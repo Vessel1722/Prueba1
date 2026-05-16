@@ -1,0 +1,249 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vessel Games | Entretenimiento Premium</title>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Montserrat:ital,wght@0,400;0,700;0,900&display=swap');
+
+        :root {
+            --primary: #8a2be2; 
+            --bg-color: #07070a;
+            --card-bg: #12121a;
+            --text-light: #ffffff;
+            --text-dim: #a0a0b0;
+            --accent: #00ffcc; 
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Montserrat', sans-serif;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            background-color: var(--bg-color);
+            color: var(--text-light);
+            overflow-x: hidden;
+        }
+
+        /* --- NAVEGACIÓN --- */
+        nav {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 5%;
+            background: rgba(7, 7, 10, 0.85);
+            backdrop-filter: blur(10px);
+            position: fixed;
+            width: 100%;
+            top: 0;
+            z-index: 100;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+        }
+        .logo { font-size: 1.4rem; font-weight: 900; letter-spacing: 2px; }
+        .logo span { color: var(--primary); }
+        .menu { display: flex; gap: 20px; }
+        .menu a { color: var(--text-light); text-decoration: none; font-size: 0.8rem; font-weight: 700; text-transform: uppercase; transition: color 0.3s; }
+        .menu a:hover { color: var(--primary); }
+
+        /* --- CARRUSEL HERO --- */
+        .hero-carousel {
+            position: relative;
+            width: 100%;
+            height: 80vh;
+            overflow: hidden;
+            background-color: #000;
+        }
+        .carousel-container {
+            display: flex;
+            width: 500%; /* Para 5 imágenes */
+            height: 100%;
+            transition: transform 0.8s ease-in-out;
+        }
+        .carousel-slide {
+            width: 20%;
+            height: 100%;
+            background-size: cover;
+            background-position: center;
+            position: relative;
+        }
+        .carousel-slide::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: linear-gradient(to right, rgba(7,7,10,1) 0%, rgba(7,7,10,0.4) 50%, rgba(7,7,10,1) 100%);
+        }
+        .hero-overlay {
+            position: absolute;
+            top: 50%;
+            left: 10%;
+            transform: translateY(-50%);
+            z-index: 10;
+            max-width: 600px;
+        }
+        .hero-overlay h1 { font-size: 3.5rem; font-weight: 900; line-height: 1.1; margin-bottom: 20px; text-transform: uppercase; }
+        .hero-overlay h1 span { color: var(--primary); }
+        .hero-overlay p { color: var(--text-dim); font-size: 1.1rem; margin-bottom: 30px; }
+
+        /* --- SECCIONES --- */
+        .section-title { text-align: center; margin: 60px 0 30px 0; font-size: 2rem; font-weight: 900; text-transform: uppercase; letter-spacing: 1px; padding-top: 40px; }
+        .section-title::after { content: ''; display: block; width: 50px; height: 3px; background-color: var(--primary); margin: 10px auto 0 auto; }
+        .services-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 25px; max-width: 1200px; margin: 0 auto; padding: 0 5%; }
+        .service-card { background-color: var(--card-bg); border-radius: 16px; overflow: hidden; text-decoration: none; color: white; transition: 0.3s; border: 1px solid rgba(255,255,255,0.03); display: flex; flex-direction: column; }
+        .service-card:hover { transform: translateY(-8px); border-color: var(--primary); }
+        .img-container { height: 180px; overflow: hidden; }
+        .service-img { width: 100%; height: 100%; object-fit: cover; opacity: 0.8; transition: 0.3s; }
+        .service-card:hover .service-img { opacity: 1; }
+        .service-info { padding: 20px; flex-grow: 1; }
+        .price-container { display: flex; justify-content: space-between; align-items: center; margin-top: 10px; }
+        .price { font-weight: 900; font-size: 1.3rem; }
+
+        /* --- RECOMENDACIONES DIRECTAS --- */
+        #recomendaciones { background: #0a0a0f; padding: 60px 5%; margin-top: 60px; }
+        .review-form { max-width: 600px; margin: 0 auto 50px auto; background: var(--card-bg); padding: 30px; border-radius: 16px; border: 1px solid var(--primary); }
+        .review-form h3 { margin-bottom: 20px; text-align: center; }
+        .review-form input, .review-form textarea { width: 100%; padding: 12px; margin-bottom: 15px; border-radius: 8px; border: 1px solid #222; background: #07070a; color: white; }
+        .star-rating { display: flex; justify-content: center; gap: 10px; margin-bottom: 20px; font-size: 1.5rem; cursor: pointer; }
+        .star-rating span { color: #222; transition: 0.3s; }
+        .star-rating span.active { color: #ffd700; }
+        .btn-post { width: 100%; padding: 15px; background: var(--primary); color: white; border: none; border-radius: 30px; font-weight: 700; cursor: pointer; }
+        
+        .testimonials-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 20px; max-width: 1100px; margin: 0 auto; }
+        .testimonial-card { background: var(--card-bg); padding: 25px; border-radius: 16px; border: 1px solid rgba(255,255,255,0.05); text-align: center; animation: fadeIn 0.5s ease; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+
+        footer { text-align: center; padding: 40px; color: var(--text-dim); font-size: 0.8rem; border-top: 1px solid rgba(255,255,255,0.05); }
+
+        @media (max-width: 768px) {
+            .hero-overlay h1 { font-size: 2.2rem; }
+            .menu { display: none; }
+            .services-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+            .img-container { height: 130px; }
+        }
+    </style>
+</head>
+<body>
+
+    <nav>
+        <div class="logo">VESSEL<span>GAMES</span></div>
+        <div class="menu">
+            <a href="#gaming">Gaming</a>
+            <a href="#perfiles">Streaming</a>
+            <a href="#recomendaciones">Recomendaciones</a>
+        </div>
+    </nav>
+
+    <div class="hero-carousel">
+        <div class="carousel-container" id="carousel">
+            <div class="carousel-slide" style="background-image: url('https://images.unsplash.com/photo-1522869635100-9f4c5e86aa37?w=1200&q=80')"></div>
+            <div class="carousel-slide" style="background-image: url('https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=1200&q=80')"></div>
+            <div class="carousel-slide" style="background-image: url('https://images.unsplash.com/photo-1578632767115-351597cf2477?w=1200&q=80')"></div>
+            <div class="carousel-slide" style="background-image: url('https://images.unsplash.com/photo-1605901309584-818e25960b8f?w=1200&q=80')"></div>
+            <div class="carousel-slide" style="background-image: url('https://images.unsplash.com/photo-1599839619722-39751411ea63?w=1200&q=80')"></div>
+        </div>
+
+        <div class="hero-overlay">
+            <div class="badge">• VESSEL GAMES OFICIAL</div>
+            <h1 id="hero-title">TU MUNDO DE <span>ENTRETENIMIENTO</span></h1>
+            <p>Perfiles premium, recargas de juegos y licencias al mejor precio.</p>
+            <a href="#gaming" class="btn-post" style="padding: 15px 30px; text-decoration: none;">✓ EXPLORAR CATÁLOGO</a>
+        </div>
+    </div>
+
+    <h2 id="gaming" class="section-title">Gaming & Monedas</h2>
+    <div class="services-grid">
+        <a href="https://wa.me/526611078412?text=Cotizar%20Diamantes%20Free%20Fire" class="service-card">
+            <div class="img-container"><img src="https://images.unsplash.com/photo-1599839619722-39751411ea63?w=500" class="service-img"></div>
+            <div class="service-info"><h3>Diamantes Free Fire</h3><p>Recarga vía ID segura.</p><div class="price-container"><span class="price">Cotizar</span></div></div>
+        </a>
+        <a href="https://wa.me/526611078412?text=Cotizar%202400%20Codpoints" class="service-card">
+            <div class="img-container"><img src="https://images.unsplash.com/photo-1605901309584-818e25960b8f?w=500" class="service-img"></div>
+            <div class="service-info"><h3>2400 Codpoints</h3><p>Call of Duty Mobile/Console</p><div class="price-container"><span class="price">$195 MXN</span></div></div>
+        </a>
+        <a href="https://wa.me/526611078412?text=Cotizar%20Juego%20Xbox" class="service-card">
+            <div class="img-container"><img src="https://images.unsplash.com/photo-1621259182978-fbf93132d53d?w=500" class="service-img"></div>
+            <div class="service-info"><h3>Juegos Xbox</h3><p>Cualquier título digital.</p><div class="price-container"><span class="price">Cotizar</span></div></div>
+        </a>
+    </div>
+
+    <h2 id="recomendaciones" class="section-title">Lo que dicen nuestros clientes</h2>
+    <div class="review-form">
+        <h3>Deja tu Recomendación</h3>
+        <input type="text" id="rev-name" placeholder="Tu Nombre">
+        <textarea id="rev-msg" rows="3" placeholder="¿Qué te pareció nuestro servicio?"></textarea>
+        <div class="star-rating" id="stars">
+            <span data-v="1">★</span><span data-v="2">★</span><span data-v="3">★</span><span data-v="4">★</span><span data-v="5" class="active">★</span>
+        </div>
+        <button class="btn-post" onclick="postReview()">Publicar Reseña</button>
+    </div>
+
+    <div class="testimonials-container" id="testimonials-list">
+        <div class="testimonial-card">
+            <div style="color:#ffd700; margin-bottom:10px;">★★★★★</div>
+            <p>"Súper confiable, los Codpoints me llegaron en minutos."</p>
+            <div class="customer-name">- Juan P.</div>
+        </div>
+        <div class="testimonial-card">
+            <div style="color:#ffd700; margin-bottom:10px;">★★★★★</div>
+            <p>"Netflix sin caídas, ya llevo 3 meses renovando aquí."</p>
+            <div class="customer-name">- María L.</div>
+        </div>
+    </div>
+
+    <footer>
+        <p>&copy; 2026 Vessel Games Oficial | Envíos inmediatos vía WhatsApp</p>
+    </footer>
+
+    <script>
+        // Lógica del Carrusel
+        const carousel = document.getElementById('carousel');
+        let index = 0;
+        setInterval(() => {
+            index = (index + 1) % 5;
+            carousel.style.transform = `translateX(-${index * 20}%)`;
+        }, 4000);
+
+        // Lógica de Estrellas
+        let selectedStars = 5;
+        const starSpans = document.querySelectorAll('#stars span');
+        starSpans.forEach(s => {
+            s.onclick = () => {
+                selectedStars = s.getAttribute('data-v');
+                starSpans.forEach(st => {
+                    st.classList.toggle('active', st.getAttribute('data-v') <= selectedStars);
+                });
+            };
+        });
+
+        // Lógica de Publicar Reseña
+        function postReview() {
+            const name = document.getElementById('rev-name').value;
+            const msg = document.getElementById('rev-msg').value;
+            
+            if(!name || !msg) return alert("Por favor llena todos los campos");
+
+            // Añadir visualmente a la lista
+            const list = document.getElementById('testimonials-list');
+            const card = document.createElement('div');
+            card.className = 'testimonial-card';
+            let starsHtml = '';
+            for(let i=0; i<5; i++) starsHtml += i < selectedStars ? '★' : '☆';
+            
+            card.innerHTML = `<div style="color:#ffd700; margin-bottom:10px;">${starsHtml}</div><p>"${msg}"</p><div class="customer-name">- ${name}</div>`;
+            list.prepend(card);
+
+            // Enviar a WhatsApp del dueño
+            const waText = encodeURIComponent(`⭐ NUEVA RESEÑA ⭐\nNombre: ${name}\nCalificación: ${selectedStars} estrellas\nMensaje: ${msg}`);
+            window.open(`https://wa.me/526611078412?text=${waText}`);
+
+            // Limpiar
+            document.getElementById('rev-name').value = '';
+            document.getElementById('rev-msg').value = '';
+        }
+    </script>
+</body>
+</html>
