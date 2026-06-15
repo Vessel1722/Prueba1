@@ -1,215 +1,589 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Plataforma de Delivery</title>
+    <title>GameKey Market | Digital Game Keys</title>
+    <!-- Google Fonts -->
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
+    <!-- Font Awesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    
     <style>
-        /* Variables y Reseteo */
         :root {
-            --primary: #ff5e00;
-            --secondary: #007bff;
-            --success: #28a745;
-            --dark: #333;
-            --light: #f4f7f6;
-            --border: #ddd;
+            --bg-dark: #0f1115;
+            --bg-card: #1a1d24;
+            --bg-hover: #252932;
+            --accent: #ff6b00; /* Kinguin/Eneba style orange */
+            --accent-hover: #e65c00;
+            --text-primary: #ffffff;
+            --text-secondary: #a0a3b1;
+            --success: #00d084;
+            --border: #2d313a;
         }
-        * { box-sizing: border-box; margin: 0; padding: 0; font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; }
-        body { background-color: var(--light); color: var(--dark); }
 
-        /* Navegación */
-        nav {
-            background-color: var(--dark);
-            color: white;
-            padding: 15px 20px;
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Inter', sans-serif;
+        }
+
+        body {
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            line-height: 1.6;
+        }
+
+        /* --- Header --- */
+        header {
+            background-color: var(--bg-card);
+            border-bottom: 1px solid var(--border);
+            position: sticky;
+            top: 0;
+            z-index: 100;
+            padding: 1rem 0;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 0 1.5rem;
+        }
+
+        .nav-wrapper {
             display: flex;
-            justify-content: space-between;
             align-items: center;
-        }
-        nav h1 { font-size: 1.5rem; color: var(--primary); margin: 0; cursor: pointer; }
-        .nav-links button {
-            background: none; border: none; color: white; margin-left: 15px;
-            font-size: 1rem; cursor: pointer; transition: color 0.3s;
-        }
-        .nav-links button:hover { color: var(--primary); }
-
-        /* Contenedores de Secciones */
-        .section-container {
-            display: none; /* Oculto por defecto, controlado por JS */
-            max-width: 1200px; margin: 30px auto; padding: 0 20px;
-            animation: fadeIn 0.4s;
-        }
-        .active-section { display: block; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
-
-        /* Tarjetas de Datos (Comercios, Pedidos, etc.) */
-        .grid {
-            display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: 20px;
-            margin-top: 20px;
-        }
-        .item-card {
-            background: white; padding: 20px; border-radius: 8px;
-            border: 1px solid var(--border); box-shadow: 0 2px 5px rgba(0,0,0,0.05);
-        }
-        .item-card h3 { margin-bottom: 10px; color: var(--primary); }
-        .item-card p { margin-bottom: 15px; font-size: 0.95rem; color: #555; }
-        .item-card .price { font-weight: bold; color: var(--dark); font-size: 1.1rem; }
-
-        /* Botones Funcionales */
-        .btn {
-            display: inline-block; padding: 10px 15px; border: none; border-radius: 5px;
-            font-weight: bold; cursor: pointer; text-align: center; width: 100%; transition: 0.2s;
-        }
-        .btn-action { background-color: var(--secondary); color: white; }
-        .btn-action:hover { background-color: #0056b3; }
-        .btn-success { background-color: var(--success); color: white; }
-        .btn-success:hover { background-color: #1e7e34; }
-        .btn-warning { background-color: var(--primary); color: white; }
-        
-        /* Layouts específicos */
-        .dashboard-header {
-            display: flex; justify-content: space-between; align-items: center;
-            margin-bottom: 20px; padding-bottom: 10px; border-bottom: 2px solid var(--border);
-        }
-        .balance-badge {
-            background: #e9ecef; padding: 10px 15px; border-radius: 5px; font-weight: bold;
+            justify-content: space-between;
+            gap: 2rem;
         }
 
-        /* Alerta de Comisión/Protección */
-        .alert-box {
-            background-color: #fff3cd; border-left: 4px solid #ffc107;
-            padding: 15px; margin-bottom: 20px; border-radius: 4px; font-size: 0.9rem;
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 800;
+            color: var(--text-primary);
+            text-decoration: none;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
         }
-    </style>
+
+        .logo span { color: var(--accent); }
+
+        .search-bar {
+            flex: 1;
+            max-width: 500px;
+            position: relative;
+        }
+
+        .search-bar input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            background-color: var(--bg-dark);
+            color: var(--text-primary);
+            font-size: 0.95rem;
+            transition: border-color 0.3s;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: var(--accent);
+        }
+
+        .search-bar i {
+            position: absolute;
+            left: 1rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-secondary);
+        }
+
+        .nav-actions {
+            display: flex;
+            align-items: center;
+            gap: 1.5rem;
+        }
+
+        .nav-btn {
+            background: none;
+            border: none;
+            color: var(--text-secondary);
+            font-size: 1.2rem;
+            cursor: pointer;
+            position: relative;
+            transition: color 0.3s;
+        }
+
+        .nav-btn:hover { color: var(--text-primary); }
+
+        .cart-count {
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background-color: var(--accent);
+            color: white;
+            font-size: 0.7rem;
+            font-weight: 700;
+            width: 18px;
+            height: 18px;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        .btn-primary {
+            background-color: var(--accent);
+            color: white;
+            padding: 0.6rem 1.2rem;
+            border-radius: 6px;
+            text-decoration: none;
+            font-weight: 600;
+            font-size: 0.9rem;
+            transition: background 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+
+        .btn-primary:hover { background-color: var(--accent-hover); }
+
+        /* --- Hero Section --- */
+        .hero {
+            background: linear-gradient(135deg, #1a1d24 0%, #0f1115 100%);
+            padding: 3rem 0;
+            margin-bottom: 2rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .hero-content {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 2rem;
+        }
+
+        .hero-text h1 {
+            font-size: 2.5rem;
+            font-weight: 800;
+            margin-bottom: 1rem;
+            line-height: 1.2;
+        }
+
+        .hero-text p {
+            color: var(--text-secondary);
+            font-size: 1.1rem;
+            margin-bottom: 1.5rem;
+            max-width: 500px;
+        }
+
+        .hero-badge {
+            display: inline-block;
+            background-color: rgba(255, 107, 0, 0.15);
+            color: var(--accent);
+            padding: 0.4rem 0.8rem;
+            border-radius: 20px;
+            font-size: 0.85rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
+        }
+
+        /* --- Categories --- */
+        .categories {
+            display: flex;
+            gap: 1rem;
+            margin-bottom: 2rem;
+            overflow-x: auto;
+            padding-bottom: 0.5rem;
+        }
+
+        .category-pill {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            color: var(--text-secondary);
+            padding: 0.6rem 1.2rem;
+            border-radius: 20px;
+            cursor: pointer;
+            white-space: nowrap;
+            transition: all 0.3s;
+            font-weight: 600;
+            font-size: 0.9rem;
+        }
+
+        .category-pill:hover, .category-pill.active {
+            background-color: var(--accent);
+            color: white;
+            border-color: var(--accent);
+        }
+
+        /* --- Product Grid --- */
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            margin-bottom: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .product-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 4rem;
+        }
+
+        .product-card {
+            background-color: var(--bg-card);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            overflow: hidden;
+            transition: transform 0.3s, box-shadow 0.3s;
+            position: relative;
+        }
+
+        .product-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+            border-color: var(--accent);
+        }
+
+        .discount-badge {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            background-color: var(--success);
+            color: #000;
+            font-weight: 800;
+            font-size: 0.8rem;
+            padding: 0.3rem 0.6rem;
+            border-radius: 4px;
+            z-index: 2;
+        }
+
+        .product-image {
+            width: 100%;
+            height: 280px;
+            object-fit: cover;
+            background-color: #2a2d35;
+        }
+
+        .product-info {
+            padding: 1rem;
+        }
+
+        .platform-icon {
+            font-size: 0.8rem;
+            color: var(--text-secondary);
+            margin-bottom: 0.5rem;
+            display: flex;
+            align-items: center;
+            gap: 0.4rem;
+        }
+
+        .product-title {
+            font-size: 1rem;
+            font-weight: 600;
+            margin-bottom: 0.8rem;
+            line-height: 1.3;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+        }
+
+        .price-wrapper {
+            display: flex;
+            align-items: baseline;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+
+        .old-price {
+            text-decoration: line-through;
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+
+        .new-price {
+            color: var(--accent);
+            font-size: 1.3rem;
+            font-weight: 800;
+        }
+
+        .add-to-cart {
+            width: 100%;
+            padding: 0.7rem;
+            background-color: var(--bg-hover);
+            color: var(--text-primary);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 0.5rem;
+        }
+
+        .add-to-cart:hover {
+            background-color: var(--accent);
+            border-color: var(--accent);
+            color: white;
+        }
+
+        /* --- Footer --- */
+        footer {
+            background-color: var(--bg-card);
+            border-top: 1px solid var(--border);
+            padding: 3rem 0;
+            margin-top: auto;
+        }
+
+        .footer-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 2rem;
+        }
+
+        .footer-col h4 {
+            color: var(--text-primary);
+            margin-bottom: 1rem;
+            font-size: 1.1rem;
+        }
+
+        .footer-col ul {
+            list-style: none;
+        }
+
+        .footer-col ul li {
+            margin-bottom: 0.6rem;
+        }
+
+        .footer-col ul li a {
+            color: var(--text-secondary);
+            text-decoration: none;
+            font-size: 0.9rem;
+            transition: color 0.3s;
+        }
+
+        .footer-col ul li a:hover { color: var(--accent); }
+
+        .payment-methods {
+            display: flex;
+            gap: 1rem;
+            font-size: 1.5rem;
+            color: var(--text-secondary);
+            margin-top: 1rem;
+        }
+
+        /* --- Responsive --- */
+        @media (max-width: 768px) {
+            .nav-wrapper { flex-wrap: wrap; }
+            .search-bar { order: 3; max-width: 100%; margin-top: 1rem; }
+            .hero-content { flex-direction: column; text-align: center; }
+            .hero-text p { margin: 0 auto 1.5rem; }
+            .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
+            .product-image { height: 220px; }
+        }
+    </style.
 </head>
 <body>
 
-    <nav>
-        <h1 onclick="showSection('home')">DeliveryApp</h1>
-        <div class="nav-links">
-            <button onclick="showSection('client')">Vista Cliente</button>
-            <button onclick="showSection('commerce')">Panel Comercio</button>
-            <button onclick="showSection('courier')">Panel Repartidor</button>
-        </div>
-    </nav>
+    <!-- Header -->
+    <header>
+        <div class="container">
+            <div class="nav-wrapper">
+                <a href="#" class="logo">
+                    <i class="fa-solid fa-gamepad"></i> Game<span>Key</span>
+                </a>
+                
+                <div class="search-bar">
+                    <i class="fa-solid fa-magnifying-glass"></i>
+                    <input type="text" id="searchInput" placeholder="Search for games, software, or gift cards...">
+                </div>
 
-    <div id="home" class="section-container active-section">
-        <div class="dashboard-header">
-            <h2>Bienvenido a la Plataforma</h2>
-        </div>
-        <p>Selecciona una vista en el menú superior para probar los diferentes módulos del sistema.</p>
-        <div class="grid">
-            <div class="item-card">
-                <h3>Comisión Fija</h3>
-                <p>Modelo de negocio basado en una comisión única de $25 MXN por pedido, sin porcentajes ocultos.</p>
+                <div class="nav-actions">
+                    <button class="nav-btn" title="Currency">
+                        <i class="fa-solid fa-dollar-sign"></i> USD
+                    <button class="nav-btn" title="Cart">
+                        <i class="fa-solid fa-cart-shopping"></i>
+                        <span class="cart-count" id="cartCount">0</span>
+                    </button>
+                    <button class="nav-btn" title="Account">
+                        <i class="fa-regular fa-user"></i>
+                    </button>
+                    <a href="#" class="btn-primary">Sign In</a>
+                </div>
             </div>
-            <div class="item-card">
-                <h3>Pagos Protegidos</h3>
-                <p>Transferencias retenidas hasta que el comprador confirma la recepción del producto.</p>
-            </div>
         </div>
-    </div>
+    </header>
 
-    <div id="client" class="section-container">
-        <div class="dashboard-header">
-            <h2>Restaurantes Disponibles</h2>
-            <div class="balance-badge">Carrito: 1 Item</div>
+    <!-- Hero Section -->
+    <section class="hero">
+        <div class="container">
+            <div class="hero-content">
+                <div class="hero-text">
+                    <span class="hero-badge">🔥 SUMMER MEGA SALE</span>
+                    <h1>Up to 90% Off<br>Premium Game Keys</h1>
+                    <p>Instant delivery. 100% genuine keys. The safest marketplace for PC, Xbox, PlayStation, and Nintendo games.</p>
+                    <a href="#products" class="btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">Browse Deals</a>
+                </div>
+                <!-- Decorative placeholder for hero image -->
+                <div style="font-size: 8rem; color: var(--bg-hover);">
+                    <i class="fa-solid fa-trophy"></i>
+                </div>
+            </div recent search history or trending.
         </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="container" id="products">
+        <!-- Categories -->
+        <div class="categories">
+            <div class="category-pill active" onclick="filterCategory('all')">All Deals</div>
+            <div class="category-pill" onclick="filterCategory('pc')"><i class="fa-brands fa-windows"></i> PC</div>
+            <div class="category-pill" onclick="filterCategory('xbox')"><i class="fa-brands fa-xbox"></i> Xbox</div>
+            <div class="category-pill" onclick="filterCategory('playstation')"><i class="fa-brands fa-playstation"></i> PlayStation</div>
+            <div class="category-pill" onclick="filterCategory('nintendo')"><i class="fa-solid fa-gamepad"></i> Nintendo</div>
+            <div class="category-pill" onclick="filterCategory('software')"><i class="fa-brands fa-microsoft"></i> Software</div>
+        </div>
+
+        <h2 class="section-title"><i class="fa-solid fa-fire" style="color: var(--accent);"></i> Trending Now</h2>
         
-        <div class="alert-box">
-            🛡️ <b>Compra Segura:</b> Tu pago por transferencia está protegido. Comisión por uso de app: $25 MXN.
+        <!-- Product Grid -->
+        <div class="product-grid" id="productGrid">
+            <!-- Products will be injected here by JavaScript -->
         </div>
+    </main>
 
-        <div class="grid">
-            <div class="item-card">
-                <h3>Hamburguesas "El Carbón"</h3>
-                <p>Especialidad en carnes a la parrilla y papas artesanales.</p>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-action">Ver Menú</button>
-                    <button class="btn btn-success" onclick="simularCompra()">Comprar Rapido</button>
+    <!-- Footer -->
+    <footer>
+        <div class="container">
+            <div class="footer-grid">
+                <div class="footer-col">
+                    <a href="#" class="logo" style="margin-bottom: 1rem; display: inline-block;">
+                        <i class="fa-solid fa-gamepad"></i> Game<span>Key</span>
+                    </a>
+                    <p style="color: var(--text-secondary); font-size: 0.9rem;">The most trusted digital marketplace for gamers worldwide. Instant delivery, 24/7 support.</p>
+                    <div class="payment-methods">
+                        <i class="fa-brands fa-cc-visa"></i>
+                        <i class="fa-brands fa-cc-mastercard"></i>
+                        <i class="fa-brands fa-paypal"></i>
+                        <i class="fa-brands fa-bitcoin"></i>
+                    </div>
+                </div>
+                <div class="footer-col">
+                    <h4>Marketplace</h4>
+                    <ul>
+                        <li><a href="#">PC Games</a></li>
+                        <li><a href="#">Xbox Games</a></li>
+                        <li><a href="#">PlayStation Games</a></li>
+                        <li><a href="#">Nintendo Games</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Support</h4>
+                    <ul>
+                        <li><a href="#">Help Center</a></li>
+                        <li><a href="#">How to activate</a></li>
+                        <li><a href="#">Sell on GameKey</a></li>
+                        <li><a href="#">Contact Us</a></li>
+                    </ul>
+                </div>
+                <div class="footer-col">
+                    <h4>Legal</h4>
+                    <ul>
+                        <li><a href="#">Terms of Service</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Cookie Policy</a></li>
+                    </ul>
                 </div>
             </div>
-            
-            <div class="item-card">
-                <h3>Pizzería Roma</h3>
-                <p>Pizzas a la leña, pastas y ensaladas frescas. Tiempo de espera: 30 min.</p>
-                <div style="display: flex; gap: 10px;">
-                    <button class="btn btn-action">Ver Menú</button>
-                    <button class="btn btn-success" onclick="simularCompra()">Comprar Rapido</button>
-                </div>
+            <div style="text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 0.85rem;">
+                &copy; 2023 GameKey Market. All rights reserved. This is a demo template.
             </div>
         </div>
-    </div>
+    </footer>
 
-    <div id="commerce" class="section-container">
-        <div class="dashboard-header">
-            <h2>Panel de Control - Tu Comercio</h2>
-            <div class="balance-badge">Ganancias Retenidas: $450.00 MXN</div>
-        </div>
-
-        <h3>Pedidos Entrantes</h3>
-        <div class="grid">
-            <div class="item-card">
-                <h3>Orden #1024</h3>
-                <p><b>Contenido:</b> 2x Hamburguesa Doble, 1x Refresco.<br><b>Cliente:</b> Juan Pérez</p>
-                <p class="price">Total a recibir: $220.00 MXN</p>
-                <p style="font-size: 0.8rem; color: #ff5e00;">* El pago del cliente ya está protegido en la plataforma.</p>
-                <button class="btn btn-warning" onclick="alert('Pedido aceptado. Buscando repartidor...')">Aceptar Pedido</button>
-            </div>
-
-            <div class="item-card">
-                <h3>Orden #1025</h3>
-                <p><b>Contenido:</b> 1x Pizza Pepperoni Grande.<br><b>Cliente:</b> María Gómez</p>
-                <p class="price">Total a recibir: $180.00 MXN</p>
-                <p style="font-size: 0.8rem; color: #ff5e00;">* El pago del cliente ya está protegido en la plataforma.</p>
-                <button class="btn btn-warning" onclick="alert('Pedido aceptado. Buscando repartidor...')">Aceptar Pedido</button>
-            </div>
-        </div>
-    </div>
-
-    <div id="courier" class="section-container">
-        <div class="dashboard-header">
-            <h2>Viajes Disponibles</h2>
-            <div class="balance-badge">Ganancias de hoy: $140.00 MXN</div>
-        </div>
-
-        <div class="alert-box">
-            📍 Mantente en línea para recibir notificaciones de viajes cercanos.
-        </div>
-
-        <div class="grid">
-            <div class="item-card">
-                <h3>Ruta: Centro -> Zona Norte</h3>
-                <p><b>Recoger en:</b> Hamburguesas "El Carbón"<br><b>Entregar a:</b> 3.5 km de distancia.</p>
-                <p class="price">Ganancia del viaje: $40.00 MXN</p>
-                <button class="btn btn-success" onclick="alert('Viaje asignado. Dirígete al comercio.')">Tomar Viaje</button>
-            </div>
-            
-            <div class="item-card">
-                <h3>Ruta: Plaza Sur -> Centro</h3>
-                <p><b>Recoger en:</b> Pizzería Roma<br><b>Entregar a:</b> 1.2 km de distancia.</p>
-                <p class="price">Ganancia del viaje: $25.00 MXN</p>
-                <button class="btn btn-success" onclick="alert('Viaje asignado. Dirígete al comercio.')">Tomar Viaje</button>
-            </div>
-        </div>
-    </div>
-
+    <!-- JavaScript for Interactivity -->
     <script>
-        // Función para cambiar de vistas (Navegación tipo App)
-        function showSection(sectionId) {
-            // Ocultar todas las secciones
-            const sections = document.querySelectorAll('.section-container');
-            sections.forEach(sec => sec.classList.remove('active-section'));
-            
-            // Mostrar la sección seleccionada
-            document.getElementById(sectionId).classList.add('active-section');
+        // Mock Data for Products
+        const products = [
+            { id: 1, title: "Elden Ring", platform: "pc", platformIcon: "fa-windows", oldPrice: 59.99, newPrice: 29.99, discount: "-50%", image: "https://placehold.co/300x400/1a1d24/ff6b00?text=Elden+Ring" },
+            { id: 2, title: "FIFA 24 (FC 24)", platform: "xbox", platformIcon: "fa-xbox", oldPrice: 69.99, newPrice: 34.99, discount: "-50%", image: "https://placehold.co/300x400/1a1d24/00d084?text=FC+24" },
+            { id: 3, title: "Grand Theft Auto V", platform: "pc", platformIcon: "fa-windows", oldPrice: 29.99, newPrice: 14.99, discount: "-50%", image: "https://placehold.co/300x400/1a1d24/ffffff?text=GTA+V" },
+            { id: 4, title: "The Legend of Zelda: TOTK", platform: "nintendo", platformIcon: "fa-gamepad", oldPrice: 59.99, newPrice: 54.99, discount: "-8%", image: "https://placehold.co/300x400/1a1d24/ff0000?text=Zelda+TOTK" },
+            { id: 5, title: "Windows 11 Pro Key", platform: "software", platformIcon: "fa-microsoft", oldPrice: 199.99, newPrice: 19.99, discount: "-90%", image: "https://placehold.co/300x400/1a1d24/0078d4?text=Windows+11" },
+            { id: 6, title: "God of War Ragnarök", platform: "playstation", platformIcon: "fa-playstation", oldPrice: 69.99, newPrice: 49.99, discount: "-28%", image: "https://placehold.co/300x400/1a1d24/003087?text=God+of+War" },
+            { id: 7, title: "Cyberpunk 2077", platform: "pc", platformIcon: "fa-windows", oldPrice: 59.99, newPrice: 29.99, discount: "-50%", image: "https://placehold.co/300x400/1a1d24/fcee0a?text=Cyberpunk" },
+            { id: 8, title: "Minecraft Java & Bedrock", platform: "pc", platformIcon: "fa-windows", oldPrice: 29.99, newPrice: 19.99, discount: "-33%", image: "https://placehold.co/300x400/1a1d24/5D8C3A?text=Minecraft" }
+        ];
+
+        let cartCount = 0;
+        const productGrid = document.getElementById('productGrid');
+        const cartCountEl = document.getElementById('cartCount');
+        const searchInput = document.getElementById('searchInput');
+
+        // Function to render products
+        function renderProducts(items) {
+            productGrid.innerHTML = '';
+            items.forEach(product => {
+                const card = document.createElement('div');
+                card.className = 'product-card';
+                card.innerHTML = `
+                    <span class="discount-badge">${product.discount}</span>
+                    <img src="${product.image}" alt="${product.title}" class="product-image">
+                    <div class="product-info">
+                        <div class="platform-icon">
+                            <i class="fa-brands ${product.platformIcon}"></i> ${product.platform.toUpperCase()}
+                        </div>
+                        <h3 class="product-title">${product.title}</h3>
+                        <div class="price-wrapper">
+                            <span class="old-price">$${product.oldPrice}</span>
+                            <span class="new-price">$${product.newPrice}</span>
+                        </div>
+                        <button class="add-to-cart" onclick="addToCart()">
+                            <i class="fa-solid fa-cart-plus"></i> Add to Cart
+                        </button>
+                    </div>
+                `;
+                productGrid.appendChild(card);
+            });
         }
 
-        // Función de simulación de compra para el cliente
-        function simularCompra() {
-            let confirmacion = confirm("Resumen de compra:\n- Comida: $150.00 MXN\n- Envío: $35.00 MXN\n- Comisión App: $25.00 MXN\n\nTotal a transferir: $210.00 MXN\n\n¿Deseas generar los datos de transferencia protegida?");
-            if(confirmacion) {
-                alert("Redirigiendo al panel de transferencia bancaria...");
+        // Initial Render
+        renderProducts(products);
+
+        // Add to Cart Functionality
+        function addToCart() {
+            cartCount++;
+            cartCountEl.textContent = cartCount;
+            // Simple animation feedback
+            cartCountEl.style.transform = "scale(1.5)";
+            setTimeout(() => { cartCountEl.style.transform = "scale(1)"; }, 200);
+        }
+
+        // Search Functionality
+        searchInput.addEventListener('input', (e) => {
+            const searchTerm = e.target.value.toLowerCase();
+            const filtered = products.filter(p => p.title.toLowerCase().includes(searchTerm));
+            renderProducts(filtered);
+        });
+
+        // Category Filter Functionality
+        function filterCategory(category) {
+            // Update active pill UI
+            document.querySelectorAll('.category-pill').forEach(pill => pill.classList.remove('active'));
+            event.target.closest('.category-pill').classList.add('active');
+
+            if (category === 'all') {
+                renderProducts(products);
+            } else {
+                const filtered = products.filter(p => p.platform === category);
+                renderProducts(filtered);
             }
         }
     </script>
