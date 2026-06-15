@@ -3,589 +3,242 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>GameKey Market | Digital Game Keys</title>
-    <!-- Google Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700;800&display=swap" rel="stylesheet">
-    <!-- Font Awesome for Icons -->
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    
+    <title>Game Marketplace</title>
     <style>
-        :root {
-            --bg-dark: #0f1115;
-            --bg-card: #1a1d24;
-            --bg-hover: #252932;
-            --accent: #ff6b00; /* Kinguin/Eneba style orange */
-            --accent-hover: #e65c00;
-            --text-primary: #ffffff;
-            --text-secondary: #a0a3b1;
-            --success: #00d084;
-            --border: #2d313a;
-        }
-
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
+            font-family: Arial, sans-serif;
         }
 
         body {
-            background-color: var(--bg-dark);
-            color: var(--text-primary);
-            line-height: 1.6;
+            background-color: #0f1115;
+            color: white;
         }
 
-        /* --- Header --- */
         header {
-            background-color: var(--bg-card);
-            border-bottom: 1px solid var(--border);
-            position: sticky;
-            top: 0;
-            z-index: 100;
-            padding: 1rem 0;
+            background-color: #1a1d24;
+            padding: 20px;
+            border-bottom: 2px solid #ff6b00;
         }
 
         .container {
             max-width: 1200px;
             margin: 0 auto;
-            padding: 0 1.5rem;
+            padding: 20px;
         }
 
-        .nav-wrapper {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 2rem;
+        h1 {
+            color: #ff6b00;
+            margin-bottom: 20px;
         }
 
-        .logo {
-            font-size: 1.5rem;
-            font-weight: 800;
-            color: var(--text-primary);
-            text-decoration: none;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .logo span { color: var(--accent); }
-
-        .search-bar {
-            flex: 1;
-            max-width: 500px;
-            position: relative;
-        }
-
-        .search-bar input {
+        .search-box {
             width: 100%;
-            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            max-width: 600px;
+            padding: 12px;
             border-radius: 8px;
-            border: 1px solid var(--border);
-            background-color: var(--bg-dark);
-            color: var(--text-primary);
-            font-size: 0.95rem;
-            transition: border-color 0.3s;
-        }
-
-        .search-bar input:focus {
-            outline: none;
-            border-color: var(--accent);
-        }
-
-        .search-bar i {
-            position: absolute;
-            left: 1rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: var(--text-secondary);
-        }
-
-        .nav-actions {
-            display: flex;
-            align-items: center;
-            gap: 1.5rem;
-        }
-
-        .nav-btn {
-            background: none;
-            border: none;
-            color: var(--text-secondary);
-            font-size: 1.2rem;
-            cursor: pointer;
-            position: relative;
-            transition: color 0.3s;
-        }
-
-        .nav-btn:hover { color: var(--text-primary); }
-
-        .cart-count {
-            position: absolute;
-            top: -8px;
-            right: -8px;
-            background-color: var(--accent);
+            border: 1px solid #2d313a;
+            background-color: #0f1115;
             color: white;
-            font-size: 0.7rem;
-            font-weight: 700;
-            width: 18px;
-            height: 18px;
-            border-radius: 50%;
-            display: flex;
-            align-items: center;
-            justify-content: center;
+            font-size: 16px;
+            margin-bottom: 30px;
         }
 
-        .btn-primary {
-            background-color: var(--accent);
-            color: white;
-            padding: 0.6rem 1.2rem;
-            border-radius: 6px;
-            text-decoration: none;
-            font-weight: 600;
-            font-size: 0.9rem;
-            transition: background 0.3s;
-            border: none;
-            cursor: pointer;
-        }
-
-        .btn-primary:hover { background-color: var(--accent-hover); }
-
-        /* --- Hero Section --- */
-        .hero {
-            background: linear-gradient(135deg, #1a1d24 0%, #0f1115 100%);
-            padding: 3rem 0;
-            margin-bottom: 2rem;
-            border-bottom: 1px solid var(--border);
-        }
-
-        .hero-content {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 2rem;
-        }
-
-        .hero-text h1 {
-            font-size: 2.5rem;
-            font-weight: 800;
-            margin-bottom: 1rem;
-            line-height: 1.2;
-        }
-
-        .hero-text p {
-            color: var(--text-secondary);
-            font-size: 1.1rem;
-            margin-bottom: 1.5rem;
-            max-width: 500px;
-        }
-
-        .hero-badge {
-            display: inline-block;
-            background-color: rgba(255, 107, 0, 0.15);
-            color: var(--accent);
-            padding: 0.4rem 0.8rem;
-            border-radius: 20px;
-            font-size: 0.85rem;
-            font-weight: 700;
-            margin-bottom: 1rem;
-        }
-
-        /* --- Categories --- */
-        .categories {
-            display: flex;
-            gap: 1rem;
-            margin-bottom: 2rem;
-            overflow-x: auto;
-            padding-bottom: 0.5rem;
-        }
-
-        .category-pill {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border);
-            color: var(--text-secondary);
-            padding: 0.6rem 1.2rem;
-            border-radius: 20px;
-            cursor: pointer;
-            white-space: nowrap;
-            transition: all 0.3s;
-            font-weight: 600;
-            font-size: 0.9rem;
-        }
-
-        .category-pill:hover, .category-pill.active {
-            background-color: var(--accent);
-            color: white;
-            border-color: var(--accent);
-        }
-
-        /* --- Product Grid --- */
-        .section-title {
-            font-size: 1.5rem;
-            font-weight: 700;
-            margin-bottom: 1.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.5rem;
-        }
-
-        .product-grid {
+        .products {
             display: grid;
-            grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
-            gap: 1.5rem;
-            margin-bottom: 4rem;
+            grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+            gap: 20px;
         }
 
         .product-card {
-            background-color: var(--bg-card);
-            border: 1px solid var(--border);
+            background-color: #1a1d24;
             border-radius: 12px;
             overflow: hidden;
-            transition: transform 0.3s, box-shadow 0.3s;
-            position: relative;
+            border: 1px solid #2d313a;
+            transition: transform 0.3s;
         }
 
         .product-card:hover {
             transform: translateY(-5px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-            border-color: var(--accent);
-        }
-
-        .discount-badge {
-            position: absolute;
-            top: 10px;
-            left: 10px;
-            background-color: var(--success);
-            color: #000;
-            font-weight: 800;
-            font-size: 0.8rem;
-            padding: 0.3rem 0.6rem;
-            border-radius: 4px;
-            z-index: 2;
+            border-color: #ff6b00;
         }
 
         .product-image {
             width: 100%;
-            height: 280px;
-            object-fit: cover;
-            background-color: #2a2d35;
+            height: 200px;
+            background-color: #2d313a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 48px;
         }
 
         .product-info {
-            padding: 1rem;
-        }
-
-        .platform-icon {
-            font-size: 0.8rem;
-            color: var(--text-secondary);
-            margin-bottom: 0.5rem;
-            display: flex;
-            align-items: center;
-            gap: 0.4rem;
+            padding: 15px;
         }
 
         .product-title {
-            font-size: 1rem;
-            font-weight: 600;
-            margin-bottom: 0.8rem;
-            line-height: 1.3;
-            display: -webkit-box;
-            -webkit-line-clamp: 2;
-            -webkit-box-orient: vertical;
-            overflow: hidden;
+            font-size: 18px;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
 
-        .price-wrapper {
-            display: flex;
-            align-items: baseline;
-            gap: 0.5rem;
-            margin-bottom: 1rem;
+        .price {
+            color: #ff6b00;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 10px;
         }
 
         .old-price {
             text-decoration: line-through;
-            color: var(--text-secondary);
-            font-size: 0.9rem;
+            color: #888;
+            font-size: 14px;
+            margin-right: 10px;
         }
 
-        .new-price {
-            color: var(--accent);
-            font-size: 1.3rem;
-            font-weight: 800;
-        }
-
-        .add-to-cart {
+        .buy-btn {
             width: 100%;
-            padding: 0.7rem;
-            background-color: var(--bg-hover);
-            color: var(--text-primary);
-            border: 1px solid var(--border);
-            border-radius: 6px;
-            font-weight: 600;
-            cursor: pointer;
-            transition: all 0.3s;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            gap: 0.5rem;
-        }
-
-        .add-to-cart:hover {
-            background-color: var(--accent);
-            border-color: var(--accent);
+            padding: 12px;
+            background-color: #ff6b00;
             color: white;
+            border: none;
+            border-radius: 6px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
         }
 
-        /* --- Footer --- */
-        footer {
-            background-color: var(--bg-card);
-            border-top: 1px solid var(--border);
-            padding: 3rem 0;
-            margin-top: auto;
+        .buy-btn:hover {
+            background-color: #e65c00;
         }
 
-        .footer-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-            gap: 2rem;
+        .discount {
+            background-color: #00d084;
+            color: black;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-weight: bold;
+            display: inline-block;
+            margin-bottom: 10px;
         }
-
-        .footer-col h4 {
-            color: var(--text-primary);
-            margin-bottom: 1rem;
-            font-size: 1.1rem;
-        }
-
-        .footer-col ul {
-            list-style: none;
-        }
-
-        .footer-col ul li {
-            margin-bottom: 0.6rem;
-        }
-
-        .footer-col ul li a {
-            color: var(--text-secondary);
-            text-decoration: none;
-            font-size: 0.9rem;
-            transition: color 0.3s;
-        }
-
-        .footer-col ul li a:hover { color: var(--accent); }
-
-        .payment-methods {
-            display: flex;
-            gap: 1rem;
-            font-size: 1.5rem;
-            color: var(--text-secondary);
-            margin-top: 1rem;
-        }
-
-        /* --- Responsive --- */
-        @media (max-width: 768px) {
-            .nav-wrapper { flex-wrap: wrap; }
-            .search-bar { order: 3; max-width: 100%; margin-top: 1rem; }
-            .hero-content { flex-direction: column; text-align: center; }
-            .hero-text p { margin: 0 auto 1.5rem; }
-            .product-grid { grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); }
-            .product-image { height: 220px; }
-        }
-    </style.
+    </style>
 </head>
 <body>
-
-    <!-- Header -->
     <header>
         <div class="container">
-            <div class="nav-wrapper">
-                <a href="#" class="logo">
-                    <i class="fa-solid fa-gamepad"></i> Game<span>Key</span>
-                </a>
-                
-                <div class="search-bar">
-                    <i class="fa-solid fa-magnifying-glass"></i>
-                    <input type="text" id="searchInput" placeholder="Search for games, software, or gift cards...">
-                </div>
-
-                <div class="nav-actions">
-                    <button class="nav-btn" title="Currency">
-                        <i class="fa-solid fa-dollar-sign"></i> USD
-                    <button class="nav-btn" title="Cart">
-                        <i class="fa-solid fa-cart-shopping"></i>
-                        <span class="cart-count" id="cartCount">0</span>
-                    </button>
-                    <button class="nav-btn" title="Account">
-                        <i class="fa-regular fa-user"></i>
-                    </button>
-                    <a href="#" class="btn-primary">Sign In</a>
-                </div>
-            </div>
+            <h1>🎮 GameKey Market</h1>
+            <input type="text" class="search-box" placeholder="Search for games..." id="searchBox">
         </div>
     </header>
 
-    <!-- Hero Section -->
-    <section class="hero">
-        <div class="container">
-            <div class="hero-content">
-                <div class="hero-text">
-                    <span class="hero-badge">🔥 SUMMER MEGA SALE</span>
-                    <h1>Up to 90% Off<br>Premium Game Keys</h1>
-                    <p>Instant delivery. 100% genuine keys. The safest marketplace for PC, Xbox, PlayStation, and Nintendo games.</p>
-                    <a href="#products" class="btn-primary" style="padding: 0.8rem 2rem; font-size: 1rem;">Browse Deals</a>
-                </div>
-                <!-- Decorative placeholder for hero image -->
-                <div style="font-size: 8rem; color: var(--bg-hover);">
-                    <i class="fa-solid fa-trophy"></i>
-                </div>
-            </div recent search history or trending.
-        </div>
-    </section>
-
-    <!-- Main Content -->
-    <main class="container" id="products">
-        <!-- Categories -->
-        <div class="categories">
-            <div class="category-pill active" onclick="filterCategory('all')">All Deals</div>
-            <div class="category-pill" onclick="filterCategory('pc')"><i class="fa-brands fa-windows"></i> PC</div>
-            <div class="category-pill" onclick="filterCategory('xbox')"><i class="fa-brands fa-xbox"></i> Xbox</div>
-            <div class="category-pill" onclick="filterCategory('playstation')"><i class="fa-brands fa-playstation"></i> PlayStation</div>
-            <div class="category-pill" onclick="filterCategory('nintendo')"><i class="fa-solid fa-gamepad"></i> Nintendo</div>
-            <div class="category-pill" onclick="filterCategory('software')"><i class="fa-brands fa-microsoft"></i> Software</div>
-        </div>
-
-        <h2 class="section-title"><i class="fa-solid fa-fire" style="color: var(--accent);"></i> Trending Now</h2>
-        
-        <!-- Product Grid -->
-        <div class="product-grid" id="productGrid">
-            <!-- Products will be injected here by JavaScript -->
-        </div>
-    </main>
-
-    <!-- Footer -->
-    <footer>
-        <div class="container">
-            <div class="footer-grid">
-                <div class="footer-col">
-                    <a href="#" class="logo" style="margin-bottom: 1rem; display: inline-block;">
-                        <i class="fa-solid fa-gamepad"></i> Game<span>Key</span>
-                    </a>
-                    <p style="color: var(--text-secondary); font-size: 0.9rem;">The most trusted digital marketplace for gamers worldwide. Instant delivery, 24/7 support.</p>
-                    <div class="payment-methods">
-                        <i class="fa-brands fa-cc-visa"></i>
-                        <i class="fa-brands fa-cc-mastercard"></i>
-                        <i class="fa-brands fa-paypal"></i>
-                        <i class="fa-brands fa-bitcoin"></i>
+    <div class="container">
+        <h2>🔥 Hot Deals</h2>
+        <br>
+        <div class="products" id="productList">
+            <div class="product-card">
+                <div class="product-image">🎮</div>
+                <div class="product-info">
+                    <span class="discount">-50%</span>
+                    <div class="product-title">Elden Ring</div>
+                    <div class="price">
+                        <span class="old-price">$59.99</span>
+                        $29.99
                     </div>
-                </div>
-                <div class="footer-col">
-                    <h4>Marketplace</h4>
-                    <ul>
-                        <li><a href="#">PC Games</a></li>
-                        <li><a href="#">Xbox Games</a></li>
-                        <li><a href="#">PlayStation Games</a></li>
-                        <li><a href="#">Nintendo Games</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Support</h4>
-                    <ul>
-                        <li><a href="#">Help Center</a></li>
-                        <li><a href="#">How to activate</a></li>
-                        <li><a href="#">Sell on GameKey</a></li>
-                        <li><a href="#">Contact Us</a></li>
-                    </ul>
-                </div>
-                <div class="footer-col">
-                    <h4>Legal</h4>
-                    <ul>
-                        <li><a href="#">Terms of Service</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Cookie Policy</a></li>
-                    </ul>
+                    <button class="buy-btn" onclick="addToCart()">Add to Cart</button>
                 </div>
             </div>
-            <div style="text-align: center; margin-top: 3rem; padding-top: 2rem; border-top: 1px solid var(--border); color: var(--text-secondary); font-size: 0.85rem;">
-                &copy; 2023 GameKey Market. All rights reserved. This is a demo template.
+
+            <div class="product-card">
+                <div class="product-image">⚽</div>
+                <div class="product-info">
+                    <span class="discount">-40%</span>
+                    <div class="product-title">FC 24 (FIFA)</div>
+                    <div class="price">
+                        <span class="old-price">$69.99</span>
+                        $41.99
+                    </div>
+                    <button class="buy-btn" onclick="addToCart()">Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-image">🚗</div>
+                <div class="product-info">
+                    <span class="discount">-50%</span>
+                    <div class="product-title">GTA V Premium</div>
+                    <div class="price">
+                        <span class="old-price">$29.99</span>
+                        $14.99
+                    </div>
+                    <button class="buy-btn" onclick="addToCart()">Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-image">🗡️</div>
+                <div class="product-info">
+                    <span class="discount">-30%</span>
+                    <div class="product-title">God of War</div>
+                    <div class="price">
+                        <span class="old-price">$49.99</span>
+                        $34.99
+                    </div>
+                    <button class="buy-btn" onclick="addToCart()">Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-image">🤖</div>
+                <div class="product-info">
+                    <span class="discount">-50%</span>
+                    <div class="product-title">Cyberpunk 2077</div>
+                    <div class="price">
+                        <span class="old-price">$59.99</span>
+                        $29.99
+                    </div>
+                    <button class="buy-btn" onclick="addToCart()">Add to Cart</button>
+                </div>
+            </div>
+
+            <div class="product-card">
+                <div class="product-image">⛏️</div>
+                <div class="product-info">
+                    <span class="discount">-25%</span>
+                    <div class="product-title">Minecraft</div>
+                    <div class="price">
+                        <span class="old-price">$26.95</span>
+                        $20.21
+                    </div>
+                    <button class="buy-btn" onclick="addToCart()">Add to Cart</button>
+                </div>
             </div>
         </div>
-    </footer>
+    </div>
 
-    <!-- JavaScript for Interactivity -->
     <script>
-        // Mock Data for Products
-        const products = [
-            { id: 1, title: "Elden Ring", platform: "pc", platformIcon: "fa-windows", oldPrice: 59.99, newPrice: 29.99, discount: "-50%", image: "https://placehold.co/300x400/1a1d24/ff6b00?text=Elden+Ring" },
-            { id: 2, title: "FIFA 24 (FC 24)", platform: "xbox", platformIcon: "fa-xbox", oldPrice: 69.99, newPrice: 34.99, discount: "-50%", image: "https://placehold.co/300x400/1a1d24/00d084?text=FC+24" },
-            { id: 3, title: "Grand Theft Auto V", platform: "pc", platformIcon: "fa-windows", oldPrice: 29.99, newPrice: 14.99, discount: "-50%", image: "https://placehold.co/300x400/1a1d24/ffffff?text=GTA+V" },
-            { id: 4, title: "The Legend of Zelda: TOTK", platform: "nintendo", platformIcon: "fa-gamepad", oldPrice: 59.99, newPrice: 54.99, discount: "-8%", image: "https://placehold.co/300x400/1a1d24/ff0000?text=Zelda+TOTK" },
-            { id: 5, title: "Windows 11 Pro Key", platform: "software", platformIcon: "fa-microsoft", oldPrice: 199.99, newPrice: 19.99, discount: "-90%", image: "https://placehold.co/300x400/1a1d24/0078d4?text=Windows+11" },
-            { id: 6, title: "God of War Ragnarök", platform: "playstation", platformIcon: "fa-playstation", oldPrice: 69.99, newPrice: 49.99, discount: "-28%", image: "https://placehold.co/300x400/1a1d24/003087?text=God+of+War" },
-            { id: 7, title: "Cyberpunk 2077", platform: "pc", platformIcon: "fa-windows", oldPrice: 59.99, newPrice: 29.99, discount: "-50%", image: "https://placehold.co/300x400/1a1d24/fcee0a?text=Cyberpunk" },
-            { id: 8, title: "Minecraft Java & Bedrock", platform: "pc", platformIcon: "fa-windows", oldPrice: 29.99, newPrice: 19.99, discount: "-33%", image: "https://placehold.co/300x400/1a1d24/5D8C3A?text=Minecraft" }
-        ];
-
         let cartCount = 0;
-        const productGrid = document.getElementById('productGrid');
-        const cartCountEl = document.getElementById('cartCount');
-        const searchInput = document.getElementById('searchInput');
 
-        // Function to render products
-        function renderProducts(items) {
-            productGrid.innerHTML = '';
-            items.forEach(product => {
-                const card = document.createElement('div');
-                card.className = 'product-card';
-                card.innerHTML = `
-                    <span class="discount-badge">${product.discount}</span>
-                    <img src="${product.image}" alt="${product.title}" class="product-image">
-                    <div class="product-info">
-                        <div class="platform-icon">
-                            <i class="fa-brands ${product.platformIcon}"></i> ${product.platform.toUpperCase()}
-                        </div>
-                        <h3 class="product-title">${product.title}</h3>
-                        <div class="price-wrapper">
-                            <span class="old-price">$${product.oldPrice}</span>
-                            <span class="new-price">$${product.newPrice}</span>
-                        </div>
-                        <button class="add-to-cart" onclick="addToCart()">
-                            <i class="fa-solid fa-cart-plus"></i> Add to Cart
-                        </button>
-                    </div>
-                `;
-                productGrid.appendChild(card);
-            });
-        }
-
-        // Initial Render
-        renderProducts(products);
-
-        // Add to Cart Functionality
         function addToCart() {
             cartCount++;
-            cartCountEl.textContent = cartCount;
-            // Simple animation feedback
-            cartCountEl.style.transform = "scale(1.5)";
-            setTimeout(() => { cartCountEl.style.transform = "scale(1)"; }, 200);
+            alert('Added to cart! Total items: ' + cartCount);
         }
 
-        // Search Functionality
-        searchInput.addEventListener('input', (e) => {
+        document.getElementById('searchBox').addEventListener('input', function(e) {
             const searchTerm = e.target.value.toLowerCase();
-            const filtered = products.filter(p => p.title.toLowerCase().includes(searchTerm));
-            renderProducts(filtered);
+            const cards = document.querySelectorAll('.product-card');
+            
+            cards.forEach(card => {
+                const title = card.querySelector('.product-title').textContent.toLowerCase();
+                if (title.includes(searchTerm)) {
+                    card.style.display = 'block';
+                } else {
+                    card.style.display = 'none';
+                }
+            });
         });
-
-        // Category Filter Functionality
-        function filterCategory(category) {
-            // Update active pill UI
-            document.querySelectorAll('.category-pill').forEach(pill => pill.classList.remove('active'));
-            event.target.closest('.category-pill').classList.add('active');
-
-            if (category === 'all') {
-                renderProducts(products);
-            } else {
-                const filtered = products.filter(p => p.platform === category);
-                renderProducts(filtered);
-            }
-        }
     </script>
 </body>
 </html>
