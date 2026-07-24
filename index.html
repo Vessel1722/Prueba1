@@ -25202,7 +25202,7 @@ else init();
      las ventanas del sitio (no solo el modal de producto).
      ════════════════════════════════════════════════════════════════ -->
 <style id="vg-body-scroll-lock-css">
-body.vg-modal-open-lock{ overflow:hidden !important; }
+html.vg-modal-open-lock, body.vg-modal-open-lock{ overflow:hidden !important; height:100% !important; }
 </style>
 <script id="vg-body-scroll-lock-v106">
 (function(){
@@ -25215,6 +25215,7 @@ var SELECTOR = '.modal.active, .cart.active, #retroModal.active, #vg10Auth.activ
 function sync(){
   var anyOpen = !!document.querySelector(SELECTOR);
   document.body.classList.toggle('vg-modal-open-lock', anyOpen);
+  document.documentElement.classList.toggle('vg-modal-open-lock', anyOpen);
 }
 
 function init(){
