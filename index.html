@@ -24973,6 +24973,10 @@ async function renderOfferAdmin(){
     var packages = collectPkgs().filter(function(p){return p.name && p.name.trim();});
     if(active && !title){ setMsg('Escribe un título para activar la oferta.'); return; }
     if(active && !packages.length){ setMsg('Agrega al menos un paquete con nombre.'); return; }
+    if(!active && (title || packages.length)){
+      var seguir = confirm('La casilla "Oferta personalizada ACTIVA" está SIN marcar.\n\nSi guardas así, tus cambios se guardan pero la tienda seguirá mostrando la oferta original de Free Fire (no se verá lo que acabas de escribir).\n\n¿Quieres marcarla como ACTIVA y guardar ahora?\n\nAceptar = activar y guardar · Cancelar = guardar sin activar (solo como borrador)');
+      if(seguir){ qs('#ofActive',form).checked = true; active = true; }
+    }
     var payload = {
       id:'main', title:title, subtitle:(qs('#ofSubtitle',form).value||'').trim(),
       image:(qs('#ofImage',form).value||'').trim(), badge_text:(qs('#ofBadge',form).value||'OFERTAS').trim(),
@@ -24983,7 +24987,12 @@ async function renderOfferAdmin(){
     try{
       var res = await client.from('hero_offer').upsert(payload,{onConflict:'id'});
       if(res.error){ setMsg('Error: '+res.error.message); return; }
-      setMsg('Guardado. Ya se aplicó en la tienda.', true);
+      var liveStatus = qs('#vgOfferLiveStatus',form);
+      if(liveStatus){
+        if(active){ liveStatus.style.color='#34d399'; liveStatus.innerHTML='<b>✓ Actualmente VISIBLE en la tienda.</b>'; }
+        else{ liveStatus.style.color='#fb7185'; liveStatus.innerHTML='<b>✕ Actualmente OCULTA — se está mostrando la oferta original de Free Fire.</b>'; }
+      }
+      setMsg(active ? 'Guardado y ACTIVADO. Ya se muestra en la tienda.' : 'Guardado como borrador (sin publicar).', true);
       renderStorefrontOffer();
     }catch(e){ setMsg('Error: '+(e.message||e)); }
   };
