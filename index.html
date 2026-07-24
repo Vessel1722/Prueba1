@@ -32,6 +32,19 @@
 <script id="vg-supabase-public-config-v42">
   window.VG_SUPABASE_URL = "https://qlczzaajxvvkyuqqdjmu.supabase.co";
   window.VG_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY3p6YWFqeHZ2a3l1cXFkam11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MDY4OTMsImV4cCI6MjA5NDk4Mjg5M30.p5A25H8epCHRmxHQjuMWa1iO_4Qqg5w0aCrlI-Ehjhc";
+  /* GUARDIA: mucho código viejo del panel admin lee una config guardada en
+     localStorage ('vg_supabase_cfg_v1') ANTES de usar las credenciales de
+     arriba. Si ahí quedó una URL vieja/de pruebas, TODO el sitio se conecta
+     en silencio a la conexión equivocada (guarda "bien" pero no aparece
+     nunca, o lee datos de otro lado). Si lo guardado no coincide con la
+     URL real del proyecto, lo borramos para forzar la conexión correcta. */
+  try{
+    var __vgSbCfg = JSON.parse(localStorage.getItem('vg_supabase_cfg_v1') || 'null');
+    if(__vgSbCfg && __vgSbCfg.url && __vgSbCfg.url !== window.VG_SUPABASE_URL){
+      localStorage.removeItem('vg_supabase_cfg_v1');
+      console.warn('[Vessel] Se encontró una configuración de Supabase distinta a la actual y se eliminó automáticamente.');
+    }
+  }catch(e){ try{ localStorage.removeItem('vg_supabase_cfg_v1'); }catch(e2){} }
 </script>
 <script id="vg-admin-auth-config-v52">
 /* SEGURIDAD: las credenciales de admin YA NO viven en el HTML.
@@ -15522,69 +15535,6 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 </div>
 </div>
 </section>
-<section class="vg-admin-section" id="vgAdminUsuarios">
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;align-items:center">
-<span style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.10em;color:#8b93b0;flex:1">Usuarios &amp; Tokens</span>
-<input class="vg-admin-input" id="vgUserSearch" oninput="vgFilterUsers()" placeholder="Buscar por nombre o tel..." style="width:200px;height:34px"/>
-<button class="vg-notif-btn" onclick="vgLoadUsers()">Actualizar</button>
-<button class="vg-csv-btn" onclick="vgExportUsersCSV()">Exportar CSV</button>
-</div>
-<div id="vgUsersStats" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px"></div>
-<!-- Redemptions pending -->
-<div id="vgPendingRedemptions" style="margin-bottom:16px;display:none">
-<h4 style="font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:#d6a84f;margin:0 0 8px">Canjes Pendientes</h4>
-<div id="vgPendingRedList"></div>
-</div>
-<div style="overflow-x:auto">
-<table class="vg-users-table" id="vgUsersTable">
-<thead>
-<tr>
-<th>Usuario</th><th>Telf</th><th>Tokens</th><th>Compras</th><th>Referidos</th><th>Registro</th><th>Ajustar Tokens</th>
-</tr>
-</thead>
-<tbody id="vgUsersTbody"><tr><td colspan="7" style="color:#5a6180;text-align:center;padding:28px">Carga los usuarios con el botón Actualizar</td></tr></tbody>
-</table>
-</div>
-<!-- SQL Setup -->
-<div style="margin-top:28px">
-<h4 style="font-size:.74rem;letter-spacing:.12em;text-transform:uppercase;color:#8b93b0;margin:0 0 8px">Setup — SQL para Supabase</h4>
-<button class="vg-dash-btn" onclick="navigator.clipboard.writeText(document.getElementById('vgSqlSchema').textContent);this.textContent='Copiado!'">Copiar SQL</button>
-<pre class="vg-admin-setup-sql" id="vgSqlSchema">-- Ejecuta esto en Supabase SQL Editor
-CREATE TABLE IF NOT EXISTS vg_users (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  name TEXT NOT NULL,
-  phone TEXT UNIQUE NOT NULL,
-  tokens NUMERIC(10,1) DEFAULT 0,
-  total_purchases INTEGER DEFAULT 0,
-  referral_code TEXT UNIQUE DEFAULT upper(substring(replace(gen_random_uuid()::text,'-',''),1,8)),
-  referred_by TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE TABLE IF NOT EXISTS vg_token_log (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES vg_users(id) ON DELETE CASCADE,
-  amount NUMERIC(10,1) NOT NULL,
-  type TEXT NOT NULL,
-  description TEXT,
-  order_id TEXT,
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-CREATE TABLE IF NOT EXISTS vg_redemptions (
-  id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
-  user_id UUID REFERENCES vg_users(id) ON DELETE CASCADE,
-  service TEXT NOT NULL,
-  tokens_cost INTEGER NOT NULL,
-  status TEXT DEFAULT 'pending',
-  created_at TIMESTAMPTZ DEFAULT NOW()
-);
-ALTER TABLE vg_users ENABLE ROW LEVEL SECURITY;
-ALTER TABLE vg_token_log ENABLE ROW LEVEL SECURITY;
-ALTER TABLE vg_redemptions ENABLE ROW LEVEL SECURITY;
-CREATE POLICY IF NOT EXISTS anon_all_users ON vg_users FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS anon_all_log ON vg_token_log FOR ALL TO anon USING (true) WITH CHECK (true);
-CREATE POLICY IF NOT EXISTS anon_all_red ON vg_redemptions FOR ALL TO anon USING (true) WITH CHECK (true);</pre>
-</div>
-</section>
 <section class="vg-admin-section active" id="vgAdminOrders">
 <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
 <span style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.10em;color:#8b93b0;flex:1">Gestión de compras</span>
@@ -17939,11 +17889,13 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   async function fetchProductOverrides(silent){
     var client = getSB();
     if(!client){
+      console.error('[Vessel/Artículos] Supabase no configurado al leer products_admin.');
       if(!silent) renderAdminProducts('Supabase no está configurado. Aun así cargué el catálogo base para que puedas verlo.', true);
       return {ok:false,message:'Sin Supabase'};
     }
     var res = await client.from('products_admin').select('*');
     if(res.error){
+      console.error('[Vessel/Artículos] Error leyendo products_admin (por eso los precios editados no aparecen):', res.error);
       if(!silent) renderAdminProducts('No pude leer products_admin: ' + res.error.message + '. Cargué el catálogo base para que no se quede vacío.', true);
       return {ok:false,message:res.error.message};
     }
@@ -21819,7 +21771,7 @@ window.vgExportUsersCSV = function(){
 /* Admin tab hook for Usuarios */
 document.addEventListener('click', function(e){
   var btn = e.target.closest && e.target.closest('.vg-admin-tab');
-  if(btn && btn.dataset.tab==='usuarios') setTimeout(vgLoadUsers, 100);
+  if(btn && btn.dataset.tab==='usuarios' && typeof window.vgAdminLoadUsers==='function') setTimeout(window.vgAdminLoadUsers, 100);
 });
 
 /* ─── INIT ───────────────────────────────────────────────── */
@@ -21961,7 +21913,7 @@ window.addEventListener('popstate',function(){
 /* ── ADMIN USERS AUTO-LOAD ── */
 document.addEventListener('click',function(e){
   var btn=e.target.closest&&e.target.closest('.vg-admin-tab');
-  if(btn&&btn.dataset.tab==='usuarios')setTimeout(function(){if(typeof window.vgLoadUsers==='function')window.vgLoadUsers();},120);
+  if(btn&&btn.dataset.tab==='usuarios')setTimeout(function(){if(typeof window.vgAdminLoadUsers==='function')window.vgAdminLoadUsers();},120);
 });
 
 })();
@@ -24056,6 +24008,11 @@ async function createOrder(){var c=sb(); if(!c)throw new Error('Supabase no conf
 window.sendPaymentWhatsApp=async function(){var btn=document.activeElement;if(btn)btn.classList.add('vg10-loading'); try{var o=await createOrder(); await sendMessage(orderId(o),'system','Pedido recibido.\n'+orderItemsText(o)+'\nTotal: '+money(orderTotal(o))); qs('#paymentModal')&&qs('#paymentModal').classList.remove('active'); showOrderSuccess(o); if(window.cart&&Array.isArray(window.cart)){window.cart.length=0;try{window.updateCartCount&&window.updateCartCount()}catch(e){}}}catch(e){console.error(e);alert('No se pudo crear el pedido: '+(e.message||e))}finally{if(btn)btn.classList.remove('vg10-loading')}};
 function showOrderSuccess(o){var box=qs('#vg10OrderSuccess'); qs('#vg10OrderSuccessText').textContent='Pedido #'+orderId(o)+' registrado. Te avisaremos cuando soporte responda.'; qs('#vg10GoPurchases').onclick=function(){box.classList.remove('active');openClientPanel('purchases')}; qs('#vg10KeepBrowsing').onclick=function(){box.classList.remove('active')}; box.classList.add('active')}
 function patchButtons(){qsa('button').forEach(function(b){var t=(b.textContent||'').toLowerCase(); if(t.indexOf('activar sonido')>-1||t.indexOf('sonido')>-1)b.style.display='none'; if(t.indexOf('confirmar')>-1&&t.indexOf('comprobante')>-1)b.textContent='✅ Confirmar pedido';}); ensurePaymentUI()}
+/* Guardamos el panel admin "clásico" (Usuarios/Dashboard/Compras/Artículos/etc.)
+   ANTES de que este bloque lo reemplace por el panel v10 minimalista. Así el
+   candado de seguridad (Fase 2, al final del archivo) puede seguir abriendo
+   el panel clásico en vez del simplificado. */
+if(typeof window.vgAdminOpen === 'function') window.__vgClassicAdminOpen = window.vgAdminOpen;
 window.vgAdminOpen=openAdminPanel; window.openDashboard=function(){openClientPanel('dashboard')}; window.vgProOpen=function(){openClientPanel('dashboard')}; window.vgOpenClientPanel=openClientPanel;
 document.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('#vg-account-btn,.vg-account-btn,[data-vg-account]'); if(a){ev.preventDefault();ev.stopImmediatePropagation(); if(session())openClientPanel('dashboard'); else openAuth()}},true);
 document.addEventListener('DOMContentLoaded',function(){qs('#vg10LoginBtn').onclick=function(){auth('login')};qs('#vg10RegBtn').onclick=function(){auth('register')}; patchButtons(); updateAccountBadge(); setInterval(patchButtons,2000); startClientPolling()});
@@ -24390,8 +24347,13 @@ else init();
 'use strict';
 if(window.__VG_ADMIN_V101__) return; window.__VG_ADMIN_V101__ = true;
 
-/* Captura el abridor real del panel admin (v10) tal como está ahora */
-var _openPanel = (typeof window.vgAdminOpen === 'function') ? window.vgAdminOpen : null;
+/* Preferimos el panel admin CLÁSICO (Usuarios/Dashboard/Compras/Artículos/
+   Reviews/Retro/etc.) que quedó guardado en window.__vgClassicAdminOpen antes
+   de que el bloque v10 lo reemplazara por el panel minimalista. Si por algún
+   motivo no existe, usamos el que esté activo (v10) como respaldo. */
+var _openPanel = (typeof window.__vgClassicAdminOpen === 'function')
+  ? window.__vgClassicAdminOpen
+  : ((typeof window.vgAdminOpen === 'function') ? window.vgAdminOpen : null);
 
 async function isAdmin(){
   var c = (typeof window.vgGetSB === 'function') ? window.vgGetSB() : null;
@@ -24696,8 +24658,18 @@ async function deleteProduct(id){
   await loadCatalog();
 }
 
-/* ── Botón "📦 Catálogo" dentro del panel admin (v10) ── */
+/* ── Botón "📦 Catálogo" dentro del panel admin (clásico y/o v10) ── */
 function injectCatalogButton(){
+  /* Panel clásico (#vgAdminModal): pestaña más, mismo estilo que las demás */
+  var classicTabs = qs('#vgAdminModal .vg-admin-tabs');
+  if(classicTabs && !qs('#vgCatAdminTab', classicTabs)){
+    var t = document.createElement('button');
+    t.id = 'vgCatAdminTab'; t.className = 'vg-admin-tab'; t.type = 'button';
+    t.textContent = '📦 Catálogo';
+    t.onclick = function(e){ e.preventDefault(); e.stopPropagation(); openCatAdmin(); };
+    classicTabs.appendChild(t);
+  }
+  /* Panel v10 (por si sigue en uso como respaldo) */
   var tabs = qs('#vg10AdminPanel .vg10-admin-tabs');
   if(tabs && !qs('#vgCatAdminBtn', tabs)){
     var b = document.createElement('button');
@@ -24710,8 +24682,10 @@ function injectCatalogButton(){
 var catObs = new MutationObserver(injectCatalogButton);
 
 function init(){
-  var p = qs('#vg10AdminPanel');
-  if(p) catObs.observe(p, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+  var p1 = qs('#vgAdminModal');
+  if(p1) catObs.observe(p1, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+  var p2 = qs('#vg10AdminPanel');
+  if(p2) catObs.observe(p2, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
   /* cargar catálogo desde Supabase tras un momento (deja que el resto cargue) */
   setTimeout(loadCatalog, 600);
 }
@@ -24786,6 +24760,264 @@ else init();
   #vg10Auth .vg10-auth-card,#vgCatAdmin .vgcat-wrap{max-height:92vh;overflow:auto}
 }
 </style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 5 — OFERTA PRINCIPAL EDITABLE (banner grande "Ofertas de la
+     semana"). Reemplaza el contenido fijo de Free Fire por lo que el
+     admin configure: título, imagen, paquetes y precios. Si no hay
+     nada configurado (o está desactivada), se deja la oferta original
+     tal cual, sin romper nada.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-offer-editor-css">
+#vgOfferAdminSection .vgoffer-form{display:grid;gap:12px;max-width:720px}
+#vgOfferAdminSection label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#8b93b0;display:block;margin-bottom:4px}
+#vgOfferAdminModal{position:fixed;inset:0;z-index:1000003;background:rgba(2,6,23,.92);backdrop-filter:blur(12px);display:none;padding:16px;overflow:auto;color:#f1f5f9;font-family:Inter,system-ui,sans-serif}
+#vgOfferAdminModal.active{display:block}
+.vgoffer-wrap{max-width:760px;margin:0 auto;background:#0b1424;border:1px solid rgba(148,163,184,.2);border-radius:22px;padding:20px;box-shadow:0 30px 90px rgba(0,0,0,.6)}
+.vgoffer-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px}
+.vgoffer-head h2{margin:0;font-size:20px}
+.vgoffer-form{display:grid;gap:12px}
+.vgoffer-form label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#8b93b0;display:block;margin-bottom:4px}
+.vgoffer-form input,.vgoffer-form textarea{width:100%;border:1px solid rgba(255,255,255,.14);background:#0f1420;color:#fff;border-radius:12px;padding:11px 12px;font-size:14px;font-family:inherit}
+.vgoffer-form textarea{resize:vertical}
+.vgoffer-grid2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.vgoffer-pkg-row{display:grid;grid-template-columns:1fr 130px auto;gap:8px;margin-bottom:8px;align-items:center}
+.vgoffer-preview{width:100%;max-width:280px;height:150px;object-fit:cover;border-radius:14px;background:#0a0e18;border:1px solid rgba(255,255,255,.12);margin-top:6px}
+.vgoffer-status{font-weight:800;font-size:13px;min-height:20px}
+@media(max-width:640px){.vgoffer-grid2{grid-template-columns:1fr}.vgoffer-pkg-row{grid-template-columns:1fr 90px auto}.vgoffer-wrap{padding:14px}}
+</style>
+<div id="vgOfferAdminModal"><div class="vgoffer-wrap">
+  <div class="vgoffer-head"><h2>🎯 Oferta principal</h2><button class="vg-admin-btn" type="button" id="vgOfferCloseBtn">Cerrar</button></div>
+  <div class="vgoffer-form" id="vgOfferFormWrap"></div>
+</div></div>
+<script id="vg-offer-editor-v104">
+(function(){
+'use strict';
+if(window.__VG_OFFER_V104__) return; window.__VG_OFFER_V104__ = true;
+
+var qs = function(s,r){return (r||document).querySelector(s);};
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
+function money(n){return '$'+Number(n||0).toLocaleString('es-MX')+' MXN';}
+function SB(){
+  if(typeof window.vgGetSB==='function'){ var c=window.vgGetSB(); if(c) return c; }
+  try{
+    if(window.supabase && window.VG_SUPABASE_URL && window.VG_SUPABASE_ANON_KEY){
+      window.__vgOfferSB = window.__vgOfferSB || window.supabase.createClient(window.VG_SUPABASE_URL, window.VG_SUPABASE_ANON_KEY);
+      return window.__vgOfferSB;
+    }
+  }catch(e){}
+  return null;
+}
+
+/* ═══ Render en la tienda (pública) ═══ */
+var WHATSAPP_NUMBER = '526611078412';
+
+async function renderStorefrontOffer(){
+  var c = SB(); if(!c) return;
+  var root = document.getElementById('offersShowcase');
+  if(!root) return;
+  var res;
+  try{ res = await c.from('hero_offer').select('*').eq('id','main').maybeSingle(); }catch(e){ return; }
+  if(!res || res.error || !res.data || !res.data.active) return; /* sin oferta custom → se deja la original */
+  var o = res.data;
+  var packages = Array.isArray(o.packages) ? o.packages.filter(function(p){return p && p.name;}) : [];
+  if(!packages.length) return;
+
+  var selected = 0;
+  function pkgHTML(){
+    return packages.map(function(p,i){
+      return '<button type="button" class="ff-only-package '+(i===selected?'active':'')+'" data-i="'+i+'">' +
+        '<strong>'+esc(p.name)+'</strong><small>Selecciona para comprar</small><em>'+money(p.price)+'</em>' +
+      '</button>';
+    }).join('');
+  }
+
+  root.setAttribute('data-ff-only-ready','1');
+  root.innerHTML =
+    '<div class="offers-head"><div>' +
+      '<span class="badge ff-offer-badge-animated">'+esc(o.badge_text||'OFERTAS')+'</span>' +
+      '<h2 class="ff-week-title">'+esc(o.title||'OFERTA ESPECIAL')+'</h2>' +
+    '</div><div class="offer-chip">PROMOS DESTACADAS Y VISIBLES</div></div>' +
+    '<article class="offer-card"><div class="ff-only-wrapper">' +
+      '<div class="ff-only-media"><img src="'+esc(o.image||'portada.png')+'" alt="'+esc(o.title||'Oferta')+'" referrerpolicy="no-referrer" onerror="this.src=\'portada.png\'">' +
+        '<div class="ff-media-caption"><b>'+esc(o.title||'')+'</b><span>'+esc(o.subtitle||'')+'</span></div>' +
+      '</div>' +
+      '<div class="ff-only-body">' +
+        '<div class="ff-only-title-row"><div><h3>'+esc(o.title||'')+'</h3><p>'+esc(o.subtitle||'')+'</p></div></div>' +
+        '<div class="ff-only-packages" id="vgOfferPackages">'+pkgHTML()+'</div>' +
+        '<div class="ff-purchase-box"><div class="ff-purchase-meta">' +
+          '<div><span>Paquete</span><b id="vgOfferSelectedName">'+esc(packages[0].name)+'</b></div>' +
+          '<div class="ff-total"><span>Total</span><b id="vgOfferSelectedPrice">'+money(packages[0].price)+'</b></div>' +
+        '</div><div class="ff-only-actions">' +
+          '<button class="ff-offer-btn" id="vgOfferBuyBtn">Comprar esta oferta</button>' +
+        '</div></div>' +
+        (o.note ? '<div class="ff-info-note">'+esc(o.note)+'</div>' : '') +
+      '</div>' +
+    '</div></article>';
+
+  function bind(){
+    var wrap = qs('#vgOfferPackages', root);
+    if(wrap) wrap.querySelectorAll('.ff-only-package').forEach(function(btn){
+      btn.onclick = function(){
+        selected = Number(btn.getAttribute('data-i'))||0;
+        wrap.innerHTML = pkgHTML();
+        bind();
+        var nEl=qs('#vgOfferSelectedName',root), pEl=qs('#vgOfferSelectedPrice',root);
+        if(nEl) nEl.textContent = packages[selected].name;
+        if(pEl) pEl.textContent = money(packages[selected].price);
+      };
+    });
+    var buy = qs('#vgOfferBuyBtn', root);
+    if(buy) buy.onclick = function(){
+      var p = packages[selected];
+      var msg = 'Hola, quiero la oferta "'+(o.title||'')+'": '+p.name+' por '+money(p.price)+'.';
+      window.open('https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(msg), '_blank');
+    };
+  }
+  bind();
+}
+
+/* ═══ Panel admin: editor ═══ */
+function packageRowHTML(p,i){
+  return '<div class="vgoffer-pkg-row">' +
+    '<input placeholder="Nombre del paquete" data-pn="'+i+'" value="'+esc(p&&p.name||'')+'">' +
+    '<input type="number" placeholder="Precio" data-pp="'+i+'" value="'+Number(p&&p.price||0)+'">' +
+    '<button class="vg-admin-btn danger" type="button" data-prm="'+i+'">✕</button>' +
+  '</div>';
+}
+
+async function renderOfferAdmin(){
+  var sec = qs('#vgOfferFormWrap');
+  if(!sec) return;
+  sec.innerHTML = '<div class="vgoffer-status" id="vgOfferMsg">Cargando...</div>';
+  var c = SB();
+  var current = {title:'',subtitle:'',image:'',badge_text:'OFERTAS',note:'',packages:[{name:'',price:0}],active:false};
+  if(c){
+    try{
+      var res = await c.from('hero_offer').select('*').eq('id','main').maybeSingle();
+      if(res && res.data) current = Object.assign(current, res.data);
+    }catch(e){}
+  }
+  if(!Array.isArray(current.packages) || !current.packages.length) current.packages = [{name:'',price:0}];
+
+  var form = sec;
+  form.innerHTML =
+    '<div class="vgoffer-status" id="vgOfferMsg"></div>' +
+    '<div class="vg-admin-note">Esta oferta se muestra en el banner grande de "Ofertas especiales de la semana" en el inicio. Si la desactivas, vuelve a mostrarse la oferta original de Diamantes Free Fire.</div>' +
+    '<label><input type="checkbox" id="ofActive" '+(current.active?'checked':'')+'> Oferta personalizada ACTIVA (si está sin marcar, se ve la oferta original)</label>' +
+    '<div><label>Título grande</label><input id="ofTitle" value="'+esc(current.title)+'" placeholder="Ej: OFERTA DE ROBUX PARA ROBLOX"></div>' +
+    '<div><label>Subtítulo / descripción</label><textarea id="ofSubtitle" rows="2" placeholder="Texto corto debajo del título">'+esc(current.subtitle)+'</textarea></div>' +
+    '<div class="vgoffer-grid2">' +
+      '<div><label>Imagen (URL)</label><input id="ofImage" value="'+esc(current.image)+'" placeholder="https://..."><img class="vgoffer-preview" id="ofImgPreview" src="'+esc(current.image||'portada.png')+'" onerror="this.style.display=\'none\'"></div>' +
+      '<div><label>Etiqueta (badge)</label><input id="ofBadge" value="'+esc(current.badge_text||'OFERTAS')+'" placeholder="OFERTAS"></div>' +
+    '</div>' +
+    '<div><label>Paquetes y precios</label><div id="ofPackages"></div><button class="vg-admin-btn" type="button" id="ofAddPkg">+ Agregar paquete</button></div>' +
+    '<div><label>Nota final (opcional)</label><textarea id="ofNote" rows="2" placeholder="Ej: Si buscas otra cantidad, cotízala por privado.">'+esc(current.note)+'</textarea></div>' +
+    '<div style="display:flex;gap:10px;flex-wrap:wrap">' +
+      '<button class="vg-admin-btn primary" type="button" id="ofSave">Guardar oferta</button>' +
+      '<button class="vg-admin-btn danger" type="button" id="ofReset">Restablecer oferta original (Free Fire)</button>' +
+    '</div>';
+
+  var pkgWrap = qs('#ofPackages', form);
+  function renderPkgs(list){
+    pkgWrap.innerHTML = list.map(packageRowHTML).join('');
+    pkgWrap.querySelectorAll('[data-prm]').forEach(function(b){
+      b.onclick = function(){ var arr=collectPkgs(); arr.splice(Number(b.getAttribute('data-prm')),1); if(!arr.length)arr=[{name:'',price:0}]; renderPkgs(arr); };
+    });
+  }
+  function collectPkgs(){
+    var arr=[];
+    pkgWrap.querySelectorAll('[data-pn]').forEach(function(inp){
+      var i=inp.getAttribute('data-pn'); var pr=pkgWrap.querySelector('[data-pp="'+i+'"]');
+      arr.push({name:inp.value||'', price:Number(pr&&pr.value||0)});
+    });
+    return arr;
+  }
+  renderPkgs(current.packages);
+  qs('#ofAddPkg',form).onclick = function(){ var arr=collectPkgs(); arr.push({name:'',price:0}); renderPkgs(arr); };
+  qs('#ofImage',form).addEventListener('input', function(){ var img=qs('#ofImgPreview',form); if(img){ img.style.display=''; img.src=this.value||'portada.png'; } });
+
+  function setMsg(t,ok){ var m=qs('#vgOfferMsg',form); if(m){ m.textContent=t; m.style.color=ok?'#34d399':'#fb7185'; } }
+
+  qs('#ofSave',form).onclick = async function(){
+    var client = SB(); if(!client){ setMsg('Sin conexión con Supabase.'); return; }
+    var title = (qs('#ofTitle',form).value||'').trim();
+    var active = qs('#ofActive',form).checked;
+    var packages = collectPkgs().filter(function(p){return p.name && p.name.trim();});
+    if(active && !title){ setMsg('Escribe un título para activar la oferta.'); return; }
+    if(active && !packages.length){ setMsg('Agrega al menos un paquete con nombre.'); return; }
+    var payload = {
+      id:'main', title:title, subtitle:(qs('#ofSubtitle',form).value||'').trim(),
+      image:(qs('#ofImage',form).value||'').trim(), badge_text:(qs('#ofBadge',form).value||'OFERTAS').trim(),
+      note:(qs('#ofNote',form).value||'').trim(), packages:packages, active:active,
+      updated_at:new Date().toISOString()
+    };
+    setMsg('Guardando...', true);
+    try{
+      var res = await client.from('hero_offer').upsert(payload,{onConflict:'id'});
+      if(res.error){ setMsg('Error: '+res.error.message); return; }
+      setMsg('Guardado. Ya se aplicó en la tienda.', true);
+      renderStorefrontOffer();
+    }catch(e){ setMsg('Error: '+(e.message||e)); }
+  };
+
+  qs('#ofReset',form).onclick = async function(){
+    if(!confirm('¿Volver a la oferta original de Free Fire? Se borra tu oferta personalizada.')) return;
+    var client = SB(); if(!client){ setMsg('Sin conexión con Supabase.'); return; }
+    try{
+      var res = await client.from('hero_offer').upsert({id:'main', active:false, updated_at:new Date().toISOString()},{onConflict:'id'});
+      if(res.error){ setMsg('Error: '+res.error.message); return; }
+      location.reload();
+    }catch(e){ setMsg('Error: '+(e.message||e)); }
+  };
+}
+
+/* ═══ Botón "🎯 Oferta principal" → ventana propia (no pelea con bindTabs) ═══
+   Nota: el panel clásico tiene una función bindTabs() que reescribe el
+   onclick de TODOS los botones .vg-admin-tab esperando un data-tab que
+   arma el id de sección (#vgAdmin+Nombre). Para no depender de esa
+   convención (y por consistencia con el botón 📦 Catálogo), la oferta
+   vive en su propia ventana superpuesta, igual que el catálogo. */
+function injectOfferButton(){
+  var classicTabs = qs('#vgAdminModal .vg-admin-tabs');
+  if(classicTabs && !qs('#vgOfferAdminBtn', classicTabs)){
+    var t = document.createElement('button');
+    t.id = 'vgOfferAdminBtn'; t.className = 'vg-admin-tab'; t.type = 'button';
+    t.dataset.tab = '__offer_noop__'; /* evita el crash de bindTabs si algo lo reescribe */
+    t.textContent = '🎯 Oferta principal';
+    t.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); openOfferAdmin(); }, true);
+    classicTabs.appendChild(t);
+  }
+  var v10Tabs = qs('#vg10AdminPanel .vg10-admin-tabs');
+  if(v10Tabs && !qs('#vgOfferAdminBtnV10', v10Tabs)){
+    var b = document.createElement('button');
+    b.id = 'vgOfferAdminBtnV10'; b.className = 'vg10-btn'; b.type = 'button';
+    b.textContent = '🎯 Oferta principal';
+    b.onclick = openOfferAdmin;
+    v10Tabs.appendChild(b);
+  }
+}
+function openOfferAdmin(){
+  var m = qs('#vgOfferAdminModal');
+  if(m){ m.classList.add('active'); renderOfferAdmin(); }
+}
+var offerObs = new MutationObserver(injectOfferButton);
+
+function init(){
+  var p1 = qs('#vgAdminModal');
+  if(p1) offerObs.observe(p1, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+  var p2 = qs('#vg10AdminPanel');
+  if(p2) offerObs.observe(p2, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+  var closeBtn = qs('#vgOfferCloseBtn');
+  if(closeBtn) closeBtn.onclick = function(){ qs('#vgOfferAdminModal').classList.remove('active'); };
+  var modal = qs('#vgOfferAdminModal');
+  if(modal) modal.addEventListener('click', function(e){ if(e.target===modal) modal.classList.remove('active'); });
+  setTimeout(renderStorefrontOffer, 1200); /* tras el offer original para poder reemplazarlo */
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+})();
+</script>
 
 </body>
 </html>
