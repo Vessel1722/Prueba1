@@ -25228,5 +25228,28 @@ else init();
 })();
 </script>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 8 — La causa REAL de la barra de scroll "clásica"
+     Había una regla vieja (línea ~13606) que le ponía overflow-y:auto
+     a TODOS los hijos directos de .modal-body (el badge, el título, la
+     descripción, la nota de entrega, etc.) — no solo a las opciones.
+     Chrome dibuja la barra de scroll COMPLETA (con flechas, según el
+     tema de Windows) en cuanto hay aunque sea 1-2px de desborde por
+     redondeo de fuente — por eso el título "Netflix Nueva" mostraba
+     una barra aunque nunca tuviera nada que desplazar de verdad.
+     Se deja SOLO #modalOptions con scroll real; todo lo demás no lo
+     necesita y no debe poder mostrar barra alguna.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-modal-body-children-scroll-fix-v107">
+#productModal .modal-body > *{
+  overflow-y:visible !important;
+  overflow-x:visible !important;
+}
+#productModal #modalOptions{
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+}
+</style>
+
 </body>
 </html>
