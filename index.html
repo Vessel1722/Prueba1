@@ -24507,24 +24507,39 @@ async function loadCatalog(){
     if(!_dbRows.length) return; /* nada guardado en Supabase todavía → no tocar el catálogo */
 
     var arr = canonicalServices();
-    var byId = {};
-    arr.forEach(function(p){ byId[String(p.id)] = p; });
+    /* Índice por legacy_id (para productos migrados del catálogo original)
+       Y por _dbId (el id real de la fila en Supabase) — así, en la SEGUNDA
+       carga (esto se re-ejecuta cada vez que se guarda algo en el admin),
+       reconocemos productos NUEVOS que ya habíamos agregado antes y los
+       actualizamos en su lugar en vez de volver a agregarlos (eso era lo
+       que causaba los duplicados). */
+    var byLegacyId = {};
+    var byDbId = {};
+    arr.forEach(function(p){
+      byLegacyId[String(p.id)] = p;
+      if(p._dbId != null) byDbId[String(p._dbId)] = p;
+    });
+    var usados = {}; arr.forEach(function(p){ usados[p.id] = true; });
 
-    var nuevos = [];
     _dbRows.forEach(function(row, i){
       var mapped = mapRow(row, i);
-      var existing = row.legacy_id ? byId[String(row.legacy_id)] : null;
-      if(existing){
-        mapped.id = existing.id; /* conserva el id original */
-        Object.assign(existing, mapped);
+      var yaAgregado = byDbId[String(row.id)];
+      var migrado = (!yaAgregado && row.legacy_id) ? byLegacyId[String(row.legacy_id)] : null;
+
+      if(yaAgregado){
+        mapped.id = yaAgregado.id;
+        Object.assign(yaAgregado, mapped);
+      } else if(migrado){
+        mapped.id = migrado.id;
+        Object.assign(migrado, mapped);
+        byDbId[String(row.id)] = migrado;
       } else {
-        nuevos.push(mapped);
+        while(usados[mapped.id]){ mapped.id++; }
+        usados[mapped.id] = true;
+        arr.push(mapped);
+        byDbId[String(row.id)] = mapped;
       }
     });
-
-    /* evitar que un producto nuevo choque de id con uno existente */
-    var usados = {}; arr.forEach(function(p){ usados[p.id] = true; });
-    nuevos.forEach(function(p){ while(usados[p.id]){ p.id++; } usados[p.id] = true; arr.push(p); });
 
     window.SERVICES = arr; /* mismo array (por compatibilidad con otro código) */
     if(typeof window.renderProducts === 'function') window.renderProducts();
