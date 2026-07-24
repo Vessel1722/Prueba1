@@ -25165,11 +25165,25 @@ else init();
 .modal-body #modalCat{ margin-right:56px !important; max-width:calc(100% - 56px) !important; box-sizing:border-box !important; }
 .modal-body #modalTitle{ padding-right:56px !important; box-sizing:border-box !important; }
 
-/* Scroll delgado y discreto en la columna de info (evita la barra ancha) */
-.modal-info{ scrollbar-width:thin !important; scrollbar-color:rgba(255,255,255,.22) transparent !important; }
-.modal-info::-webkit-scrollbar{ width:6px !important; }
-.modal-info::-webkit-scrollbar-track{ background:transparent !important; }
-.modal-info::-webkit-scrollbar-thumb{ background:rgba(255,255,255,.22) !important; border-radius:999px !important; }
+/* OJO: la columna de info real usa la clase .modal-body (NO .modal-info,
+   esa clase no existe en el DOM). Ahí es donde se veía la barra de scroll
+   clásica de Windows. Además, otra regla más vieja del archivo le quitaba
+   el límite de altura a #modalOptions (max-height:none;overflow:visible),
+   así que en productos con varias opciones (ej. Servicio de SMS, 8
+   opciones) la lista se "derramaba" fuera de su caja y el diseño de abajo
+   (botones pegados al fondo) no se enteraba de cuánto espacio necesitaba
+   — quedaban encimados. Se restaura el scroll PROPIO de #modalOptions
+   (como ya funciona bien en Actas Gob) para que nunca se salga de su caja. */
+#productModal #modalOptions{
+  max-height:min(46vh,440px) !important;
+  overflow-y:auto !important;
+  overflow-x:hidden !important;
+  scrollbar-width:thin !important;
+  min-height:0 !important;
+}
+/* .modal-body conserva su propio scroll (overflow-y:auto) como red de
+   seguridad por si una descripción muy larga no cupiera ni así — pero
+   con #modalOptions ya acotado, en la práctica no debería necesitarse. */
 
 @media(max-width:760px){
   .modal-body > .x{ top:10px !important; right:10px !important; width:38px !important; height:38px !important; }
