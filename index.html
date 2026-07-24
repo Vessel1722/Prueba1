@@ -4997,6 +4997,11 @@ window.WHATSAPP_NUMBER = "526611078412";
   .vg-admin-tabs{display:flex;gap:8px;padding:12px 18px;border-bottom:1px solid rgba(255,255,255,.08);overflow-x:auto}
   .vg-admin-tab{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);color:#dbe4f8;border-radius:999px;padding:9px 13px;font-weight:950;font-size:.78rem;cursor:pointer;white-space:nowrap}
   .vg-admin-tab.active{background:linear-gradient(135deg,#8B5CF6,#19E6C1);color:#fff}
+  /* Botones propios (Catálogo / Oferta principal): mismo look que .vg-admin-tab
+     pero con OTRA clase a propósito, para que bindTabs() nunca los reescriba. */
+  .vg-admin-tab-x{border:1px solid rgba(139,92,246,.45);background:rgba(139,92,246,.16);color:#e9e4ff;border-radius:999px;padding:9px 13px;font-weight:950;font-size:.78rem;cursor:pointer;white-space:nowrap}
+  .vg-admin-tab-x:hover{background:rgba(139,92,246,.28)}
+  @media(max-width:980px){.vg-admin-tab-x{padding:12px 16px}}
   .vg-admin-content{overflow:auto;padding:18px}.vg-admin-section{display:none}.vg-admin-section.active{display:block}
   .vg-admin-note{border:1px solid rgba(255,180,92,.22);background:rgba(255,180,92,.06);color:#ffe5c7;border-radius:16px;padding:12px 14px;margin-bottom:14px;font-size:.86rem;line-height:1.45}
   .vg-admin-ok{border-color:rgba(25,230,193,.22);background:rgba(25,230,193,.07);color:#d9fffa}
@@ -24664,7 +24669,11 @@ function injectCatalogButton(){
   var classicTabs = qs('#vgAdminModal .vg-admin-tabs');
   if(classicTabs && !qs('#vgCatAdminTab', classicTabs)){
     var t = document.createElement('button');
-    t.id = 'vgCatAdminTab'; t.className = 'vg-admin-tab'; t.type = 'button';
+    /* OJO: clase "vg-admin-tab-x" (NO "vg-admin-tab") a propósito — el panel
+       clásico tiene una función bindTabs() que reescribe el onclick de TODO
+       lo que tenga clase .vg-admin-tab cada vez que se abre el panel, y
+       rompía este botón. Con otra clase, nunca lo toca. */
+    t.id = 'vgCatAdminTab'; t.className = 'vg-admin-tab-x'; t.type = 'button';
     t.textContent = '📦 Catálogo';
     t.onclick = function(e){ e.preventDefault(); e.stopPropagation(); openCatAdmin(); };
     classicTabs.appendChild(t);
@@ -24903,12 +24912,17 @@ async function renderOfferAdmin(){
   var form = sec;
   form.innerHTML =
     '<div class="vgoffer-status" id="vgOfferMsg"></div>' +
+    '<div class="vg-admin-note" id="vgOfferLiveStatus" style="'+(current.active?'color:#34d399':'color:#fb7185')+'"><b>'+(current.active?'✓ Actualmente VISIBLE en la tienda.':'✕ Actualmente OCULTA — se está mostrando la oferta original de Free Fire.')+'</b></div>' +
     '<div class="vg-admin-note">Esta oferta se muestra en el banner grande de "Ofertas especiales de la semana" en el inicio. Si la desactivas, vuelve a mostrarse la oferta original de Diamantes Free Fire.</div>' +
     '<label><input type="checkbox" id="ofActive" '+(current.active?'checked':'')+'> Oferta personalizada ACTIVA (si está sin marcar, se ve la oferta original)</label>' +
     '<div><label>Título grande</label><input id="ofTitle" value="'+esc(current.title)+'" placeholder="Ej: OFERTA DE ROBUX PARA ROBLOX"></div>' +
     '<div><label>Subtítulo / descripción</label><textarea id="ofSubtitle" rows="2" placeholder="Texto corto debajo del título">'+esc(current.subtitle)+'</textarea></div>' +
     '<div class="vgoffer-grid2">' +
-      '<div><label>Imagen (URL)</label><input id="ofImage" value="'+esc(current.image)+'" placeholder="https://..."><img class="vgoffer-preview" id="ofImgPreview" src="'+esc(current.image||'portada.png')+'" onerror="this.style.display=\'none\'"></div>' +
+      '<div><label>Imagen (URL directa a la imagen)</label><input id="ofImage" value="'+esc(current.image)+'" placeholder="https://i.imgur.com/xxxxx.jpg">' +
+        '<small style="display:block;color:#8b93b0;margin:4px 0">En Imgur: clic derecho sobre la imagen → "Copiar dirección de imagen". Debe empezar con <b>i.imgur.com</b> y terminar en .jpg/.png — NO uses el link de la página (imgur.com/xxxx sin la "i.").</small>' +
+        '<img class="vgoffer-preview" id="ofImgPreview" src="'+esc(current.image||'portada.png')+'">' +
+        '<div id="ofImgError" style="display:none;color:#fb7185;font-weight:800;font-size:12.5px;margin-top:4px">⚠ Esta imagen no cargó. Revisa que sea el link DIRECTO a la imagen (nota arriba).</div>' +
+      '</div>' +
       '<div><label>Etiqueta (badge)</label><input id="ofBadge" value="'+esc(current.badge_text||'OFERTAS')+'" placeholder="OFERTAS"></div>' +
     '</div>' +
     '<div><label>Paquetes y precios</label><div id="ofPackages"></div><button class="vg-admin-btn" type="button" id="ofAddPkg">+ Agregar paquete</button></div>' +
@@ -24935,7 +24949,20 @@ async function renderOfferAdmin(){
   }
   renderPkgs(current.packages);
   qs('#ofAddPkg',form).onclick = function(){ var arr=collectPkgs(); arr.push({name:'',price:0}); renderPkgs(arr); };
-  qs('#ofImage',form).addEventListener('input', function(){ var img=qs('#ofImgPreview',form); if(img){ img.style.display=''; img.src=this.value||'portada.png'; } });
+
+  var imgPreview = qs('#ofImgPreview',form), imgErr = qs('#ofImgError',form);
+  imgPreview.onerror = function(){ imgPreview.style.display='none'; imgErr.style.display='block'; };
+  imgPreview.onload  = function(){ imgPreview.style.display=''; imgErr.style.display='none'; };
+  qs('#ofImage',form).addEventListener('input', function(){
+    imgErr.style.display='none';
+    imgPreview.src = this.value || 'portada.png';
+  });
+
+  var liveStatus = qs('#vgOfferLiveStatus',form);
+  qs('#ofActive',form).addEventListener('change', function(){
+    if(this.checked){ liveStatus.style.color='#34d399'; liveStatus.innerHTML='<b>✓ Se mostrará en la tienda al guardar.</b>'; }
+    else{ liveStatus.style.color='#fb7185'; liveStatus.innerHTML='<b>✕ Al guardar quedará OCULTA — se mostrará la oferta original de Free Fire.</b>'; }
+  });
 
   function setMsg(t,ok){ var m=qs('#vgOfferMsg',form); if(m){ m.textContent=t; m.style.color=ok?'#34d399':'#fb7185'; } }
 
@@ -24982,10 +25009,12 @@ function injectOfferButton(){
   var classicTabs = qs('#vgAdminModal .vg-admin-tabs');
   if(classicTabs && !qs('#vgOfferAdminBtn', classicTabs)){
     var t = document.createElement('button');
-    t.id = 'vgOfferAdminBtn'; t.className = 'vg-admin-tab'; t.type = 'button';
-    t.dataset.tab = '__offer_noop__'; /* evita el crash de bindTabs si algo lo reescribe */
+    /* Clase "vg-admin-tab-x" (NO "vg-admin-tab") — ver nota del botón Catálogo:
+       bindTabs() reescribe el onclick de todo lo que tenga clase .vg-admin-tab
+       cada vez que se abre el panel. Con otra clase, nunca lo toca. */
+    t.id = 'vgOfferAdminBtn'; t.className = 'vg-admin-tab-x'; t.type = 'button';
     t.textContent = '🎯 Oferta principal';
-    t.addEventListener('click', function(e){ e.preventDefault(); e.stopImmediatePropagation(); openOfferAdmin(); }, true);
+    t.onclick = function(e){ e.preventDefault(); e.stopPropagation(); openOfferAdmin(); };
     classicTabs.appendChild(t);
   }
   var v10Tabs = qs('#vg10AdminPanel .vg10-admin-tabs');
