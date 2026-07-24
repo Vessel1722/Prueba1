@@ -25524,5 +25524,71 @@ else init();
 })();
 </script>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 12 — Arreglos reales de móvil (confirmados con capturas)
+
+     1) El body tenía un reset "html, body{padding:0!important}" que
+        borraba el espacio reservado para la barra inferior fija, así
+        que el contenido chocaba/se escondía detrás de ella.
+     2) Los botones "Agregar al carrito"/"Comprar" del modal usaban
+        flex:1 1 100% en móvil — cada botón intentaba ocupar el 100%
+        del ancho, y eso los inflaba a ~160px de alto. Como resultado,
+        la lista de precios (#modalOptions) se quedaba sin espacio y
+        colapsaba a 0px de alto — por eso no se veían las opciones.
+     3) La barra inferior fija se refuerza para que nunca "salte"
+        durante el scroll en navegadores móviles.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-mobile-real-fixes-v110">
+@media(max-width:900px){
+  /* 1) Restaurar el espacio para que el contenido no choque con la barra fija */
+  body{
+    padding-bottom:calc(var(--vg-mobile-nav-h,74px) + var(--vg-mobile-safe-bottom,0px) + 20px) !important;
+  }
+
+  /* 2) Botones del modal: nunca más de 1 por fila a lo ancho completo
+        apilándose en varias líneas de texto. Altura fija y razonable. */
+  .modal-actions .primary,
+  .modal-actions .secondary,
+  .modal-actions .whatsapp{
+    flex:1 1 auto !important;
+    width:100% !important;
+    height:52px !important;
+    min-height:52px !important;
+    max-height:52px !important;
+    padding:0 18px !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+  .modal-actions{
+    flex-wrap:wrap !important;
+    row-gap:10px !important;
+  }
+
+  /* Nunca dejar la lista de opciones sin espacio visible.
+     Selector con la misma especificidad que #productModal #modalOptions
+     (que en algunos productos fija min-height:0) para ganarle siempre. */
+  #productModal #modalOptions,
+  #modalOptions{
+    flex:0 1 auto !important;
+    min-height:120px !important;
+    max-height:none !important;
+  }
+}
+
+/* 3) Barra inferior: forzar su propia capa de composición para que el
+      navegador nunca la "recalcule" de golpe durante el scroll — evita
+      el salto visual en Chrome/Safari móvil. */
+.vg-mobile-bottom-nav{
+  transform:translateZ(0) !important;
+  -webkit-transform:translateZ(0) !important;
+  will-change:transform !important;
+  backface-visibility:hidden !important;
+}
+.vg-mobile-bottom-nav button{
+  max-width:none !important;
+}
+</style>
+
 </body>
 </html>
