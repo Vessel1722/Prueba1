@@ -25673,6 +25673,9 @@ else init();
     justify-content:center !important;
     opacity:1;
     transition:opacity .25s ease, transform .25s ease;
+    /* La barra inferior mide ~70px y está a 12px del borde: se sube
+       la burbuja para que no se encime con ella. */
+    bottom:96px !important;
   }
   /* Mientras se ve el hero (que ya trae su propio botón "Pedir por
      WhatsApp"), el flotante se esconde para no encimarse con él. */
