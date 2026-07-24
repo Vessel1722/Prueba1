@@ -25192,5 +25192,40 @@ else init();
 }
 </style>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 7 — Bloquear el scroll de la página de fondo mientras hay
+     una ventana abierta (producto, carrito, login, etc.)
+     La barra de scroll "clásica de Windows" que se veía flotando junto
+     al modal NO era de ningún elemento del modal — era el scroll de LA
+     PÁGINA COMPLETA de fondo, que seguía activo porque abrir el modal
+     nunca bloqueaba el body. Esto se resuelve una sola vez para todas
+     las ventanas del sitio (no solo el modal de producto).
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-body-scroll-lock-css">
+body.vg-modal-open-lock{ overflow:hidden !important; }
+</style>
+<script id="vg-body-scroll-lock-v106">
+(function(){
+'use strict';
+if(window.__VG_SCROLL_LOCK_V106__) return; window.__VG_SCROLL_LOCK_V106__ = true;
+
+var SELECTOR = '.modal.active, .cart.active, #retroModal.active, #vg10Auth.active, ' +
+  '#vgCatAdmin.active, #vgOfferAdminModal.active, #vgAdminModal.active, #vg10AdminPanel.active';
+
+function sync(){
+  var anyOpen = !!document.querySelector(SELECTOR);
+  document.body.classList.toggle('vg-modal-open-lock', anyOpen);
+}
+
+function init(){
+  sync();
+  var obs = new MutationObserver(sync);
+  obs.observe(document.body, {attributes:true, subtree:true, attributeFilter:['class']});
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+})();
+</script>
+
 </body>
 </html>
