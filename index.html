@@ -24454,8 +24454,20 @@ function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){retur
 function money(n){var x=Number(n||0);return x>0?('$'+x.toLocaleString('es-MX')+' MXN'):'Cotizar';}
 function deriveLabel(opts){var p=(opts||[]).map(function(o){return Number(o.price||0);}).filter(function(n){return n>0;});return p.length?money(Math.min.apply(null,p)):'Cotizar';}
 
+/* ── El array real que usa la tienda para pintar productos es la
+     constante `SERVICES` (declarada como const en el script principal
+     del catálogo). Un const NO se puede reemplazar por otro array, así
+     que para que los cambios se vean de verdad hay que MUTAR ese mismo
+     array (vaciar/rellenar o empujar productos nuevos), nunca reasignar
+     window.SERVICES a uno distinto — eso no afecta lo que se renderiza. */
+function canonicalServices(){
+  try{ if(typeof SERVICES!=='undefined' && Array.isArray(SERVICES)) return SERVICES; }catch(e){}
+  if(!Array.isArray(window.SERVICES)) window.SERVICES = [];
+  return window.SERVICES;
+}
+
 /* Snapshot del catálogo original (por si migramos) */
-var _original = Array.isArray(window.SERVICES) ? window.SERVICES.slice() : [];
+var _original = canonicalServices().slice();
 var _dbRows = [];  /* filas crudas de la tabla products */
 
 /* Mapear fila de Supabase → forma que espera la tienda */
@@ -24480,15 +24492,41 @@ function mapRow(r, i){
   };
 }
 
-/* Cargar catálogo desde Supabase (si hay filas) */
+/* Cargar catálogo desde Supabase y FUSIONARLO con el original:
+   - Si un producto de Supabase tiene legacy_id de uno que ya existe
+     (viene de "Migrar catálogo actual"), actualiza ESE producto en su
+     mismo lugar (así se ven los precios/datos editados).
+   - Si es un producto nuevo (sin legacy_id, creado con "+ Nuevo
+     producto"), se AGREGA a la lista sin borrar nada de lo demás. */
 async function loadCatalog(){
   var c = SB(); if(!c) return;
   try{
     var r = await c.from('products').select('*').eq('active', true).order('sort_order', {ascending:true});
     if(r.error){ console.warn('catálogo:', r.error.message); return; }
-    if(!r.data || !r.data.length){ return; }  /* vacío → conservar catálogo original */
-    _dbRows = r.data;
-    window.SERVICES = r.data.map(mapRow);
+    _dbRows = r.data || [];
+    if(!_dbRows.length) return; /* nada guardado en Supabase todavía → no tocar el catálogo */
+
+    var arr = canonicalServices();
+    var byId = {};
+    arr.forEach(function(p){ byId[String(p.id)] = p; });
+
+    var nuevos = [];
+    _dbRows.forEach(function(row, i){
+      var mapped = mapRow(row, i);
+      var existing = row.legacy_id ? byId[String(row.legacy_id)] : null;
+      if(existing){
+        mapped.id = existing.id; /* conserva el id original */
+        Object.assign(existing, mapped);
+      } else {
+        nuevos.push(mapped);
+      }
+    });
+
+    /* evitar que un producto nuevo choque de id con uno existente */
+    var usados = {}; arr.forEach(function(p){ usados[p.id] = true; });
+    nuevos.forEach(function(p){ while(usados[p.id]){ p.id++; } usados[p.id] = true; arr.push(p); });
+
+    window.SERVICES = arr; /* mismo array (por compatibilidad con otro código) */
     if(typeof window.renderProducts === 'function') window.renderProducts();
   }catch(e){ console.warn('catálogo load', e); }
 }
