@@ -24831,6 +24831,12 @@ else init();
      tal cual, sin romper nada.
      ════════════════════════════════════════════════════════════════ -->
 <style id="vg-offer-editor-css">
+/* Evita el "parpadeo" de la oferta anterior: la sección de ofertas queda
+   invisible hasta que el script decide si mostrar la oferta original o
+   la personalizada. En cuanto se agrega la clase vg-offer-ready, aparece
+   con un fundido suave (nunca se alcanza a ver la versión vieja). */
+#offersShowcase{opacity:0}
+#offersShowcase.vg-offer-ready{opacity:1;transition:opacity .25s ease}
 #vgOfferAdminSection .vgoffer-form{display:grid;gap:12px;max-width:720px}
 #vgOfferAdminSection label{font-size:.72rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#8b93b0;display:block;margin-bottom:4px}
 #vgOfferAdminModal{position:fixed;inset:0;z-index:1000003;background:rgba(2,6,23,.92);backdrop-filter:blur(12px);display:none;padding:16px;overflow:auto;color:#f1f5f9;font-family:Inter,system-ui,sans-serif}
@@ -24874,28 +24880,57 @@ function SB(){
 /* ═══ Render en la tienda (pública) ═══ */
 var WHATSAPP_NUMBER = '526611078412';
 
+/* Espera a que el contenedor de ofertas exista en la página (lo arma otro
+   script) sin usar una espera fija — en cuanto aparece, se atiende. */
+function waitForOfferSection(cb){
+  var el = document.getElementById('offersShowcase');
+  if(el){ cb(el); return; }
+  var obs = new MutationObserver(function(){
+    var found = document.getElementById('offersShowcase');
+    if(found){ obs.disconnect(); cb(found); }
+  });
+  obs.observe(document.body, {childList:true, subtree:true});
+  setTimeout(function(){ /* red de seguridad */
+    var found = document.getElementById('offersShowcase');
+    if(found){ obs.disconnect(); cb(found); }
+  }, 5000);
+}
+
 async function renderStorefrontOffer(){
-  var c = SB(); if(!c) return;
-  var root = document.getElementById('offersShowcase');
-  if(!root) return;
-  var res;
-  try{ res = await c.from('hero_offer').select('*').eq('id','main').maybeSingle(); }catch(e){ return; }
-  if(!res || res.error || !res.data || !res.data.active) return; /* sin oferta custom → se deja la original */
-  var o = res.data;
-  var packages = Array.isArray(o.packages) ? o.packages.filter(function(p){return p && p.name;}) : [];
-  if(!packages.length) return;
+  /* Arranca la consulta a Supabase YA, en paralelo con que el resto de la
+     página termine de armar la oferta original — así no se pierde tiempo
+     esperando una cosa y luego la otra. La sección queda invisible
+     (opacity:0 por CSS) hasta que aquí se decide qué mostrar, así nunca
+     se alcanza a ver la oferta anterior parpadear.
+     OJO: el resultado de .maybeSingle() es "thenable" pero NO tiene
+     .catch() propio — hay que envolverlo en Promise.resolve() para
+     poder usar .catch() sin que reviente en silencio. */
+  var c = SB();
+  var dataPromise = c
+    ? Promise.resolve(c.from('hero_offer').select('*').eq('id','main').maybeSingle()).catch(function(){ return null; })
+    : Promise.resolve(null);
 
-  var selected = 0;
-  function pkgHTML(){
-    return packages.map(function(p,i){
-      return '<button type="button" class="ff-only-package '+(i===selected?'active':'')+'" data-i="'+i+'">' +
-        '<strong>'+esc(p.name)+'</strong><small>Selecciona para comprar</small><em>'+money(p.price)+'</em>' +
-      '</button>';
-    }).join('');
-  }
+  waitForOfferSection(async function(root){
+    var res = await dataPromise;
+    if(!res || res.error || !res.data || !res.data.active){
+      root.classList.add('vg-offer-ready'); /* sin oferta custom → se revela la original tal cual */
+      return;
+    }
+    var o = res.data;
+    var packages = Array.isArray(o.packages) ? o.packages.filter(function(p){return p && p.name;}) : [];
+    if(!packages.length){ root.classList.add('vg-offer-ready'); return; }
 
-  root.setAttribute('data-ff-only-ready','1');
-  root.innerHTML =
+    var selected = 0;
+    function pkgHTML(){
+      return packages.map(function(p,i){
+        return '<button type="button" class="ff-only-package '+(i===selected?'active':'')+'" data-i="'+i+'">' +
+          '<strong>'+esc(p.name)+'</strong><small>Selecciona para comprar</small><em>'+money(p.price)+'</em>' +
+        '</button>';
+      }).join('');
+    }
+
+    root.setAttribute('data-ff-only-ready','1');
+    root.innerHTML =
     '<div class="offers-head"><div>' +
       '<span class="badge ff-offer-badge-animated">'+esc(o.badge_text||'OFERTAS')+'</span>' +
       '<h2 class="ff-week-title">'+esc(o.title||'OFERTA ESPECIAL')+'</h2>' +
@@ -24917,26 +24952,28 @@ async function renderStorefrontOffer(){
       '</div>' +
     '</div></article>';
 
-  function bind(){
-    var wrap = qs('#vgOfferPackages', root);
-    if(wrap) wrap.querySelectorAll('.ff-only-package').forEach(function(btn){
-      btn.onclick = function(){
-        selected = Number(btn.getAttribute('data-i'))||0;
-        wrap.innerHTML = pkgHTML();
-        bind();
-        var nEl=qs('#vgOfferSelectedName',root), pEl=qs('#vgOfferSelectedPrice',root);
-        if(nEl) nEl.textContent = packages[selected].name;
-        if(pEl) pEl.textContent = money(packages[selected].price);
+    function bind(){
+      var wrap = qs('#vgOfferPackages', root);
+      if(wrap) wrap.querySelectorAll('.ff-only-package').forEach(function(btn){
+        btn.onclick = function(){
+          selected = Number(btn.getAttribute('data-i'))||0;
+          wrap.innerHTML = pkgHTML();
+          bind();
+          var nEl=qs('#vgOfferSelectedName',root), pEl=qs('#vgOfferSelectedPrice',root);
+          if(nEl) nEl.textContent = packages[selected].name;
+          if(pEl) pEl.textContent = money(packages[selected].price);
+        };
+      });
+      var buy = qs('#vgOfferBuyBtn', root);
+      if(buy) buy.onclick = function(){
+        var p = packages[selected];
+        var msg = 'Hola, quiero la oferta "'+(o.title||'')+'": '+p.name+' por '+money(p.price)+'.';
+        window.open('https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(msg), '_blank');
       };
-    });
-    var buy = qs('#vgOfferBuyBtn', root);
-    if(buy) buy.onclick = function(){
-      var p = packages[selected];
-      var msg = 'Hola, quiero la oferta "'+(o.title||'')+'": '+p.name+' por '+money(p.price)+'.';
-      window.open('https://wa.me/'+WHATSAPP_NUMBER+'?text='+encodeURIComponent(msg), '_blank');
-    };
-  }
-  bind();
+    }
+    bind();
+    root.classList.add('vg-offer-ready');
+  });
 }
 
 /* ═══ Panel admin: editor ═══ */
@@ -25103,7 +25140,7 @@ function init(){
   if(closeBtn) closeBtn.onclick = function(){ qs('#vgOfferAdminModal').classList.remove('active'); };
   var modal = qs('#vgOfferAdminModal');
   if(modal) modal.addEventListener('click', function(e){ if(e.target===modal) modal.classList.remove('active'); });
-  setTimeout(renderStorefrontOffer, 1200); /* tras el offer original para poder reemplazarlo */
+  renderStorefrontOffer(); /* ya no hace falta esperar: espera a la sección y a los datos en paralelo, y revela solo al terminar */
 }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
 else init();
