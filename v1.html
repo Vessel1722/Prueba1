@@ -14351,9 +14351,11 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
         if(!homeTiles || !homeView.classList.contains('active')) return;
         const max=homeTiles.scrollWidth-homeTiles.clientWidth;
         if(max<=0) return;
+        const card=homeTiles.querySelector('.service-carousel-card');
+        const step=card ? Math.round(card.getBoundingClientRect().width)+10 : 296; /* ancho real de tarjeta + espacio, en vez de un salto fijo desalineado */
         if(homeTiles.scrollLeft>=max-20) homeTiles.scrollTo({left:0,behavior:'smooth'});
-        else homeTiles.scrollBy({left:380,behavior:'smooth'});
-      },4200);
+        else homeTiles.scrollBy({left:step,behavior:'smooth'});
+      },2600);
     }
     function showHome(){ activeCategory='all'; homeView.classList.add('active'); marketView.classList.remove('active'); renderNav(); window.scrollTo(0,0); }
     function showSection(cat){ activeCategory=cat; homeView.classList.remove('active'); marketView.classList.add('active'); const c=catInfo(cat); sectionBadge.textContent='Sección'; sectionTitle.innerHTML=`${c.icon} ${c.label}`; sectionDesc.textContent=c.desc; sectionHero.style.setProperty('--section-bg', c.bg); productsTitle.textContent=cat==='all'?'Catálogo completo':`Productos de ${c.label}`; renderNav(); renderProducts(); window.scrollTo(0,0); }
@@ -15202,7 +15204,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
   };
 })();
 </script>
-<a class="floating-whatsapp" href="https://wa.me/526611078412?text=Hola%2C%20tengo%20una%20duda%20sobre%20el%20cat%C3%A1logo%20de%20Vessel%20Games" rel="noopener" target="_blank"><span>💬</span> ¿Dudas? WhatsApp</a>
+<a class="floating-whatsapp" href="https://wa.me/526611078412?text=Hola%2C%20tengo%20una%20duda%20sobre%20el%20cat%C3%A1logo%20de%20Vessel%20Games" rel="noopener" target="_blank" title="¿Dudas? Escríbenos por WhatsApp"><span class="vg-wa-icon"><svg viewBox="0 0 32 32" width="26" height="26" fill="currentColor"><path d="M16.03 3C9.4 3 4 8.4 4 15.03c0 2.23.62 4.32 1.7 6.11L4 29l8.06-1.65a12 12 0 0 0 3.97.68C22.66 28.03 28 22.63 28 16s-5.34-13-11.97-13Zm0 2.2A10.8 10.8 0 0 1 26.83 16c0 5.98-4.85 10.83-10.8 10.83a10.7 10.7 0 0 1-5.5-1.5l-.4-.24-4.24.87.9-4.13-.26-.42a10.7 10.7 0 0 1-1.63-5.68c0-5.98 4.86-10.83 10.83-10.83Zm-5.9 5.6c-.22 0-.58.08-.88.42-.3.33-1.15 1.12-1.15 2.73s1.18 3.17 1.34 3.39c.17.22 2.3 3.7 5.68 5.03 2.81 1.11 3.38.89 3.99.83.6-.06 1.95-.8 2.22-1.57.28-.77.28-1.43.2-1.57-.08-.14-.3-.22-.63-.39-.33-.17-1.95-.96-2.25-1.07-.3-.11-.52-.17-.74.17-.22.33-.85 1.07-1.04 1.29-.19.22-.38.25-.71.08-.33-.17-1.4-.52-2.66-1.65-.98-.88-1.65-1.96-1.84-2.29-.19-.33-.02-.5.15-.67.15-.15.33-.39.5-.58.17-.2.22-.33.33-.55.11-.22.06-.42-.03-.58-.08-.17-.71-1.8-1-2.46-.26-.63-.53-.55-.74-.56Z"/></svg></span></a>
 <script id="vg-search-live-dropdown-v12">
 (function(){
   'use strict';
@@ -25589,6 +25591,140 @@ else init();
   max-width:none !important;
 }
 </style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 13 — Encabezado, botón de WhatsApp, imágenes y carrusel
+     en móvil (confirmado con capturas reales del usuario)
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-mobile-header-fixes-v111">
+@media(max-width:640px){
+  /* 1) "Mi cuenta" se desbordaba fuera de su columna y tapaba el logo:
+        el conjunto de botones (cuenta+favoritos+carrito+menú) necesitaba
+        más espacio del que la rejilla le daba. Se vuelve compacto
+        (solo ícono), igual que carrito y favoritos. */
+  #vg-account-btn{
+    width:46px !important;
+    min-width:46px !important;
+    padding:0 !important;
+    justify-content:center !important;
+  }
+  #vg-account-btn #vgAbLabel{
+    display:none !important;
+  }
+  .nav{
+    grid-template-columns:minmax(0,1fr) auto !important;
+  }
+  .nav > a{
+    min-width:0 !important;
+    overflow:hidden !important;
+  }
+  .nav > a *{
+    min-width:0 !important;
+  }
+  .nav > a.brand{
+    display:flex !important;
+    align-items:center !important;
+    gap:8px !important;
+  }
+  .nav > a.brand > div{
+    min-width:0 !important;
+    overflow:hidden !important;
+  }
+  .nav > a.brand b,
+  .nav > a.brand span{
+    display:block !important;
+    white-space:nowrap !important;
+    overflow:hidden !important;
+    text-overflow:ellipsis !important;
+  }
+  .nav-actions{
+    gap:4px !important;
+  }
+}
+
+/* 2) El botón de favoritos heredaba el ícono de carrito ("🛒") porque
+      comparte la clase .cart-pill (para el mismo tamaño/estilo). Se le
+      pone su propio ícono de corazón. */
+#vgFavNavBtn.cart-pill::before{
+  content:"♥" !important;
+  color:#ff6b8a !important;
+}
+
+/* 3) Burbuja de WhatsApp: ya no se agrega el texto "Ayuda", solo el
+      ícono real de WhatsApp, más chico y sin estorbar otros botones. */
+.floating-whatsapp::after{
+  content:"" !important;
+  margin:0 !important;
+}
+.floating-whatsapp .vg-wa-icon{
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
+  color:#fff !important;
+}
+@media(max-width:640px){
+  .floating-whatsapp{
+    width:50px !important;
+    height:50px !important;
+    padding:0 !important;
+    border-radius:50% !important;
+    display:flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+    opacity:1;
+    transition:opacity .25s ease, transform .25s ease;
+  }
+  /* Mientras se ve el hero (que ya trae su propio botón "Pedir por
+     WhatsApp"), el flotante se esconde para no encimarse con él. */
+  .floating-whatsapp.vg-wa-hidden{
+    opacity:0 !important;
+    transform:scale(.6) !important;
+    pointer-events:none !important;
+  }
+}
+
+/* 4) Imágenes de producto: que llenen su caja de verdad, sin relleno
+      que las haga verse chicas dentro de un "banner" vacío. */
+.imgbox{
+  padding:0 !important;
+}
+.imgbox img{
+  width:100% !important;
+  height:100% !important;
+  object-fit:cover !important;
+}
+
+/* 5) Carrusel de inicio: que las tarjetas se acomoden ("encajen") solas
+      al soltar o al avanzar automático, para que el movimiento se sienta
+      preciso y no descuadrado. */
+#homeTiles{
+  scroll-snap-type:x mandatory !important;
+  scroll-behavior:smooth !important;
+}
+#homeTiles .service-carousel-card{
+  scroll-snap-align:start !important;
+}
+</style>
+<script id="vg-mobile-wa-hide-v111">
+(function(){
+'use strict';
+if(window.__VG_WA_HIDE_V111__) return; window.__VG_WA_HIDE_V111__ = true;
+function init(){
+  if(window.innerWidth > 640) return; /* solo aplica en móvil */
+  var wa = document.querySelector('.floating-whatsapp');
+  var heroActions = document.querySelector('.hero-actions');
+  if(!wa || !heroActions || typeof IntersectionObserver !== 'function') return;
+  var obs = new IntersectionObserver(function(entries){
+    entries.forEach(function(entry){
+      wa.classList.toggle('vg-wa-hidden', entry.isIntersecting);
+    });
+  }, { threshold: 0.15 });
+  obs.observe(heroActions);
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+})();
+</script>
 
 </body>
 </html>
