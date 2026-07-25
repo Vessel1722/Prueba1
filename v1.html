@@ -14345,6 +14345,22 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
       startHomeCarousel();
     }
     let homeCarouselTimer=null;
+    let homeCarouselRAF=null;
+    function vgAnimateScrollLeft(el,to,duration){
+      /* Animación manual en vez de scrollTo(behavior:'smooth'): el scroll
+         nativo se quedaba congelado en móvil al chocar con scroll-snap,
+         así que se mueve scrollLeft cuadro a cuadro con requestAnimationFrame,
+         que no depende del soporte de "smooth" del navegador. */
+      if(homeCarouselRAF) cancelAnimationFrame(homeCarouselRAF);
+      const start=el.scrollLeft, change=to-start, startTime=performance.now();
+      function step(now){
+        const p=Math.min(1,(now-startTime)/duration);
+        const eased=1-Math.pow(1-p,3);
+        el.scrollLeft=start+change*eased;
+        if(p<1) homeCarouselRAF=requestAnimationFrame(step);
+      }
+      homeCarouselRAF=requestAnimationFrame(step);
+    }
     function startHomeCarousel(){
       clearInterval(homeCarouselTimer);
       homeCarouselTimer=setInterval(()=>{
@@ -14353,8 +14369,8 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
         if(max<=0) return;
         const card=homeTiles.querySelector('.service-carousel-card');
         const step=card ? Math.round(card.getBoundingClientRect().width)+10 : 296; /* ancho real de tarjeta + espacio, en vez de un salto fijo desalineado */
-        if(homeTiles.scrollLeft>=max-20) homeTiles.scrollTo({left:0,behavior:'smooth'});
-        else homeTiles.scrollBy({left:step,behavior:'smooth'});
+        const target=homeTiles.scrollLeft>=max-20 ? 0 : Math.min(homeTiles.scrollLeft+step,max);
+        vgAnimateScrollLeft(homeTiles,target,450);
       },2600);
     }
     function showHome(){ activeCategory='all'; homeView.classList.add('active'); marketView.classList.remove('active'); renderNav(); window.scrollTo(0,0); }
@@ -25359,7 +25375,7 @@ body.vg-light .vg-footer-bottom{border-top-color:rgba(0,0,0,.08) !important;colo
 .vg-fav-btn{
   position:absolute; top:10px; right:10px; z-index:5;
   width:34px; height:34px; border-radius:50%; border:1px solid rgba(255,255,255,.16);
-  background:rgba(10,13,22,.55); backdrop-filter:blur(6px);
+  background:rgba(10,13,22,.72);
   display:flex; align-items:center; justify-content:center; cursor:pointer;
   color:#fff; transition:transform .18s ease, background .18s ease;
 }
@@ -25640,6 +25656,11 @@ else init();
   .nav-actions{
     gap:4px !important;
   }
+  /* El carrito ya está repetido en la barra inferior ("Carrito"):
+     se quita el de arriba para no duplicarlo y dejar más aire. */
+  .nav-actions .cart-pill:not(#vgFavNavBtn){
+    display:none !important;
+  }
 }
 
 /* 2) El botón de favoritos heredaba el ícono de carrito ("🛒") porque
@@ -25663,26 +25684,11 @@ else init();
   color:#fff !important;
 }
 @media(max-width:640px){
+  /* El botón ya existe dentro del hero ("Pedir por WhatsApp") y la
+     burbuja flotante solo estorbaba encima del contenido: se quita
+     por completo en móvil. */
   .floating-whatsapp{
-    width:50px !important;
-    height:50px !important;
-    padding:0 !important;
-    border-radius:50% !important;
-    display:flex !important;
-    align-items:center !important;
-    justify-content:center !important;
-    opacity:1;
-    transition:opacity .25s ease, transform .25s ease;
-    /* La barra inferior mide ~70px y está a 12px del borde: se sube
-       la burbuja para que no se encime con ella. */
-    bottom:96px !important;
-  }
-  /* Mientras se ve el hero (que ya trae su propio botón "Pedir por
-     WhatsApp"), el flotante se esconde para no encimarse con él. */
-  .floating-whatsapp.vg-wa-hidden{
-    opacity:0 !important;
-    transform:scale(.6) !important;
-    pointer-events:none !important;
+    display:none !important;
   }
 }
 
@@ -25701,11 +25707,27 @@ else init();
       al soltar o al avanzar automático, para que el movimiento se sienta
       preciso y no descuadrado. */
 #homeTiles{
-  scroll-snap-type:x mandatory !important;
+  /* "mandatory" peleaba con el auto-avance por JS (scrollBy smooth):
+     el snap cancelaba la animación antes de completarse y el carrusel
+     se quedaba congelado. "proximity" deja acomodar las tarjetas al
+     soltar sin bloquear el scroll programado. */
+  scroll-snap-type:x proximity !important;
   scroll-behavior:smooth !important;
 }
 #homeTiles .service-carousel-card{
   scroll-snap-align:start !important;
+}
+
+/* 6) Línea/brillo blanco en los bordes al hacer scroll: es el "rebote"
+      horizontal del navegador asomando el fondo por defecto (blanco)
+      porque <html> no tenía color de fondo propio. Se bloquea el rebote
+      horizontal y se le da a <html> el mismo fondo oscuro del sitio. */
+html{
+  background:rgb(7,8,15) !important;
+  overscroll-behavior-x:none !important;
+}
+body{
+  overscroll-behavior-x:none !important;
 }
 </style>
 <script id="vg-mobile-wa-hide-v111">
