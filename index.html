@@ -14408,7 +14408,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
       showToast('Producto agregado', `${product.title} se agregó al carrito.`);
     }
 
-    function cardHTML(p){ const badge=getCardBadge(p); const optionCount=(p.options||[]).length; const isFav=(typeof window.vgIsFavorite==='function')&&window.vgIsFavorite(p.id); return `<article class="card"><div class="imgbox"><img decoding="async" loading="lazy" src="${p.image}" alt="${escapeHtml(p.alt||p.title)}" referrerpolicy="no-referrer" onerror="this.src='portada.png'"><button class="vg-fav-btn${isFav?' active':''}" type="button" title="${isFav?'Quitar de favoritos':'Guardar en favoritos'}" onclick="event.stopPropagation();window.vgToggleFavorite&&window.vgToggleFavorite(${p.id})"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 21s-7.5-4.7-10.2-9.3C.2 8.6 1.6 5 5.1 4.2c2-.5 3.9.3 5.1 1.9l1.8 2.4 1.8-2.4c1.2-1.6 3.1-2.4 5.1-1.9 3.5.8 4.9 4.4 3.3 7.5C19.5 16.3 12 21 12 21z"/></svg></button><button class="vg-quickview-btn" type="button" onclick="event.stopPropagation();window.vgQuickView&&window.vgQuickView(${p.id})">Vista rápida</button></div><div class="info"><div class="meta"><span class="tag">${escapeHtml(p.categoryName||'Servicio')}</span><span class="card-badge ${badge.cls}">${badge.label}</span></div><h3>${escapeHtml(p.title)}</h3><p class="desc">${escapeHtml(p.description||'Servicio digital disponible.')}</p><div class="price-line"><div><div class="from">Desde</div><div class="price">${p.priceLabel||fmt(minPrice(p))}</div><small class="option-count">${optionCount} opción(es)</small></div></div><div class="premium-actions"><button class="detail-btn" onclick="openProduct(${p.id})">${getCardAction(p)}</button><button class="quick-add-btn" title="Agregar al carrito" onclick="quickAddFirstOption(${p.id})">${cartIconSvg()}</button></div></div></article>`; }
+    function cardHTML(p){ const badge=getCardBadge(p); const optionCount=(p.options||[]).length; const isFav=(typeof window.vgIsFavorite==='function')&&window.vgIsFavorite(p.id); return `<article class="card"><div class="imgbox"><span class="card-badge ${badge.cls}">${badge.label}</span><img decoding="async" loading="lazy" src="${p.image}" alt="${escapeHtml(p.alt||p.title)}" referrerpolicy="no-referrer" onerror="this.src='portada.png'"><button class="vg-fav-btn${isFav?' active':''}" type="button" title="${isFav?'Quitar de favoritos':'Guardar en favoritos'}" onclick="event.stopPropagation();window.vgToggleFavorite&&window.vgToggleFavorite(${p.id})"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 21s-7.5-4.7-10.2-9.3C.2 8.6 1.6 5 5.1 4.2c2-.5 3.9.3 5.1 1.9l1.8 2.4 1.8-2.4c1.2-1.6 3.1-2.4 5.1-1.9 3.5.8 4.9 4.4 3.3 7.5C19.5 16.3 12 21 12 21z"/></svg></button><button class="vg-quickview-btn" type="button" onclick="event.stopPropagation();window.vgQuickView&&window.vgQuickView(${p.id})">Vista rápida</button></div><div class="info"><div class="meta"><span class="tag">${escapeHtml(p.categoryName||'Servicio')}</span></div><h3>${escapeHtml(p.title)}</h3><p class="desc">${escapeHtml(p.description||'Servicio digital disponible.')}</p><div class="price-line"><div><div class="from">Desde</div><div class="price">${p.priceLabel||fmt(minPrice(p))}</div><small class="option-count">${optionCount} opción(es)</small></div></div><div class="premium-actions"><button class="detail-btn" onclick="openProduct(${p.id})">${getCardAction(p)}</button><button class="quick-add-btn" title="Agregar al carrito" onclick="quickAddFirstOption(${p.id})">${cartIconSvg()}</button></div></div></article>`; }
     function openProduct(id){ currentProduct=SERVICES.find(s=>s.id===id); selectedOptionIndex=0; if(!currentProduct)return; if(currentProduct.title.includes('Juegos Retro')){ openRetroModal(); return; } modalImage.src=currentProduct.image; modalImageBox.style.backgroundImage=`url('${currentProduct.image}')`; modalTitle.textContent=currentProduct.title; modalCat.textContent=currentProduct.categoryName; modalDesc.textContent=currentProduct.description||'Selecciona una opción para comprar o agregar al carrito.'; renderOptions(); productModal.classList.add('active'); }
     function renderOptions(){ modalOptions.innerHTML=(currentProduct.options||[]).map((o,i)=>`<div class="option ${i===selectedOptionIndex?'active':''}" onclick="selectedOptionIndex=${i};renderOptions()"><b>${escapeHtml(o.name)}</b><strong>${fmt(o.price)}</strong></div>`).join('') || '<div class="empty">Cotización personalizada</div>'; }
     function closeModal(){productModal.classList.remove('active')}
@@ -25732,6 +25732,103 @@ html{
 }
 body{
   overscroll-behavior-x:none !important;
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 14 — Tarjeta de producto rediseñada (referencia: kinguin.net
+     en móvil): imagen a todo el ancho, franja de categoría a todo el
+     ancho, badge como listón sobre la imagen, precio como barra
+     destacada.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-card-redesign-v112">
+/* 1) El badge (Más vendido/Premium/Disponible) ahora vive dentro de
+      .imgbox (ver cardHTML en el JS) para poder mostrarse como listón
+      sobre la esquina de la imagen, en vez de ir como pastilla suelta
+      junto al texto. */
+.imgbox{
+  position:relative !important;
+}
+.card-badge{
+  position:absolute !important;
+  top:10px !important;
+  left:10px !important;
+  right:auto !important;
+  z-index:4 !important;
+  margin:0 !important;
+}
+
+/* 2) Franja de categoría a todo el ancho, pegada a la imagen (antes
+      era una pastilla junto al badge). */
+.info{
+  padding:14px !important;
+  position:relative !important;
+}
+.card .meta{
+  display:block !important;
+  width:calc(100% + 28px) !important;
+  margin:-14px -14px 12px -14px !important;
+  padding:0 !important;
+}
+.card .meta .tag{
+  display:block !important;
+  width:100% !important;
+  text-align:center !important;
+  background:rgba(139,92,246,.10) !important;
+  border:0 !important;
+  border-bottom:1px solid var(--line) !important;
+  border-radius:0 !important;
+  padding:8px 10px !important;
+  font-size:.66rem !important;
+  letter-spacing:.08em !important;
+  text-transform:uppercase !important;
+  font-weight:900 !important;
+  color:#c9d3f0 !important;
+}
+
+/* 3) La descripción larga solo estorbaba en la tarjeta chica; se queda
+      únicamente en el modal de producto. */
+.card .desc{
+  display:none !important;
+}
+
+/* 4) Título centrado, como en la referencia. */
+.card .info h3{
+  text-align:center !important;
+}
+
+/* 5) El precio pasa de texto suelto a una barra destacada a todo el
+      ancho, como el precio resaltado de Kinguin. */
+.price-line{
+  background:linear-gradient(135deg,#19e6c1,#8b5cf6) !important;
+  border-radius:14px !important;
+  padding:10px 14px !important;
+  margin:12px 0 0 !important;
+  box-shadow:0 8px 20px rgba(25,230,193,.18) !important;
+}
+.price-line > div{
+  display:flex !important;
+  align-items:baseline !important;
+  justify-content:center !important;
+  flex-wrap:wrap !important;
+  gap:7px !important;
+  width:100% !important;
+}
+.price-line .from{
+  color:rgba(3,15,12,.62) !important;
+  font-size:.64rem !important;
+}
+.price-line .price{
+  color:#03150f !important;
+  font-size:1.15rem !important;
+  font-weight:950 !important;
+}
+.price-line .option-count{
+  display:inline !important;
+  margin:0 !important;
+  color:rgba(3,15,12,.62) !important;
+  font-size:.68rem !important;
+  font-weight:800 !important;
 }
 </style>
 <script id="vg-mobile-wa-hide-v111">
