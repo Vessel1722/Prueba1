@@ -11072,13 +11072,16 @@ body{margin:0;background:#070912;color:#fff;font-family:system-ui,-apple-system,
       font-size:.66rem!important;
     }
 
+    /* Esta tarjeta ya no usa layout horizontal (imagen a la izquierda,
+       110px fijos); ahora es vertical (imagen arriba, ancho completo).
+       El grid-template-columns de abajo quedó obsoleto y el ancho fijo
+       de .imgbox dejaba ~70px de espacio muerto junto a la imagen. */
     .card{
-      grid-template-columns:110px minmax(0,1fr)!important;
       min-height:150px!important;
     }
 
     .imgbox{
-      width:110px!important;
+      width:100%!important;
       min-height:150px!important;
     }
 
