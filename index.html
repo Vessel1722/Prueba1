@@ -25882,5 +25882,54 @@ else init();
 })();
 </script>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 16 — Panel admin oculto. Se quita el botón "⚙ Admin" que
+     veían todos los usuarios; ahora el panel se abre escribiendo un
+     código secreto en el buscador de servicios.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-admin-hidden-v114">
+/* El botón de admin ya no se muestra a nadie. El acceso es por código
+   en el buscador (ver el script de abajo). */
+#vgAdminCornerBtn,
+.vg-admin-corner-btn{
+  display:none !important;
+}
+</style>
+<script id="vg-admin-secret-code-v114">
+(function(){
+'use strict';
+if(window.__VG_ADMIN_SECRET_V114__) return; window.__VG_ADMIN_SECRET_V114__ = true;
+
+/* ─────────────────────────────────────────────────────────────
+   TU CÓDIGO SECRETO — escríbelo en el buscador para abrir el panel.
+   Para cambiarlo, edita SOLO esta línea (se compara en minúsculas).
+   ───────────────────────────────────────────────────────────── */
+var CODIGO = 'vgadmin777';
+
+function abrirPanel(input){
+  /* Limpia el buscador para no dejar el código a la vista ni el
+     catálogo filtrado en "sin resultados". */
+  input.value = '';
+  try{ if(typeof window.renderProducts === 'function') window.renderProducts(); }catch(e){}
+  try{ input.blur(); }catch(e){}
+  /* Se llama al vgAdminOpen definitivo (el de vg-admin-secure-v101),
+     así que la validación de Supabase Auth + rol is_admin se mantiene:
+     el código solo revela la entrada, no da permisos por sí solo. */
+  if(typeof window.vgAdminOpen === 'function') window.vgAdminOpen();
+  else alert('No se encontró el panel de administración.');
+}
+
+function init(){
+  var input = document.getElementById('globalSearch');
+  if(!input) return;
+  input.addEventListener('input', function(){
+    if((input.value || '').trim().toLowerCase() === CODIGO) abrirPanel(input);
+  });
+}
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+})();
+</script>
+
 </body>
 </html>
