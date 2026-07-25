@@ -24225,7 +24225,14 @@ function goAfterAuth(){
     window.vgAdminOpen();
     return;
   }
-  openClientDashboard();
+  /* Tras un login normal el usuario se queda EN LA TIENDA.
+     Antes se le abría el panel de cuenta a pantalla completa y le
+     tapaba todo el catálogo nada más entrar. El panel ahora solo se
+     abre a propósito: con el botón de cuenta, o al terminar una compra
+     (que es la redirección a "Mis compras" del módulo 2). */
+  if(typeof window.showToast === 'function'){
+    try{ window.showToast('Sesión iniciada', 'Ya puedes comprar. Tus pedidos están en Mi cuenta.'); }catch(e){}
+  }
 }
 
 /* ── Registro ── */
@@ -25939,9 +25946,19 @@ else init();
 <style id="vg-fase17-css">
 .vg17-panel{position:fixed;inset:0;z-index:30000;background:#070810;display:none;overflow:auto;-webkit-overflow-scrolling:touch}
 .vg17-panel.active{display:block}
+/* Reset de tipografía acotado al panel: el sitio aplica una fuente
+   display condensada y en mayúsculas a los h1-h4, y hacía que
+   "Mi cuenta" saliera gigantesca dentro del panel. */
+.vg17-panel h1,.vg17-panel h2,.vg17-panel h3,.vg17-panel h4{
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif !important;
+  text-transform:none !important;
+  letter-spacing:-.01em !important;
+  font-weight:900 !important;
+  line-height:1.25 !important;
+}
 .vg17-wrap{max-width:1240px;margin:0 auto;padding:18px 16px 60px}
 .vg17-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 18px;position:sticky;top:0;background:#070810;z-index:5;border-bottom:1px solid rgba(255,255,255,.08)}
-.vg17-top h1{margin:0;font-size:1.3rem;color:#fff}
+.vg17-top h1{margin:0 !important;font-size:1.35rem !important;color:#fff}
 .vg17-top p{margin:3px 0 0;color:#93a0bd;font-size:.82rem}
 .vg17-x{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-size:1.3rem;cursor:pointer;flex:none}
 .vg17-tabs{display:flex;gap:8px;overflow-x:auto;padding:14px 0;scrollbar-width:none}
@@ -26203,7 +26220,16 @@ async function loadClient(){
 
 function renderPurchases(body){
   var orders=C.orders;
-  if(!orders.length){ body.innerHTML='<div class="vg17-empty">Todavía no tienes compras registradas.</div>'; return; }
+  if(!orders.length){
+    body.innerHTML='<div class="vg17-empty" style="padding:52px 20px">'+
+      '<div style="font-size:2.4rem;margin-bottom:10px">🛍️</div>'+
+      '<b style="display:block;color:#fff;font-size:1rem;margin-bottom:6px">Todavía no tienes compras</b>'+
+      'Cuando hagas un pedido aparecerá aquí, junto con su chat de entrega.'+
+      '<div style="margin-top:18px"><button class="vg17-btn primary" id="vg17GoShop">Ver catálogo</button></div>'+
+    '</div>';
+    var go=qs('#vg17GoShop'); if(go) go.onclick=closeClient;
+    return;
+  }
   var sel = orders.filter(function(o){return oid(o)===String(C.ref||'');})[0] || orders[0];
   C.ref = oid(sel);
   var total = orders.reduce(function(s,o){return s+ototal(o);},0);
