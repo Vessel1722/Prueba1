@@ -88,11 +88,14 @@ create index if not exists chat_role_idx    on public.vg_live_chat_messages(send
 --      · Conviene borrar el ticket (o vaciar esa columna) cuando se
 --        resuelva. La sección 8 trae una función para eso.
 -- ═══════════════════════════════════════════════════════════════════
+-- La llave foránea hacia vg_users se agrega aparte (sección 3b) para que,
+-- si los tipos no coinciden en una instalación vieja, la tabla se cree
+-- igual y solo se quede sin la restricción — en vez de tumbar el script.
 create table if not exists public.vg_support_tickets (
   id                  uuid primary key default gen_random_uuid(),
   created_at          timestamptz default now(),
   updated_at          timestamptz default now(),
-  user_id             uuid references public.vg_users(id) on delete set null,
+  user_id             uuid,
 
   -- Campos obligatorios del formulario
   order_id            text,          -- pedido al que pertenece (del desplegable)
@@ -113,6 +116,22 @@ create table if not exists public.vg_support_tickets (
 create index if not exists tickets_user_idx    on public.vg_support_tickets(user_id);
 create index if not exists tickets_status_idx  on public.vg_support_tickets(status);
 create index if not exists tickets_created_idx on public.vg_support_tickets(created_at desc);
+
+
+-- ── 3b. Llave foránea opcional de tickets → vg_users ──
+-- Si los tipos coinciden se agrega; si no, se ignora sin romper nada.
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint where conname = 'vg_support_tickets_user_fk'
+  ) then
+    alter table public.vg_support_tickets
+      add constraint vg_support_tickets_user_fk
+      foreign key (user_id) references public.vg_users(id) on delete set null;
+  end if;
+exception when others then
+  raise notice 'FK de tickets omitida (tipos distintos): %', sqlerrm;
+end $$;
 
 
 -- ═══════════════════════════════════════════════════════════════════
@@ -159,6 +178,13 @@ create trigger vg_chat_after_insert_trg
 -- ═══════════════════════════════════════════════════════════════════
 
 -- ¿Este pedido es del usuario que está conectado?
+--
+-- OJO con los ::text — no son adorno. En instalaciones viejas la
+-- columna orders.user_id quedó como text en vez de uuid, y comparar
+-- text = uuid directamente truena con:
+--   ERROR 42883: operator does not exist: text = uuid
+-- Comparando ambos lados como texto funciona con cualquiera de los dos
+-- tipos, sin tener que migrar la tabla.
 create or replace function public.vg_owns_order(p_ref text)
 returns boolean
 language sql security definer stable
@@ -167,7 +193,7 @@ as $$
   select exists (
     select 1 from public.orders o
      where o.id::text = p_ref
-       and o.user_id = auth.uid()
+       and o.user_id::text = auth.uid()::text
   );
 $$;
 
@@ -208,7 +234,7 @@ begin
     raise exception 'Inicia sesión para registrar tu pedido.';
   end if;
 
-  select * into v_user from public.vg_users where id = auth.uid();
+  select * into v_user from public.vg_users where id::text = auth.uid()::text;
 
   insert into public.orders (
     source, status, total, currency, items,
@@ -320,15 +346,16 @@ drop policy if exists tickets_insert            on public.vg_support_tickets;
 drop policy if exists tickets_update            on public.vg_support_tickets;
 
 -- ── PEDIDOS ──
+-- (mismo motivo que arriba para los ::text: aguanta user_id uuid o text)
 -- El cliente ve solo los suyos; el admin ve todos.
 create policy orders_select_own on public.orders
   for select to authenticated
-  using (user_id = auth.uid() or public.is_admin());
+  using (user_id::text = auth.uid()::text or public.is_admin());
 
 -- El cliente puede crear pedidos a su nombre (además del RPC).
 create policy orders_insert_own on public.orders
   for insert to authenticated
-  with check (user_id = auth.uid() or public.is_admin());
+  with check (user_id::text = auth.uid()::text or public.is_admin());
 
 -- Solo el admin actualiza pedidos (estado, entrega, chat_unlocked).
 -- Así el cliente NO puede desbloquearse el chat por su cuenta.
@@ -371,11 +398,11 @@ create policy chat_update on public.vg_live_chat_messages
 -- ── TICKETS ──
 create policy tickets_select on public.vg_support_tickets
   for select to authenticated
-  using (user_id = auth.uid() or public.is_admin());
+  using (user_id::text = auth.uid()::text or public.is_admin());
 
 create policy tickets_insert on public.vg_support_tickets
   for insert to authenticated
-  with check (user_id = auth.uid());
+  with check (user_id::text = auth.uid()::text);
 
 create policy tickets_update on public.vg_support_tickets
   for update to authenticated
