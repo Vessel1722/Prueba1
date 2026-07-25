@@ -27068,5 +27068,281 @@ else init();
 })();
 </script>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 18 — Rediseño visual de los dos paneles.
+     SOLO estilos: no toca la lógica de Supabase, el chat condicional,
+     las notificaciones ni el candado de admin. Va al final del archivo
+     para ganar la cascada sin tener que editar los bloques anteriores.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-fase18-ui">
+/* ════════════════════════════════════════════════════════════════
+   1) PANEL ADMIN — el espacio es para trabajar, no para el título
+   ════════════════════════════════════════════════════════════════ */
+
+/* OJO CON LOS SELECTORES LARGOS: no son manía, son necesarios.
+   Sobre esta cabecera hay 12 reglas acumuladas de fases anteriores, y
+   la que ganaba era
+     #vgAdminModal.active .vg-admin-panel.vg-admin-fullscreen-mode .vg-admin-head
+   con min-height:104px !important. Como tiene más especificidad que
+   "#vgAdminModal .vg-admin-head", ponerle !important a la mía no
+   servía de nada. Repetir ".active" sube la especificidad sin cambiar
+   a qué elementos aplica, que es justo lo que hace falta aquí.
+
+   Resultado: la cabecera pasa de 104px a 44px. El título deja de ser
+   un banner y se vuelve una etiqueta discreta — ya sabes en qué panel
+   estás, no necesita anunciarse a 41px. Ese alto se lo queda el
+   contenido, que es lo que de verdad se usa. */
+html body #vgAdminModal.active.active.active .vg-admin-head{
+  min-height:44px !important;
+  height:44px !important;
+  padding:0 12px !important;
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  background:rgba(9,11,18,.97) !important;
+  backdrop-filter:none !important;
+  border-bottom:1px solid rgba(255,255,255,.07) !important;
+}
+html body #vgAdminModal.active.active.active .vg-admin-head > div:first-child{
+  display:flex !important;
+  align-items:center !important;
+  gap:10px !important;
+  min-width:0 !important;
+  flex:1 1 auto !important;
+}
+html body #vgAdminModal.active.active.active .vg-admin-head h2{
+  margin:0 !important;
+  font-family:system-ui,-apple-system,'Segoe UI',Roboto,sans-serif !important;
+  font-size:.74rem !important;
+  font-weight:800 !important;
+  letter-spacing:.14em !important;
+  text-transform:uppercase !important;
+  color:#7d8db0 !important;
+  white-space:nowrap !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  line-height:1 !important;
+}
+/* El subtítulo "Solo administradores de VG..." no aporta nada
+   operativo a quien ya entró: fuera. */
+html body #vgAdminModal.active.active.active .vg-admin-head p{ display:none !important; }
+
+/* Cerrar sesión: de bloque suelto a pastilla pequeña alineada */
+html body #vgAdminModal.active.active.active .vg-admin-head button:not(.vg-admin-x){
+  margin:0 0 0 auto !important;
+  padding:6px 12px !important;
+  font-size:.72rem !important;
+  font-weight:800 !important;
+  border-radius:999px !important;
+  height:30px !important;
+  min-height:0 !important;
+  line-height:1 !important;
+  flex:none !important;
+  position:static !important;
+}
+html body #vgAdminModal.active.active.active .vg-admin-x{
+  width:30px !important; height:30px !important;
+  min-width:30px !important; padding:0 !important;
+  font-size:1rem !important; border-radius:50% !important;
+  flex:none !important; margin:0 !important;
+  position:static !important; top:auto !important; right:auto !important;
+}
+
+/* Pestañas compactas, en una sola línea con desplazamiento lateral */
+html body #vgAdminModal.active.active.active .vg-admin-tabs{
+  padding:8px 12px !important;
+  gap:6px !important;
+  flex-wrap:nowrap !important;
+  overflow-x:auto !important;
+  scrollbar-width:none;
+  background:rgba(9,11,18,.97) !important;
+  border-bottom:1px solid rgba(255,255,255,.07) !important;
+  min-height:0 !important;
+}
+html body #vgAdminModal.active.active.active .vg-admin-tabs::-webkit-scrollbar{display:none}
+html body #vgAdminModal.active.active.active .vg-admin-tab{
+  flex:none !important;
+  padding:7px 13px !important;
+  font-size:.74rem !important;
+  height:32px !important;
+  min-height:0 !important;
+  line-height:1 !important;
+  white-space:nowrap !important;
+  display:inline-flex !important;
+  align-items:center !important;
+  gap:6px !important;
+}
+
+/* El panel usa casi toda la pantalla y el contenido se lleva el resto */
+html body #vgAdminModal.active.active.active .vg-admin-panel{
+  width:min(1500px,calc(100vw - 16px)) !important;
+  height:calc(100vh - 16px) !important;
+  max-height:calc(100vh - 16px) !important;
+}
+html body #vgAdminModal.active.active.active .vg-admin-content{
+  padding:14px !important;
+  background:#0a0c14 !important;
+}
+
+/* ── Densidad dentro del admin: tarjetas más apretadas ── */
+#vgAdminModal .vg17-scope .vg17-cards{ gap:9px !important; margin-bottom:12px !important; }
+#vgAdminModal .vg17-scope .vg17-stat{ padding:10px 12px !important; border-radius:12px !important; }
+#vgAdminModal .vg17-scope .vg17-stat span{ font-size:.6rem !important; }
+#vgAdminModal .vg17-scope .vg17-stat b{ font-size:1.2rem !important; margin-top:3px !important; }
+#vgAdminModal .vg17-scope .vg17-card{ padding:10px 12px !important; border-radius:12px !important; margin-bottom:7px !important; }
+#vgAdminModal .vg17-scope .vg17-card h4{ font-size:.86rem !important; margin-bottom:3px !important; }
+#vgAdminModal .vg17-scope .vg17-card p{ font-size:.71rem !important; }
+#vgAdminModal .vg17-scope .vg17-box{ padding:10px 12px !important; border-radius:12px !important; margin-bottom:8px !important; }
+#vgAdminModal .vg17-scope .vg17-box>span{ font-size:.6rem !important; margin-bottom:3px !important; }
+#vgAdminModal .vg17-scope .vg17-box>b{ font-size:.84rem !important; }
+#vgAdminModal .vg17-scope .vg17-split{ gap:12px !important; grid-template-columns:330px 1fr !important; }
+#vgAdminModal .vg17-scope .vg17-btn{ padding:8px 12px !important; font-size:.78rem !important; border-radius:10px !important; }
+#vgAdminModal .vg17-scope .vg17-quick button{ padding:6px 10px !important; font-size:.71rem !important; }
+#vgAdminModal .vg17-scope .vg17-chip{ font-size:.58rem !important; padding:3px 8px !important; }
+/* El chat es la herramienta principal: se le da más alto */
+#vgAdminModal .vg17-scope .vg17-msgs{ max-height:340px !important; min-height:150px !important; padding:11px !important; }
+/* La columna de la lista se queda fija y solo desplaza ella */
+@media(min-width:901px){
+  #vgAdminModal .vg17-scope .vg17-split > div:first-child{
+    max-height:calc(100vh - 210px); overflow-y:auto; padding-right:4px;
+  }
+}
+@media(max-width:900px){
+  #vgAdminModal .vg17-scope .vg17-split{ grid-template-columns:1fr !important; }
+  html body #vgAdminModal.active.active.active .vg-admin-panel{
+    width:100vw !important; height:100vh !important; max-height:100vh !important; border-radius:0 !important;
+  }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   2) PANEL DEL CLIENTE — que dé gusto entrar
+   ════════════════════════════════════════════════════════════════ */
+
+/* Fondo con profundidad en vez de negro plano */
+#vg17Client{
+  background:
+    radial-gradient(120% 55% at 8% -8%, rgba(139,92,246,.16), transparent 60%),
+    radial-gradient(90% 45% at 95% 0%, rgba(25,230,193,.10), transparent 55%),
+    #070810 !important;
+}
+#vg17Client .vg17-top{
+  background:linear-gradient(180deg,rgba(9,11,20,.99) 60%,rgba(9,11,20,.82)) !important;
+  backdrop-filter:blur(12px);
+  padding:16px 0 16px !important;
+}
+#vg17Client .vg17-top h1{ font-size:1.42rem !important; }
+#vg17Client .vg17-avatar{
+  width:50px;height:50px;border-radius:16px;font-size:1.2rem;
+  box-shadow:0 8px 24px rgba(139,92,246,.42), inset 0 1px 0 rgba(255,255,255,.35);
+}
+
+/* Pestañas tipo segmento */
+#vg17Client .vg17-tabs{ gap:7px !important; padding:16px 0 18px !important; }
+#vg17Client .vg17-tab{
+  padding:11px 17px !important;
+  font-size:.82rem !important;
+  border-radius:14px !important;
+  background:rgba(255,255,255,.045) !important;
+}
+#vg17Client .vg17-tab.active{
+  box-shadow:0 8px 22px rgba(139,92,246,.30) !important;
+}
+
+/* Tarjetas de pedido: más aire y sensación de "tocable" */
+#vg17Client .vg17-card{
+  padding:16px 17px !important;
+  border-radius:18px !important;
+  margin-bottom:12px !important;
+  background:linear-gradient(160deg,rgba(255,255,255,.062),rgba(255,255,255,.022)) !important;
+  transition:transform .18s ease, border-color .18s ease, box-shadow .18s ease !important;
+}
+#vg17Client .vg17-card:hover{ transform:translateY(-2px); }
+#vg17Client .vg17-card h4{ font-size:1rem !important; margin-bottom:6px !important; }
+#vg17Client .vg17-stat{ padding:16px !important; border-radius:18px !important; }
+#vg17Client .vg17-stat b{ font-size:1.6rem !important; }
+#vg17Client .vg17-box{ padding:16px !important; border-radius:18px !important; }
+
+/* ── Mensajería: la parte que más ven ── */
+#vg17Client .vg17-msgs{
+  min-height:240px !important;
+  max-height:52vh !important;
+  padding:16px !important;
+  border-radius:18px !important;
+  background:
+    radial-gradient(90% 60% at 50% 0%, rgba(139,92,246,.07), transparent 70%),
+    linear-gradient(180deg,#080b13,#0b0f1a) !important;
+}
+#vg17Client .vg17-msg{ max-width:82% !important; margin-bottom:14px !important; }
+#vg17Client .vg17-msg div{
+  padding:12px 15px !important;
+  font-size:.89rem !important;
+  line-height:1.5 !important;
+  border-radius:17px !important;
+}
+#vg17Client .vg17-msg small{ font-size:.65rem !important; margin-bottom:5px !important; opacity:.85; }
+#vg17Client .vg17-msg.client div{
+  background:linear-gradient(135deg,rgba(139,92,246,.32),rgba(139,92,246,.20)) !important;
+  border-color:rgba(139,92,246,.42) !important;
+  border-top-right-radius:6px !important;
+}
+#vg17Client .vg17-msg.admin div{
+  background:linear-gradient(135deg,rgba(25,230,193,.19),rgba(25,230,193,.10)) !important;
+  border-color:rgba(25,230,193,.34) !important;
+  border-top-left-radius:6px !important;
+}
+#vg17Client .vg17-msg.delivery div{
+  background:linear-gradient(135deg,rgba(25,230,193,.30),rgba(139,92,246,.26)) !important;
+  border:1px solid rgba(25,230,193,.55) !important;
+  box-shadow:0 10px 30px rgba(25,230,193,.24) !important;
+}
+/* Entrada de mensaje con aspecto de app de chat */
+#vg17Client .vg17-inputbar{
+  padding:11px !important;
+  border-radius:18px !important;
+  background:rgba(255,255,255,.05) !important;
+  border-color:rgba(255,255,255,.10) !important;
+}
+#vg17Client .vg17-inputbar:focus-within{
+  border-color:rgba(139,92,246,.50) !important;
+  box-shadow:0 0 0 3px rgba(139,92,246,.13) !important;
+}
+#vg17Client .vg17-inputbar textarea{ font-size:.9rem !important; min-height:46px !important; }
+#vg17Client .vg17-btn{ padding:12px 18px !important; border-radius:14px !important; font-size:.86rem !important; }
+#vg17Client .vg17-btn.primary{ box-shadow:0 8px 22px rgba(139,92,246,.30) !important; }
+
+/* Aviso de chat bloqueado: informativo, no un error */
+#vg17Client .vg17-lock{
+  padding:18px 16px !important;
+  border-radius:18px !important;
+  border-style:solid !important;
+  border-color:rgba(139,92,246,.32) !important;
+  background:linear-gradient(160deg,rgba(139,92,246,.13),rgba(139,92,246,.05)) !important;
+  color:#cfc2ff !important;
+  font-size:.85rem !important;
+}
+
+/* Formulario de reporte más legible */
+#vg17Client .vg17-form label>span{ font-size:.8rem !important; margin-bottom:7px !important; }
+#vg17Client .vg17-form input,
+#vg17Client .vg17-form select,
+#vg17Client .vg17-form textarea{
+  padding:13px 14px !important; border-radius:14px !important; font-size:.9rem !important;
+}
+#vg17Client .vg17-form input:focus,
+#vg17Client .vg17-form select:focus,
+#vg17Client .vg17-form textarea:focus{
+  outline:none !important;
+  border-color:rgba(139,92,246,.55) !important;
+  box-shadow:0 0 0 3px rgba(139,92,246,.13) !important;
+}
+
+@media(max-width:900px){
+  #vg17Client .vg17-top h1{ font-size:1.18rem !important; }
+  #vg17Client .vg17-msg{ max-width:90% !important; }
+  #vg17Client .vg17-msgs{ max-height:46vh !important; padding:13px !important; }
+  #vg17Client .vg17-card{ padding:14px !important; }
+}
+</style>
+
 </body>
 </html>
