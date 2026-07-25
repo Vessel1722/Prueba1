@@ -25944,7 +25944,10 @@ else init();
      Requiere correr antes: supabase_fase17_entregas_chat_tickets.sql
      ════════════════════════════════════════════════════════════════ -->
 <style id="vg-fase17-css">
-.vg17-panel{position:fixed;inset:0;z-index:30000;background:#070810;display:none;overflow:auto;-webkit-overflow-scrolling:touch}
+.vg17-panel{position:fixed;inset:0;z-index:30000;background:#070810;display:none;overflow:auto;-webkit-overflow-scrolling:touch;
+  /* Corta el "scroll chaining": al llegar al final del panel el
+     navegador ya no sigue desplazando la página de atrás. */
+  overscroll-behavior:contain;overscroll-behavior-y:contain}
 .vg17-panel.active{display:block}
 /* Reset de tipografía acotado al panel: el sitio aplica una fuente
    display condensada y en mayúsculas a los h1-h4, y hacía que
@@ -26161,6 +26164,30 @@ function chip(s){
 }
 function toast(t,m){ try{ if(typeof window.showToast==='function'){window.showToast(t,m);return;} }catch(e){} }
 
+/* ── Bloqueo de scroll de la página de atrás ──────────────────────
+   `body{overflow:hidden}` por sí solo NO alcanza en móvil: al llegar
+   al final del panel, el navegador encadena el desplazamiento a la
+   página de abajo (scroll chaining) y se alcanza a ver el catálogo.
+   La forma que sí funciona es fijar el body en su posición actual y
+   restaurarla al cerrar, para que además no se pierda el lugar donde
+   iba el usuario. Se combina con overscroll-behavior:contain en CSS. */
+var __scrollY = 0;
+function lockScroll(){
+  __scrollY = window.scrollY || window.pageYOffset || 0;
+  var b=document.body, h=document.documentElement;
+  h.style.overflow='hidden';
+  b.style.position='fixed';
+  b.style.top=(-__scrollY)+'px';
+  b.style.left='0'; b.style.right='0'; b.style.width='100%';
+  b.style.overflow='hidden';
+}
+function unlockScroll(){
+  var b=document.body, h=document.documentElement;
+  h.style.overflow=''; b.style.position=''; b.style.top='';
+  b.style.left=''; b.style.right=''; b.style.width=''; b.style.overflow='';
+  window.scrollTo(0, __scrollY);   /* vuelve justo donde estaba */
+}
+
 /* ── Sonido de pedido nuevo (generado, sin archivo externo) ──── */
 var actx=null;
 function beep(){
@@ -26277,7 +26304,8 @@ window.vgOpenClientPanel = async function(view, ref){
   if(!s||!s.data||!s.data.session){ if(window.vgOpenAuth) window.vgOpenAuth(); return; }
   var root=qs('#vg17Client');
   root.innerHTML=clientShell(); root.classList.add('active');
-  document.body.style.overflow='hidden';
+  root.scrollTop=0;
+  lockScroll();
   setUnread(0);   /* al entrar al panel se dan por vistos los avisos */
   qs('#vg17CX').onclick=closeClient;
   C.view = view||'purchases'; C.ref = ref||null;
@@ -26292,7 +26320,7 @@ window.vgProOpen     = function(){ window.vgOpenClientPanel('purchases'); };
 
 function closeClient(){
   qs('#vg17Client').classList.remove('active');
-  document.body.style.overflow='';
+  unlockScroll();
   if(C.chan){ try{ SB().removeChannel(C.chan); }catch(e){} C.chan=null; }
 }
 
@@ -27450,8 +27478,16 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
   #vg17Client .vg17-top p{ font-size:.72rem !important; }
   #vg17Client .vg17-avatar{ width:40px;height:40px;border-radius:13px;font-size:.98rem; }
   #vg17Client .vg17-x{ width:38px !important;height:38px !important; }
-  #vg17Client .vg17-tabs{ padding:12px 0 14px !important;gap:6px !important; }
-  #vg17Client .vg17-tab{ padding:9px 13px !important;font-size:.76rem !important;border-radius:12px !important; }
+  #vg17Client .vg17-tabs{ padding:12px 0 14px !important;gap:5px !important; }
+  /* Se nombra también .active: si no, la regla de escritorio
+     "#vg17Client .vg17-tab.active" (una clase más, o sea más
+     específica) le ganaba a esta y la pestaña activa se quedaba
+     grande en móvil, empujando "Mis reportes" fuera de la pantalla. */
+  #vg17Client .vg17-tab,
+  #vg17Client .vg17-tab:not(.active),
+  #vg17Client .vg17-tab.active{
+    padding:9px 12px !important;font-size:.74rem !important;border-radius:12px !important;
+  }
   /* Tres tarjetas de estadística no caben: se apilan en dos columnas
      y la última ocupa el ancho completo. */
   #vg17Client .vg17-cards{ grid-template-columns:1fr 1fr !important;gap:8px !important; }
@@ -27480,6 +27516,64 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
   #vg17Client .vg17-hero-top{ flex-direction:column;gap:6px; }
   #vg17Client .vg17-hero-price{ font-size:1.28rem; }
   #vg17Client .vg17-step small{ font-size:.55rem;letter-spacing:-.01em; }
+}
+
+/* ════════════════════════════════════════════════════════════════
+   ENTRADA AL PANEL — que se sienta bien al abrirlo
+   El panel aparece con un fundido y una elevación corta, y los
+   bloques entran escalonados de arriba a abajo. Son 0.4s en total:
+   suficiente para que se sienta cuidado, no tanto como para estorbar
+   a quien entra a ver su pedido con prisa.
+   ════════════════════════════════════════════════════════════════ */
+@keyframes vg17In{ from{opacity:0} to{opacity:1} }
+@keyframes vg17Up{
+  from{opacity:0;transform:translateY(14px)}
+  to{opacity:1;transform:translateY(0)}
+}
+@keyframes vg17Pop{
+  0%{opacity:0;transform:scale(.86)}
+  60%{transform:scale(1.04)}
+  100%{opacity:1;transform:scale(1)}
+}
+#vg17Client.active{ animation:vg17In .22s ease both; }
+#vg17Client.active .vg17-top{ animation:vg17Up .34s cubic-bezier(.2,.8,.3,1) both; }
+#vg17Client.active .vg17-avatar{ animation:vg17Pop .45s cubic-bezier(.2,.9,.3,1.4) .06s both; }
+#vg17Client.active .vg17-tabs{ animation:vg17Up .34s cubic-bezier(.2,.8,.3,1) .05s both; }
+#vg17Client.active .vg17-cards{ animation:vg17Up .38s cubic-bezier(.2,.8,.3,1) .10s both; }
+#vg17Client.active .vg17-cards .vg17-stat:nth-child(1){ animation:vg17Up .38s cubic-bezier(.2,.8,.3,1) .12s both; }
+#vg17Client.active .vg17-cards .vg17-stat:nth-child(2){ animation:vg17Up .38s cubic-bezier(.2,.8,.3,1) .17s both; }
+#vg17Client.active .vg17-cards .vg17-stat:nth-child(3){ animation:vg17Up .38s cubic-bezier(.2,.8,.3,1) .22s both; }
+#vg17Client.active .vg17-split{ animation:vg17Up .40s cubic-bezier(.2,.8,.3,1) .18s both; }
+
+/* Los mensajes del chat entran uno tras otro, como en una app de
+   mensajería. Se limita a los primeros para que un historial largo
+   no tarde en aparecer. */
+@keyframes vg17Msg{ from{opacity:0;transform:translateY(8px) scale(.98)} to{opacity:1;transform:none} }
+#vg17Client .vg17-msg{ animation:vg17Msg .28s ease both; }
+#vg17Client .vg17-msg:nth-child(1){ animation-delay:.02s }
+#vg17Client .vg17-msg:nth-child(2){ animation-delay:.06s }
+#vg17Client .vg17-msg:nth-child(3){ animation-delay:.10s }
+#vg17Client .vg17-msg:nth-child(4){ animation-delay:.14s }
+#vg17Client .vg17-msg:nth-child(n+5){ animation-delay:.16s }
+
+/* Los puntos de la línea de progreso se encienden en cadena */
+@keyframes vg17Dot{ from{transform:scale(.3);opacity:0} to{transform:scale(1);opacity:1} }
+#vg17Client.active .vg17-step.done span{ animation:vg17Dot .4s cubic-bezier(.2,.9,.3,1.5) both; }
+#vg17Client.active .vg17-step:nth-child(1).done span{ animation-delay:.30s }
+#vg17Client.active .vg17-step:nth-child(2).done span{ animation-delay:.42s }
+#vg17Client.active .vg17-step:nth-child(3).done span{ animation-delay:.54s }
+
+/* Brillo que recorre el encabezado del pedido una sola vez */
+#vg17Client.active .vg17-hero::after{
+  content:"";position:absolute;top:0;left:-60%;width:45%;height:100%;
+  background:linear-gradient(90deg,transparent,rgba(255,255,255,.09),transparent);
+  transform:skewX(-18deg);animation:vg17Shine 1.1s ease .35s both;pointer-events:none;
+}
+@keyframes vg17Shine{ from{left:-60%} to{left:130%} }
+
+/* Respeta a quien pidió menos movimiento en su sistema */
+@media(prefers-reduced-motion:reduce){
+  #vg17Client.active,#vg17Client.active *{ animation:none !important; }
 }
 </style>
 
