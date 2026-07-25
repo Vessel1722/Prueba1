@@ -26431,6 +26431,10 @@ function adminShell(){
     '<div class="vg17-tabs">'+
       '<button class="vg17-tab" data-v="orders">Pedidos<span class="vg17-dot" id="vg17ADot"></span></button>'+
       '<button class="vg17-tab" data-v="tickets">Reportes de falla</button>'+
+      /* Acceso al panel de siempre (Usuarios, Artículos, Supabase,
+         Reviews, Retro...). No se perdió: quedó guardado en
+         window.__vgClassicAdminOpen antes de instalar este panel. */
+      '<button class="vg17-tab" id="vg17AClassic">⚙ Más opciones</button>'+
     '</div><div id="vg17ABody"></div></div>';
 }
 
@@ -26448,13 +26452,33 @@ window.vgAdminOpen = async function(){
   var r=await c.rpc('is_admin');
   if(r.error || r.data!==true){ alert('Esta cuenta no tiene permisos de administrador.'); return; }
 
+  /* El panel clásico se guía por estas banderas de sesión. Se ponen
+     SOLO después de que Supabase confirmó el rol is_admin, para que
+     "Más opciones" no tenga que pedir otra contraseña. */
+  try{
+    sessionStorage.setItem('vg10_admin_ok','1');
+    sessionStorage.setItem('vg_admin_email_session_v52','1');
+    sessionStorage.setItem('vg_admin_ok','1');
+  }catch(e){}
+
   var root=qs('#vg17Admin');
   root.innerHTML=adminShell(); root.classList.add('active');
   document.body.style.overflow='hidden';
   qs('#vg17AX').onclick=closeAdmin;
-  qsa('#vg17Admin .vg17-tab').forEach(function(b){
+  /* Solo los que tienen data-v son pestañas de este panel; "Más opciones"
+     se enlaza aparte porque abre el panel clásico completo. */
+  qsa('#vg17Admin .vg17-tab[data-v]').forEach(function(b){
     b.onclick=function(){ A.view=b.dataset.v; A.ref=null; loadAdmin(); };
   });
+  var cl=qs('#vg17AClassic');
+  if(cl) cl.onclick=function(){
+    if(typeof window.__vgClassicAdminOpen!=='function'){
+      alert('No se encontró el panel clásico en esta versión.');
+      return;
+    }
+    closeAdmin();
+    window.__vgClassicAdminOpen();
+  };
   beep(); /* desbloquea el audio del navegador con este gesto del usuario */
   await loadAdmin();
   startAdminRealtime();
@@ -26467,7 +26491,7 @@ function closeAdmin(){
 
 async function loadAdmin(){
   var body=qs('#vg17ABody'); if(!body) return;
-  qsa('#vg17Admin .vg17-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.v===A.view); });
+  qsa('#vg17Admin .vg17-tab[data-v]').forEach(function(b){ b.classList.toggle('active', b.dataset.v===A.view); });
   body.innerHTML='<div class="vg17-empty">Cargando...</div>';
   if(A.view==='tickets') return renderAdminTickets(body);
   try{ A.orders=await allOrders(); }
