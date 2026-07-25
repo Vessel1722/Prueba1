@@ -26405,9 +26405,15 @@ async function renderTicketForm(body){
         ['1 mes','2 meses','3 meses','6 meses','12 meses','Vitalicio / Permanente','Único uso']
           .map(function(x){return '<option>'+x+'</option>';}).join('')+
       '</select></label>'+
-      '<label><span>Correo del producto afectado *</span><input type="email" id="t_email" placeholder="correo@ejemplo.com"></label>'+
-      '<label><span>Contraseña del producto afectado *</span><input type="text" id="t_pass" placeholder="Contraseña de la cuenta con falla"></label>'+
-      '<div class="vg17-warn">🔒 Estos datos solo los ve el equipo de Vessel Games y sirven para revisar tu cuenta. '+
+      '<div class="vg17-warn" id="t_credhint">ℹ️ <b>¿Tu servicio no es de streaming ni de cuentas?</b><br>'+
+        'Si compraste un código, monedas, una licencia o un trámite, <b>deja vacíos</b> los dos campos de abajo '+
+        'y envía el reporte normalmente. Solo se llenan para Netflix, Max, Disney+, Prime Video, Spotify y '+
+        'servicios parecidos donde hay correo y contraseña.</div>'+
+      '<label><span>Correo del producto afectado <i style="color:#8e9cba;font-style:normal">(solo streaming/cuentas)</i></span>'+
+        '<input type="email" id="t_email" placeholder="Déjalo vacío si no aplica"></label>'+
+      '<label><span>Contraseña del producto afectado <i style="color:#8e9cba;font-style:normal">(solo streaming/cuentas)</i></span>'+
+        '<input type="text" id="t_pass" placeholder="Déjalo vacío si no aplica"></label>'+
+      '<div class="vg17-warn">🔒 Si los llenas, estos datos solo los ve el equipo de Vessel Games y sirven para revisar tu cuenta. '+
         'No escribas aquí la contraseña de tu cuenta de Vessel Games ni la de tu correo personal.</div>'+
       '<label><span>Descripción detallada del problema *</span>'+
         '<textarea id="t_desc" placeholder="Explica qué pasó, desde cuándo, y qué mensaje de error aparece."></textarea></label>'+
@@ -26436,8 +26442,12 @@ async function renderTicketForm(body){
     if(!v.order_id){ err.textContent='Selecciona el producto afectado.'; return; }
     if(!v.purchase_date){ err.textContent='Indica la fecha de compra.'; return; }
     if(!v.subscription_period){ err.textContent='Indica el tiempo de suscripción.'; return; }
-    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.account_email)){ err.textContent='Escribe un correo válido del producto.'; return; }
-    if(!v.account_password){ err.textContent='Escribe la contraseña del producto afectado.'; return; }
+    /* Correo y contraseña son OPCIONALES: solo aplican a streaming y
+       cuentas. Un código, unas monedas o un trámite no los tienen.
+       Si el cliente sí escribe un correo, al menos que sea válido. */
+    if(v.account_email && !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.account_email)){
+      err.textContent='Ese correo no parece válido. Corrígelo o déjalo vacío si no aplica.'; return;
+    }
     if(v.problem_description.length<15){ err.textContent='Describe el problema con más detalle (mínimo 15 caracteres).'; return; }
 
     var c=SB(); if(!c){ err.textContent='Sin conexión.'; return; }
@@ -26454,8 +26464,10 @@ async function renderTicketForm(body){
         product_name:otitle(order),
         purchase_date:v.purchase_date,
         subscription_period:v.subscription_period,
-        account_email:v.account_email,
-        account_password:v.account_password,
+        /* vacío → null, para que en el panel admin se vea claramente
+           "no aplica" en vez de una cadena en blanco */
+        account_email:v.account_email||null,
+        account_password:v.account_password||null,
         problem_description:v.problem_description,
         customer_name:prof.name||'',
         customer_phone:prof.phone||'',
@@ -26703,7 +26715,11 @@ async function renderAdminTickets(body){
       '<p style="margin:8px 0 0;color:#93a0bd;font-size:.77rem">'+esc(t.customer_name||'')+' · '+esc(t.customer_phone||'')+' · '+esc(dateMX(t.created_at))+'</p>'+
       '<div class="vg17-grid2" style="margin-top:10px">'+
         '<div class="vg17-box" style="margin:0"><span>Compra</span><b>'+esc(t.purchase_date)+'\n'+esc(t.subscription_period)+'</b></div>'+
-        '<div class="vg17-box" style="margin:0"><span>Cuenta afectada</span><b style="word-break:break-all">'+esc(t.account_email)+'\n'+esc(t.account_password)+'</b></div>'+
+        '<div class="vg17-box" style="margin:0"><span>Cuenta afectada</span><b style="word-break:break-all">'+
+          (t.account_email||t.account_password
+            ? esc(t.account_email||'(sin correo)')+'\n'+esc(t.account_password||'(sin contraseña)')
+            : '<span style="color:#8e9cba;font-weight:800">No aplica · servicio sin credenciales</span>')+
+        '</b></div>'+
       '</div>'+
       '<div class="vg17-box" style="margin:10px 0 0"><span>Problema</span><b>'+esc(t.problem_description)+'</b></div>'+
       '<textarea class="t-note" placeholder="Respuesta / notas para el cliente..." style="width:100%;min-height:70px;margin-top:10px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:11px;padding:10px;font-family:inherit;font-size:.83rem">'+esc(t.admin_notes||'')+'</textarea>'+
