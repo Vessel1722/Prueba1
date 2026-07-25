@@ -25931,5 +25931,820 @@ else init();
 })();
 </script>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 17 — Entrega interna, chat condicional y tickets
+     Reemplaza el flujo de entregas por WhatsApp.
+     Requiere correr antes: supabase_fase17_entregas_chat_tickets.sql
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-fase17-css">
+.vg17-panel{position:fixed;inset:0;z-index:30000;background:#070810;display:none;overflow:auto;-webkit-overflow-scrolling:touch}
+.vg17-panel.active{display:block}
+.vg17-wrap{max-width:1240px;margin:0 auto;padding:18px 16px 60px}
+.vg17-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 18px;position:sticky;top:0;background:#070810;z-index:5;border-bottom:1px solid rgba(255,255,255,.08)}
+.vg17-top h1{margin:0;font-size:1.3rem;color:#fff}
+.vg17-top p{margin:3px 0 0;color:#93a0bd;font-size:.82rem}
+.vg17-x{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-size:1.3rem;cursor:pointer;flex:none}
+.vg17-tabs{display:flex;gap:8px;overflow-x:auto;padding:14px 0;scrollbar-width:none}
+.vg17-tabs::-webkit-scrollbar{display:none}
+.vg17-tab{flex:none;padding:10px 15px;border-radius:999px;border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:#c4cee6;font-weight:800;font-size:.8rem;cursor:pointer;white-space:nowrap;position:relative}
+.vg17-tab.active{background:linear-gradient(135deg,#8b5cf6,#19e6c1);color:#06121a;border-color:transparent}
+.vg17-dot{display:none;position:absolute;top:-3px;right:-3px;min-width:18px;height:18px;border-radius:9px;background:#ff4d6d;color:#fff;font-size:.62rem;font-weight:900;align-items:center;justify-content:center;padding:0 5px}
+.vg17-dot.show{display:flex}
+.vg17-cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:11px;margin-bottom:18px}
+.vg17-stat{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.035);border-radius:16px;padding:14px}
+.vg17-stat span{display:block;color:#8e9cba;font-size:.66rem;text-transform:uppercase;letter-spacing:.09em;font-weight:900}
+.vg17-stat b{display:block;margin-top:6px;color:#fff;font-size:1.42rem}
+.vg17-card{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.035);border-radius:18px;padding:14px;margin-bottom:11px;cursor:pointer;transition:.18s}
+.vg17-card:hover,.vg17-card.active{border-color:rgba(139,92,246,.55);background:rgba(139,92,246,.09)}
+.vg17-card h4{margin:0 0 5px;color:#fff;font-size:.97rem}
+.vg17-card p{margin:0;color:#93a0bd;font-size:.76rem}
+.vg17-row{display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.vg17-price{color:#19e6c1;font-weight:950;font-size:1.02rem}
+.vg17-chip{display:inline-block;padding:4px 10px;border-radius:999px;font-size:.63rem;font-weight:900;text-transform:uppercase;letter-spacing:.06em;margin-top:7px}
+.vg17-chip.pendiente{background:rgba(255,183,77,.16);color:#ffd68a}
+.vg17-chip.proceso{background:rgba(139,92,246,.18);color:#d6c7ff}
+.vg17-chip.entregado{background:rgba(25,230,193,.16);color:#8ff5e3}
+.vg17-chip.cancelado{background:rgba(255,77,109,.16);color:#ffabbc}
+.vg17-btn{border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#e8edf9;border-radius:13px;padding:11px 15px;font-weight:850;cursor:pointer;font-size:.83rem;transition:.18s}
+.vg17-btn:hover{border-color:rgba(139,92,246,.5)}
+.vg17-btn.primary{background:linear-gradient(135deg,#8b5cf6,#19e6c1);color:#06121a;border-color:transparent}
+.vg17-btn.ok{background:rgba(25,230,193,.14);color:#8ff5e3;border-color:rgba(25,230,193,.32)}
+.vg17-btn:disabled{opacity:.45;cursor:not-allowed}
+.vg17-grid2{display:grid;grid-template-columns:1fr 1fr;gap:11px}
+.vg17-box{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.03);border-radius:15px;padding:13px;margin-bottom:11px}
+.vg17-box>span{display:block;color:#8e9cba;font-size:.64rem;text-transform:uppercase;letter-spacing:.09em;font-weight:900;margin-bottom:5px}
+.vg17-box>b{color:#fff;font-size:.9rem;white-space:pre-line;font-weight:800}
+.vg17-proof img{width:100%;max-height:330px;object-fit:contain;border-radius:13px;border:1px solid rgba(255,255,255,.12);background:#0b0e18}
+.vg17-msgs{min-height:190px;max-height:390px;overflow-y:auto;padding:13px;border:1px solid rgba(255,255,255,.10);border-radius:15px;background:#0a0d16;margin-bottom:11px}
+.vg17-msg{margin-bottom:11px;max-width:86%}
+.vg17-msg small{display:block;color:#7d8aa8;font-size:.63rem;font-weight:850;margin-bottom:4px}
+.vg17-msg div{padding:10px 13px;border-radius:14px;font-size:.86rem;line-height:1.45;color:#e8edf9;white-space:pre-line;word-break:break-word}
+.vg17-msg.client{margin-left:auto;text-align:right}
+.vg17-msg.client div{background:rgba(139,92,246,.20);border:1px solid rgba(139,92,246,.30)}
+.vg17-msg.admin div{background:rgba(25,230,193,.13);border:1px solid rgba(25,230,193,.26)}
+.vg17-msg.system div{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.10);color:#a9b6d0;font-style:italic}
+.vg17-msg.delivery div{background:linear-gradient(135deg,rgba(25,230,193,.20),rgba(139,92,246,.20));border:1px solid rgba(25,230,193,.45)}
+.vg17-inputbar{display:flex;gap:9px;align-items:flex-end}
+.vg17-inputbar textarea{flex:1;min-height:52px;max-height:130px;resize:vertical;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:13px;padding:12px;font-family:inherit;font-size:.87rem}
+.vg17-inputbar textarea:disabled{opacity:.5;cursor:not-allowed}
+.vg17-lock{border:1px dashed rgba(255,183,77,.45);background:rgba(255,183,77,.08);border-radius:14px;padding:13px;color:#ffd68a;font-size:.82rem;font-weight:800;text-align:center;line-height:1.5}
+.vg17-quick{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:11px}
+.vg17-quick button{padding:8px 12px;border-radius:11px;border:1px solid rgba(139,92,246,.32);background:rgba(139,92,246,.13);color:#d6c7ff;font-size:.76rem;font-weight:850;cursor:pointer}
+.vg17-quick button:hover{background:rgba(139,92,246,.26)}
+.vg17-form label{display:block;margin-bottom:11px}
+.vg17-form label>span{display:block;color:#c4cee6;font-size:.76rem;font-weight:850;margin-bottom:5px}
+.vg17-form input,.vg17-form select,.vg17-form textarea{width:100%;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:12px;padding:11px 12px;font-family:inherit;font-size:.87rem}
+.vg17-form textarea{min-height:105px;resize:vertical}
+.vg17-empty{text-align:center;color:#7d8aa8;padding:30px 16px;font-size:.86rem}
+.vg17-err{color:#ff92a8;font-weight:850;font-size:.8rem;min-height:20px;margin:6px 0}
+.vg17-ok{color:#8ff5e3;font-weight:850;font-size:.8rem;min-height:20px;margin:6px 0}
+.vg17-warn{border:1px solid rgba(255,183,77,.32);background:rgba(255,183,77,.08);color:#ffd68a;border-radius:13px;padding:11px;font-size:.76rem;font-weight:800;margin-bottom:12px;line-height:1.5}
+.vg17-split{display:grid;grid-template-columns:360px 1fr;gap:16px;align-items:start}
+@media(max-width:900px){
+  .vg17-split{grid-template-columns:1fr}
+  .vg17-grid2{grid-template-columns:1fr}
+  .vg17-wrap{padding:14px 12px 50px}
+}
+/* Alerta de pedido nuevo (panel admin) */
+#vg17Alert{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-140%);z-index:40000;
+  background:linear-gradient(135deg,#8b5cf6,#19e6c1);color:#06121a;padding:13px 20px;border-radius:16px;
+  font-weight:950;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.2,.9,.3,1.3);
+  cursor:pointer;max-width:calc(100vw - 28px);text-align:center;font-size:.9rem}
+#vg17Alert.show{transform:translateX(-50%) translateY(0)}
+</style>
+
+<div class="vg17-panel" id="vg17Client"></div>
+<div class="vg17-panel" id="vg17Admin"></div>
+<div id="vg17Alert"></div>
+
+<script id="vg-fase17-js">
+(function(){
+'use strict';
+if(window.__VG_FASE17__) return; window.__VG_FASE17__ = true;
+
+/* ═══════════════════════════════════════════════════════════════
+   RESPUESTAS PRE-CARGADAS DEL ADMIN
+   Edita libremente este arreglo: cada texto se vuelve un botón.
+   ═══════════════════════════════════════════════════════════════ */
+var QUICK_REPLIES = [
+  'Se está procesando su pedido.',
+  'Se está verificando su compra.',
+  'Comprobante recibido correctamente. Ya estamos preparando su entrega.',
+  'Su pedido está listo, se lo enviamos en unos minutos.',
+  'No pudimos validar el comprobante. ¿Podría reenviarlo?',
+  '¡Gracias por su compra! Cualquier duda estamos aquí.'
+];
+
+/* ── Helpers ─────────────────────────────────────────────────── */
+var qs = function(s,r){return (r||document).querySelector(s);};
+var qsa= function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));};
+function SB(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
+function money(n){var x=Number(n||0);return x>0?('$'+x.toLocaleString('es-MX')+' MXN'):'Cotizar';}
+function dateMX(d){try{return new Date(d).toLocaleString('es-MX',{dateStyle:'medium',timeStyle:'short'});}catch(e){return String(d||'');}}
+function oid(o){return String((o&&(o.id!=null?o.id:o.order_id))||'');}
+function ostatus(o){return String((o&&o.status)||'pendiente').toLowerCase();}
+function ototal(o){return Number((o&&o.total)||0);}
+function otitle(o){
+  if(!o) return 'Pedido';
+  if(o.product_title) return o.product_title + (o.product_option?(' · '+o.product_option):'');
+  var it=Array.isArray(o.items)?o.items:[];
+  if(it.length) return it.map(function(x){return (x.title||x.name||'Producto')+(x.option?(' · '+x.option):'');}).join(' | ');
+  return 'Pedido #'+oid(o);
+}
+function oitemsText(o){
+  var it=Array.isArray(o&&o.items)?o.items:[];
+  if(!it.length) return o&&o.product_title ? (o.product_title+(o.product_option?('\n'+o.product_option):'')) : 'Sin detalle.';
+  return it.map(function(x){return '· '+(x.title||x.name||'Producto')+(x.option?(' — '+x.option):'')+'  '+money(x.price);}).join('\n');
+}
+function chip(s){
+  var k = s==='entregado'?'entregado':s==='cancelado'?'cancelado':(s==='proceso'||s==='en_proceso')?'proceso':'pendiente';
+  var t = k==='entregado'?'Entregado':k==='cancelado'?'Cancelado':k==='proceso'?'En proceso':'Pendiente';
+  return '<span class="vg17-chip '+k+'">'+t+'</span>';
+}
+function toast(t,m){ try{ if(typeof window.showToast==='function'){window.showToast(t,m);return;} }catch(e){} }
+
+/* ── Sonido de pedido nuevo (generado, sin archivo externo) ──── */
+var actx=null;
+function beep(){
+  try{
+    actx = actx || new (window.AudioContext||window.webkitAudioContext)();
+    if(actx.state==='suspended') actx.resume();
+    [0,0.18].forEach(function(delay,i){
+      var o=actx.createOscillator(), g=actx.createGain();
+      o.type='sine'; o.frequency.value = i===0?880:1170;
+      g.gain.setValueAtTime(0.0001, actx.currentTime+delay);
+      g.gain.exponentialRampToValueAtTime(0.32, actx.currentTime+delay+0.02);
+      g.gain.exponentialRampToValueAtTime(0.0001, actx.currentTime+delay+0.16);
+      o.connect(g); g.connect(actx.destination);
+      o.start(actx.currentTime+delay); o.stop(actx.currentTime+delay+0.18);
+    });
+  }catch(e){}
+}
+function alertNew(text, onClick){
+  var el=qs('#vg17Alert'); if(!el) return;
+  el.textContent = text;
+  el.onclick = function(){ el.classList.remove('show'); if(onClick) onClick(); };
+  el.classList.add('show');
+  clearTimeout(window.__vg17AlertT);
+  window.__vg17AlertT = setTimeout(function(){ el.classList.remove('show'); }, 9000);
+}
+
+/* ── Datos ───────────────────────────────────────────────────── */
+async function myOrders(){
+  var c=SB(); if(!c) throw new Error('Sin conexión con el servidor.');
+  var r=await c.from('orders').select('*').order('created_at',{ascending:false}).limit(300);
+  if(r.error) throw r.error;
+  return r.data||[];   /* RLS ya filtra: el cliente solo recibe los suyos */
+}
+async function allOrders(){
+  var c=SB(); if(!c) throw new Error('Sin conexión con el servidor.');
+  var r=await c.from('orders').select('*').order('created_at',{ascending:false}).limit(500);
+  if(r.error) throw r.error;
+  return r.data||[];
+}
+async function fetchMsgs(ref){
+  var c=SB(); if(!c||!ref) return [];
+  var r=await c.from('vg_live_chat_messages').select('*')
+        .eq('thread_type','order').eq('thread_ref',String(ref))
+        .order('created_at',{ascending:true}).limit(400);
+  if(r.error) return [];
+  return r.data||[];
+}
+async function sendMsg(ref, role, text, isDelivery){
+  var c=SB(); if(!c) throw new Error('Sin conexión.');
+  text=String(text||'').trim();
+  if(!text) throw new Error('Escribe un mensaje.');
+  var prof = window.vgGetLocalSession ? (window.vgGetLocalSession()||{}) : {};
+  var r=await c.from('vg_live_chat_messages').insert({
+    thread_type:'order', thread_ref:String(ref), order_id:String(ref),
+    sender_role:role,
+    sender_name: role==='admin' ? 'Vessel Games' : (prof.name||'Cliente'),
+    sender_phone: role==='client' ? (prof.phone||'') : null,
+    message:text,
+    is_delivery: !!isDelivery,
+    read_by_client: role==='client',
+    read_by_admin: role==='admin'
+  }).select().single();
+  if(r.error){
+    /* La política RLS rechaza al cliente si el admin no ha escrito */
+    if(/row-level security|violates/i.test(r.error.message||''))
+      throw new Error('Todavía no puedes escribir en este chat. Espera a que un administrador te responda.');
+    throw r.error;
+  }
+  return r.data;
+}
+function renderMsgs(list){
+  if(!list||!list.length) return '<div class="vg17-empty">Sin mensajes todavía.</div>';
+  return list.map(function(m){
+    var role=String(m.sender_role||'client').toLowerCase();
+    if(role.indexOf('admin')>-1||role.indexOf('soporte')>-1) role='admin';
+    else if(role.indexOf('system')>-1||role.indexOf('sistema')>-1) role='system';
+    else role='client';
+    var who = role==='admin'?'Vessel Games':role==='system'?'Sistema':'Tú';
+    return '<div class="vg17-msg '+role+(m.is_delivery?' delivery':'')+'">'+
+             '<small>'+esc(who)+' · '+esc(dateMX(m.created_at))+(m.is_delivery?' · ENTREGA':'')+'</small>'+
+             '<div>'+esc(m.message||'')+'</div>'+
+           '</div>';
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MÓDULO 2 — PANEL DEL CLIENTE (chat condicional)
+   ═══════════════════════════════════════════════════════════════ */
+var C = { view:'purchases', orders:[], ref:null, unread:0, poll:null, chan:null };
+
+function clientShell(){
+  return '<div class="vg17-wrap">'+
+    '<div class="vg17-top"><div><h1>Mi cuenta</h1><p>Pedidos, entregas y soporte.</p></div>'+
+    '<button class="vg17-x" id="vg17CX">×</button></div>'+
+    '<div class="vg17-tabs">'+
+      '<button class="vg17-tab" data-v="purchases">Mis compras</button>'+
+      '<button class="vg17-tab" data-v="tickets">Reportar falla</button>'+
+      '<button class="vg17-tab" data-v="mytickets">Mis reportes</button>'+
+    '</div><div id="vg17CBody"></div></div>';
+}
+
+window.vgOpenClientPanel = async function(view, ref){
+  var c=SB();
+  if(!c){ alert('No hay conexión con el servidor.'); return; }
+  var s=await c.auth.getSession();
+  if(!s||!s.data||!s.data.session){ if(window.vgOpenAuth) window.vgOpenAuth(); return; }
+  var root=qs('#vg17Client');
+  root.innerHTML=clientShell(); root.classList.add('active');
+  document.body.style.overflow='hidden';
+  qs('#vg17CX').onclick=closeClient;
+  C.view = view||'purchases'; C.ref = ref||null;
+  qsa('#vg17Client .vg17-tab').forEach(function(b){
+    b.onclick=function(){ C.view=b.dataset.v; C.ref=null; loadClient(); };
+  });
+  await loadClient();
+  startClientRealtime();
+};
+window.openDashboard = function(){ window.vgOpenClientPanel('purchases'); };
+window.vgProOpen     = function(){ window.vgOpenClientPanel('purchases'); };
+
+function closeClient(){
+  qs('#vg17Client').classList.remove('active');
+  document.body.style.overflow='';
+  if(C.chan){ try{ SB().removeChannel(C.chan); }catch(e){} C.chan=null; }
+}
+
+async function loadClient(){
+  var body=qs('#vg17CBody'); if(!body) return;
+  qsa('#vg17Client .vg17-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.v===C.view); });
+  body.innerHTML='<div class="vg17-empty">Cargando...</div>';
+  if(C.view==='tickets')   return renderTicketForm(body);
+  if(C.view==='mytickets') return renderMyTickets(body);
+  try{ C.orders = await myOrders(); }
+  catch(e){ body.innerHTML='<div class="vg17-empty">No se pudieron cargar tus compras: '+esc(e.message||e)+'</div>'; return; }
+  return renderPurchases(body);
+}
+
+function renderPurchases(body){
+  var orders=C.orders;
+  if(!orders.length){ body.innerHTML='<div class="vg17-empty">Todavía no tienes compras registradas.</div>'; return; }
+  var sel = orders.filter(function(o){return oid(o)===String(C.ref||'');})[0] || orders[0];
+  C.ref = oid(sel);
+  var total = orders.reduce(function(s,o){return s+ototal(o);},0);
+  var activos = orders.filter(function(o){return ostatus(o)!=='entregado'&&ostatus(o)!=='cancelado';}).length;
+
+  body.innerHTML =
+    '<div class="vg17-cards">'+
+      '<div class="vg17-stat"><span>Compras</span><b>'+orders.length+'</b></div>'+
+      '<div class="vg17-stat"><span>Total</span><b>'+money(total)+'</b></div>'+
+      '<div class="vg17-stat"><span>Activos</span><b>'+activos+'</b></div>'+
+    '</div>'+
+    '<div class="vg17-split">'+
+      '<div>'+orders.map(function(o){
+        return '<div class="vg17-card '+(oid(o)===C.ref?'active':'')+'" data-o="'+esc(oid(o))+'">'+
+          '<h4>'+esc(otitle(o))+'</h4>'+
+          '<p>Pedido #'+esc(oid(o).slice(0,8))+' · '+esc(dateMX(o.created_at))+'</p>'+
+          '<div class="vg17-row">'+chip(ostatus(o))+'<span class="vg17-price">'+money(ototal(o))+'</span></div>'+
+        '</div>';
+      }).join('')+'</div>'+
+      '<div id="vg17CDetail"></div>'+
+    '</div>';
+  qsa('[data-o]',body).forEach(function(card){
+    card.onclick=function(){ C.ref=card.getAttribute('data-o'); renderPurchases(body); };
+  });
+  renderClientDetail(sel);
+}
+
+async function renderClientDetail(o){
+  var d=qs('#vg17CDetail'); if(!d||!o) return;
+  /* ★ REGLA ESTRICTA: la caja de texto nace bloqueada y solo se abre
+     cuando el pedido tiene chat_unlocked = true, que es lo que pone
+     el trigger de la base de datos cuando el admin escribe primero. */
+  var unlocked = o.chat_unlocked === true;
+  d.innerHTML =
+    '<div class="vg17-box"><span>Producto</span><b>'+esc(oitemsText(o))+'</b></div>'+
+    '<div class="vg17-grid2">'+
+      '<div class="vg17-box"><span>Estado</span><b>'+chip(ostatus(o))+'</b></div>'+
+      '<div class="vg17-box"><span>Total</span><b style="color:#19e6c1">'+money(ototal(o))+'</b></div>'+
+    '</div>'+
+    '<div class="vg17-box"><span>Chat de entrega</span>'+
+      '<div class="vg17-msgs" id="vg17CMsgs"><div class="vg17-empty">Cargando...</div></div>'+
+      (unlocked
+        ? '<div class="vg17-inputbar"><textarea id="vg17CInput" placeholder="Escribe tu mensaje..."></textarea>'+
+          '<button class="vg17-btn primary" id="vg17CSend">Enviar</button></div>'+
+          '<div class="vg17-err" id="vg17CErr"></div>'
+        : '<div class="vg17-lock">🔒 El chat se activará cuando un administrador te escriba.<br>'+
+          'Mientras tanto puedes ver aquí el estado de tu pedido y el historial.</div>')+
+    '</div>';
+  var list=await fetchMsgs(oid(o));
+  var box=qs('#vg17CMsgs'); if(box){ box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight; }
+  if(unlocked){
+    qs('#vg17CSend').onclick=async function(){
+      var ta=qs('#vg17CInput'), err=qs('#vg17CErr'), btn=this;
+      err.textContent=''; btn.disabled=true;
+      try{
+        await sendMsg(oid(o),'client',ta.value);
+        ta.value='';
+        var l=await fetchMsgs(oid(o));
+        var b=qs('#vg17CMsgs'); b.innerHTML=renderMsgs(l); b.scrollTop=b.scrollHeight;
+      }catch(e){ err.textContent = e.message||String(e); }
+      finally{ btn.disabled=false; }
+    };
+  }
+}
+
+/* Realtime del cliente: si el admin escribe, se desbloquea al instante */
+function startClientRealtime(){
+  var c=SB(); if(!c) return;
+  if(C.chan){ try{ c.removeChannel(C.chan); }catch(e){} }
+  C.chan = c.channel('vg17-client')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'vg_live_chat_messages'}, function(p){
+      var m=p.new||{};
+      if(String(m.sender_role)!=='admin') return;
+      if(!C.orders.some(function(o){return oid(o)===String(m.thread_ref);})) return;
+      beep();
+      alertNew('Soporte respondió tu pedido', function(){ C.ref=String(m.thread_ref); loadClient(); });
+      loadClient();
+    })
+    .subscribe();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MÓDULO 3 — TICKETS DE SOPORTE (reporte de fallas)
+   ═══════════════════════════════════════════════════════════════ */
+async function renderTicketForm(body){
+  var orders=[];
+  try{ orders=await myOrders(); }catch(e){}
+  C.orders=orders;
+  var opts = orders.map(function(o){
+    return '<option value="'+esc(oid(o))+'" data-d="'+esc(String(o.created_at||'').slice(0,10))+'">'+
+             esc(otitle(o))+' — '+esc(dateMX(o.created_at))+'</option>';
+  }).join('');
+
+  body.innerHTML =
+    '<div class="vg17-box vg17-form">'+
+      '<h3 style="margin:0 0 4px;color:#fff">Reportar una falla</h3>'+
+      '<p style="margin:0 0 16px;color:#93a0bd;font-size:.82rem">Exclusivo para servicios que dejaron de funcionar. Todos los campos son obligatorios.</p>'+
+      (orders.length
+        ? ''
+        : '<div class="vg17-warn">No encontramos compras en tu cuenta. Necesitas al menos un pedido para levantar un reporte.</div>')+
+      '<label><span>Producto adquirido *</span><select id="t_prod">'+
+        '<option value="">Selecciona tu producto...</option>'+opts+'</select></label>'+
+      '<label><span>Fecha de compra *</span><input type="date" id="t_date"></label>'+
+      '<label><span>Tiempo de suscripción adquirido *</span><select id="t_sub">'+
+        '<option value="">Selecciona...</option>'+
+        ['1 mes','2 meses','3 meses','6 meses','12 meses','Vitalicio / Permanente','Único uso']
+          .map(function(x){return '<option>'+x+'</option>';}).join('')+
+      '</select></label>'+
+      '<label><span>Correo del producto afectado *</span><input type="email" id="t_email" placeholder="correo@ejemplo.com"></label>'+
+      '<label><span>Contraseña del producto afectado *</span><input type="text" id="t_pass" placeholder="Contraseña de la cuenta con falla"></label>'+
+      '<div class="vg17-warn">🔒 Estos datos solo los ve el equipo de Vessel Games y sirven para revisar tu cuenta. '+
+        'No escribas aquí la contraseña de tu cuenta de Vessel Games ni la de tu correo personal.</div>'+
+      '<label><span>Descripción detallada del problema *</span>'+
+        '<textarea id="t_desc" placeholder="Explica qué pasó, desde cuándo, y qué mensaje de error aparece."></textarea></label>'+
+      '<div class="vg17-err" id="t_err"></div><div class="vg17-ok" id="t_ok"></div>'+
+      '<button class="vg17-btn primary" id="t_send" style="width:100%">Enviar reporte</button>'+
+    '</div>';
+
+  /* Al elegir el pedido, autocompleta la fecha de compra */
+  qs('#t_prod').onchange=function(){
+    var op=this.options[this.selectedIndex];
+    var d=op&&op.getAttribute('data-d');
+    if(d) qs('#t_date').value=d;
+  };
+
+  qs('#t_send').onclick=async function(){
+    var err=qs('#t_err'), ok=qs('#t_ok'), btn=this;
+    err.textContent=''; ok.textContent='';
+    var v={
+      order_id:            qs('#t_prod').value,
+      purchase_date:       qs('#t_date').value,
+      subscription_period: qs('#t_sub').value,
+      account_email:       qs('#t_email').value.trim(),
+      account_password:    qs('#t_pass').value,
+      problem_description: qs('#t_desc').value.trim()
+    };
+    if(!v.order_id){ err.textContent='Selecciona el producto afectado.'; return; }
+    if(!v.purchase_date){ err.textContent='Indica la fecha de compra.'; return; }
+    if(!v.subscription_period){ err.textContent='Indica el tiempo de suscripción.'; return; }
+    if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(v.account_email)){ err.textContent='Escribe un correo válido del producto.'; return; }
+    if(!v.account_password){ err.textContent='Escribe la contraseña del producto afectado.'; return; }
+    if(v.problem_description.length<15){ err.textContent='Describe el problema con más detalle (mínimo 15 caracteres).'; return; }
+
+    var c=SB(); if(!c){ err.textContent='Sin conexión.'; return; }
+    btn.disabled=true; btn.textContent='Enviando...';
+    try{
+      var s=await c.auth.getSession();
+      var uid=s&&s.data&&s.data.session?s.data.session.user.id:null;
+      if(!uid) throw new Error('Inicia sesión para enviar un reporte.');
+      var order=C.orders.filter(function(o){return oid(o)===v.order_id;})[0]||{};
+      var prof=window.vgGetLocalSession?(window.vgGetLocalSession()||{}):{};
+      var r=await c.from('vg_support_tickets').insert({
+        user_id:uid,
+        order_id:v.order_id,
+        product_name:otitle(order),
+        purchase_date:v.purchase_date,
+        subscription_period:v.subscription_period,
+        account_email:v.account_email,
+        account_password:v.account_password,
+        problem_description:v.problem_description,
+        customer_name:prof.name||'',
+        customer_phone:prof.phone||'',
+        status:'abierto'
+      }).select().single();
+      if(r.error) throw r.error;
+      ok.textContent='✅ Reporte enviado. Te responderemos por el chat del pedido.';
+      ['#t_email','#t_pass','#t_desc'].forEach(function(x){ qs(x).value=''; });
+      setTimeout(function(){ C.view='mytickets'; loadClient(); }, 1400);
+    }catch(e){ err.textContent='No se pudo enviar: '+(e.message||e); }
+    finally{ btn.disabled=false; btn.textContent='Enviar reporte'; }
+  };
+}
+
+async function renderMyTickets(body){
+  var c=SB(); if(!c){ body.innerHTML='<div class="vg17-empty">Sin conexión.</div>'; return; }
+  var r=await c.from('vg_support_tickets').select('*').order('created_at',{ascending:false}).limit(100);
+  if(r.error){ body.innerHTML='<div class="vg17-empty">No se pudieron cargar tus reportes: '+esc(r.error.message)+'</div>'; return; }
+  var t=r.data||[];
+  if(!t.length){ body.innerHTML='<div class="vg17-empty">Todavía no has enviado ningún reporte.</div>'; return; }
+  body.innerHTML=t.map(function(x){
+    return '<div class="vg17-box"><div class="vg17-row"><b style="color:#fff">'+esc(x.product_name)+'</b>'+
+      '<span class="vg17-chip '+(x.status==='resuelto'?'entregado':x.status==='en_proceso'?'proceso':'pendiente')+'">'+esc(x.status)+'</span></div>'+
+      '<p style="margin:8px 0 0;color:#93a0bd;font-size:.78rem">Enviado el '+esc(dateMX(x.created_at))+' · Compra: '+esc(x.purchase_date)+' · '+esc(x.subscription_period)+'</p>'+
+      '<p style="margin:8px 0 0;color:#c4cee6;font-size:.83rem;white-space:pre-line">'+esc(x.problem_description)+'</p>'+
+      (x.admin_notes?'<div style="margin-top:10px;padding:10px;border-radius:11px;background:rgba(25,230,193,.10);border:1px solid rgba(25,230,193,.26);color:#8ff5e3;font-size:.82rem"><b>Respuesta de soporte:</b><br>'+esc(x.admin_notes)+'</div>':'')+
+    '</div>';
+  }).join('');
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MÓDULO 1 — PANEL ADMIN (bandeja, alertas, respuestas, entrega)
+   ═══════════════════════════════════════════════════════════════ */
+var A = { view:'orders', orders:[], tickets:[], ref:null, chan:null, seen:{} };
+
+function adminShell(){
+  return '<div class="vg17-wrap">'+
+    '<div class="vg17-top"><div><h1>Panel administrador</h1><p>Pedidos, entregas y reportes de falla.</p></div>'+
+    '<button class="vg17-x" id="vg17AX">×</button></div>'+
+    '<div class="vg17-tabs">'+
+      '<button class="vg17-tab" data-v="orders">Pedidos<span class="vg17-dot" id="vg17ADot"></span></button>'+
+      '<button class="vg17-tab" data-v="tickets">Reportes de falla</button>'+
+    '</div><div id="vg17ABody"></div></div>';
+}
+
+/* Se mantiene el candado de seguridad: se vuelve a validar la sesión
+   de Supabase Auth y el rol is_admin antes de abrir nada. */
+window.vgAdminOpen = async function(){
+  var c=SB();
+  if(!c){ alert('No hay conexión con el servidor.'); return; }
+  var s=await c.auth.getSession();
+  if(!s||!s.data||!s.data.session){
+    alert('Inicia sesión con tu cuenta de administrador para entrar al panel.');
+    if(window.vgOpenAuth) window.vgOpenAuth('admin');
+    return;
+  }
+  var r=await c.rpc('is_admin');
+  if(r.error || r.data!==true){ alert('Esta cuenta no tiene permisos de administrador.'); return; }
+
+  var root=qs('#vg17Admin');
+  root.innerHTML=adminShell(); root.classList.add('active');
+  document.body.style.overflow='hidden';
+  qs('#vg17AX').onclick=closeAdmin;
+  qsa('#vg17Admin .vg17-tab').forEach(function(b){
+    b.onclick=function(){ A.view=b.dataset.v; A.ref=null; loadAdmin(); };
+  });
+  beep(); /* desbloquea el audio del navegador con este gesto del usuario */
+  await loadAdmin();
+  startAdminRealtime();
+};
+
+function closeAdmin(){
+  qs('#vg17Admin').classList.remove('active');
+  document.body.style.overflow='';
+}
+
+async function loadAdmin(){
+  var body=qs('#vg17ABody'); if(!body) return;
+  qsa('#vg17Admin .vg17-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.v===A.view); });
+  body.innerHTML='<div class="vg17-empty">Cargando...</div>';
+  if(A.view==='tickets') return renderAdminTickets(body);
+  try{ A.orders=await allOrders(); }
+  catch(e){ body.innerHTML='<div class="vg17-empty">Error: '+esc(e.message||e)+'</div>'; return; }
+  renderAdminOrders(body);
+}
+
+function renderAdminOrders(body){
+  var orders=A.orders;
+  var nuevos=orders.filter(function(o){return o.unread_admin===true;}).length;
+  var dot=qs('#vg17ADot'); if(dot){ dot.classList.toggle('show',!!nuevos); dot.textContent=nuevos>9?'9+':String(nuevos); }
+  if(!orders.length){ body.innerHTML='<div class="vg17-empty">Sin pedidos.</div>'; return; }
+  var sel=orders.filter(function(o){return oid(o)===String(A.ref||'');})[0]||orders[0];
+  A.ref=oid(sel);
+  body.innerHTML=
+    '<div class="vg17-cards">'+
+      '<div class="vg17-stat"><span>Pedidos</span><b>'+orders.length+'</b></div>'+
+      '<div class="vg17-stat"><span>Sin leer</span><b style="color:#ffd68a">'+nuevos+'</b></div>'+
+      '<div class="vg17-stat"><span>Entregados</span><b>'+orders.filter(function(o){return ostatus(o)==='entregado';}).length+'</b></div>'+
+    '</div>'+
+    '<div class="vg17-split"><div>'+orders.map(function(o){
+      return '<div class="vg17-card '+(oid(o)===A.ref?'active':'')+'" data-o="'+esc(oid(o))+'">'+
+        '<h4>'+(o.unread_admin?'🔴 ':'')+esc(otitle(o))+'</h4>'+
+        '<p>'+esc(o.customer_name||o.client_name||'Cliente')+' · '+esc(o.customer_phone||o.client_phone||'')+'</p>'+
+        '<p>'+esc(dateMX(o.created_at))+'</p>'+
+        '<div class="vg17-row">'+chip(ostatus(o))+'<span class="vg17-price">'+money(ototal(o))+'</span></div>'+
+      '</div>';
+    }).join('')+'</div><div id="vg17ADetail"></div></div>';
+  qsa('[data-o]',body).forEach(function(card){
+    card.onclick=function(){ A.ref=card.getAttribute('data-o'); renderAdminOrders(body); };
+  });
+  renderAdminDetail(sel);
+}
+
+async function renderAdminDetail(o){
+  var d=qs('#vg17ADetail'); if(!d||!o) return;
+  var proof=o.proof_data_url||(o.proof&&(o.proof.url||o.proof.data_url))||'';
+  d.innerHTML=
+    '<div class="vg17-grid2">'+
+      '<div class="vg17-box"><span>Cliente</span><b>'+esc(o.customer_name||o.client_name||'Cliente')+'\n'+
+        esc(o.customer_phone||o.client_phone||'')+'\n'+esc(o.customer_email||'')+'</b></div>'+
+      '<div class="vg17-box"><span>Pedido</span><b>#'+esc(oid(o).slice(0,8))+'\n'+esc(dateMX(o.created_at))+'\n'+money(ototal(o))+'</b></div>'+
+    '</div>'+
+    '<div class="vg17-box"><span>Producto solicitado</span><b>'+esc(oitemsText(o))+'</b></div>'+
+    (o.delivery_data?'<div class="vg17-box"><span>Datos que dejó el cliente</span><b>'+esc(o.delivery_data)+'</b></div>':'')+
+    '<div class="vg17-box vg17-proof"><span>Comprobante de pago</span>'+
+      (proof
+        ? '<img src="'+esc(proof)+'" alt="Comprobante"><a href="'+esc(proof)+'" target="_blank" style="display:inline-block;margin-top:10px;color:#2dd4bf;font-weight:900;font-size:.8rem">Abrir en grande</a>'
+        : '<div class="vg17-empty">Sin comprobante.</div>')+
+    '</div>'+
+    '<div class="vg17-box"><span>Estado del pedido</span>'+
+      '<div class="vg17-quick" style="margin-top:8px">'+
+        ['pendiente','proceso','entregado','cancelado'].map(function(s){
+          return '<button data-st="'+s+'">'+s+'</button>';
+        }).join('')+
+      '</div></div>'+
+    '<div class="vg17-box"><span>Chat con el cliente</span>'+
+      '<div class="vg17-msgs" id="vg17AMsgs"><div class="vg17-empty">Cargando...</div></div>'+
+      '<div class="vg17-quick" id="vg17AQuick">'+
+        QUICK_REPLIES.map(function(t,i){return '<button data-q="'+i+'">'+esc(t)+'</button>';}).join('')+
+      '</div>'+
+      '<div class="vg17-inputbar"><textarea id="vg17AInput" placeholder="Escribe tu respuesta..."></textarea>'+
+      '<button class="vg17-btn primary" id="vg17ASend">Enviar</button></div>'+
+      '<div class="vg17-err" id="vg17AErr"></div>'+
+    '</div>'+
+    '<div class="vg17-box" style="border-color:rgba(25,230,193,.32);background:rgba(25,230,193,.06)">'+
+      '<span style="color:#8ff5e3">📦 Entregar pedido</span>'+
+      '<p style="margin:0 0 9px;color:#93a0bd;font-size:.78rem">Escribe aquí los datos finales (usuario, contraseña, código, enlace). '+
+      'Al enviar, el cliente los recibe en su chat y el pedido queda marcado como entregado.</p>'+
+      '<textarea id="vg17ADeliv" style="width:100%;min-height:100px;border:1px solid rgba(25,230,193,.30);background:rgba(255,255,255,.05);color:#fff;border-radius:12px;padding:11px;font-family:inherit;font-size:.86rem" placeholder="Correo: ejemplo@correo.com&#10;Contraseña: ******&#10;Instrucciones: ..."></textarea>'+
+      '<button class="vg17-btn ok" id="vg17ADelivBtn" style="width:100%;margin-top:9px">Enviar entrega y marcar como entregado</button>'+
+      '<div class="vg17-err" id="vg17ADelivErr"></div>'+
+    '</div>';
+
+  /* marcar como leído */
+  if(o.unread_admin){
+    try{ await SB().from('orders').update({unread_admin:false}).eq('id',o.id); o.unread_admin=false; }catch(e){}
+  }
+  await refreshAdminChat(oid(o));
+
+  qsa('[data-st]',d).forEach(function(b){
+    b.onclick=async function(){
+      try{
+        await SB().from('orders').update({status:b.getAttribute('data-st')}).eq('id',o.id);
+        o.status=b.getAttribute('data-st');
+        renderAdminOrders(qs('#vg17ABody'));
+        toast('Estado actualizado', o.status);
+      }catch(e){ alert('No se pudo actualizar: '+(e.message||e)); }
+    };
+  });
+  qsa('[data-q]',d).forEach(function(b){
+    b.onclick=function(){ qs('#vg17AInput').value = QUICK_REPLIES[Number(b.getAttribute('data-q'))]; };
+  });
+  qs('#vg17ASend').onclick=async function(){
+    var ta=qs('#vg17AInput'), err=qs('#vg17AErr'), btn=this;
+    err.textContent=''; btn.disabled=true;
+    try{ await sendMsg(oid(o),'admin',ta.value); ta.value=''; await refreshAdminChat(oid(o));
+      toast('Mensaje enviado','El cliente ya puede responderte.');
+    }catch(e){ err.textContent=e.message||String(e); }
+    finally{ btn.disabled=false; }
+  };
+  qs('#vg17ADelivBtn').onclick=async function(){
+    var ta=qs('#vg17ADeliv'), err=qs('#vg17ADelivErr'), btn=this;
+    err.textContent='';
+    var txt=(ta.value||'').trim();
+    if(txt.length<4){ err.textContent='Escribe los datos de entrega.'; return; }
+    if(!confirm('¿Enviar la entrega al cliente y marcar el pedido como entregado?')) return;
+    btn.disabled=true; btn.textContent='Enviando...';
+    try{
+      var r=await SB().rpc('vg_deliver_order_v17',{p_order_id:oid(o), p_message:txt});
+      if(r.error) throw r.error;
+      ta.value=''; o.status='entregado';
+      await loadAdmin();
+      toast('Entrega enviada','El pedido quedó como entregado.');
+    }catch(e){ err.textContent='No se pudo entregar: '+(e.message||e); }
+    finally{ btn.disabled=false; btn.textContent='Enviar entrega y marcar como entregado'; }
+  };
+}
+
+async function refreshAdminChat(ref){
+  var box=qs('#vg17AMsgs'); if(!box) return;
+  var l=await fetchMsgs(ref);
+  box.innerHTML=renderMsgs(l).replace(/>Tú</g,'>Cliente<');
+  box.scrollTop=box.scrollHeight;
+}
+
+async function renderAdminTickets(body){
+  var c=SB();
+  var r=await c.from('vg_support_tickets').select('*').order('created_at',{ascending:false}).limit(200);
+  if(r.error){ body.innerHTML='<div class="vg17-empty">Error: '+esc(r.error.message)+'</div>'; return; }
+  A.tickets=r.data||[];
+  if(!A.tickets.length){ body.innerHTML='<div class="vg17-empty">Sin reportes de falla.</div>'; return; }
+  body.innerHTML=A.tickets.map(function(t){
+    return '<div class="vg17-box" data-t="'+esc(t.id)+'">'+
+      '<div class="vg17-row"><b style="color:#fff">'+esc(t.product_name)+'</b>'+
+        '<span class="vg17-chip '+(t.status==='resuelto'?'entregado':t.status==='en_proceso'?'proceso':'pendiente')+'">'+esc(t.status)+'</span></div>'+
+      '<p style="margin:8px 0 0;color:#93a0bd;font-size:.77rem">'+esc(t.customer_name||'')+' · '+esc(t.customer_phone||'')+' · '+esc(dateMX(t.created_at))+'</p>'+
+      '<div class="vg17-grid2" style="margin-top:10px">'+
+        '<div class="vg17-box" style="margin:0"><span>Compra</span><b>'+esc(t.purchase_date)+'\n'+esc(t.subscription_period)+'</b></div>'+
+        '<div class="vg17-box" style="margin:0"><span>Cuenta afectada</span><b style="word-break:break-all">'+esc(t.account_email)+'\n'+esc(t.account_password)+'</b></div>'+
+      '</div>'+
+      '<div class="vg17-box" style="margin:10px 0 0"><span>Problema</span><b>'+esc(t.problem_description)+'</b></div>'+
+      '<textarea class="t-note" placeholder="Respuesta / notas para el cliente..." style="width:100%;min-height:70px;margin-top:10px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:11px;padding:10px;font-family:inherit;font-size:.83rem">'+esc(t.admin_notes||'')+'</textarea>'+
+      '<div class="vg17-quick" style="margin-top:9px">'+
+        '<button class="t-st" data-s="en_proceso">En proceso</button>'+
+        '<button class="t-st" data-s="resuelto">Resuelto</button>'+
+        '<button class="t-st" data-s="cerrado">Cerrar</button>'+
+        '<button class="t-wipe">Borrar contraseña</button>'+
+      '</div><div class="vg17-ok t-ok"></div></div>';
+  }).join('');
+
+  qsa('[data-t]',body).forEach(function(card){
+    var id=card.getAttribute('data-t');
+    var note=qs('.t-note',card), ok=qs('.t-ok',card);
+    qsa('.t-st',card).forEach(function(b){
+      b.onclick=async function(){
+        try{
+          var r2=await c.from('vg_support_tickets').update({
+            status:b.getAttribute('data-s'), admin_notes:note.value, updated_at:new Date().toISOString()
+          }).eq('id',id);
+          if(r2.error) throw r2.error;
+          ok.textContent='✅ Guardado.';
+        }catch(e){ ok.textContent='Error: '+(e.message||e); }
+      };
+    });
+    qs('.t-wipe',card).onclick=async function(){
+      if(!confirm('¿Borrar la contraseña guardada de este ticket? No se puede deshacer.')) return;
+      try{
+        var r3=await c.rpc('vg_ticket_wipe_credentials',{p_ticket_id:id});
+        if(r3.error) throw r3.error;
+        ok.textContent='✅ Contraseña borrada.'; renderAdminTickets(body);
+      }catch(e){ ok.textContent='Error: '+(e.message||e); }
+    };
+  });
+}
+
+/* Realtime del admin: alerta visual + sonido con cada pedido nuevo */
+function startAdminRealtime(){
+  var c=SB(); if(!c) return;
+  if(A.chan){ try{ c.removeChannel(A.chan); }catch(e){} }
+  A.chan = c.channel('vg17-admin')
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'}, function(p){
+      var o=p.new||{};
+      if(A.seen[o.id]) return; A.seen[o.id]=1;
+      beep();
+      alertNew('🛒 Pedido nuevo — '+(o.product_title||'ver detalle'), function(){ A.ref=String(o.id); A.view='orders'; loadAdmin(); });
+      loadAdmin();
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'vg_live_chat_messages'}, function(p){
+      var m=p.new||{};
+      if(String(m.sender_role)!=='client') return;
+      beep();
+      alertNew('💬 El cliente respondió', function(){ A.ref=String(m.thread_ref); A.view='orders'; loadAdmin(); });
+      if(String(m.thread_ref)===String(A.ref)) refreshAdminChat(A.ref);
+    })
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'vg_support_tickets'}, function(){
+      beep();
+      alertNew('🛠 Nuevo reporte de falla', function(){ A.view='tickets'; loadAdmin(); });
+    })
+    .subscribe();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   CREACIÓN DEL PEDIDO — entrega interna, ya sin WhatsApp
+   ═══════════════════════════════════════════════════════════════ */
+function fileToDataUrl(file){
+  return new Promise(function(res,rej){
+    if(!file) return res('');
+    if(!/^image\//.test(file.type||'')){
+      var fr=new FileReader(); fr.onload=function(){res(fr.result||'');}; fr.onerror=rej; fr.readAsDataURL(file); return;
+    }
+    var img=new Image(), url=URL.createObjectURL(file);
+    img.onload=function(){
+      try{
+        var max=1280,w=img.width,h=img.height,sc=Math.min(1,max/Math.max(w,h));
+        var cv=document.createElement('canvas'); cv.width=Math.round(w*sc); cv.height=Math.round(h*sc);
+        cv.getContext('2d').drawImage(img,0,0,cv.width,cv.height);
+        URL.revokeObjectURL(url); res(cv.toDataURL('image/jpeg',0.78));
+      }catch(e){ URL.revokeObjectURL(url); rej(e); }
+    };
+    img.onerror=function(){ URL.revokeObjectURL(url); var fr=new FileReader(); fr.onload=function(){res(fr.result||'');}; fr.onerror=rej; fr.readAsDataURL(file); };
+    img.src=url;
+  });
+}
+
+window.sendPaymentWhatsApp = async function(){
+  var c=SB();
+  if(!c){ alert('No hay conexión con el servidor.'); return; }
+  var s=await c.auth.getSession();
+  if(!s||!s.data||!s.data.session){
+    alert('Inicia sesión para registrar tu pedido.');
+    if(window.vgOpenAuth) window.vgOpenAuth();
+    return;
+  }
+  var f=(qs('#proofInput')&&qs('#proofInput').files&&qs('#proofInput').files[0])||null;
+  if(!f){ alert('Sube el comprobante de pago para confirmar el pedido.'); return; }
+
+  var pend = window.pendingPaymentOrder || {};
+  var items = Array.isArray(pend.items)&&pend.items.length ? pend.items
+            : (Array.isArray(window.cart)&&window.cart.length ? window.cart : []);
+  items = items.map(function(it){
+    return {title:it.title||it.name||'Producto', option:it.option||it.variant||'', price:Number(it.price||0)||0};
+  });
+  if(!items.length){ alert('No hay pedido activo. Selecciona un producto antes.'); return; }
+  var total = Number(pend.total|| items.reduce(function(a,b){return a+Number(b.price||0);},0))||0;
+
+  try{
+    var proof = await fileToDataUrl(f);
+    var deliv = (qs('#vg10PayDelivery')&&qs('#vg10PayDelivery').value.trim())||'';
+    var r = await c.rpc('vg_create_order_v17',{
+      p_items:items, p_total:total,
+      p_product_title:items[0].title, p_product_option:items[0].option,
+      p_delivery_data:deliv,
+      p_proof_data_url:proof, p_proof_file_name:f.name||'comprobante.jpg', p_proof_mime:f.type||'image/jpeg',
+      p_source:'web'
+    });
+    if(r.error) throw r.error;
+    var modal=qs('#paymentModal'); if(modal) modal.classList.remove('active');
+    if(window.cart&&Array.isArray(window.cart)){ window.cart.length=0; try{window.updateCartCount&&window.updateCartCount();}catch(e){} }
+    /* MÓDULO 2: redirección automática a "Mis compras" */
+    var newId = r.data && (r.data.id || (r.data[0]&&r.data[0].id));
+    await window.vgOpenClientPanel('purchases', newId?String(newId):null);
+    toast('Pedido registrado','Sigue tu entrega desde Mis compras.');
+  }catch(e){
+    alert('No se pudo crear el pedido: '+(e.message||e));
+  }
+};
+window.vgCreateOrderInternal = window.sendPaymentWhatsApp;
+
+/* ── Quitar los accesos de entrega por WhatsApp ──────────────── */
+function killWhatsappDelivery(){
+  qsa('a.floating-whatsapp').forEach(function(a){ a.style.display='none'; });
+  qsa('a[href*="wa.me"],a[href*="api.whatsapp.com"]').forEach(function(a){
+    var t=(a.textContent||'').toLowerCase();
+    if(t.indexOf('pedir')>-1||t.indexOf('comprar')>-1||t.indexOf('whatsapp')>-1){ a.style.display='none'; }
+  });
+  qsa('button').forEach(function(b){
+    var t=(b.textContent||'').toLowerCase();
+    if(t.indexOf('whatsapp')>-1 && (t.indexOf('pedir')>-1||t.indexOf('enviar')>-1||t.indexOf('comprar')>-1)){
+      b.textContent='✅ Confirmar pedido';
+      b.onclick=function(ev){ ev.preventDefault(); ev.stopPropagation(); window.sendPaymentWhatsApp(); };
+    }
+  });
+}
+
+function init(){
+  killWhatsappDelivery();
+  /* El observer se agrupa en un rAF: sin esto correría un querySelectorAll
+     completo en CADA cambio del DOM y volvería a meter lag en móvil. */
+  var pending=false;
+  new MutationObserver(function(){
+    if(pending) return; pending=true;
+    requestAnimationFrame(function(){ pending=false; killWhatsappDelivery(); });
+  }).observe(document.body,{childList:true,subtree:true});
+  document.addEventListener('click',function(ev){
+    var a=ev.target.closest&&ev.target.closest('#vg-account-btn,.vg-account-btn,[data-vg-account]');
+    if(a){ ev.preventDefault(); ev.stopImmediatePropagation(); window.vgOpenClientPanel('purchases'); }
+  },true);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+})();
+</script>
+
 </body>
 </html>
