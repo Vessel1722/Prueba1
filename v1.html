@@ -26026,9 +26026,14 @@ else init();
 /* Alerta de pedido nuevo (panel admin) */
 #vg17Alert{position:fixed;top:14px;left:50%;transform:translateX(-50%) translateY(-140%);z-index:40000;
   background:linear-gradient(135deg,#8b5cf6,#19e6c1);color:#06121a;padding:13px 20px;border-radius:16px;
-  font-weight:950;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.2,.9,.3,1.3);
-  cursor:pointer;max-width:calc(100vw - 28px);text-align:center;font-size:.9rem}
-#vg17Alert.show{transform:translateX(-50%) translateY(0)}
+  font-weight:950;box-shadow:0 14px 40px rgba(0,0,0,.5);
+  transition:transform .35s cubic-bezier(.2,.9,.3,1.3), opacity .25s ease, visibility .25s;
+  cursor:pointer;max-width:calc(100vw - 28px);text-align:center;font-size:.9rem;
+  /* Estando vacío mide 26px de alto; con translateY(-140%) se quedaban
+     4px asomando por arriba de la ventana y se veía como un botón
+     cortado pegado a la barra del navegador. Se oculta de verdad. */
+  visibility:hidden;opacity:0;pointer-events:none}
+#vg17Alert.show{transform:translateX(-50%) translateY(0);visibility:visible;opacity:1;pointer-events:auto}
 
 /* ── Panel admin unificado: se le da el aspecto nuevo a la cabecera
       y a las pestañas del panel de siempre, para que Pedidos y Soporte
@@ -26321,16 +26326,23 @@ function renderPurchases(body){
 
   body.innerHTML =
     '<div class="vg17-cards">'+
-      '<div class="vg17-stat"><span>Compras</span><b>'+orders.length+'</b></div>'+
-      '<div class="vg17-stat"><span>Total</span><b>'+money(total)+'</b></div>'+
-      '<div class="vg17-stat"><span>Activos</span><b>'+activos+'</b></div>'+
+      '<div class="vg17-stat"><i>🧾</i><span>Compras</span><b>'+orders.length+'</b></div>'+
+      '<div class="vg17-stat"><i>💳</i><span>Total gastado</span><b>'+money(total)+'</b></div>'+
+      '<div class="vg17-stat"><i>⚡</i><span>En proceso</span><b>'+activos+'</b></div>'+
     '</div>'+
     '<div class="vg17-split">'+
-      '<div>'+orders.map(function(o){
-        return '<div class="vg17-card '+(oid(o)===C.ref?'active':'')+'" data-o="'+esc(oid(o))+'">'+
-          '<h4>'+esc(otitle(o))+'</h4>'+
-          '<p>Pedido #'+esc(oid(o).slice(0,8))+' · '+esc(dateMX(o.created_at))+'</p>'+
-          '<div class="vg17-row">'+chip(ostatus(o))+'<span class="vg17-price">'+money(ototal(o))+'</span></div>'+
+      '<div class="vg17-list"><div class="vg17-listhead">Tus pedidos</div>'+orders.map(function(o){
+        var st=ostatus(o);
+        var ini=String(otitle(o)).trim().charAt(0).toUpperCase()||'V';
+        return '<div class="vg17-card st-'+esc(st)+' '+(oid(o)===C.ref?'active':'')+'" data-o="'+esc(oid(o))+'">'+
+          '<div class="vg17-cardtop">'+
+            '<span class="vg17-thumb">'+esc(ini)+'</span>'+
+            '<div style="min-width:0;flex:1">'+
+              '<h4>'+esc(otitle(o))+'</h4>'+
+              '<p>#'+esc(oid(o).slice(0,8))+' · '+esc(dateMX(o.created_at))+'</p>'+
+            '</div>'+
+          '</div>'+
+          '<div class="vg17-row">'+chip(st)+'<span class="vg17-price">'+money(ototal(o))+'</span></div>'+
         '</div>';
       }).join('')+'</div>'+
       '<div id="vg17CDetail"></div>'+
@@ -26347,20 +26359,36 @@ async function renderClientDetail(o){
      cuando el pedido tiene chat_unlocked = true, que es lo que pone
      el trigger de la base de datos cuando el admin escribe primero. */
   var unlocked = o.chat_unlocked === true;
+  var st=ostatus(o);
+  var pasos=['pendiente','proceso','entregado'];
+  var idx=pasos.indexOf(st==='en_proceso'?'proceso':st);
   d.innerHTML =
-    '<div class="vg17-box"><span>Producto</span><b>'+esc(oitemsText(o))+'</b></div>'+
-    '<div class="vg17-grid2">'+
-      '<div class="vg17-box"><span>Estado</span><b>'+chip(ostatus(o))+'</b></div>'+
-      '<div class="vg17-box"><span>Total</span><b style="color:#19e6c1">'+money(ototal(o))+'</b></div>'+
+    /* Encabezado del pedido, con la línea de progreso */
+    '<div class="vg17-hero st-'+esc(st)+'">'+
+      '<div class="vg17-hero-top">'+
+        '<div style="min-width:0">'+
+          '<h3>'+esc(otitle(o))+'</h3>'+
+          '<p>Pedido #'+esc(oid(o).slice(0,8))+' · '+esc(dateMX(o.created_at))+'</p>'+
+        '</div>'+
+        '<div class="vg17-hero-price">'+money(ototal(o))+'</div>'+
+      '</div>'+
+      (st==='cancelado' ? '<div class="vg17-cancel">Pedido cancelado</div>' :
+      '<div class="vg17-steps">'+
+        ['Recibido','En proceso','Entregado'].map(function(t,i){
+          return '<div class="vg17-step'+(i<=idx?' done':'')+'"><span></span><small>'+t+'</small></div>';
+        }).join('')+
+      '</div>')+
     '</div>'+
-    '<div class="vg17-box"><span>Chat de entrega</span>'+
+    '<div class="vg17-box"><span>Detalle de tu compra</span><b>'+esc(oitemsText(o))+'</b></div>'+
+    '<div class="vg17-box vg17-chatbox"><span>💬 Chat de entrega</span>'+
       '<div class="vg17-msgs" id="vg17CMsgs"><div class="vg17-empty">Cargando...</div></div>'+
       (unlocked
         ? '<div class="vg17-inputbar"><textarea id="vg17CInput" placeholder="Escribe tu mensaje..."></textarea>'+
           '<button class="vg17-btn primary" id="vg17CSend">Enviar</button></div>'+
           '<div class="vg17-err" id="vg17CErr"></div>'
-        : '<div class="vg17-lock">🔒 El chat se activará cuando un administrador te escriba.<br>'+
-          'Mientras tanto puedes ver aquí el estado de tu pedido y el historial.</div>')+
+        : '<div class="vg17-lock"><b>🔒 El chat se abrirá en cuanto te escribamos</b>'+
+          'Aquí verás los datos de tu entrega y podrás responder. Mientras tanto, '+
+          'puedes seguir el estado de tu pedido arriba.</div>')+
     '</div>';
   var list=await fetchMsgs(oid(o));
   var box=qs('#vg17CMsgs'); if(box){ box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight; }
@@ -27238,13 +27266,22 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
 
 /* Pestañas tipo segmento */
 #vg17Client .vg17-tabs{ gap:7px !important; padding:16px 0 18px !important; }
-#vg17Client .vg17-tab{
+/* El :not(.active) es necesario: sin él este fondo pisaba el degradado
+   de la pestaña activa (que no lleva !important) y el texto oscuro
+   quedaba sobre fondo oscuro, ilegible. */
+#vg17Client .vg17-tab:not(.active){
   padding:11px 17px !important;
   font-size:.82rem !important;
   border-radius:14px !important;
   background:rgba(255,255,255,.045) !important;
 }
 #vg17Client .vg17-tab.active{
+  padding:11px 17px !important;
+  font-size:.82rem !important;
+  border-radius:14px !important;
+  background:linear-gradient(135deg,#8b5cf6,#19e6c1) !important;
+  color:#06121a !important;
+  border-color:transparent !important;
   box-shadow:0 8px 22px rgba(139,92,246,.30) !important;
 }
 
@@ -27336,11 +27373,113 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
   box-shadow:0 0 0 3px rgba(139,92,246,.13) !important;
 }
 
+/* ── Tarjetas de estadística con ícono ── */
+#vg17Client .vg17-stat{ display:flex; flex-direction:column; gap:2px; }
+#vg17Client .vg17-stat i{ font-size:1.05rem; font-style:normal; opacity:.9; margin-bottom:2px; }
+
+/* ── Lista de pedidos ── */
+#vg17Client .vg17-listhead{
+  font-size:.66rem;font-weight:900;letter-spacing:.12em;text-transform:uppercase;
+  color:#7d8aa8;margin:0 0 10px 3px;
+}
+#vg17Client .vg17-cardtop{ display:flex;align-items:center;gap:11px;margin-bottom:10px; }
+#vg17Client .vg17-thumb{
+  width:42px;height:42px;border-radius:13px;flex:none;display:flex;align-items:center;
+  justify-content:center;font-weight:900;font-size:1.05rem;color:#fff;
+  background:linear-gradient(135deg,rgba(139,92,246,.55),rgba(25,230,193,.40));
+  border:1px solid rgba(255,255,255,.14);
+}
+#vg17Client .vg17-card h4{ margin:0 !important; }
+#vg17Client .vg17-card p{ margin:2px 0 0 !important; font-size:.72rem !important; }
+/* Riel de color según el estado del pedido */
+#vg17Client .vg17-card.st-entregado::before{ background:linear-gradient(180deg,#19e6c1,#0fbfa0) !important; }
+#vg17Client .vg17-card.st-pendiente::before{ background:linear-gradient(180deg,#ffb74d,#f59e0b) !important; }
+#vg17Client .vg17-card.st-proceso::before,
+#vg17Client .vg17-card.st-en_proceso::before{ background:linear-gradient(180deg,#8b5cf6,#6d5ef0) !important; }
+#vg17Client .vg17-card.st-cancelado::before{ background:linear-gradient(180deg,#ff4d6d,#e11d48) !important; }
+
+/* ── Encabezado del pedido con progreso ── */
+#vg17Client .vg17-hero{
+  border:1px solid rgba(255,255,255,.11);border-radius:20px;padding:18px;margin-bottom:12px;
+  background:linear-gradient(160deg,rgba(139,92,246,.16),rgba(25,230,193,.07) 60%,rgba(255,255,255,.02));
+  position:relative;overflow:hidden;
+}
+#vg17Client .vg17-hero.st-entregado{ background:linear-gradient(160deg,rgba(25,230,193,.20),rgba(255,255,255,.02)); }
+#vg17Client .vg17-hero.st-cancelado{ background:linear-gradient(160deg,rgba(255,77,109,.16),rgba(255,255,255,.02)); }
+#vg17Client .vg17-hero-top{ display:flex;align-items:flex-start;justify-content:space-between;gap:12px;flex-wrap:wrap; }
+#vg17Client .vg17-hero h3{ margin:0 !important;color:#fff;font-size:1.12rem !important; }
+#vg17Client .vg17-hero p{ margin:4px 0 0;color:#a3b0cc;font-size:.75rem; }
+#vg17Client .vg17-hero-price{ color:#19e6c1;font-weight:950;font-size:1.32rem;white-space:nowrap; }
+#vg17Client .vg17-cancel{
+  margin-top:14px;padding:9px;border-radius:11px;text-align:center;font-weight:900;font-size:.78rem;
+  background:rgba(255,77,109,.16);color:#ffabbc;border:1px solid rgba(255,77,109,.30);
+}
+/* Línea de progreso: Recibido → En proceso → Entregado */
+#vg17Client .vg17-steps{ display:flex;margin-top:18px;position:relative; }
+#vg17Client .vg17-step{ flex:1;text-align:center;position:relative; }
+#vg17Client .vg17-step span{
+  display:block;width:13px;height:13px;border-radius:50%;margin:0 auto 7px;
+  background:rgba(255,255,255,.14);border:2px solid rgba(255,255,255,.20);position:relative;z-index:2;
+  transition:.25s;
+}
+#vg17Client .vg17-step.done span{
+  background:linear-gradient(135deg,#8b5cf6,#19e6c1);border-color:transparent;
+  box-shadow:0 0 0 4px rgba(25,230,193,.16);
+}
+#vg17Client .vg17-step small{ font-size:.66rem;font-weight:800;color:#7d8aa8; }
+#vg17Client .vg17-step.done small{ color:#c8d4ee; }
+/* Línea que une los puntos */
+#vg17Client .vg17-step::after{
+  content:"";position:absolute;top:6px;left:50%;width:100%;height:2px;
+  background:rgba(255,255,255,.12);z-index:1;
+}
+#vg17Client .vg17-step:last-child::after{ display:none; }
+#vg17Client .vg17-step.done::after{ background:linear-gradient(90deg,#8b5cf6,#19e6c1); }
+
+/* El chat, protagonista */
+#vg17Client .vg17-chatbox{
+  border-color:rgba(139,92,246,.24) !important;
+  background:linear-gradient(180deg,rgba(139,92,246,.07),rgba(255,255,255,.02)) !important;
+}
+#vg17Client .vg17-lock b{ display:block;margin-bottom:6px;font-size:.92rem;color:#e2daff; }
+
+/* ════════════════ MÓVIL ════════════════ */
 @media(max-width:900px){
-  #vg17Client .vg17-top h1{ font-size:1.18rem !important; }
-  #vg17Client .vg17-msg{ max-width:90% !important; }
-  #vg17Client .vg17-msgs{ max-height:46vh !important; padding:13px !important; }
-  #vg17Client .vg17-card{ padding:14px !important; }
+  #vg17Client .vg17-top{ padding:12px 0 12px !important; }
+  #vg17Client .vg17-top h1{ font-size:1.05rem !important; }
+  #vg17Client .vg17-top p{ font-size:.72rem !important; }
+  #vg17Client .vg17-avatar{ width:40px;height:40px;border-radius:13px;font-size:.98rem; }
+  #vg17Client .vg17-x{ width:38px !important;height:38px !important; }
+  #vg17Client .vg17-tabs{ padding:12px 0 14px !important;gap:6px !important; }
+  #vg17Client .vg17-tab{ padding:9px 13px !important;font-size:.76rem !important;border-radius:12px !important; }
+  /* Tres tarjetas de estadística no caben: se apilan en dos columnas
+     y la última ocupa el ancho completo. */
+  #vg17Client .vg17-cards{ grid-template-columns:1fr 1fr !important;gap:8px !important; }
+  #vg17Client .vg17-cards .vg17-stat:last-child{ grid-column:1/-1; }
+  #vg17Client .vg17-stat{ padding:12px !important;border-radius:14px !important; }
+  #vg17Client .vg17-stat b{ font-size:1.25rem !important; }
+  #vg17Client .vg17-stat span{ font-size:.58rem !important; }
+  #vg17Client .vg17-card{ padding:13px !important;border-radius:15px !important; }
+  #vg17Client .vg17-thumb{ width:36px;height:36px;border-radius:11px;font-size:.92rem; }
+  #vg17Client .vg17-hero{ padding:14px !important;border-radius:16px !important; }
+  #vg17Client .vg17-hero h3{ font-size:.98rem !important; }
+  #vg17Client .vg17-hero-price{ font-size:1.12rem; }
+  #vg17Client .vg17-step small{ font-size:.6rem; }
+  #vg17Client .vg17-box{ padding:13px !important;border-radius:16px !important; }
+  #vg17Client .vg17-msg{ max-width:88% !important; }
+  #vg17Client .vg17-msgs{ max-height:44vh !important;padding:12px !important;border-radius:15px !important; }
+  #vg17Client .vg17-msg div{ font-size:.85rem !important;padding:10px 13px !important; }
+  #vg17Client .vg17-inputbar{ padding:9px !important;border-radius:15px !important; }
+  #vg17Client .vg17-inputbar textarea{ font-size:16px !important; } /* 16px evita que iOS haga zoom al enfocar */
+  #vg17Client .vg17-btn{ padding:11px 15px !important;font-size:.82rem !important; }
+  #vg17Client .vg17-form input,
+  #vg17Client .vg17-form select,
+  #vg17Client .vg17-form textarea{ font-size:16px !important;padding:12px !important; }
+}
+@media(max-width:420px){
+  #vg17Client .vg17-hero-top{ flex-direction:column;gap:6px; }
+  #vg17Client .vg17-hero-price{ font-size:1.28rem; }
+  #vg17Client .vg17-step small{ font-size:.55rem;letter-spacing:-.01em; }
 }
 </style>
 
