@@ -25660,11 +25660,6 @@ else init();
   .nav-actions{
     gap:4px !important;
   }
-  /* El carrito ya está repetido en la barra inferior ("Carrito"):
-     se quita el de arriba para no duplicarlo y dejar más aire. */
-  .nav-actions .cart-pill:not(#vgFavNavBtn){
-    display:none !important;
-  }
 }
 
 /* 2) El botón de favoritos heredaba el ícono de carrito ("🛒") porque
@@ -25829,6 +25824,41 @@ body{
   color:rgba(3,15,12,.62) !important;
   font-size:.68rem !important;
   font-weight:800 !important;
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 15 — Quita la barra inferior fija en móvil (se trababa y
+     "saltaba" al hacer scroll en el teléfono real) y regresa el
+     carrito al menú de arriba, como en kinguin.net.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-remove-bottom-nav-v113">
+@media(max-width:820px){
+  /* Esta variable controla el espacio reservado para la barra inferior
+     en varias reglas (padding del body, del wrap, y la posición de
+     "volver arriba" y del botón de admin). Al ponerla en 0 se corrige
+     ese espacio en todos lados sin tener que tocar cada regla. */
+  :root{
+    --vg-mobile-nav-h:0px;
+  }
+}
+@media(max-width:768px){
+  .vg-mobile-bottom-nav{
+    display:none !important;
+  }
+  #vg-btt{
+    bottom:20px !important;
+  }
+  .vg-admin-corner-btn,
+  #vgAdminCornerBtn{
+    bottom:20px !important;
+  }
+  /* El carrito regresa al menú de arriba (ya no hay barra inferior
+     que lo tuviera). Reusa el mismo tratamiento compacto (ícono +
+     contador) que ya tienen "Mi cuenta" y "Favoritos". */
+  .nav-actions .cart-pill{
+    display:inline-flex !important;
+  }
 }
 </style>
 <script id="vg-mobile-wa-hide-v111">
