@@ -25949,7 +25949,8 @@ else init();
 /* Reset de tipografía acotado al panel: el sitio aplica una fuente
    display condensada y en mayúsculas a los h1-h4, y hacía que
    "Mi cuenta" saliera gigantesca dentro del panel. */
-.vg17-panel h1,.vg17-panel h2,.vg17-panel h3,.vg17-panel h4{
+.vg17-panel h1,.vg17-panel h2,.vg17-panel h3,.vg17-panel h4,
+.vg17-scope h1,.vg17-scope h2,.vg17-scope h3,.vg17-scope h4{
   font-family:system-ui,-apple-system,'Segoe UI',Roboto,Helvetica,Arial,sans-serif !important;
   text-transform:none !important;
   letter-spacing:-.01em !important;
@@ -26028,6 +26029,22 @@ else init();
   font-weight:950;box-shadow:0 14px 40px rgba(0,0,0,.5);transition:transform .35s cubic-bezier(.2,.9,.3,1.3);
   cursor:pointer;max-width:calc(100vw - 28px);text-align:center;font-size:.9rem}
 #vg17Alert.show{transform:translateX(-50%) translateY(0)}
+
+/* ── Panel admin unificado: se le da el aspecto nuevo a la cabecera
+      y a las pestañas del panel de siempre, para que Pedidos y Soporte
+      no se vean pegados encima de otro diseño. ── */
+#vgAdminModal .vg-admin-head{position:relative}
+#vgAdminModal .vg-admin-head::after{content:"";position:absolute;left:0;right:0;bottom:0;height:2px;
+  background:linear-gradient(90deg,#8b5cf6,#19e6c1,transparent)}
+#vgAdminModal .vg-admin-tabs{gap:8px !important;flex-wrap:wrap}
+#vgAdminModal .vg-admin-tab{position:relative;border-radius:999px !important;font-weight:800 !important}
+#vgAdminModal .vg-admin-tab.active{
+  background:linear-gradient(135deg,#8b5cf6,#19e6c1) !important;color:#06121a !important;border-color:transparent !important}
+/* Las dos pestañas principales, un poco más marcadas que el resto */
+#vgAdminModal .vg-admin-tab[data-tab="pedidos"],
+#vgAdminModal .vg-admin-tab[data-tab="soporte"]{
+  border-color:rgba(139,92,246,.40) !important}
+#vgAdminPedidos.active,#vgAdminSoporte.active{display:block}
 
 /* ── Contador de mensajes sin leer sobre el botón de cuenta ── */
 .vg17-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;border-radius:10px;
@@ -26503,23 +26520,63 @@ async function renderMyTickets(body){
    ═══════════════════════════════════════════════════════════════ */
 var A = { view:'orders', orders:[], tickets:[], ref:null, chan:null, seen:{} };
 
-function adminShell(){
-  return '<div class="vg17-wrap">'+
-    '<div class="vg17-top">'+
-      '<div class="vg17-head-l">'+
-        '<div class="vg17-avatar">VG</div>'+
-        '<div style="min-width:0"><h1>Panel administrador</h1>'+
-        '<p>Pedidos, entregas y reportes de falla.</p></div>'+
-      '</div>'+
-    '<button class="vg17-x" id="vg17AX">×</button></div>'+
-    '<div class="vg17-tabs">'+
-      '<button class="vg17-tab" data-v="orders">Pedidos<span class="vg17-dot" id="vg17ADot"></span></button>'+
-      '<button class="vg17-tab" data-v="tickets">Reportes de falla</button>'+
-      /* Acceso al panel de siempre (Usuarios, Artículos, Supabase,
-         Reviews, Retro...). No se perdió: quedó guardado en
-         window.__vgClassicAdminOpen antes de instalar este panel. */
-      '<button class="vg17-tab" id="vg17AClassic">⚙ Más opciones</button>'+
-    '</div><div id="vg17ABody"></div></div>';
+/* ── Un solo panel ──────────────────────────────────────────────
+   Antes había dos paneles separados y había que saltar entre ellos
+   con "Más opciones". Ahora Pedidos y Soporte se INYECTAN como dos
+   pestañas más dentro del panel de siempre (#vgAdminModal), de
+   primeras. Se hace así, y no al revés, porque todo el CSS y la
+   lógica del panel clásico dependen de vivir dentro de #vgAdminModal:
+   moverlos fuera los rompería.
+   ──────────────────────────────────────────────────────────────── */
+function ensureAdminTabs(){
+  var tabsBar = qs('#vgAdminModal .vg-admin-tabs');
+  var content = qs('#vgAdminModal .vg-admin-content');
+  if(!tabsBar || !content) return false;
+
+  /* Secciones (los ids siguen el patrón que espera showAdminTab:
+     #vgAdmin + nombre capitalizado de la pestaña) */
+  if(!qs('#vgAdminPedidos')){
+    var s1=document.createElement('section');
+    s1.className='vg-admin-section vg17-scope'; s1.id='vgAdminPedidos';
+    content.insertBefore(s1, content.firstChild);
+  }
+  if(!qs('#vgAdminSoporte')){
+    var s2=document.createElement('section');
+    s2.className='vg-admin-section vg17-scope'; s2.id='vgAdminSoporte';
+    content.insertBefore(s2, qs('#vgAdminPedidos').nextSibling);
+  }
+
+  /* Pestañas al principio: primero Pedidos, luego Soporte */
+  if(!qs('#vgAdminModal .vg-admin-tab[data-tab="soporte"]')){
+    var t2=document.createElement('button');
+    t2.className='vg-admin-tab'; t2.setAttribute('data-tab','soporte');
+    t2.innerHTML='🛠 Soporte<span class="vg17-dot" id="vg17TDot"></span>';
+    tabsBar.insertBefore(t2, tabsBar.firstChild);
+  }
+  if(!qs('#vgAdminModal .vg-admin-tab[data-tab="pedidos"]')){
+    var t1=document.createElement('button');
+    t1.className='vg-admin-tab'; t1.setAttribute('data-tab','pedidos');
+    t1.innerHTML='📦 Pedidos<span class="vg17-dot" id="vg17ADot"></span>';
+    tabsBar.insertBefore(t1, tabsBar.firstChild);
+  }
+
+  ['pedidos','soporte'].forEach(function(name){
+    var b=qs('#vgAdminModal .vg-admin-tab[data-tab="'+name+'"]');
+    if(b && !b.__vg17bound){ b.__vg17bound=true; b.onclick=function(){ showMineTab(name); }; }
+  });
+  return true;
+}
+
+function showMineTab(name){
+  qsa('#vgAdminModal .vg-admin-tab').forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-tab')===name);
+  });
+  qsa('#vgAdminModal .vg-admin-section').forEach(function(s){ s.classList.remove('active'); });
+  var sec=qs(name==='pedidos' ? '#vgAdminPedidos' : '#vgAdminSoporte');
+  if(sec) sec.classList.add('active');
+  A.view = (name==='pedidos') ? 'orders' : 'tickets';
+  A.ref = null;
+  loadAdmin();
 }
 
 /* Se mantiene el candado de seguridad: se vuelve a validar la sesión
@@ -26538,44 +26595,37 @@ window.vgAdminOpen = async function(){
 
   /* El panel clásico se guía por estas banderas de sesión. Se ponen
      SOLO después de que Supabase confirmó el rol is_admin, para que
-     "Más opciones" no tenga que pedir otra contraseña. */
+     no vuelva a pedir contraseña. */
   try{
     sessionStorage.setItem('vg10_admin_ok','1');
     sessionStorage.setItem('vg_admin_email_session_v52','1');
     sessionStorage.setItem('vg_admin_ok','1');
   }catch(e){}
 
-  var root=qs('#vg17Admin');
-  root.innerHTML=adminShell(); root.classList.add('active');
-  document.body.style.overflow='hidden';
-  qs('#vg17AX').onclick=closeAdmin;
-  /* Solo los que tienen data-v son pestañas de este panel; "Más opciones"
-     se enlaza aparte porque abre el panel clásico completo. */
-  qsa('#vg17Admin .vg17-tab[data-v]').forEach(function(b){
-    b.onclick=function(){ A.view=b.dataset.v; A.ref=null; loadAdmin(); };
-  });
-  var cl=qs('#vg17AClassic');
-  if(cl) cl.onclick=function(){
-    if(typeof window.__vgClassicAdminOpen!=='function'){
-      alert('No se encontró el panel clásico en esta versión.');
-      return;
-    }
-    closeAdmin();
-    window.__vgClassicAdminOpen();
-  };
+  if(typeof window.__vgClassicAdminOpen!=='function'){
+    alert('No se encontró el panel de administración.'); return;
+  }
+  window.__vgClassicAdminOpen();
   beep(); /* desbloquea el audio del navegador con este gesto del usuario */
-  await loadAdmin();
-  startAdminRealtime();
+
+  /* El panel clásico pinta su contenido de forma asíncrona; se espera
+     a que exista la barra de pestañas antes de inyectar las mías. */
+  var intentos=0;
+  (function esperar(){
+    if(ensureAdminTabs()){ showMineTab('pedidos'); startAdminRealtime(); return; }
+    if(++intentos<40) setTimeout(esperar,80);
+  })();
 };
 
 function closeAdmin(){
-  qs('#vg17Admin').classList.remove('active');
+  var m=qs('#vgAdminModal'); if(m) m.classList.remove('active');
+  var p=qs('#vg17Admin'); if(p) p.classList.remove('active');
   document.body.style.overflow='';
 }
 
 async function loadAdmin(){
-  var body=qs('#vg17ABody'); if(!body) return;
-  qsa('#vg17Admin .vg17-tab[data-v]').forEach(function(b){ b.classList.toggle('active', b.dataset.v===A.view); });
+  var body = (A.view==='tickets') ? qs('#vgAdminSoporte') : qs('#vgAdminPedidos');
+  if(!body) return;
   body.innerHTML='<div class="vg17-empty">Cargando...</div>';
   if(A.view==='tickets') return renderAdminTickets(body);
   try{ A.orders=await allOrders(); }
@@ -26661,7 +26711,7 @@ async function renderAdminDetail(o){
       try{
         await SB().from('orders').update({status:b.getAttribute('data-st')}).eq('id',o.id);
         o.status=b.getAttribute('data-st');
-        renderAdminOrders(qs('#vg17ABody'));
+        renderAdminOrders(qs('#vgAdminPedidos'));
         toast('Estado actualizado', o.status);
       }catch(e){ alert('No se pudo actualizar: '+(e.message||e)); }
     };
@@ -26710,7 +26760,7 @@ async function renderAdminTickets(body){
   if(!A.tickets.length){ body.innerHTML='<div class="vg17-empty">Sin reportes de falla.</div>'; return; }
   body.innerHTML=A.tickets.map(function(t){
     return '<div class="vg17-box" data-t="'+esc(t.id)+'">'+
-      '<div class="vg17-row"><b style="color:#fff">'+esc(t.product_name)+'</b>'+
+      '<div class="vg17-row"><b style="color:#fff">'+esc(t.product_name||'(reporte sin producto)')+'</b>'+
         '<span class="vg17-chip '+(t.status==='resuelto'?'entregado':t.status==='en_proceso'?'proceso':'pendiente')+'">'+esc(t.status)+'</span></div>'+
       '<p style="margin:8px 0 0;color:#93a0bd;font-size:.77rem">'+esc(t.customer_name||'')+' · '+esc(t.customer_phone||'')+' · '+esc(dateMX(t.created_at))+'</p>'+
       '<div class="vg17-grid2" style="margin-top:10px">'+
@@ -26722,30 +26772,71 @@ async function renderAdminTickets(body){
         '</b></div>'+
       '</div>'+
       '<div class="vg17-box" style="margin:10px 0 0"><span>Problema</span><b>'+esc(t.problem_description)+'</b></div>'+
-      '<textarea class="t-note" placeholder="Respuesta / notas para el cliente..." style="width:100%;min-height:70px;margin-top:10px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:11px;padding:10px;font-family:inherit;font-size:.83rem">'+esc(t.admin_notes||'')+'</textarea>'+
+      '<textarea class="t-note" placeholder="Escribe tu respuesta para el cliente..." style="width:100%;min-height:70px;margin-top:10px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:11px;padding:10px;font-family:inherit;font-size:.83rem">'+esc(t.admin_notes||'')+'</textarea>'+
       '<div class="vg17-quick" style="margin-top:9px">'+
+        '<button class="t-reply" style="background:linear-gradient(135deg,#8b5cf6,#19e6c1);color:#06121a;border-color:transparent">📨 Enviar respuesta al cliente</button>'+
+        '<button class="t-save">Solo guardar nota</button>'+
+      '</div>'+
+      '<div class="vg17-quick" style="margin-top:6px">'+
         '<button class="t-st" data-s="en_proceso">En proceso</button>'+
         '<button class="t-st" data-s="resuelto">Resuelto</button>'+
         '<button class="t-st" data-s="cerrado">Cerrar</button>'+
-        '<button class="t-wipe">Borrar contraseña</button>'+
+        (t.account_password ? '<button class="t-wipe">Borrar contraseña</button>' : '')+
       '</div><div class="vg17-ok t-ok"></div></div>';
   }).join('');
 
   qsa('[data-t]',body).forEach(function(card){
     var id=card.getAttribute('data-t');
+    var ticket=A.tickets.filter(function(x){return String(x.id)===String(id);})[0]||{};
     var note=qs('.t-note',card), ok=qs('.t-ok',card);
+
+    async function guardarNota(estado){
+      var patch={ admin_notes:note.value, updated_at:new Date().toISOString() };
+      if(estado) patch.status=estado;
+      var r2=await c.from('vg_support_tickets').update(patch).eq('id',id);
+      if(r2.error) throw r2.error;
+      ticket.admin_notes=note.value;
+      if(estado) ticket.status=estado;
+    }
+
+    /* Responder de verdad: guarda la nota Y se la manda al cliente por el
+       chat de su pedido, que además le desbloquea la caja de texto y le
+       dispara la notificación. Antes solo se guardaba una nota interna,
+       por eso parecía que "no dejaba contestar". */
+    qs('.t-reply',card).onclick=async function(){
+      var btn=this; ok.textContent='';
+      var txt=(note.value||'').trim();
+      if(txt.length<2){ ok.textContent='Escribe la respuesta primero.'; return; }
+      btn.disabled=true;
+      try{
+        await guardarNota('en_proceso');
+        if(ticket.order_id){
+          await sendMsg(ticket.order_id,'admin','Sobre tu reporte de "'+(ticket.product_name||'tu servicio')+'":\n\n'+txt);
+          ok.textContent='✅ Respuesta enviada al chat del cliente.';
+        }else{
+          ok.textContent='✅ Nota guardada (este reporte no tiene pedido ligado, el cliente la verá en "Mis reportes").';
+        }
+        beep();
+      }catch(e){ ok.textContent='Error: '+(e.message||e); }
+      finally{ btn.disabled=false; }
+    };
+
+    qs('.t-save',card).onclick=async function(){
+      ok.textContent='';
+      try{ await guardarNota(null); ok.textContent='✅ Nota guardada (sin avisar al cliente).'; }
+      catch(e){ ok.textContent='Error: '+(e.message||e); }
+    };
+
     qsa('.t-st',card).forEach(function(b){
       b.onclick=async function(){
-        try{
-          var r2=await c.from('vg_support_tickets').update({
-            status:b.getAttribute('data-s'), admin_notes:note.value, updated_at:new Date().toISOString()
-          }).eq('id',id);
-          if(r2.error) throw r2.error;
-          ok.textContent='✅ Guardado.';
-        }catch(e){ ok.textContent='Error: '+(e.message||e); }
+        ok.textContent='';
+        try{ await guardarNota(b.getAttribute('data-s')); ok.textContent='✅ Estado: '+b.getAttribute('data-s'); }
+        catch(e){ ok.textContent='Error: '+(e.message||e); }
       };
     });
-    qs('.t-wipe',card).onclick=async function(){
+
+    var wipe=qs('.t-wipe',card);
+    if(wipe) wipe.onclick=async function(){
       if(!confirm('¿Borrar la contraseña guardada de este ticket? No se puede deshacer.')) return;
       try{
         var r3=await c.rpc('vg_ticket_wipe_credentials',{p_ticket_id:id});
