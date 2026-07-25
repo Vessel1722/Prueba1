@@ -15137,9 +15137,10 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 
     addRetroCards(row);
 
-    requestAnimationFrame(() => {
-      startMotion(row);
-    });
+    /* startMotion() quedaba corriendo su propio scroll continuo a la vez
+       que startHomeCarousel() (más abajo) avanza tarjeta por tarjeta:
+       ambos peleaban por scrollLeft y el carrusel se veía congelado.
+       Se deja solo un sistema de movimiento (startHomeCarousel). */
 
     return true;
   }
