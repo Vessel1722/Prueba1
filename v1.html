@@ -28579,5 +28579,101 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
 #vg17Client .vg17-card:has(.vg17-newdot) .vg17-cardtop{ padding-right:96px; }
 </style>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 22 — Proporción de las fotos de producto
+     Medido en el catálogo real: 37 de 39 fotos son 1200x750 (ratio
+     1.60, horizontales). La caja las metía en 176x190 (vertical), y
+     con object-fit:cover eso RECORTABA EL 42% DE LOS LADOS — casi
+     media foto, cortando logos y texto.
+     La causa de fondo: 21 reglas distintas fijaban .imgbox con
+     alturas sueltas (100px, 118px, 190px, 220px...) sin relación con
+     la proporción de las imágenes. En vez de añadir una altura más a
+     esa pila, se ata la caja a la proporción real de las fotos.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-fotos-proporcion-v22">
+html body .card .imgbox{
+  /* 8/5 = 1.60, exactamente el de las fotos 1200x750: cero recorte */
+  aspect-ratio:8/5 !important;
+  height:auto !important;
+  min-height:0 !important;
+  max-height:none !important;
+  width:100% !important;
+  padding:0 !important;
+  overflow:hidden !important;
+  background:#0b0e18 !important;
+}
+html body .card .imgbox img{
+  width:100% !important;
+  height:100% !important;
+  max-width:none !important;
+  max-height:none !important;
+  object-fit:cover !important;
+  /* Centrado: antes iba anclado arriba (50% 0%), que en las pocas
+     fotos cuadradas cortaba justo la parte baja del logo. */
+  object-position:center center !important;
+}
+
+/* La vista de lista usa miniaturas cuadradas y tiene su propia regla
+   más específica (#productsGrid.vg-list-view .imgbox), así que no se
+   ve afectada por lo de arriba. Se deja explícito para que quede claro. */
+html body #productsGrid.vg-list-view .imgbox{
+  aspect-ratio:auto !important;
+}
+
+/* Las pocas fotos que NO son 16:10 (una cuadrada, una 16:9) se muestran
+   completas en vez de recortadas: vale más que se vea todo el producto
+   aunque queden franjas a los lados, a que se corte el logo. */
+html body .card .imgbox img.vg-foto-completa{
+  object-fit:contain !important;
+  background:#0b0e18 !important;
+}
+</style>
+
+<script id="vg-fotos-ajuste-v22">
+(function(){
+'use strict';
+if(window.__VG_FOTOS_V22__) return; window.__VG_FOTOS_V22__ = true;
+
+/* La caja tiene proporción 1.60 porque es la de 37 de las 39 fotos.
+   Para las que se salen de esa proporción, recortarlas cortaría parte
+   del producto, así que a esas se les deja ver completas. */
+var PROP_CAJA = 1.6;
+var TOLERANCIA = 0.18;      /* hasta un 18% de diferencia se recorta sin problema */
+
+function ajustar(img){
+  if(!img || img.dataset.vgAjustada) return;
+  if(!img.naturalWidth || !img.naturalHeight) return;
+  img.dataset.vgAjustada = '1';
+  var prop = img.naturalWidth / img.naturalHeight;
+  var desvio = Math.abs(prop - PROP_CAJA) / PROP_CAJA;
+  img.classList.toggle('vg-foto-completa', desvio > TOLERANCIA);
+}
+
+function revisar(){
+  document.querySelectorAll('.card .imgbox img').forEach(function(img){
+    if(img.complete) ajustar(img);
+    else img.addEventListener('load', function(){ ajustar(img); }, {once:true});
+  });
+}
+
+/* El catálogo se repinta al filtrar o buscar, así que se vuelve a
+   revisar cuando cambian las tarjetas. Se agrupa en un rAF para no
+   recorrer el DOM en cada mutación. */
+function observar(){
+  var grid = document.getElementById('productsGrid');
+  if(!grid) return;
+  var pendiente = false;
+  new MutationObserver(function(){
+    if(pendiente) return; pendiente = true;
+    requestAnimationFrame(function(){ pendiente = false; revisar(); });
+  }).observe(grid, {childList:true, subtree:true});
+}
+
+function init(){ revisar(); observar(); }
+if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
+else init();
+})();
+</script>
+
 </body>
 </html>
