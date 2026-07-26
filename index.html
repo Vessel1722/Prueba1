@@ -14217,7 +14217,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 </article>
 <article class="condition-service-card">
 <b>ValidaciÃ³n del pago</b>
-<p>El pedido se procesa despuÃ©s de confirmar el comprobante. EnvÃ­a la captura por WhatsApp para validar tu compra.</p>
+<p>El pedido se procesa despuÃ©s de confirmar el comprobante. EnvÃ­a la captura del comprobante al confirmar tu pedido y te avisamos por el chat de entrega.</p>
 </article>
 <article class="condition-service-card">
 <b>Tiempo estimado</b>
@@ -25444,7 +25444,9 @@ body.vg-light .vg-footer-bottom{border-top-color:rgba(0,0,0,.08) !important;colo
 </div></div>
 <div id="vgQuickViewModal"><div class="vgqv-card">
   <button class="vgqv-close" id="vgQvCloseBtn" type="button">âœ•</button>
-  <div class="vgqv-img"><img id="vgQvImg" src="" alt=""></div>
+  <div class="vgqv-img"><!-- Sin src="" : un src vacío hace que el navegador pida la página
+     entera otra vez. La fuente se asigna al abrir la vista rápida. -->
+<img id="vgQvImg" alt=""></div>
   <div class="vgqv-body">
     <span class="tag" id="vgQvCat"></span>
     <h3 id="vgQvTitle"></h3>
@@ -27447,6 +27449,263 @@ else init();
      las notificaciones ni el candado de admin. Va al final del archivo
      para ganar la cascada sin tener que editar los bloques anteriores.
      â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â•â• -->
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 20 — Documentos legales
+     El Aviso de Privacidad es obligatorio en México (LFPDPPP art. 15-17)
+     porque el sitio recaba nombre, correo, teléfono y comprobantes de pago.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-legal-css">
+.vg-legal{position:fixed;inset:0;z-index:45000;background:rgba(4,6,12,.88);display:none;
+  align-items:center;justify-content:center;padding:16px;overscroll-behavior:contain}
+.vg-legal.active{display:flex}
+.vg-legal-card{width:min(760px,100%);max-height:88vh;display:flex;flex-direction:column;
+  background:#0e1220;border:1px solid rgba(139,92,246,.25);border-radius:18px;overflow:hidden;
+  box-shadow:0 26px 70px rgba(0,0,0,.6)}
+.vg-legal-head{flex:none;display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:14px 18px;border-bottom:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(139,92,246,.14),transparent)}
+.vg-legal-head h2{margin:0;color:#fff;font-size:1.02rem;font-family:system-ui,-apple-system,'Segoe UI',sans-serif;
+  font-weight:900;text-transform:none;letter-spacing:0}
+.vg-legal-x{width:34px;height:34px;border-radius:50%;flex:none;cursor:pointer;font-size:1.1rem;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff}
+.vg-legal-body{flex:1;min-height:0;overflow-y:auto;padding:18px;color:#c8d2e8;
+  font-size:.87rem;line-height:1.65;overscroll-behavior:contain}
+.vg-legal-body h3{color:#fff;font-size:.92rem;margin:20px 0 7px;font-weight:900;
+  font-family:system-ui,-apple-system,'Segoe UI',sans-serif;text-transform:none;letter-spacing:0}
+.vg-legal-body h3:first-child{margin-top:0}
+.vg-legal-body p{margin:0 0 10px}
+.vg-legal-body ul{margin:0 0 12px;padding-left:20px}
+.vg-legal-body li{margin-bottom:5px}
+.vg-legal-body a{color:#19e6c1;font-weight:800}
+.vg-legal-body strong{color:#fff}
+.vg-legal-note{border:1px solid rgba(255,183,77,.32);background:rgba(255,183,77,.08);
+  color:#ffd68a;border-radius:11px;padding:11px 13px;font-size:.79rem;font-weight:700;margin-bottom:16px}
+.vg-legal-date{color:#7d8aa8;font-size:.74rem;font-weight:800;margin-top:18px;
+  padding-top:12px;border-top:1px solid rgba(255,255,255,.08)}
+@media(max-width:640px){
+  .vg-legal{padding:0}
+  .vg-legal-card{max-height:100vh;height:100vh;border-radius:0;width:100%}
+  .vg-legal-body{font-size:.85rem;padding:15px}
+}
+</style>
+
+<div class="vg-legal" id="vgLegal">
+  <div class="vg-legal-card">
+    <div class="vg-legal-head"><h2 id="vgLegalTitle"></h2>
+      <button class="vg-legal-x" onclick="vgCloseLegal()" aria-label="Cerrar">×</button></div>
+    <div class="vg-legal-body" id="vgLegalBody"></div>
+  </div>
+</div>
+
+<script id="vg-legal-js">
+(function(){
+'use strict';
+if(window.__VG_LEGAL__) return; window.__VG_LEGAL__ = true;
+
+/* ⚠️ DATOS QUE DEBES COMPLETAR
+   Sustituye los valores de abajo por los reales de tu negocio. Mientras
+   digan [PENDIENTE], el documento se muestra con un aviso indicándolo. */
+var EMPRESA = {
+  nombre:    'Vessel Games',
+  titular:   '[PENDIENTE: tu nombre completo o razón social]',
+  domicilio: '[PENDIENTE: domicilio fiscal completo]',
+  correo:    '[PENDIENTE: correo de contacto para temas de privacidad]',
+  whatsapp:  '+52 661 107 8412',
+  sitio:     'vesselgames.xyz'
+};
+var ACTUALIZADO = '25 de julio de 2026';
+
+function faltanDatos(){
+  return Object.keys(EMPRESA).some(function(k){ return String(EMPRESA[k]).indexOf('[PENDIENTE')===0; });
+}
+function aviso(){
+  return faltanDatos()
+    ? '<div class="vg-legal-note">⚠️ Documento incompleto: faltan por definir los datos de identificación del responsable. '+
+      'Complétalos en el bloque <b>vg-legal-js</b> antes de considerarlo vigente.</div>'
+    : '';
+}
+
+var PRIVACIDAD =
+  aviso()+
+  '<p>En cumplimiento de la <strong>Ley Federal de Protección de Datos Personales en Posesión de los '+
+  'Particulares</strong> (LFPDPPP), se pone a disposición el presente Aviso de Privacidad.</p>'+
+
+  '<h3>1. Responsable del tratamiento</h3>'+
+  '<p><strong>'+EMPRESA.titular+'</strong>, quien opera comercialmente como <strong>'+EMPRESA.nombre+'</strong>, '+
+  'con domicilio en '+EMPRESA.domicilio+', es responsable del uso y protección de tus datos personales.</p>'+
+
+  '<h3>2. Datos personales que recabamos</h3>'+
+  '<p>Para prestarte el servicio recabamos, de forma directa cuando tú los proporcionas:</p>'+
+  '<ul>'+
+  '<li><strong>Identificación y contacto:</strong> nombre, correo electrónico y número de teléfono o WhatsApp.</li>'+
+  '<li><strong>Datos de la operación:</strong> productos adquiridos, montos, fecha y estado del pedido.</li>'+
+  '<li><strong>Comprobantes de pago:</strong> la imagen que subes para validar tu transferencia o depósito.</li>'+
+  '<li><strong>Datos de servicios reportados:</strong> si abres un reporte de falla de un servicio de streaming '+
+  'o de cuenta, el correo y la contraseña <em>de esa cuenta del servicio</em> que nos compartes para poder revisarla.</li>'+
+  '<li><strong>Datos técnicos:</strong> información de navegación recabada mediante Google Analytics.</li>'+
+  '</ul>'+
+  '<p><strong>No recabamos ni almacenamos</strong> números completos de tarjeta bancaria, CVV ni credenciales '+
+  'de acceso a tu banca en línea.</p>'+
+
+  '<h3>3. Finalidades del tratamiento</h3>'+
+  '<p><strong>Finalidades necesarias</strong> (sin ellas no podemos prestarte el servicio):</p>'+
+  '<ul>'+
+  '<li>Crear y administrar tu cuenta de usuario.</li>'+
+  '<li>Procesar, validar y entregar tus pedidos.</li>'+
+  '<li>Mantener contacto contigo por el chat de entrega para dar seguimiento a tu compra.</li>'+
+  '<li>Atender reportes de falla, dudas y aclaraciones.</li>'+
+  '<li>Cumplir obligaciones fiscales y legales aplicables.</li>'+
+  '</ul>'+
+  '<p><strong>Finalidades adicionales</strong> (puedes oponerte sin que afecte tu servicio): envío de '+
+  'promociones y novedades del catálogo.</p>'+
+
+  '<h3>4. Transferencia de datos</h3>'+
+  '<p>No vendemos ni comercializamos tus datos personales. Utilizamos proveedores tecnológicos que los '+
+  'procesan únicamente por nuestra cuenta y bajo nuestras instrucciones:</p>'+
+  '<ul>'+
+  '<li><strong>Supabase</strong> — alojamiento de la base de datos y autenticación.</li>'+
+  '<li><strong>Vercel</strong> — alojamiento del sitio web.</li>'+
+  '<li><strong>Google Analytics</strong> — estadísticas de uso de forma agregada.</li>'+
+  '</ul>'+
+  '<p>Podremos revelar tus datos cuando una autoridad competente lo requiera conforme a la ley.</p>'+
+
+  '<h3>5. Tus derechos ARCO</h3>'+
+  '<p>Tienes derecho a <strong>Acceder</strong> a tus datos, <strong>Rectificarlos</strong> si son inexactos, '+
+  '<strong>Cancelarlos</strong> cuando consideres que no se requieren, y <strong>Oponerte</strong> a su uso '+
+  'para fines específicos. También puedes revocar tu consentimiento o limitar el uso de tus datos.</p>'+
+  '<p>Para ejercerlos, escribe a <strong>'+EMPRESA.correo+'</strong> o por WhatsApp al <strong>'+EMPRESA.whatsapp+'</strong>, '+
+  'indicando tu nombre, el correo con el que te registraste y la solicitud concreta. '+
+  'Responderemos en un plazo máximo de 20 días hábiles.</p>'+
+
+  '<h3>6. Conservación y seguridad</h3>'+
+  '<p>Conservamos tus datos mientras tengas una cuenta activa y durante los plazos que exija la legislación '+
+  'fiscal. Los comprobantes de pago se conservan como respaldo de la operación.</p>'+
+  '<p>Las contraseñas de servicios que compartas en un reporte de falla se utilizan <strong>únicamente</strong> '+
+  'para diagnosticar el problema reportado, y se eliminan una vez resuelto. Te recomendamos cambiarlas después '+
+  'de que se atienda tu reporte.</p>'+
+  '<p>Aplicamos medidas de seguridad técnicas y administrativas, incluyendo cifrado en tránsito (HTTPS) y '+
+  'control de acceso por roles a la base de datos.</p>'+
+
+  '<h3>7. Uso de cookies y tecnologías similares</h3>'+
+  '<p>Utilizamos almacenamiento local del navegador para mantener tu sesión, tu carrito y tus preferencias, '+
+  'y Google Analytics para estadísticas. Puedes borrarlos desde la configuración de tu navegador, aunque '+
+  'esto podría afectar el funcionamiento del sitio.</p>'+
+
+  '<h3>8. Cambios al aviso</h3>'+
+  '<p>Cualquier modificación se publicará en esta misma sección de '+EMPRESA.sitio+'. Te sugerimos revisarla '+
+  'periódicamente.</p>'+
+
+  '<div class="vg-legal-date">Última actualización: '+ACTUALIZADO+'</div>';
+
+var TERMINOS =
+  aviso()+
+  '<p>Al realizar una compra en <strong>'+EMPRESA.nombre+'</strong> aceptas los siguientes términos.</p>'+
+
+  '<h3>1. Naturaleza de los productos</h3>'+
+  '<p>Comercializamos productos y servicios digitales: monedas y créditos para videojuegos, cuentas y '+
+  'suscripciones de plataformas de streaming, licencias de software, servicios de crecimiento en redes '+
+  'sociales y gestión de trámites. La entrega es electrónica; no se envía ningún artículo físico.</p>'+
+
+  '<h3>2. Precios y disponibilidad</h3>'+
+  '<p>Los precios se muestran en pesos mexicanos (MXN) y pueden cambiar sin previo aviso. La disponibilidad '+
+  'está sujeta a existencias del proveedor. Si un producto no estuviera disponible tras tu pago, se te '+
+  'ofrecerá un reemplazo equivalente o la devolución íntegra de tu dinero.</p>'+
+
+  '<h3>3. Proceso de compra y entrega</h3>'+
+  '<ul>'+
+  '<li>Seleccionas el producto y realizas el pago por alguno de los métodos indicados.</li>'+
+  '<li>Subes el comprobante de pago desde el sitio para que podamos validarlo.</li>'+
+  '<li>Una vez validado, recibes tu pedido en el <strong>chat de entrega</strong> dentro de tu panel, '+
+  'en la sección "Mis compras".</li>'+
+  '<li>El tiempo estimado de entrega es de <strong>20 minutos a 2 horas</strong>, según el flujo de pedidos. '+
+  'Este plazo es estimado y no constituye una garantía contractual.</li>'+
+  '</ul>'+
+
+  '<h3>4. Devoluciones y reembolsos</h3>'+
+  '<p><strong>Sí procede reembolso cuando:</strong></p>'+
+  '<ul>'+
+  '<li>No pudimos entregar el producto adquirido.</li>'+
+  '<li>El producto entregado no funciona desde el inicio y no fue posible reponerlo.</li>'+
+  '<li>Se cobró un monto distinto al del pedido.</li>'+
+  '</ul>'+
+  '<p><strong>No procede reembolso cuando:</strong></p>'+
+  '<ul>'+
+  '<li>El producto digital ya fue entregado, usado, activado o canjeado correctamente.</li>'+
+  '<li>El cliente modificó la contraseña, el correo, el número o los datos de recuperación de una cuenta, '+
+  'salvo que las instrucciones lo autorizaran expresamente.</li>'+
+  '<li>El cliente compartió los accesos con terceros.</li>'+
+  '<li>El error se debe a datos incorrectos proporcionados por el cliente (ID de juego, correo, región).</li>'+
+  '</ul>'+
+
+  '<h3>5. Garantía de cuentas y suscripciones</h3>'+
+  '<p>Los productos de cuenta incluyen una garantía por el periodo contratado, siempre que el cliente siga '+
+  'las instrucciones de uso entregadas. La garantía se pierde si se modifican los datos de la cuenta sin '+
+  'autorización, se comparte con terceros o se usa en más dispositivos de los permitidos.</p>'+
+  '<p>Para hacerla válida, abre un <strong>reporte de falla</strong> desde tu panel, en "Reportar falla".</p>'+
+
+  '<h3>6. Obligaciones del cliente</h3>'+
+  '<ul>'+
+  '<li>Proporcionar datos veraces y completos para la entrega.</li>'+
+  '<li>Realizar el pago por los medios oficiales publicados en el sitio.</li>'+
+  '<li>No revender ni redistribuir los productos sin autorización.</li>'+
+  '<li>No utilizar el servicio para fines ilícitos.</li>'+
+  '</ul>'+
+
+  '<h3>7. Cuenta de usuario</h3>'+
+  '<p>Eres responsable de mantener la confidencialidad de tu contraseña. Podremos suspender cuentas que '+
+  'incurran en fraude, abuso, cargos revertidos indebidos o incumplimiento de estos términos.</p>'+
+
+  '<h3>8. Limitación de responsabilidad</h3>'+
+  '<p>No somos responsables por suspensiones, bloqueos o cambios de política aplicados por las plataformas '+
+  'de terceros (Netflix, Xbox, Free Fire, etc.), ni por fallas atribuibles a dichos proveedores. Nuestra '+
+  'responsabilidad se limita, como máximo, al monto pagado por el pedido correspondiente.</p>'+
+
+  '<h3>9. Atención y contacto</h3>'+
+  '<p>Chat de entrega dentro del sitio · WhatsApp <strong>'+EMPRESA.whatsapp+'</strong>'+
+  (String(EMPRESA.correo).indexOf('[PENDIENTE')===0 ? '' : ' · '+EMPRESA.correo)+'</p>'+
+
+  '<h3>10. Legislación aplicable</h3>'+
+  '<p>Estos términos se rigen por las leyes de los Estados Unidos Mexicanos. Para cualquier controversia, '+
+  'las partes se someten a la jurisdicción de los tribunales competentes, sin perjuicio del derecho del '+
+  'consumidor de acudir a la <strong>PROFECO</strong>.</p>'+
+
+  '<div class="vg-legal-date">Última actualización: '+ACTUALIZADO+'</div>';
+
+window.vgOpenLegal=function(cual){
+  var m=document.getElementById('vgLegal');
+  document.getElementById('vgLegalTitle').textContent =
+    cual==='privacidad' ? 'Aviso de Privacidad' : 'Términos y Condiciones';
+  document.getElementById('vgLegalBody').innerHTML =
+    cual==='privacidad' ? PRIVACIDAD : TERMINOS;
+  document.getElementById('vgLegalBody').scrollTop=0;
+  m.classList.add('active');
+};
+window.vgCloseLegal=function(){ document.getElementById('vgLegal').classList.remove('active'); };
+
+document.getElementById('vgLegal').addEventListener('click',function(ev){
+  if(ev.target===this) window.vgCloseLegal();
+});
+document.addEventListener('keydown',function(ev){
+  if(ev.key==='Escape') window.vgCloseLegal();
+});
+
+/* Enlaces en el pie de página */
+function ponerEnlaces(){
+  var cont=document.querySelector('.vg-clean-footer');
+  if(!cont || document.getElementById('vgLegalLinks')) return;
+  var zona=cont.querySelector('a') ? cont.querySelector('a').parentElement : cont;
+  var d=document.createElement('div');
+  d.id='vgLegalLinks';
+  d.style.cssText='display:flex;gap:14px;flex-wrap:wrap;margin-top:10px';
+  d.innerHTML='<a href="javascript:void(0)" onclick="vgOpenLegal(\'terminos\')">Términos y Condiciones</a>'+
+              '<a href="javascript:void(0)" onclick="vgOpenLegal(\'privacidad\')">Aviso de Privacidad</a>';
+  zona.appendChild(d);
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',ponerEnlaces);
+else ponerEnlaces();
+})();
+</script>
+
 <script id="vg-video-lazy">
 (function(){
 'use strict';
