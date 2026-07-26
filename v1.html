@@ -16517,7 +16517,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
           setTimeout(()=>box.classList.remove('vg-proof-required'), 2400);
         }
       }
-      alert('Sube el comprobante para confirmar la compra antes de mandar el mensaje por WhatsApp.');
+      alert('Sube el comprobante de pago para confirmar tu pedido.');
       return;
     }
 
@@ -16789,7 +16789,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
         setTimeout(function(){ box.classList.remove('vg-proof-required'); }, 2600);
       }
       if(input) input.focus();
-      alert('Sube el comprobante para confirmar la compra antes de mandar el mensaje por WhatsApp.');
+      alert('Sube el comprobante de pago para confirmar tu pedido.');
       return false;
     }
     return true;
@@ -19289,7 +19289,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     if(!file){
       if(input) input.focus();
       proofStatus('Sube el comprobante antes de mandar el pedido.', 'error');
-      alert('Sube el comprobante para confirmar la compra antes de mandar el mensaje por WhatsApp.');
+      alert('Sube el comprobante de pago para confirmar tu pedido.');
       return;
     }
     var client = getClient();
@@ -26455,6 +26455,7 @@ function clientShell(){
     '<div class="vg17-tabs">'+
       '<button class="vg17-tab" data-v="purchases">Mis compras</button>'+
       '<button class="vg17-tab" data-v="tickets">Reportar falla</button>'+
+      '<button class="vg17-tab" data-v="tokens">Mis tokens</button>'+
       '<button class="vg17-tab" data-v="mytickets">Mis reportes</button>'+
     '</div><div id="vg17CBody"></div></div>';
 }
@@ -26491,6 +26492,7 @@ async function loadClient(){
   qsa('#vg17Client .vg17-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.v===C.view); });
   body.innerHTML='<div class="vg17-empty">Cargando...</div>';
   if(C.view==='tickets')   return renderTicketForm(body);
+  if(C.view==='tokens')    return renderTokens(body);
   if(C.view==='mytickets') return renderMyTickets(body);
   try{ C.orders = await myOrders(); }
   catch(e){ body.innerHTML='<div class="vg17-empty">No se pudieron cargar tus compras: '+esc(e.message||e)+'</div>'; return; }
@@ -26754,6 +26756,61 @@ async function renderTicketForm(body){
   };
 }
 
+/* ── Mis tokens: saldo, link de referido e historial ──────────── */
+async function renderTokens(body){
+  var c=SB();
+  if(!c){ body.innerHTML='<div class="vg17-empty">Sin conexión.</div>'; return; }
+  var r=await c.rpc('vg_mi_wallet');
+  if(r.error || !r.data){
+    body.innerHTML='<div class="vg17-empty">No se pudo cargar tu wallet: '+esc((r.error&&r.error.message)||'sin datos')+'</div>';
+    return;
+  }
+  var w=r.data;
+  var n=function(x){ return (Math.round(Number(x||0)*100)/100).toString(); };
+  var link='https://vesselgames.xyz/?ref='+(w.referral_code||'');
+  var movs=Array.isArray(w.movimientos)?w.movimientos:[];
+
+  var etiqueta={compra:'Compra propia', referido:'Amigo invitado', ajuste_admin:'Ajuste de Vessel Games', canje:'Canje'};
+
+  body.innerHTML=
+    '<div class="vg17-cards">'+
+      '<div class="vg17-stat"><i>🪙</i><span>Tokens disponibles</span><b>'+n(w.balance)+'</b></div>'+
+      '<div class="vg17-stat"><i>📈</i><span>Ganados en total</span><b>'+n(w.total_earned)+'</b></div>'+
+      '<div class="vg17-stat"><i>👥</i><span>Amigos que compraron</span><b>'+(w.total_referidos||0)+'</b></div>'+
+    '</div>'+
+    '<div class="vg17-box"><span>Tu link de referido</span>'+
+      '<p style="margin:6px 0 10px;color:#8e9cba;font-size:.79rem;line-height:1.5">'+
+        'Compártelo con tus amigos. Cuando uno haga su primera compra usando tu link, '+
+        'el token se te acredita solo.</p>'+
+      '<code style="display:block;color:#c4cee6;font-size:.78rem;word-break:break-all;background:rgba(0,0,0,.30);padding:10px 12px;border-radius:10px;margin-bottom:10px;font-family:ui-monospace,Menlo,Consolas,monospace">'+esc(link)+'</code>'+
+      '<button class="vg17-btn primary" id="vgtkCopiaPanel" style="width:100%">Copiar mi link</button>'+
+    '</div>'+
+    '<div class="vg17-box"><span>Movimientos</span>'+
+      (movs.length
+        ? movs.map(function(m){
+            var mas=Number(m.cantidad)>0;
+            return '<div class="vgtk-mov"><div>'+
+              '<b>'+esc(etiqueta[m.motivo]||m.motivo)+'</b>'+
+              '<small>'+esc(m.detalle||'')+' · '+esc(hace(m.created_at))+'</small></div>'+
+              '<span class="cant '+(mas?'mas':'menos')+'">'+(mas?'+':'')+n(m.cantidad)+'</span></div>';
+          }).join('')
+        : '<div class="vg17-empty" style="padding:24px">Todavía no tienes movimientos.<br>'+
+          'Tu primer token llega cuando recibas tu primera compra.</div>')+
+    '</div>';
+
+  var b=qs('#vgtkCopiaPanel');
+  if(b) b.onclick=function(){
+    var btn=this;
+    function ok(){ btn.textContent='Copiado'; setTimeout(function(){ btn.textContent='Copiar mi link'; },1800); }
+    if(navigator.clipboard&&navigator.clipboard.writeText) navigator.clipboard.writeText(link).then(ok).catch(function(){});
+    else{
+      try{ var ta=document.createElement('textarea'); ta.value=link; ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta); ok();
+      }catch(e){}
+    }
+  };
+}
+
 async function renderMyTickets(body){
   var c=SB(); if(!c){ body.innerHTML='<div class="vg17-empty">Sin conexión.</div>'; return; }
   var r=await c.from('vg_support_tickets').select('*').order('created_at',{ascending:false}).limit(100);
@@ -26821,6 +26878,11 @@ function ensureAdminTabs(){
     s3.className='vg-admin-section vg17-scope'; s3.id='vgAdminImagenes';
     content.insertBefore(s3, qs('#vgAdminSoporte').nextSibling);
   }
+  if(!qs('#vgAdminTokens')){
+    var s4=document.createElement('section');
+    s4.className='vg-admin-section vg17-scope'; s4.id='vgAdminTokens';
+    content.insertBefore(s4, qs('#vgAdminSoporte').nextSibling);
+  }
   if(!qs('#vgAdminModal .vg-admin-tab[data-tab="imagenes"]')){
     var t3=document.createElement('button');
     t3.className='vg-admin-tab'; t3.setAttribute('data-tab','imagenes');
@@ -26831,7 +26893,16 @@ function ensureAdminTabs(){
     else tabsBar.insertBefore(t3, tabsBar.firstChild);
   }
 
-  ['pedidos','soporte','imagenes'].forEach(function(name){
+  if(!qs('#vgAdminModal .vg-admin-tab[data-tab="tokens"]')){
+    var t4=document.createElement('button');
+    t4.className='vg-admin-tab'; t4.setAttribute('data-tab','tokens');
+    t4.innerHTML='🪙 Tokens';
+    var refSop2=qs('#vgAdminModal .vg-admin-tab[data-tab="soporte"]');
+    if(refSop2) tabsBar.insertBefore(t4, refSop2.nextSibling);
+    else tabsBar.insertBefore(t4, tabsBar.firstChild);
+  }
+
+  ['pedidos','soporte','tokens','imagenes'].forEach(function(name){
     var b=qs('#vgAdminModal .vg-admin-tab[data-tab="'+name+'"]');
     if(b && !b.__vg17bound){ b.__vg17bound=true; b.onclick=function(){ showMineTab(name); }; }
   });
@@ -26843,13 +26914,111 @@ function showMineTab(name){
     b.classList.toggle('active', b.getAttribute('data-tab')===name);
   });
   qsa('#vgAdminModal .vg-admin-section').forEach(function(s){ s.classList.remove('active'); });
-  var mapa={pedidos:'#vgAdminPedidos', soporte:'#vgAdminSoporte', imagenes:'#vgAdminImagenes'};
+  var mapa={pedidos:'#vgAdminPedidos', soporte:'#vgAdminSoporte',
+            imagenes:'#vgAdminImagenes', tokens:'#vgAdminTokens'};
   var sec=qs(mapa[name]||'#vgAdminPedidos');
   if(sec) sec.classList.add('active');
   if(name==='imagenes'){ renderMigracion(sec); return; }
+  if(name==='tokens'){ renderAdminTokens(sec); return; }
   A.view = (name==='pedidos') ? 'orders' : 'tickets';
   A.ref = null;
   loadAdmin();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   TOKENS — control del admin
+   Permite corregir errores sumando o restando tokens a una cuenta.
+   Todo movimiento queda registrado en vg_token_tx con el admin que
+   lo hizo, para poder auditarlo después.
+   ═══════════════════════════════════════════════════════════════ */
+function renderAdminTokens(cont){
+  cont.innerHTML=
+    '<div class="vg17-box">'+
+      '<span>Recompensas activas</span>'+
+      '<div class="vg17-cards" id="tkReglas" style="margin-top:10px"></div>'+
+      '<p style="margin:2px 0 0;color:#8593b5;font-size:.75rem;line-height:1.5">'+
+        'Los tokens se acreditan solos cuando marcas un pedido como <b>entregado</b>. '+
+        'Se hace así, y no al crear el pedido, para que nadie pueda generar pedidos '+
+        'falsos sin pagar y llenarse de tokens.</p>'+
+    '</div>'+
+    '<div class="vg17-box">'+
+      '<span>Buscar cliente</span>'+
+      '<div style="display:flex;gap:8px;margin-top:8px">'+
+        '<input id="tkBuscar" placeholder="Nombre, correo, teléfono o código..." style="flex:1;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:11px;padding:10px 12px;font-family:inherit;font-size:.84rem">'+
+        '<button class="vg17-btn" id="tkBuscarBtn">Buscar</button>'+
+      '</div>'+
+      '<div class="vg17-ok" id="tkEstado"></div>'+
+      '<div id="tkLista" style="margin-top:10px"></div>'+
+    '</div>';
+
+  cargarReglasAdmin();
+  buscarUsuarios('');
+
+  qs('#tkBuscarBtn').onclick=function(){ buscarUsuarios(qs('#tkBuscar').value.trim()); };
+  qs('#tkBuscar').onkeydown=function(ev){
+    if(ev.key==='Enter'){ ev.preventDefault(); buscarUsuarios(this.value.trim()); }
+  };
+
+  async function cargarReglasAdmin(){
+    var c=SB(); if(!c) return;
+    var r=await c.from('vg_token_config').select('clave,valor,nota');
+    var cont2=qs('#tkReglas'); if(!cont2) return;
+    if(r.error){ cont2.innerHTML='<div class="vg17-empty">'+esc(r.error.message)+'</div>'; return; }
+    cont2.innerHTML=(r.data||[]).map(function(x){
+      var titulo = x.clave==='por_compra_propia' ? 'Por compra propia' : 'Por referido';
+      return '<div class="vg17-stat"><span>'+esc(titulo)+'</span><b>'+Number(x.valor)+'</b></div>';
+    }).join('');
+  }
+
+  async function buscarUsuarios(texto){
+    var c=SB(), lista=qs('#tkLista');
+    if(!c||!lista) return;
+    lista.innerHTML='<div class="vg17-empty">Buscando...</div>';
+    var r=await c.rpc('vg_admin_buscar_usuarios',{p_texto:texto||''});
+    if(r.error){ lista.innerHTML='<div class="vg17-empty">Error: '+esc(r.error.message)+'</div>'; return; }
+    var us=r.data||[];
+    if(!us.length){ lista.innerHTML='<div class="vg17-empty">Sin resultados.</div>'; return; }
+    lista.innerHTML=us.map(function(u){
+      return '<div class="vg17-box" data-u="'+esc(u.id)+'" style="margin-bottom:8px">'+
+        '<div class="vg17-row">'+
+          '<div style="min-width:0"><b style="color:#fff;font-size:.9rem">'+esc(u.name||'(sin nombre)')+'</b>'+
+          '<p style="margin:3px 0 0;color:#8593b5;font-size:.72rem">'+esc(u.email||'')+
+            (u.phone?' · '+esc(u.phone):'')+' · código '+esc(u.referral_code||'—')+'</p></div>'+
+          '<span style="color:#e8bf6d;font-weight:900;font-size:1.15rem;white-space:nowrap">'+
+            (Math.round(Number(u.balance||0)*100)/100)+' tk</span>'+
+        '</div>'+
+        '<p style="margin:7px 0 0;color:#8593b5;font-size:.71rem">'+
+          (u.total_purchases||0)+' compra(s) · '+(u.total_referidos||0)+' invitado(s) · '+
+          (Math.round(Number(u.total_earned||0)*100)/100)+' ganados en total</p>'+
+        '<div style="display:flex;gap:7px;margin-top:9px;flex-wrap:wrap">'+
+          '<input class="tk-cant" type="number" step="0.25" placeholder="Cantidad (ej. 1 o -0.5)" style="flex:1;min-width:150px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:10px;padding:9px 11px;font-family:inherit;font-size:.82rem">'+
+          '<input class="tk-motivo" placeholder="Motivo del ajuste" style="flex:1.4;min-width:170px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:10px;padding:9px 11px;font-family:inherit;font-size:.82rem">'+
+          '<button class="vg17-btn primary tk-aplicar">Aplicar</button>'+
+        '</div>'+
+        '<div class="vg17-ok tk-msg"></div>'+
+      '</div>';
+    }).join('');
+
+    qsa('[data-u]',lista).forEach(function(card){
+      var id=card.getAttribute('data-u');
+      var msg=qs('.tk-msg',card);
+      qs('.tk-aplicar',card).onclick=async function(){
+        var cant=parseFloat(qs('.tk-cant',card).value);
+        var motivo=(qs('.tk-motivo',card).value||'').trim()||'Ajuste manual';
+        msg.textContent='';
+        if(!cant || isNaN(cant)){ msg.textContent='Escribe una cantidad distinta de cero.'; return; }
+        if(!confirm((cant>0?'Sumar ':'Restar ')+Math.abs(cant)+' token(s) a este cliente.\n\nMotivo: '+motivo+'\n\n¿Continuar?')) return;
+        this.disabled=true;
+        try{
+          var r2=await SB().rpc('vg_admin_ajustar_tokens',{p_user:id,p_cantidad:cant,p_motivo:motivo});
+          if(r2.error) throw r2.error;
+          msg.textContent='Listo. Nuevo saldo: '+(Math.round(Number(r2.data)*100)/100)+' tokens.';
+          buscarUsuarios(qs('#tkBuscar').value.trim());
+        }catch(e){ msg.textContent='Error: '+(e.message||e); }
+        finally{ this.disabled=false; }
+      };
+    });
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════
@@ -27312,6 +27481,16 @@ window.sendPaymentWhatsApp = async function(){
   var f=(qs('#proofInput')&&qs('#proofInput').files&&qs('#proofInput').files[0])||null;
   if(!f){ alert('Sube el comprobante de pago para confirmar el pedido.'); return; }
 
+  /* Aceptación expresa de los términos antes de cobrar. Es lo que
+     respalda la política de "todas las ventas son finales" si algún
+     día hay una disputa de pago. */
+  var acepta = qs('#vgAceptaTerminos');
+  if(acepta && !acepta.checked){
+    alert('Para continuar debes aceptar los Términos de Servicio, incluida la política de no reembolsos.');
+    try{ acepta.focus(); acepta.closest('.vgacc').classList.add('vgacc-alerta'); }catch(e){}
+    return;
+  }
+
   var pend = window.pendingPaymentOrder || {};
   var items = Array.isArray(pend.items)&&pend.items.length ? pend.items
             : (Array.isArray(window.cart)&&window.cart.length ? window.cart : []);
@@ -27665,149 +27844,70 @@ function aviso(){
 
 var PRIVACIDAD =
   aviso()+
-  '<p>En cumplimiento de la <strong>Ley Federal de Protección de Datos Personales en Posesión de los '+
-  'Particulares</strong> (LFPDPPP), se pone a disposición el presente Aviso de Privacidad.</p>'+
+  '<p>El presente documento establece las políticas de privacidad, así como los términos y '+
+  'condiciones de uso aplicables a todas las compras y servicios adquiridos a través de '+
+  '<strong>Vessel Games</strong> (en adelante, "el Sitio" o "nosotros"), con dominio en '+
+  '<a href="https://www.vesselgames.xyz" target="_blank" rel="noopener">www.vesselgames.xyz</a>. '+
+  'Al realizar una compra en nuestro sitio, el usuario acepta de manera expresa los siguientes términos.</p>'+
 
-  '<h3>1. Responsable del tratamiento</h3>'+
-  '<p><strong>'+EMPRESA.titular+'</strong>, quien opera comercialmente como <strong>'+EMPRESA.nombre+'</strong>, '+
-  'con domicilio en '+EMPRESA.domicilio+', es responsable del uso y protección de tus datos personales.</p>'+
-
-  '<h3>2. Datos personales que recabamos</h3>'+
-  '<p>Para prestarte el servicio recabamos, de forma directa cuando tú los proporcionas:</p>'+
+  '<h3>1. Aviso de Privacidad</h3>'+
+  '<p><strong>Recopilación y Uso de Datos.</strong> En Vessel Games recopilamos la información '+
+  'estrictamente necesaria para procesar tus pedidos de bienes digitales, licencias de software, '+
+  'monedas de juego y servicios de redes sociales. Esto puede incluir tu nombre, correo electrónico, '+
+  'identificadores de plataformas (como ID de Binance o nombres de usuario) y datos de contacto.</p>'+
+  '<p>Tus datos personales serán utilizados única y exclusivamente para:</p>'+
   '<ul>'+
-  '<li><strong>Identificación y contacto:</strong> nombre, correo electrónico y número de teléfono o WhatsApp.</li>'+
-  '<li><strong>Datos de la operación:</strong> productos adquiridos, montos, fecha y estado del pedido.</li>'+
-  '<li><strong>Comprobantes de pago:</strong> la imagen que subes para validar tu transferencia o depósito.</li>'+
-  '<li><strong>Datos de servicios reportados:</strong> si abres un reporte de falla de un servicio de streaming '+
-  'o de cuenta, el correo y la contraseña <em>de esa cuenta del servicio</em> que nos compartes para revisarla.</li>'+
-  '<li><strong>Datos técnicos:</strong> información de navegación recabada mediante Google Analytics.</li>'+
+  '<li>Procesar, verificar y entregar tus pedidos digitales.</li>'+
+  '<li>Proveer atención al cliente y soporte técnico.</li>'+
+  '<li>Prevenir fraudes y mantener la seguridad de las transacciones.</li>'+
   '</ul>'+
-  '<p><strong>No recabamos ni almacenamos</strong> números completos de tarjeta bancaria, CVV ni credenciales '+
-  'de acceso a tu banca en línea.</p>'+
+  '<p><strong>Protección de Datos.</strong> Nos comprometemos a mantener la confidencialidad de tus '+
+  'datos. No vendemos, alquilamos ni compartimos tu información personal con terceros con fines '+
+  'de marketing.</p>'+
 
-  '<h3>3. Finalidades del tratamiento</h3>'+
-  '<p><strong>Finalidades necesarias</strong> (sin ellas no podemos prestarte el servicio):</p>'+
+  '<h3>2. Política de Reembolsos (Todas las ventas son finales)</h3>'+
+  '<p>Debido a la naturaleza de los productos comercializados en Vessel Games (bienes digitales, '+
+  'licencias, divisas de juegos y servicios de redes sociales), <strong>NO SE EFECTÚAN REEMBOLSOS '+
+  'BAJO NINGUNA CIRCUNSTANCIA</strong> una vez que el producto ha sido entregado o el servicio ha '+
+  'sido iniciado.</p>'+
   '<ul>'+
-  '<li>Crear y administrar tu cuenta de usuario.</li>'+
-  '<li>Procesar, validar y entregar tus pedidos.</li>'+
-  '<li>Mantener contacto contigo por el chat de entrega para dar seguimiento a tu compra.</li>'+
-  '<li>Atender reportes de falla, dudas y aclaraciones.</li>'+
-  '<li>Cumplir obligaciones fiscales y legales aplicables.</li>'+
+  '<li>Es responsabilidad exclusiva del cliente verificar que está adquiriendo el producto correcto, '+
+  'para la región correcta y la plataforma indicada antes de finalizar el pago.</li>'+
+  '<li>Cualquier error por parte del usuario al proporcionar su información de entrega (como enlaces '+
+  'incorrectos, nombres de usuario mal escritos o identificadores erróneos) no será motivo de '+
+  'reembolso ni de reposición del saldo.</li>'+
   '</ul>'+
-  '<p><strong>Finalidades adicionales</strong> (puedes oponerte sin que afecte tu servicio): envío de '+
-  'promociones y novedades del catálogo.</p>'+
 
-  '<h3>4. Transferencia de datos</h3>'+
-  '<p>No vendemos ni comercializamos tus datos personales. Utilizamos proveedores tecnológicos que los '+
-  'procesan únicamente por nuestra cuenta y bajo nuestras instrucciones:</p>'+
+  '<h3>3. Deslinde de Responsabilidad (Uso de los Servicios)</h3>'+
+  '<p>Vessel Games actúa únicamente como proveedor de los bienes y servicios digitales solicitados. '+
+  'Nos deslindamos de cualquier responsabilidad civil, penal o administrativa derivada del uso '+
+  'incorrecto, indebido o ilícito que el usuario final le dé a los servicios o productos adquiridos.</p>'+
   '<ul>'+
-  '<li><strong>Supabase</strong> — alojamiento de la base de datos y autenticación.</li>'+
-  '<li><strong>Vercel</strong> — alojamiento del sitio web.</li>'+
-  '<li><strong>Google Analytics</strong> — estadísticas de uso de forma agregada.</li>'+
+  '<li><strong>Riesgos de cuentas de terceros:</strong> El cliente asume total responsabilidad al '+
+  'utilizar servicios de engagement (redes sociales), activación de software o inyección de monedas '+
+  'en videojuegos. Vessel Games no se hace responsable por baneos, bloqueos de cuenta, suspensiones, '+
+  'pérdida de progreso o cualquier penalización impuesta por los desarrolladores de los juegos o las '+
+  'plataformas de redes sociales debido a la violación de sus respectivos Términos de Servicio (TOS).</li>'+
+  '<li>Una vez que el producto o servicio digital es entregado de manera funcional, la forma en que '+
+  'se utilice y las consecuencias que de ello deriven recaen 100% sobre el usuario comprador.</li>'+
   '</ul>'+
-  '<p>Podremos revelar tus datos cuando una autoridad competente lo requiera conforme a la ley.</p>'+
 
-  '<h3>5. Tus derechos ARCO</h3>'+
-  '<p>Tienes derecho a <strong>Acceder</strong> a tus datos, <strong>Rectificarlos</strong> si son inexactos, '+
-  '<strong>Cancelarlos</strong> cuando consideres que no se requieren, y <strong>Oponerte</strong> a su uso '+
-  'para fines específicos. También puedes revocar tu consentimiento o limitar el uso de tus datos.</p>'+
-  '<p>Para ejercerlos, escribe a <strong>'+EMPRESA.correo+'</strong> o por WhatsApp al <strong>'+EMPRESA.whatsapp+'</strong>, '+
-  'indicando tu nombre, el correo con el que te registraste y la solicitud concreta. '+
-  'Responderemos en un plazo máximo de 20 días hábiles.</p>'+
+  '<h3>4. Responsable y contacto</h3>'+
+  '<p><strong>'+EMPRESA.titular+'</strong>, quien opera comercialmente como <strong>'+EMPRESA.nombre+'</strong>'+
+  (String(EMPRESA.domicilio).indexOf('[PENDIENTE')===0 ? '' : ', con domicilio en '+EMPRESA.domicilio)+'.</p>'+
+  '<p>Para cualquier duda sobre el tratamiento de tus datos, o para ejercer tus derechos de acceso, '+
+  'rectificación, cancelación u oposición (ARCO), escríbenos a <strong>'+EMPRESA.correo+'</strong> '+
+  'o por WhatsApp al <strong>'+EMPRESA.whatsapp+'</strong>.</p>'+
 
-  '<h3>6. Conservación y seguridad</h3>'+
-  '<p>Conservamos tus datos mientras tengas una cuenta activa y durante los plazos que exija la legislación '+
-  'fiscal. Los comprobantes de pago se conservan como respaldo de la operación.</p>'+
-  '<p>Las contraseñas de servicios que compartas en un reporte de falla se utilizan <strong>únicamente</strong> '+
-  'para diagnosticar el problema reportado, y se eliminan una vez resuelto. Te recomendamos cambiarlas después '+
-  'de que se atienda tu reporte.</p>'+
-  '<p>Aplicamos medidas de seguridad técnicas y administrativas, incluyendo cifrado en tránsito (HTTPS) y '+
-  'control de acceso por roles a la base de datos.</p>'+
-
-  '<h3>7. Uso de cookies y tecnologías similares</h3>'+
-  '<p>Utilizamos almacenamiento local del navegador para mantener tu sesión, tu carrito y tus preferencias, '+
-  'y Google Analytics para estadísticas. Puedes borrarlos desde la configuración de tu navegador, aunque '+
-  'esto podría afectar el funcionamiento del sitio.</p>'+
-
-  '<h3>8. Cambios al aviso</h3>'+
-  '<p>Cualquier modificación se publicará en esta misma sección de '+EMPRESA.sitio+'. Te sugerimos revisarla '+
-  'periódicamente.</p>'+
+  '<p style="margin-top:16px">Al continuar navegando y realizar una compra en '+
+  '<a href="https://www.vesselgames.xyz" target="_blank" rel="noopener">www.vesselgames.xyz</a>, '+
+  'confirmas que has leído, entendido y aceptado en su totalidad estas políticas.</p>'+
 
   '<div class="vg-legal-date">Última actualización: '+ACTUALIZADO+'</div>';
 
-var TERMINOS =
-  aviso()+
-  '<p>Al realizar una compra en <strong>'+EMPRESA.nombre+'</strong> aceptas los siguientes términos.</p>'+
-
-  '<h3>1. Naturaleza de los productos</h3>'+
-  '<p>Comercializamos productos y servicios digitales: monedas y créditos para videojuegos, cuentas y '+
-  'suscripciones de plataformas de streaming, licencias de software, servicios de crecimiento en redes '+
-  'sociales y gestión de trámites. La entrega es electrónica; no se envía ningún artículo físico.</p>'+
-
-  '<h3>2. Precios y disponibilidad</h3>'+
-  '<p>Los precios se muestran en pesos mexicanos (MXN) y pueden cambiar sin previo aviso. La disponibilidad '+
-  'está sujeta a existencias del proveedor. Si un producto no estuviera disponible tras tu pago, se te '+
-  'ofrecerá un reemplazo equivalente o la devolución íntegra de tu dinero.</p>'+
-
-  '<h3>3. Proceso de compra y entrega</h3>'+
-  '<ul>'+
-  '<li>Seleccionas el producto y realizas el pago por alguno de los métodos indicados.</li>'+
-  '<li>Subes el comprobante de pago desde el sitio para que podamos validarlo.</li>'+
-  '<li>Una vez validado, recibes tu pedido en el <strong>chat de entrega</strong> dentro de tu panel, '+
-  'en la sección "Mis compras".</li>'+
-  '<li>El tiempo estimado de entrega es de <strong>20 minutos a 2 horas</strong>, según el flujo de pedidos. '+
-  'Este plazo es estimado y no constituye una garantía contractual.</li>'+
-  '</ul>'+
-
-  '<h3>4. Devoluciones y reembolsos</h3>'+
-  '<p><strong>Sí procede reembolso cuando:</strong></p>'+
-  '<ul>'+
-  '<li>No pudimos entregar el producto adquirido.</li>'+
-  '<li>El producto entregado no funciona desde el inicio y no fue posible reponerlo.</li>'+
-  '<li>Se cobró un monto distinto al del pedido.</li>'+
-  '</ul>'+
-  '<p><strong>No procede reembolso cuando:</strong></p>'+
-  '<ul>'+
-  '<li>El producto digital ya fue entregado, usado, activado o canjeado correctamente.</li>'+
-  '<li>El cliente modificó la contraseña, el correo, el número o los datos de recuperación de una cuenta, '+
-  'salvo que las instrucciones lo autorizaran expresamente.</li>'+
-  '<li>El cliente compartió los accesos con terceros.</li>'+
-  '<li>El error se debe a datos incorrectos proporcionados por el cliente (ID de juego, correo, región).</li>'+
-  '</ul>'+
-
-  '<h3>5. Garantía de cuentas y suscripciones</h3>'+
-  '<p>Los productos de cuenta incluyen una garantía por el periodo contratado, siempre que el cliente siga '+
-  'las instrucciones de uso entregadas. La garantía se pierde si se modifican los datos de la cuenta sin '+
-  'autorización, se comparte con terceros o se usa en más dispositivos de los permitidos.</p>'+
-  '<p>Para hacerla válida, abre un <strong>reporte de falla</strong> desde tu panel, en "Reportar falla".</p>'+
-
-  '<h3>6. Obligaciones del cliente</h3>'+
-  '<ul>'+
-  '<li>Proporcionar datos veraces y completos para la entrega.</li>'+
-  '<li>Realizar el pago por los medios oficiales publicados en el sitio.</li>'+
-  '<li>No revender ni redistribuir los productos sin autorización.</li>'+
-  '<li>No utilizar el servicio para fines ilícitos.</li>'+
-  '</ul>'+
-
-  '<h3>7. Cuenta de usuario</h3>'+
-  '<p>Eres responsable de mantener la confidencialidad de tu contraseña. Podremos suspender cuentas que '+
-  'incurran en fraude, abuso, cargos revertidos indebidos o incumplimiento de estos términos.</p>'+
-
-  '<h3>8. Limitación de responsabilidad</h3>'+
-  '<p>No somos responsables por suspensiones, bloqueos o cambios de política aplicados por las plataformas '+
-  'de terceros (Netflix, Xbox, Free Fire, etc.), ni por fallas atribuibles a dichos proveedores. Nuestra '+
-  'responsabilidad se limita, como máximo, al monto pagado por el pedido correspondiente.</p>'+
-
-  '<h3>9. Atención y contacto</h3>'+
-  '<p>Chat de entrega dentro del sitio · WhatsApp <strong>'+EMPRESA.whatsapp+'</strong>'+
-  (String(EMPRESA.correo).indexOf('[PENDIENTE')===0 ? '' : ' · '+EMPRESA.correo)+'</p>'+
-
-  '<h3>10. Legislación aplicable</h3>'+
-  '<p>Estos términos se rigen por las leyes de los Estados Unidos Mexicanos. Para cualquier controversia, '+
-  'las partes se someten a la jurisdicción de los tribunales competentes, sin perjuicio del derecho del '+
-  'consumidor de acudir a la <strong>PROFECO</strong>.</p>'+
-
-  '<div class="vg-legal-date">Última actualización: '+ACTUALIZADO+'</div>';
+/* Los Términos muestran el mismo documento: el texto legal es único y
+   cubre privacidad, reembolsos y deslinde de responsabilidad. */
+var TERMINOS = PRIVACIDAD;
 
 window.vgOpenLegal=function(cual){
   var m=document.getElementById('vgLegal');
@@ -28578,6 +28678,381 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
 #vg17Client .vg17-card{ position:relative; }
 #vg17Client .vg17-card:has(.vg17-newdot) .vg17-cardtop{ padding-right:96px; }
 </style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 24 — Programa de referidos y tokens, funcional
+     El banner estaba DENTRO del <footer>, por eso se veía fuera de
+     lugar: un banner promocional enterrado al final de la página.
+     Se saca de ahí y se coloca tras el carrusel de destacados, donde
+     el visitante ya vio productos y tiene motivo para compartir.
+     Requiere: supabase_fase23_TOKENS.sql
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-tokens-css">
+/* El banner viejo del footer se retira: se reemplaza por la sección nueva */
+html body #vgRefBanner{ display:none !important; }
+
+.vgtk-sec{
+  margin:26px 0;padding:0;border-radius:24px;overflow:hidden;position:relative;
+  border:1px solid rgba(214,168,79,.28);
+  background:
+    radial-gradient(90% 70% at 12% 0%, rgba(214,168,79,.16), transparent 60%),
+    radial-gradient(70% 60% at 95% 100%, rgba(139,92,246,.16), transparent 60%),
+    linear-gradient(160deg,#151428,#0b0e1a);
+}
+.vgtk-grid{display:grid;grid-template-columns:1.05fr .95fr;gap:0}
+.vgtk-left{padding:30px 28px}
+.vgtk-right{padding:30px 28px;border-left:1px solid rgba(255,255,255,.07);
+  background:linear-gradient(180deg,rgba(255,255,255,.03),transparent)}
+.vgtk-badge{
+  display:inline-flex;align-items:center;gap:7px;padding:6px 13px;border-radius:999px;
+  background:rgba(214,168,79,.14);border:1px solid rgba(214,168,79,.36);
+  color:#f0d090;font-size:.66rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase;
+}
+.vgtk-sec h2{
+  margin:14px 0 10px !important;color:#fff;font-size:2rem;line-height:1.08;
+}
+.vgtk-sec h2 em{font-style:normal;color:#e8bf6d;display:block}
+.vgtk-sec p.vgtk-lead{margin:0 0 20px;color:#aab6d0;font-size:.92rem;line-height:1.6;max-width:46ch}
+.vgtk-sec p.vgtk-lead b{color:#f0d090}
+
+/* Las dos reglas del programa, claras y grandes */
+.vgtk-reglas{display:grid;grid-template-columns:1fr 1fr;gap:11px;margin-bottom:20px}
+.vgtk-regla{
+  padding:15px;border-radius:16px;border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(160deg,rgba(255,255,255,.055),rgba(255,255,255,.02));
+}
+.vgtk-regla .n{display:block;color:#e8bf6d;font-size:1.72rem;font-weight:900;line-height:1}
+.vgtk-regla .t{display:block;color:#fff;font-size:.83rem;font-weight:800;margin:5px 0 3px}
+.vgtk-regla .d{display:block;color:#8e9cba;font-size:.73rem;line-height:1.45}
+
+/* Premios canjeables */
+.vgtk-premios{display:flex;gap:8px;flex-wrap:wrap}
+.vgtk-premio{
+  padding:9px 13px;border-radius:13px;text-align:center;min-width:74px;
+  border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.04);
+}
+.vgtk-premio b{display:block;color:#e8bf6d;font-size:1.05rem;font-weight:900;line-height:1}
+.vgtk-premio span{display:block;color:#8e9cba;font-size:.6rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em;margin-top:3px}
+.vgtk-premio small{display:block;color:#c4cee6;font-size:.7rem;font-weight:800;margin-top:2px}
+
+/* Panel derecho: saldo y link */
+.vgtk-saldo{
+  padding:18px;border-radius:18px;margin-bottom:14px;text-align:center;
+  border:1px solid rgba(214,168,79,.30);
+  background:linear-gradient(160deg,rgba(214,168,79,.14),rgba(214,168,79,.04));
+}
+.vgtk-saldo span{display:block;color:#cbb187;font-size:.64rem;font-weight:900;
+  text-transform:uppercase;letter-spacing:.12em}
+.vgtk-saldo b{display:block;color:#fff;font-size:2.5rem;font-weight:900;line-height:1.1;margin-top:4px}
+.vgtk-saldo small{display:block;color:#a08b5f;font-size:.72rem;font-weight:800;margin-top:2px}
+.vgtk-mini{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-bottom:14px}
+.vgtk-mini div{
+  padding:11px;border-radius:13px;text-align:center;
+  border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);
+}
+.vgtk-mini b{display:block;color:#fff;font-size:1.22rem;font-weight:900}
+.vgtk-mini span{display:block;color:#8e9cba;font-size:.6rem;font-weight:800;
+  text-transform:uppercase;letter-spacing:.07em;margin-top:2px}
+
+.vgtk-linkbox{
+  padding:14px;border-radius:16px;margin-bottom:12px;
+  border:1px solid rgba(25,230,193,.30);background:rgba(25,230,193,.06);
+}
+.vgtk-linkbox > span{display:block;color:#8ff5e3;font-size:.64rem;font-weight:900;
+  text-transform:uppercase;letter-spacing:.1em;margin-bottom:7px}
+.vgtk-link{
+  display:block;color:#c4cee6;font-size:.78rem;font-weight:700;word-break:break-all;
+  background:rgba(0,0,0,.30);padding:9px 11px;border-radius:10px;margin-bottom:9px;
+  font-family:ui-monospace,Menlo,Consolas,monospace;
+}
+.vgtk-btn{
+  width:100%;padding:13px;border-radius:14px;cursor:pointer;font-family:inherit;
+  font-weight:900;font-size:.88rem;border:1px solid transparent;transition:.16s;
+}
+.vgtk-btn.copiar{background:linear-gradient(135deg,#19e6c1,#12b899);color:#04211b}
+.vgtk-btn.copiar:hover{filter:brightness(1.08)}
+.vgtk-btn.copiar.listo{background:rgba(25,230,193,.25);color:#8ff5e3}
+.vgtk-btn.crear{background:linear-gradient(135deg,#8b5cf6,#6d5ef0);color:#fff;margin-top:4px}
+.vgtk-btn.crear:hover{filter:brightness(1.1)}
+.vgtk-btn:active{transform:scale(.98)}
+.vgtk-aviso{
+  padding:13px;border-radius:14px;text-align:center;color:#c4cee6;font-size:.82rem;
+  border:1px dashed rgba(139,92,246,.36);background:rgba(139,92,246,.08);line-height:1.5;
+}
+.vgtk-aviso b{color:#fff;display:block;margin-bottom:3px}
+
+/* Historial de movimientos en el panel del cliente */
+.vgtk-mov{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:10px 12px;border-radius:11px;background:rgba(255,255,255,.035);
+  border:1px solid rgba(255,255,255,.07);margin-bottom:7px}
+.vgtk-mov div{min-width:0}
+.vgtk-mov b{display:block;color:#fff;font-size:.82rem}
+.vgtk-mov small{display:block;color:#8e9cba;font-size:.68rem;margin-top:2px}
+.vgtk-mov .cant{font-weight:900;font-size:.95rem;white-space:nowrap;flex:none}
+.vgtk-mov .cant.mas{color:#19e6c1}
+.vgtk-mov .cant.menos{color:#ff8fa3}
+
+@media(max-width:900px){
+  .vgtk-grid{grid-template-columns:1fr}
+  .vgtk-right{border-left:0;border-top:1px solid rgba(255,255,255,.07)}
+  .vgtk-left,.vgtk-right{padding:22px 18px}
+  .vgtk-sec{margin:20px 0;border-radius:20px}
+  .vgtk-sec h2{font-size:1.5rem}
+  .vgtk-reglas{grid-template-columns:1fr}
+  .vgtk-saldo b{font-size:2.1rem}
+  .vgtk-premio{min-width:66px;padding:8px 10px}
+}
+</style>
+
+<style id="vg-acepta-css">
+.vgacc{
+  display:flex;align-items:flex-start;gap:11px;margin:14px 0;padding:13px 15px;
+  border-radius:14px;border:1px solid rgba(139,92,246,.30);
+  background:rgba(139,92,246,.07);cursor:pointer;transition:.18s;
+}
+.vgacc:hover{border-color:rgba(139,92,246,.50)}
+.vgacc input{
+  width:21px;height:21px;flex:none;margin:1px 0 0;cursor:pointer;
+  accent-color:#8b5cf6;
+}
+.vgacc span{color:#c8d2e8;font-size:.83rem;line-height:1.5}
+.vgacc b{color:#fff}
+.vgacc a{color:#19e6c1;font-weight:800;text-decoration:underline}
+.vgacc-alerta{
+  border-color:#ff4d6d !important;background:rgba(255,77,109,.10) !important;
+  animation:vgaccShake .4s ease;
+}
+@keyframes vgaccShake{
+  0%,100%{transform:translateX(0)}
+  25%{transform:translateX(-6px)}
+  75%{transform:translateX(6px)}
+}
+</style>
+<script id="vg-acepta-js">
+(function(){
+'use strict';
+if(window.__VG_ACEPTA__) return; window.__VG_ACEPTA__ = true;
+
+/* Casilla obligatoria de aceptación de términos en el modal de pago.
+   Se inserta justo antes del botón de confirmar, que es donde el
+   cliente decide, y se desmarca cada vez que se abre el modal para
+   que la aceptación sea consciente en cada compra. */
+function insertar(){
+  var modal=document.getElementById('paymentModal');
+  if(!modal || modal.querySelector('.vgacc')) return;
+  var acciones=modal.querySelector('.vg-pay-actions');
+  if(!acciones) return;
+  var l=document.createElement('label');
+  l.className='vgacc';
+  l.innerHTML='<input type="checkbox" id="vgAceptaTerminos">'+
+    '<span>He leído y acepto los <a href="javascript:void(0)" '+
+    'onclick="event.stopPropagation();window.vgOpenLegal&&window.vgOpenLegal(\'terminos\')">'+
+    'Términos de Servicio</a>, <b>incluyendo la política de no reembolsos</b> '+
+    'para productos digitales ya entregados.</span>';
+  acciones.parentNode.insertBefore(l, acciones);
+  l.addEventListener('click',function(){ l.classList.remove('vgacc-alerta'); });
+}
+
+function vigilar(){
+  var modal=document.getElementById('paymentModal');
+  if(!modal) return;
+  new MutationObserver(function(){
+    if(modal.classList.contains('active')){
+      insertar();
+      var chk=document.getElementById('vgAceptaTerminos');
+      if(chk){ chk.checked=false; }
+      var caja=modal.querySelector('.vgacc');
+      if(caja) caja.classList.remove('vgacc-alerta');
+    }
+  }).observe(modal,{attributes:true,attributeFilter:['class']});
+}
+
+function init(){ insertar(); vigilar(); }
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+})();
+</script>
+
+<script id="vg-tokens-js">
+(function(){
+'use strict';
+if(window.__VG_TOKENS__) return; window.__VG_TOKENS__ = true;
+
+var qs=function(s,r){return (r||document).querySelector(s);};
+var qsa=function(s,r){return Array.prototype.slice.call((r||document).querySelectorAll(s));};
+function SB(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+function esc(v){return String(v==null?'':v).replace(/[&<>"']/g,function(m){
+  return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m];});}
+function num(n){ var x=Number(n||0); return (Math.round(x*100)/100).toString(); }
+
+/* Recompensas por defecto; se sobreescriben con lo que diga la tabla
+   vg_token_config, para que puedas cambiarlas sin tocar el código. */
+var REGLAS = { compra:0.25, referido:1 };
+var PREMIOS = [
+  {t:5,  n:'VIX'}, {t:7,  n:'Param+'}, {t:9,  n:'MAX'},
+  {t:10, n:'Crunchyroll'}, {t:20, n:'Netflix'}
+];
+
+var wallet = null;
+
+async function cargarReglas(){
+  var c=SB(); if(!c) return;
+  try{
+    var r=await c.from('vg_token_config').select('clave,valor');
+    (r.data||[]).forEach(function(x){
+      if(x.clave==='por_compra_propia') REGLAS.compra=Number(x.valor);
+      if(x.clave==='por_referido')      REGLAS.referido=Number(x.valor);
+    });
+  }catch(e){}
+}
+
+async function cargarWallet(){
+  var c=SB(); if(!c) return null;
+  try{
+    var s=await c.auth.getSession();
+    if(!s||!s.data||!s.data.session) return null;
+    var r=await c.rpc('vg_mi_wallet');
+    if(r.error) return null;
+    wallet = r.data;
+    return wallet;
+  }catch(e){ return null; }
+}
+window.vgGetWallet=function(){ return wallet; };
+window.vgReloadWallet=async function(){ await cargarWallet(); pintarSeccion(); };
+
+function linkDe(codigo){
+  return 'https://vesselgames.xyz/?ref='+codigo;
+}
+
+/* ── La sección pública ───────────────────────────────────────── */
+function plantilla(){
+  var logueado = !!wallet;
+  var premios = PREMIOS.map(function(p){
+    var alcanza = logueado && Number(wallet.balance)>=p.t;
+    return '<div class="vgtk-premio"'+(alcanza?' style="border-color:rgba(25,230,193,.45);background:rgba(25,230,193,.10)"':'')+'>'+
+      '<b>'+p.t+'</b><span>Tokens</span><small>'+esc(p.n)+'</small></div>';
+  }).join('');
+
+  var derecha;
+  if(logueado){
+    var code = wallet.referral_code || '';
+    derecha =
+      '<div class="vgtk-saldo"><span>Tus tokens</span><b id="vgtkSaldo">'+num(wallet.balance)+'</b>'+
+        '<small>'+num(wallet.total_earned)+' ganados en total</small></div>'+
+      '<div class="vgtk-mini">'+
+        '<div><b>'+(wallet.total_purchases||0)+'</b><span>Compras</span></div>'+
+        '<div><b>'+(wallet.total_referidos||0)+'</b><span>Invitados</span></div>'+
+      '</div>'+
+      '<div class="vgtk-linkbox"><span>Tu link de referido</span>'+
+        '<code class="vgtk-link" id="vgtkLink">'+esc(linkDe(code))+'</code>'+
+        '<button class="vgtk-btn copiar" id="vgtkCopiar">Copiar mi link</button>'+
+      '</div>'+
+      '<button class="vgtk-btn crear" id="vgtkVerTokens">Ver mis tokens y movimientos</button>';
+  }else{
+    derecha =
+      '<div class="vgtk-aviso"><b>Crea tu cuenta para empezar</b>'+
+        'Al registrarte recibes tu link personal. Cada amigo que compre con él te deja '+
+        num(REGLAS.referido)+' token'+(REGLAS.referido===1?'':'s')+'.</div>'+
+      '<button class="vgtk-btn crear" id="vgtkCrear" style="margin-top:12px">Crear cuenta gratis</button>'+
+      '<button class="vgtk-btn copiar" id="vgtkEntrar" style="margin-top:8px;background:rgba(255,255,255,.06);color:#c4cee6;border-color:rgba(255,255,255,.14)">Ya tengo cuenta</button>';
+  }
+
+  return '<section class="vgtk-sec" id="vgtkSeccion"><div class="vgtk-grid">'+
+    '<div class="vgtk-left">'+
+      '<span class="vgtk-badge">Programa de referidos</span>'+
+      '<h2>Comparte y gana<em>tokens gratis</em></h2>'+
+      '<p class="vgtk-lead">Junta tokens con tus compras y con las de tus amigos. '+
+        'Cámbialos por suscripciones completas: <b>Netflix, MAX, Crunchyroll y más</b>.</p>'+
+      '<div class="vgtk-reglas">'+
+        '<div class="vgtk-regla"><span class="n">'+num(REGLAS.compra)+'</span>'+
+          '<span class="t">Por cada compra tuya</span>'+
+          '<span class="d">Se acreditan solos cuando recibes tu pedido.</span></div>'+
+        '<div class="vgtk-regla"><span class="n">'+num(REGLAS.referido)+'</span>'+
+          '<span class="t">Por cada amigo que compre</span>'+
+          '<span class="d">Con tu link, en su primera compra. Sin límite de invitados.</span></div>'+
+      '</div>'+
+      '<div class="vgtk-premios">'+premios+'</div>'+
+    '</div>'+
+    '<div class="vgtk-right">'+derecha+'</div>'+
+  '</div></section>';
+}
+
+function enlazar(){
+  var cop=qs('#vgtkCopiar');
+  if(cop) cop.onclick=function(){
+    var txt=(qs('#vgtkLink')||{}).textContent||'';
+    var btn=this;
+    function ok(){ btn.textContent='Link copiado'; btn.classList.add('listo');
+      setTimeout(function(){ btn.textContent='Copiar mi link'; btn.classList.remove('listo'); },2000); }
+    if(navigator.clipboard&&navigator.clipboard.writeText)
+      navigator.clipboard.writeText(txt).then(ok).catch(respaldo);
+    else respaldo();
+    function respaldo(){
+      try{ var ta=document.createElement('textarea'); ta.value=txt;
+        ta.style.position='fixed'; ta.style.opacity='0';
+        document.body.appendChild(ta); ta.select(); document.execCommand('copy');
+        document.body.removeChild(ta); ok();
+      }catch(e){ btn.textContent='No se pudo copiar'; }
+    }
+  };
+  var ver=qs('#vgtkVerTokens');
+  if(ver) ver.onclick=function(){
+    if(typeof window.vgOpenClientPanel==='function') window.vgOpenClientPanel('tokens');
+  };
+  [['#vgtkCrear','registro'],['#vgtkEntrar','login']].forEach(function(p){
+    var b=qs(p[0]);
+    if(b) b.onclick=function(){ if(typeof window.vgOpenAuth==='function') window.vgOpenAuth(); };
+  });
+}
+
+function pintarSeccion(){
+  var cont=qs('#vgtkHost');
+  if(!cont) return;
+  cont.innerHTML=plantilla();
+  enlazar();
+}
+
+/* Coloca la sección donde de verdad se ve: después del carrusel de
+   destacados, antes de "Cómo comprar". Antes vivía dentro del footer. */
+function colocar(){
+  if(qs('#vgtkHost')) return;
+  var host=document.createElement('div');
+  host.id='vgtkHost';
+  var ancla=qs('#homeView .how-buy-section');
+  if(ancla && ancla.parentNode){ ancla.parentNode.insertBefore(host, ancla); }
+  else{
+    var wrap=qs('#homeView .wrap');
+    if(wrap) wrap.appendChild(host); else return;
+  }
+  pintarSeccion();
+}
+
+/* ── Guardar el código de referido de quien llega por un link ──── */
+function capturarRef(){
+  try{
+    var m=location.search.match(/[?&]ref=([A-Za-z0-9]+)/);
+    if(m && m[1]) localStorage.setItem('vg_pending_ref', m[1]);
+  }catch(e){}
+}
+
+async function init(){
+  capturarRef();
+  await cargarReglas();
+  await cargarWallet();
+  colocar();
+  /* Si el usuario inicia sesión después, se repinta con sus datos */
+  var c=SB();
+  if(c && c.auth && c.auth.onAuthStateChange){
+    c.auth.onAuthStateChange(function(){
+      cargarWallet().then(pintarSeccion);
+    });
+  }
+}
+if(document.readyState==='loading') document.addEventListener('DOMContentLoaded',init);
+else init();
+})();
+</script>
 
 <!-- ════════════════════════════════════════════════════════════════
      FASE 22 — Proporción de las fotos de producto
