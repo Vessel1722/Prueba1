@@ -23,9 +23,11 @@
 -- ─────────────────────────────────────────────────────────────
 create table if not exists public.vg_token_config (
   clave  text primary key,
-  valor  numeric not null,
+  valor  numeric,
   nota   text
 );
+alter table public.vg_token_config add column if not exists valor numeric;
+alter table public.vg_token_config add column if not exists nota  text;
 
 insert into public.vg_token_config (clave, valor, nota) values
   ('por_compra_propia', 0.25, 'Tokens que gana el cliente por cada compra suya entregada'),
@@ -44,11 +46,29 @@ create table if not exists public.vg_token_wallet (
   total_earned    numeric default 0,
   updated_at      timestamptz default now()
 );
+alter table public.vg_token_wallet add column if not exists user_id         uuid;
 alter table public.vg_token_wallet add column if not exists balance         numeric default 0;
 alter table public.vg_token_wallet add column if not exists total_purchases integer default 0;
 alter table public.vg_token_wallet add column if not exists total_earned    numeric default 0;
 alter table public.vg_token_wallet add column if not exists total_referidos integer default 0;
 alter table public.vg_token_wallet add column if not exists updated_at      timestamptz default now();
+
+-- El "on conflict (user_id)" de más abajo necesita que user_id sea único
+do $$
+begin
+  if not exists (
+    select 1 from pg_constraint
+     where conrelid = 'public.vg_token_wallet'::regclass
+       and contype in ('u','p')
+       and pg_get_constraintdef(oid) like '%(user_id)%'
+  ) then
+    begin
+      alter table public.vg_token_wallet add constraint vg_token_wallet_user_unico unique (user_id);
+    exception when others then
+      raise notice 'No se pudo crear la restricción única de user_id: %', sqlerrm;
+    end;
+  end if;
+end $$;
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -59,13 +79,38 @@ alter table public.vg_token_wallet add column if not exists updated_at      time
 create table if not exists public.vg_token_tx (
   id          bigserial primary key,
   created_at  timestamptz default now(),
-  user_id     uuid not null,
-  cantidad    numeric not null,          -- positiva suma, negativa resta
-  motivo      text not null,             -- compra | referido | ajuste_admin | canje
+  user_id     uuid,
+  cantidad    numeric,                   -- positiva suma, negativa resta
+  motivo      text,                      -- compra | referido | ajuste_admin | canje
   order_id    text,                      -- pedido que lo originó, si aplica
   detalle     text,
   hecho_por   uuid                       -- admin que hizo el ajuste manual
 );
+
+-- Si la tabla ya existía con otra estructura, el "create table if not
+-- exists" de arriba no la habría tocado y faltarían columnas (ese fue
+-- el error 42703: column "motivo" does not exist). Se agregan una a una.
+alter table public.vg_token_tx add column if not exists created_at timestamptz default now();
+alter table public.vg_token_tx add column if not exists user_id    uuid;
+alter table public.vg_token_tx add column if not exists cantidad   numeric;
+alter table public.vg_token_tx add column if not exists motivo     text;
+alter table public.vg_token_tx add column if not exists order_id   text;
+alter table public.vg_token_tx add column if not exists detalle    text;
+alter table public.vg_token_tx add column if not exists hecho_por  uuid;
+
+-- Columnas viejas obligatorias que bloquearían los INSERT nuevos
+do $$
+declare col text;
+begin
+  foreach col in array array['tipo','type','amount','monto','reason','descripcion','concepto','balance_after']
+  loop
+    begin
+      execute format('alter table public.vg_token_tx alter column %I drop not null', col);
+    exception when undefined_column then null;
+    end;
+  end loop;
+end $$;
+
 create index if not exists tokentx_user_idx  on public.vg_token_tx(user_id, created_at desc);
 create index if not exists tokentx_order_idx on public.vg_token_tx(order_id, motivo);
 
