@@ -26235,10 +26235,12 @@ async function fetchMsgs(ref){
   if(r.error) return [];
   return r.data||[];
 }
-async function sendMsg(ref, role, text, isDelivery){
+async function sendMsg(ref, role, text, isDelivery, adjunto){
   var c=SB(); if(!c) throw new Error('Sin conexión.');
   text=String(text||'').trim();
-  if(!text) throw new Error('Escribe un mensaje.');
+  /* Con imagen se permite mandar sin texto: la captura suele hablar
+     sola y obligar a escribir algo solo estorba. */
+  if(!text && !adjunto) throw new Error('Escribe un mensaje o adjunta una imagen.');
   var prof = window.vgGetLocalSession ? (window.vgGetLocalSession()||{}) : {};
   var r=await c.from('vg_live_chat_messages').insert({
     thread_type:'order', thread_ref:String(ref), order_id:String(ref),
@@ -26246,6 +26248,7 @@ async function sendMsg(ref, role, text, isDelivery){
     sender_name: role==='admin' ? 'Vessel Games' : (prof.name||'Cliente'),
     sender_phone: role==='client' ? (prof.phone||'') : null,
     message:text,
+    attachment_url: adjunto||null,
     is_delivery: !!isDelivery,
     read_by_client: role==='client',
     read_by_admin: role==='admin'
@@ -26281,9 +26284,11 @@ function renderMsgs(list){
     else role='client';
     var who = role==='admin'?'Vessel Games':role==='system'?'Sistema':'Tú';
     var texto = m.message||'';
+    var img = m.attachment_url||'';
     return '<div class="vg17-msg '+role+(m.is_delivery?' delivery':'')+'" title="'+esc(dateMX(m.created_at))+'">'+
              '<small>'+esc(who)+' · '+esc(hace(m.created_at))+(m.is_delivery?' · ENTREGA':'')+'</small>'+
-             '<div>'+esc(texto)+'</div>'+
+             (img ? '<img class="vg17-att" src="'+esc(img)+'" alt="Imagen adjunta" loading="lazy" data-full="'+esc(img)+'">' : '')+
+             (texto ? '<div>'+esc(texto)+'</div>' : '')+
              /* Los datos de entrega (correo, contraseña, código) son
                 justo lo que el cliente necesita copiar. Seleccionarlos
                 a mano en un teléfono es incómodo y propenso a cortar
@@ -26292,6 +26297,93 @@ function renderMsgs(list){
            '</div>';
   }).join('');
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   BARRA DE ESCRITURA — emojis y adjuntar imagen
+   Los mismos ayudantes sirven en el panel del cliente y en el del
+   admin, así el comportamiento es idéntico en los dos lados.
+   ═══════════════════════════════════════════════════════════════ */
+var EMOJIS = ['😀','😃','😄','😁','😊','🙂','😉','😍','🤩','😎','🤗','🤔','😐','😕','🙁','😢','😭','😤','😡','🥺',
+              '👍','👎','🙏','👏','💪','🤝','👋','✅','❌','⚠️','❓','❗','🔥','⭐','💯','🎉','🎁','🎮','💳','💰',
+              '📦','🚀','⏳','🕐','📧','🔑','🔒','📱','💻','🎬','🎵','❤️','💜','😅','😂','🫡','🤞','☑️'];
+
+function composeHTML(p){
+  /* p = prefijo de ids, para no repetir ids entre los dos paneles */
+  return '<div class="vg17-prev" id="'+p+'Prev"></div>'+
+    '<div class="vg17-inputbar">'+
+      '<button type="button" class="vg17-ico" id="'+p+'Emo" title="Emojis" aria-label="Emojis">😊</button>'+
+      '<button type="button" class="vg17-ico" id="'+p+'Att" title="Adjuntar imagen" aria-label="Adjuntar imagen">📎</button>'+
+      '<input type="file" accept="image/*" id="'+p+'File" style="display:none">'+
+      '<textarea id="'+p+'Input" placeholder="Escribe tu mensaje..."></textarea>'+
+      '<button class="vg17-btn primary" id="'+p+'Send">Enviar</button>'+
+    '</div>'+
+    '<div class="vg17-emojis" id="'+p+'Emojis">'+
+      EMOJIS.map(function(e){return '<button type="button" data-emo="'+e+'">'+e+'</button>';}).join('')+
+    '</div>';
+}
+
+/* Estado del adjunto pendiente de enviar, por prefijo */
+var pendiente = {};
+
+function wireCompose(p){
+  var emoBtn=qs('#'+p+'Emo'), panel=qs('#'+p+'Emojis'), input=qs('#'+p+'Input'),
+      attBtn=qs('#'+p+'Att'), file=qs('#'+p+'File'), prev=qs('#'+p+'Prev');
+  pendiente[p]=null;
+
+  if(emoBtn&&panel&&input){
+    emoBtn.onclick=function(ev){ ev.preventDefault(); panel.classList.toggle('open'); };
+    qsa('[data-emo]',panel).forEach(function(b){
+      b.onclick=function(ev){
+        ev.preventDefault();
+        var emo=b.getAttribute('data-emo');
+        /* Se inserta donde está el cursor, no al final: si el usuario
+           volvió a mitad del texto, el emoji cae donde lo espera. */
+        var ini=input.selectionStart, fin=input.selectionEnd;
+        if(typeof ini==='number'){
+          input.value=input.value.slice(0,ini)+emo+input.value.slice(fin);
+          input.focus();
+          input.selectionStart=input.selectionEnd=ini+emo.length;
+        }else{ input.value+=emo; input.focus(); }
+      };
+    });
+  }
+
+  if(attBtn&&file&&prev){
+    attBtn.onclick=function(ev){ ev.preventDefault(); file.click(); };
+    file.onchange=async function(){
+      var f=file.files&&file.files[0]; if(!f) return;
+      if(!/^image\//.test(f.type||'')){ alert('Solo se pueden adjuntar imágenes.'); file.value=''; return; }
+      prev.innerHTML='<div class="vg17-prevload">Preparando imagen...</div>';
+      try{
+        /* Se reduce y comprime antes de mandarla (misma función que ya
+           usan los comprobantes de pago), así no se sube una foto de
+           8 MB recién sacada del teléfono. */
+        pendiente[p]=await fileToDataUrl(f);
+        prev.innerHTML='<div class="vg17-prevbox"><img src="'+esc(pendiente[p])+'" alt="Adjunto">'+
+                       '<button type="button" class="vg17-prevx" title="Quitar">×</button></div>';
+        qs('.vg17-prevx',prev).onclick=function(){ pendiente[p]=null; prev.innerHTML=''; file.value=''; };
+      }catch(e){ prev.innerHTML=''; alert('No se pudo procesar la imagen.'); }
+    };
+  }
+}
+function limpiaCompose(p){
+  pendiente[p]=null;
+  var prev=qs('#'+p+'Prev'); if(prev) prev.innerHTML='';
+  var file=qs('#'+p+'File'); if(file) file.value='';
+  var panel=qs('#'+p+'Emojis'); if(panel) panel.classList.remove('open');
+}
+
+/* Ver una imagen del chat en grande */
+document.addEventListener('click', function(ev){
+  var img = ev.target.closest && ev.target.closest('.vg17-att');
+  if(!img) return;
+  ev.preventDefault(); ev.stopPropagation();
+  var lb=document.createElement('div');
+  lb.className='vg17-lightbox';
+  lb.innerHTML='<img src="'+esc(img.getAttribute('data-full')||img.src)+'" alt="Imagen">';
+  lb.onclick=function(){ lb.remove(); };
+  document.body.appendChild(lb);
+}, true);
 
 /* Copiar al portapapeles, delegado: sirve igual en el panel del
    cliente y en el del admin, y sobrevive a que el chat se repinte. */
@@ -26476,9 +26568,7 @@ async function renderClientDetail(o){
     '<div class="vg17-box vg17-chatbox"><span>💬 Chat de entrega</span>'+
       '<div class="vg17-msgs" id="vg17CMsgs"><div class="vg17-empty">Cargando...</div></div>'+
       (unlocked
-        ? '<div class="vg17-inputbar"><textarea id="vg17CInput" placeholder="Escribe tu mensaje..."></textarea>'+
-          '<button class="vg17-btn primary" id="vg17CSend">Enviar</button></div>'+
-          '<div class="vg17-err" id="vg17CErr"></div>'
+        ? composeHTML('vg17C')+'<div class="vg17-err" id="vg17CErr"></div>'
         : '<div class="vg17-lock"><b>🔒 El chat se abrirá en cuanto te escribamos</b>'+
           'Aquí verás los datos de tu entrega y podrás responder. Mientras tanto, '+
           'puedes seguir el estado de tu pedido arriba.</div>')+
@@ -26487,14 +26577,15 @@ async function renderClientDetail(o){
   var list=await fetchMsgs(oid(o));
   var box=qs('#vg17CMsgs'); if(box){ box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight; }
   if(unlocked){
+    wireCompose('vg17C');
     var ta=qs('#vg17CInput'), btn=qs('#vg17CSend'), err=qs('#vg17CErr');
     async function enviar(){
-      var texto=(ta.value||'').trim();
-      if(!texto) return;
+      var texto=(ta.value||'').trim(), img=pendiente['vg17C'];
+      if(!texto && !img) return;
       err.textContent=''; btn.disabled=true; ta.disabled=true;
       try{
-        await sendMsg(oid(o),'client',texto);
-        ta.value='';
+        await sendMsg(oid(o),'client',texto,false,img);
+        ta.value=''; limpiaCompose('vg17C');
         var l=await fetchMsgs(oid(o));
         var b=qs('#vg17CMsgs'); b.innerHTML=renderMsgs(l); b.scrollTop=b.scrollHeight;
       }catch(e){ err.textContent = e.message||String(e); }
@@ -26568,9 +26659,31 @@ async function renderTicketForm(body){
         'No escribas aquí la contraseña de tu cuenta de Vessel Games ni la de tu correo personal.</div>'+
       '<label><span>Descripción detallada del problema *</span>'+
         '<textarea id="t_desc" placeholder="Explica qué pasó, desde cuándo, y qué mensaje de error aparece."></textarea></label>'+
+      /* Una captura del error suele explicar el problema mejor que
+         cualquier descripción escrita. */
+      '<label><span>Captura del problema <i style="color:#8e9cba;font-style:normal">(opcional, ayuda mucho)</i></span>'+
+        '<button type="button" class="vg17-btn" id="t_attbtn" style="width:100%">📷 Adjuntar imagen</button>'+
+        '<input type="file" accept="image/*" id="t_file" style="display:none">'+
+        '<div class="vg17-prev" id="t_prev"></div></label>'+
       '<div class="vg17-err" id="t_err"></div><div class="vg17-ok" id="t_ok"></div>'+
       '<button class="vg17-btn primary" id="t_send" style="width:100%">Enviar reporte</button>'+
     '</div>';
+
+  /* Adjuntar la captura del problema */
+  var ticketImg=null;
+  qs('#t_attbtn').onclick=function(){ qs('#t_file').click(); };
+  qs('#t_file').onchange=async function(){
+    var f=this.files&&this.files[0]; if(!f) return;
+    if(!/^image\//.test(f.type||'')){ alert('Solo se pueden adjuntar imágenes.'); this.value=''; return; }
+    var prev=qs('#t_prev');
+    prev.innerHTML='<div class="vg17-prevload">Preparando imagen...</div>';
+    try{
+      ticketImg=await fileToDataUrl(f);
+      prev.innerHTML='<div class="vg17-prevbox"><img src="'+esc(ticketImg)+'" alt="Adjunto">'+
+                     '<button type="button" class="vg17-prevx" title="Quitar">×</button></div>';
+      qs('.vg17-prevx',prev).onclick=function(){ ticketImg=null; prev.innerHTML=''; qs('#t_file').value=''; };
+    }catch(e){ prev.innerHTML=''; alert('No se pudo procesar la imagen.'); }
+  };
 
   /* Al elegir el pedido, autocompleta la fecha de compra */
   qs('#t_prod').onchange=function(){
@@ -26620,6 +26733,7 @@ async function renderTicketForm(body){
         account_email:v.account_email||null,
         account_password:v.account_password||null,
         problem_description:v.problem_description,
+        attachment_url:ticketImg||null,
         customer_name:prof.name||'',
         customer_phone:prof.phone||'',
         status:'abierto'
@@ -26627,6 +26741,7 @@ async function renderTicketForm(body){
       if(r.error) throw r.error;
       ok.textContent='✅ Reporte enviado. Te responderemos por el chat del pedido.';
       ['#t_email','#t_pass','#t_desc'].forEach(function(x){ qs(x).value=''; });
+      ticketImg=null; qs('#t_prev').innerHTML=''; qs('#t_file').value='';
       setTimeout(function(){ C.view='mytickets'; loadClient(); }, 1400);
     }catch(e){ err.textContent='No se pudo enviar: '+(e.message||e); }
     finally{ btn.disabled=false; btn.textContent='Enviar reporte'; }
@@ -26644,6 +26759,7 @@ async function renderMyTickets(body){
       '<span class="vg17-chip '+(x.status==='resuelto'?'entregado':x.status==='en_proceso'?'proceso':'pendiente')+'">'+esc(x.status)+'</span></div>'+
       '<p style="margin:8px 0 0;color:#93a0bd;font-size:.78rem">Enviado el '+esc(dateMX(x.created_at))+' · Compra: '+esc(x.purchase_date)+' · '+esc(x.subscription_period)+'</p>'+
       '<p style="margin:8px 0 0;color:#c4cee6;font-size:.83rem;white-space:pre-line">'+esc(x.problem_description)+'</p>'+
+      (x.attachment_url?'<img class="vg17-att" src="'+esc(x.attachment_url)+'" data-full="'+esc(x.attachment_url)+'" alt="Tu captura" loading="lazy" style="margin-top:10px">':'')+
       (x.admin_notes?'<div style="margin-top:10px;padding:10px;border-radius:11px;background:rgba(25,230,193,.10);border:1px solid rgba(25,230,193,.26);color:#8ff5e3;font-size:.82rem"><b>Respuesta de soporte:</b><br>'+esc(x.admin_notes)+'</div>':'')+
     '</div>';
   }).join('');
@@ -26851,8 +26967,7 @@ async function renderAdminDetail(o){
       '<div class="vg17-quick" id="vg17AQuick">'+
         QUICK_REPLIES.map(function(t,i){return '<button data-q="'+i+'" title="'+esc(t)+'">'+esc(t)+'</button>';}).join('')+
       '</div>'+
-      '<div class="vg17-inputbar"><textarea id="vg17AInput" placeholder="Escribe tu respuesta..."></textarea>'+
-      '<button class="vg17-btn primary" id="vg17ASend">Enviar</button></div>'+
+      composeHTML('vg17A')+
       '<div class="vg17-err" id="vg17AErr"></div>'+
     '</div>';
 
@@ -26881,10 +26996,14 @@ async function renderAdminDetail(o){
       ta.focus();
     };
   });
+  wireCompose('vg17A');
   qs('#vg17ASend').onclick=async function(){
-    var ta=qs('#vg17AInput'), err=qs('#vg17AErr'), btn=this;
+    var ta=qs('#vg17AInput'), err=qs('#vg17AErr'), btn=this, img=pendiente['vg17A'];
     err.textContent=''; btn.disabled=true;
-    try{ await sendMsg(oid(o),'admin',ta.value); ta.value=''; await refreshAdminChat(oid(o));
+    try{
+      await sendMsg(oid(o),'admin',ta.value,false,img);
+      ta.value=''; limpiaCompose('vg17A');
+      await refreshAdminChat(oid(o));
       toast('Mensaje enviado','El cliente ya puede responderte.');
     }catch(e){ err.textContent=e.message||String(e); }
     finally{ btn.disabled=false; }
@@ -26933,7 +27052,9 @@ async function renderAdminTickets(body){
             : '<span style="color:#8e9cba;font-weight:800">No aplica · servicio sin credenciales</span>')+
         '</b></div>'+
       '</div>'+
-      '<div class="vg17-box" style="margin:10px 0 0"><span>Problema</span><b>'+esc(t.problem_description)+'</b></div>'+
+      '<div class="vg17-box" style="margin:10px 0 0"><span>Problema</span><b>'+esc(t.problem_description)+'</b>'+
+        (t.attachment_url?'<img class="vg17-att" src="'+esc(t.attachment_url)+'" data-full="'+esc(t.attachment_url)+'" alt="Captura del problema" loading="lazy" style="margin-top:10px">':'')+
+      '</div>'+
       '<textarea class="t-note" placeholder="Escribe tu respuesta para el cliente..." style="width:100%;min-height:70px;margin-top:10px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:11px;padding:10px;font-family:inherit;font-size:.83rem">'+esc(t.admin_notes||'')+'</textarea>'+
       '<div class="vg17-quick" style="margin-top:9px">'+
         '<button class="t-reply" style="background:linear-gradient(135deg,#8b5cf6,#19e6c1);color:#06121a;border-color:transparent">📨 Enviar respuesta al cliente</button>'+
@@ -27212,6 +27333,90 @@ function guardOldPanel(){
     }
   }).observe(old,{attributes:true,attributeFilter:['class']});
 }
+
+/* ═══════════════════════════════════════════════════════════════
+   HERRAMIENTAS DEL PANEL CLÁSICO QUE FALTABAN
+   La pestaña "Diagnóstico" y el botón "Crear pedido prueba" de
+   Compras llamaban a funciones que nunca se definieron: al pulsarlos
+   no pasaba nada (ReferenceError silencioso en el onclick). Se
+   implementan aquí, ya contra el esquema de la Fase 17.
+   ═══════════════════════════════════════════════════════════════ */
+function dbgLog(txt){
+  var ta=qs('#vgDebugLog');
+  var linea='['+new Date().toLocaleTimeString('es-MX')+'] '+txt;
+  if(ta){ ta.value = (ta.value?ta.value+'\n':'')+linea; ta.scrollTop=ta.scrollHeight; }
+  return linea;
+}
+
+window.vgDebugClearLog=function(){ var ta=qs('#vgDebugLog'); if(ta) ta.value=''; };
+
+window.vgDebugTestConnection=async function(){
+  dbgLog('Probando conexión con Supabase...');
+  var c=SB();
+  if(!c){ dbgLog('❌ No hay cliente de Supabase. Revisa URL y anon key.'); return; }
+  try{
+    var s=await c.auth.getSession();
+    dbgLog(s&&s.data&&s.data.session ? '✔ Sesión activa: '+s.data.session.user.email
+                                     : '⚠ Sin sesión iniciada (lectura anónima).');
+    var r=await c.from('orders').select('id').limit(1);
+    if(r.error) dbgLog('❌ Error leyendo pedidos: '+r.error.message);
+    else dbgLog('✔ Tabla orders accesible. Filas visibles: '+(r.data||[]).length);
+    var a=await c.rpc('is_admin');
+    dbgLog(a.error ? '❌ RPC is_admin: '+a.error.message : '✔ is_admin devuelve: '+a.data);
+    var t=await c.from('vg_support_tickets').select('id').limit(1);
+    dbgLog(t.error ? '❌ Tabla tickets: '+t.error.message : '✔ Tabla vg_support_tickets accesible.');
+    var m=await c.from('vg_live_chat_messages').select('id').limit(1);
+    dbgLog(m.error ? '❌ Tabla chat: '+m.error.message : '✔ Tabla vg_live_chat_messages accesible.');
+    dbgLog('Prueba terminada.');
+  }catch(e){ dbgLog('❌ Excepción: '+(e.message||e)); }
+};
+
+window.vgDebugListOrders=async function(){
+  dbgLog('Leyendo pedidos...');
+  var c=SB(); if(!c){ dbgLog('❌ Sin conexión.'); return; }
+  try{
+    var r=await c.from('orders').select('*').order('created_at',{ascending:false}).limit(20);
+    if(r.error){ dbgLog('❌ '+r.error.message); return; }
+    var arr=r.data||[];
+    dbgLog('✔ '+arr.length+' pedido(s):');
+    arr.forEach(function(o){
+      dbgLog('   #'+String(o.id).slice(0,8)+' · '+(o.product_title||'(sin título)')+
+             ' · '+(o.status||'?')+' · $'+(o.total||0)+
+             ' · chat '+(o.chat_unlocked?'abierto':'bloqueado'));
+    });
+  }catch(e){ dbgLog('❌ '+(e.message||e)); }
+};
+
+async function crearPedidoPrueba(){
+  var c=SB(); if(!c){ dbgLog('❌ Sin conexión.'); alert('Sin conexión con el servidor.'); return; }
+  var s=await c.auth.getSession();
+  if(!s||!s.data||!s.data.session){
+    dbgLog('❌ Necesitas sesión iniciada para crear el pedido de prueba.');
+    alert('Inicia sesión para crear un pedido de prueba.'); return;
+  }
+  dbgLog('Creando pedido de prueba...');
+  try{
+    var r=await c.rpc('vg_create_order_v17',{
+      p_items:[{title:'PEDIDO DE PRUEBA',option:'diagnóstico',price:1}],
+      p_total:1,
+      p_product_title:'PEDIDO DE PRUEBA',
+      p_product_option:'diagnóstico',
+      p_delivery_data:'Generado desde el panel de diagnóstico.',
+      p_source:'diagnostico'
+    });
+    if(r.error) throw r.error;
+    var id=r.data&&(r.data.id||(r.data[0]&&r.data[0].id));
+    dbgLog('✔ Pedido de prueba creado: #'+String(id||'').slice(0,8));
+    toast('Pedido de prueba creado','Aparece en la pestaña Pedidos.');
+    if(typeof window.vgAdminLoadOrders==='function') window.vgAdminLoadOrders();
+    if(A && A.view==='orders') loadAdmin();
+  }catch(e){
+    dbgLog('❌ No se pudo crear: '+(e.message||e));
+    alert('No se pudo crear el pedido de prueba: '+(e.message||e));
+  }
+}
+window.vgDebugCreateOrder=crearPedidoPrueba;
+window.vgAdminCreateTestOrder=crearPedidoPrueba;
 
 function init(){
   killWhatsappDelivery();
@@ -27843,6 +28048,70 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
   font-family:ui-monospace,SFMono-Regular,'Cascadia Mono',Menlo,Consolas,monospace !important;
   font-size:.85rem !important;letter-spacing:.01em;
 }
+
+/* ── Imagen adjunta dentro de un mensaje ── */
+.vg17-att{
+  display:block;max-width:100%;width:auto;max-height:230px;
+  border-radius:12px;border:1px solid rgba(255,255,255,.14);
+  margin-top:6px;cursor:zoom-in;object-fit:cover;background:#0b0e18;
+}
+.vg17-att:hover{ border-color:rgba(139,92,246,.55); }
+.vg17-lightbox{
+  position:fixed;inset:0;z-index:50000;background:rgba(4,6,12,.93);
+  display:flex;align-items:center;justify-content:center;padding:22px;cursor:zoom-out;
+  animation:vg17In .16s ease both;
+}
+.vg17-lightbox img{ max-width:100%;max-height:100%;border-radius:14px;box-shadow:0 24px 70px rgba(0,0,0,.7); }
+
+/* ── Botones de emoji y adjuntar en la barra de escritura ── */
+.vg17-ico{
+  flex:none;width:38px;height:38px;border-radius:11px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.05);
+  font-size:1.05rem;line-height:1;display:flex;align-items:center;justify-content:center;
+  transition:.15s;padding:0;
+}
+.vg17-ico:hover{ background:rgba(139,92,246,.20);border-color:rgba(139,92,246,.45); }
+.vg17-ico:active{ transform:scale(.94); }
+.vg17-inputbar{ align-items:flex-end; }
+
+/* Panel de emojis */
+.vg17-emojis{
+  display:none;grid-template-columns:repeat(auto-fill,minmax(38px,1fr));gap:2px;
+  margin-top:8px;padding:8px;max-height:172px;overflow-y:auto;
+  border:1px solid rgba(255,255,255,.10);border-radius:13px;
+  background:rgba(10,13,22,.96);overscroll-behavior:contain;
+}
+.vg17-emojis.open{ display:grid; }
+.vg17-emojis button{
+  border:0;background:transparent;cursor:pointer;font-size:1.22rem;
+  padding:5px 0;border-radius:8px;line-height:1;transition:.12s;
+}
+.vg17-emojis button:hover{ background:rgba(139,92,246,.26);transform:scale(1.18); }
+
+/* Vista previa del adjunto antes de enviarlo */
+.vg17-prev:empty{ display:none; }
+.vg17-prevbox{
+  position:relative;display:inline-block;margin-bottom:8px;
+}
+.vg17-prevbox img{
+  max-height:110px;max-width:100%;border-radius:11px;
+  border:1px solid rgba(25,230,193,.42);display:block;
+}
+.vg17-prevx{
+  position:absolute;top:-8px;right:-8px;width:26px;height:26px;border-radius:50%;
+  border:2px solid #0b0e18;background:#ff4d6d;color:#fff;
+  font-size:.95rem;font-weight:900;cursor:pointer;line-height:1;padding:0;
+  display:flex;align-items:center;justify-content:center;
+}
+.vg17-prevload{
+  padding:9px 12px;border-radius:10px;margin-bottom:8px;
+  background:rgba(255,255,255,.05);color:#93a0bd;font-size:.78rem;font-weight:800;
+}
+
+/* En el admin todo va un poco más compacto */
+#vgAdminModal .vg17-ico{ width:34px;height:34px;font-size:.98rem;border-radius:10px; }
+#vgAdminModal .vg17-emojis{ max-height:132px; }
+#vgAdminModal .vg17-att{ max-height:180px; }
 
 /* ── Aviso de mensaje nuevo en la tarjeta del pedido ── */
 .vg17-newdot{
