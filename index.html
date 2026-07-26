@@ -26702,14 +26702,27 @@ function renderAdminOrders(body){
       '<div class="vg17-stat"><span>Sin leer</span><b style="color:#ffd68a">'+nuevos+'</b></div>'+
       '<div class="vg17-stat"><span>Entregados</span><b>'+orders.filter(function(o){return ostatus(o)==='entregado';}).length+'</b></div>'+
     '</div>'+
-    '<div class="vg17-split"><div>'+orders.map(function(o){
-      return '<div class="vg17-card '+(oid(o)===A.ref?'active':'')+'" data-o="'+esc(oid(o))+'">'+
-        '<h4>'+(o.unread_admin?'🔴 ':'')+esc(otitle(o))+'</h4>'+
-        '<p>'+esc(o.customer_name||o.client_name||'Cliente')+' · '+esc(o.customer_phone||o.client_phone||'')+'</p>'+
-        '<p>'+esc(dateMX(o.created_at))+'</p>'+
-        '<div class="vg17-row">'+chip(ostatus(o))+'<span class="vg17-price">'+money(ototal(o))+'</span></div>'+
-      '</div>';
-    }).join('')+'</div><div id="vg17ADetail"></div></div>';
+    /* Tres columnas: lista | detalle | chat. Cada una con su propio
+       desplazamiento y al alto completo, para que el chat siga visible
+       mientras se revisa el comprobante y no queden huecos abajo. */
+    '<div class="vgA-grid">'+
+      '<div class="vgA-col vgA-list">'+
+        '<div class="vgA-colhead">Pedidos <b>'+orders.length+'</b></div>'+
+        '<div class="vgA-scroll">'+orders.map(function(o){
+          return '<div class="vgA-row '+(oid(o)===A.ref?'active':'')+' st-'+esc(ostatus(o))+'" data-o="'+esc(oid(o))+'">'+
+            (o.unread_admin?'<i class="vgA-new"></i>':'')+
+            '<div class="vgA-rowtop"><b>'+esc(otitle(o))+'</b><span class="vgA-amt">'+money(ototal(o))+'</span></div>'+
+            '<div class="vgA-rowsub">'+esc(o.customer_name||o.client_name||'Cliente')+
+              (o.customer_phone||o.client_phone ? ' · '+esc(o.customer_phone||o.client_phone) : '')+'</div>'+
+            '<div class="vgA-rowfoot">'+chip(ostatus(o))+'<time>'+esc(dateMX(o.created_at))+'</time></div>'+
+          '</div>';
+        }).join('')+'</div>'+
+      '</div>'+
+      '<div class="vgA-col vgA-detail"><div class="vgA-colhead">Detalle del pedido</div>'+
+        '<div class="vgA-scroll" id="vg17ADetail"></div></div>'+
+      '<div class="vgA-col vgA-chat"><div class="vgA-colhead">Conversación</div>'+
+        '<div id="vg17AChat"></div></div>'+
+    '</div>';
   qsa('[data-o]',body).forEach(function(card){
     card.onclick=function(){ A.ref=card.getAttribute('data-o'); renderAdminOrders(body); };
   });
@@ -26718,14 +26731,20 @@ function renderAdminOrders(body){
 
 async function renderAdminDetail(o){
   var d=qs('#vg17ADetail'); if(!d||!o) return;
+  var chatCol=qs('#vg17AChat');
   var proof=o.proof_data_url||(o.proof&&(o.proof.url||o.proof.data_url))||'';
+
+  /* ── Columna del medio: datos, comprobante, estado y entrega ── */
   d.innerHTML=
+    '<div class="vgA-idcard">'+
+      '<div class="vgA-idtop"><b>'+esc(otitle(o))+'</b><span class="vgA-amt big">'+money(ototal(o))+'</span></div>'+
+      '<div class="vgA-idmeta">#'+esc(oid(o).slice(0,8))+' · '+esc(dateMX(o.created_at))+'</div>'+
+    '</div>'+
     '<div class="vg17-grid2">'+
       '<div class="vg17-box"><span>Cliente</span><b>'+esc(o.customer_name||o.client_name||'Cliente')+'\n'+
         esc(o.customer_phone||o.client_phone||'')+'\n'+esc(o.customer_email||'')+'</b></div>'+
-      '<div class="vg17-box"><span>Pedido</span><b>#'+esc(oid(o).slice(0,8))+'\n'+esc(dateMX(o.created_at))+'\n'+money(ototal(o))+'</b></div>'+
+      '<div class="vg17-box"><span>Producto solicitado</span><b>'+esc(oitemsText(o))+'</b></div>'+
     '</div>'+
-    '<div class="vg17-box"><span>Producto solicitado</span><b>'+esc(oitemsText(o))+'</b></div>'+
     (o.delivery_data?'<div class="vg17-box"><span>Datos que dejó el cliente</span><b>'+esc(o.delivery_data)+'</b></div>':'')+
     '<div class="vg17-box vg17-proof"><span>Comprobante de pago</span>'+
       (proof
@@ -26735,25 +26754,28 @@ async function renderAdminDetail(o){
     '<div class="vg17-box"><span>Estado del pedido</span>'+
       '<div class="vg17-quick" style="margin-top:8px">'+
         ['pendiente','proceso','entregado','cancelado'].map(function(s){
-          return '<button data-st="'+s+'">'+s+'</button>';
+          return '<button data-st="'+s+'"'+(ostatus(o)===s?' class="on"':'')+'>'+s+'</button>';
         }).join('')+
       '</div></div>'+
-    '<div class="vg17-box"><span>Chat con el cliente</span>'+
-      '<div class="vg17-msgs" id="vg17AMsgs"><div class="vg17-empty">Cargando...</div></div>'+
+    '<div class="vg17-box vgA-deliver">'+
+      '<span>📦 Entregar pedido</span>'+
+      '<p>Escribe los datos finales (usuario, contraseña, código, enlace). '+
+      'Al enviar, el cliente los recibe en su chat y el pedido queda entregado.</p>'+
+      '<textarea id="vg17ADeliv" placeholder="Correo: ejemplo@correo.com&#10;Contraseña: ******&#10;Instrucciones: ..."></textarea>'+
+      '<button class="vg17-btn ok" id="vg17ADelivBtn">Enviar entrega y marcar como entregado</button>'+
+      '<div class="vg17-err" id="vg17ADelivErr"></div>'+
+    '</div>';
+
+  /* ── Columna derecha: el chat, fijo y siempre visible ── */
+  if(chatCol) chatCol.innerHTML=
+    '<div class="vg17-msgs" id="vg17AMsgs"><div class="vg17-empty">Cargando...</div></div>'+
+    '<div class="vgA-compose">'+
       '<div class="vg17-quick" id="vg17AQuick">'+
-        QUICK_REPLIES.map(function(t,i){return '<button data-q="'+i+'">'+esc(t)+'</button>';}).join('')+
+        QUICK_REPLIES.map(function(t,i){return '<button data-q="'+i+'" title="'+esc(t)+'">'+esc(t)+'</button>';}).join('')+
       '</div>'+
       '<div class="vg17-inputbar"><textarea id="vg17AInput" placeholder="Escribe tu respuesta..."></textarea>'+
       '<button class="vg17-btn primary" id="vg17ASend">Enviar</button></div>'+
       '<div class="vg17-err" id="vg17AErr"></div>'+
-    '</div>'+
-    '<div class="vg17-box" style="border-color:rgba(25,230,193,.32);background:rgba(25,230,193,.06)">'+
-      '<span style="color:#8ff5e3">📦 Entregar pedido</span>'+
-      '<p style="margin:0 0 9px;color:#93a0bd;font-size:.78rem">Escribe aquí los datos finales (usuario, contraseña, código, enlace). '+
-      'Al enviar, el cliente los recibe en su chat y el pedido queda marcado como entregado.</p>'+
-      '<textarea id="vg17ADeliv" style="width:100%;min-height:100px;border:1px solid rgba(25,230,193,.30);background:rgba(255,255,255,.05);color:#fff;border-radius:12px;padding:11px;font-family:inherit;font-size:.86rem" placeholder="Correo: ejemplo@correo.com&#10;Contraseña: ******&#10;Instrucciones: ..."></textarea>'+
-      '<button class="vg17-btn ok" id="vg17ADelivBtn" style="width:100%;margin-top:9px">Enviar entrega y marcar como entregado</button>'+
-      '<div class="vg17-err" id="vg17ADelivErr"></div>'+
     '</div>';
 
   /* marcar como leído */
@@ -26772,8 +26794,14 @@ async function renderAdminDetail(o){
       }catch(e){ alert('No se pudo actualizar: '+(e.message||e)); }
     };
   });
-  qsa('[data-q]',d).forEach(function(b){
-    b.onclick=function(){ qs('#vg17AInput').value = QUICK_REPLIES[Number(b.getAttribute('data-q'))]; };
+  /* Las respuestas rápidas y el campo de escritura ahora viven en la
+     columna del chat, no en la del detalle: se buscan en el documento. */
+  qsa('#vg17AQuick [data-q]').forEach(function(b){
+    b.onclick=function(){
+      var ta=qs('#vg17AInput');
+      ta.value = QUICK_REPLIES[Number(b.getAttribute('data-q'))];
+      ta.focus();
+    };
   });
   qs('#vg17ASend').onclick=async function(){
     var ta=qs('#vg17AInput'), err=qs('#vg17AErr'), btn=this;
@@ -27238,6 +27266,142 @@ html body #vgAdminModal.active.active.active .vg-admin-panel{
 html body #vgAdminModal.active.active.active .vg-admin-content{
   padding:14px !important;
   background:#0a0c14 !important;
+}
+
+/* ════════════════════════════════════════════════════════════════
+   LAYOUT DE 3 COLUMNAS · lista | detalle | chat
+   Antes todo iba en dos columnas y el detalle se estiraba a 1070px:
+   líneas larguísimas de leer y 263px vacíos abajo. Ahora cada columna
+   tiene su propio desplazamiento y ocupa el alto completo, así el chat
+   queda siempre a la vista mientras se revisa el comprobante.
+   La paleta conserva el morado/turquesa de Vessel Games, pero como
+   acento sobre superficies oscuras sobrias, no como fondo lavado.
+   ════════════════════════════════════════════════════════════════ */
+#vgAdminPedidos, #vgAdminSoporte{
+  --vgA-bg:#0b0e1a;
+  --vgA-surface:#111629;
+  --vgA-surface2:#151b31;
+  --vgA-line:rgba(139,92,246,.16);
+  --vgA-line2:rgba(255,255,255,.07);
+  --vgA-text:#e6ebf7;
+  --vgA-dim:#8593b5;
+  --vgA-purple:#8b5cf6;
+  --vgA-teal:#19e6c1;
+}
+.vgA-grid{
+  display:grid;
+  grid-template-columns:300px minmax(340px,1fr) minmax(360px,.95fr);
+  gap:12px;
+  height:calc(100vh - 200px);
+  min-height:420px;
+}
+.vgA-col{
+  display:flex;flex-direction:column;min-height:0;min-width:0;
+  background:var(--vgA-surface);
+  border:1px solid var(--vgA-line2);
+  border-radius:14px;overflow:hidden;
+}
+.vgA-colhead{
+  flex:none;padding:10px 13px;font-size:.64rem;font-weight:900;
+  letter-spacing:.12em;text-transform:uppercase;color:var(--vgA-dim);
+  border-bottom:1px solid var(--vgA-line2);
+  background:linear-gradient(180deg,rgba(139,92,246,.10),transparent);
+  display:flex;align-items:center;justify-content:space-between;gap:8px;
+}
+.vgA-colhead b{color:var(--vgA-text);font-size:.72rem}
+.vgA-scroll{ flex:1;min-height:0;overflow-y:auto;padding:10px;overscroll-behavior:contain; }
+.vgA-scroll::-webkit-scrollbar{width:8px}
+.vgA-scroll::-webkit-scrollbar-thumb{background:rgba(255,255,255,.12);border-radius:8px}
+
+/* ── Filas de pedido: densas, se ven muchas de un vistazo ── */
+.vgA-row{
+  position:relative;padding:10px 11px 10px 14px;border-radius:10px;
+  border:1px solid transparent;background:var(--vgA-surface2);
+  margin-bottom:6px;cursor:pointer;transition:.15s;
+}
+.vgA-row::before{
+  content:"";position:absolute;left:0;top:0;bottom:0;width:3px;
+  border-radius:10px 0 0 10px;background:transparent;
+}
+.vgA-row.st-pendiente::before{background:#ffb74d}
+.vgA-row.st-proceso::before,.vgA-row.st-en_proceso::before{background:var(--vgA-purple)}
+.vgA-row.st-entregado::before{background:var(--vgA-teal)}
+.vgA-row.st-cancelado::before{background:#ff4d6d}
+.vgA-row:hover{background:#1a2140;border-color:var(--vgA-line)}
+.vgA-row.active{
+  background:linear-gradient(135deg,rgba(139,92,246,.20),rgba(25,230,193,.08));
+  border-color:rgba(139,92,246,.45);
+}
+.vgA-rowtop{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.vgA-rowtop b{
+  color:var(--vgA-text);font-size:.82rem;font-weight:800;min-width:0;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.vgA-amt{color:var(--vgA-teal);font-weight:900;font-size:.8rem;white-space:nowrap;flex:none}
+.vgA-amt.big{font-size:1.15rem}
+.vgA-rowsub{
+  color:var(--vgA-dim);font-size:.7rem;margin-top:3px;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+.vgA-rowfoot{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-top:6px}
+.vgA-rowfoot time{color:#68789c;font-size:.64rem;font-weight:700}
+/* Punto rojo para los pedidos sin leer */
+.vgA-new{
+  position:absolute;top:9px;right:9px;width:7px;height:7px;border-radius:50%;
+  background:#ff4d6d;box-shadow:0 0 0 3px rgba(255,77,109,.18);
+}
+
+/* ── Encabezado del pedido en la columna del detalle ── */
+.vgA-idcard{
+  padding:12px 13px;border-radius:12px;margin-bottom:10px;
+  background:linear-gradient(135deg,rgba(139,92,246,.18),rgba(25,230,193,.07));
+  border:1px solid rgba(139,92,246,.28);
+}
+.vgA-idtop{display:flex;align-items:baseline;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.vgA-idtop b{color:#fff;font-size:.98rem;font-weight:900;min-width:0}
+.vgA-idmeta{color:var(--vgA-dim);font-size:.7rem;margin-top:4px;font-weight:700}
+
+/* Estado activo marcado entre los botones */
+#vgAdminPedidos .vg17-quick button.on{
+  background:linear-gradient(135deg,var(--vgA-purple),var(--vgA-teal)) !important;
+  color:#06121a !important;border-color:transparent !important;
+}
+
+/* ── Bloque de entrega ── */
+.vgA-deliver{ border-color:rgba(25,230,193,.30) !important;background:rgba(25,230,193,.05) !important; }
+.vgA-deliver > span{ color:#8ff5e3 !important; }
+.vgA-deliver p{ margin:0 0 8px !important;color:var(--vgA-dim);font-size:.72rem;line-height:1.45 }
+.vgA-deliver textarea{
+  width:100%;min-height:88px;border:1px solid rgba(25,230,193,.28);
+  background:rgba(255,255,255,.05);color:#fff;border-radius:10px;padding:10px;
+  font-family:inherit;font-size:.82rem;resize:vertical;
+}
+.vgA-deliver .vg17-btn{ width:100%;margin-top:8px; }
+
+/* ── Columna del chat: mensajes arriba, escritura anclada abajo ── */
+.vgA-chat #vg17AChat{ display:flex;flex-direction:column;flex:1;min-height:0; }
+.vgA-chat .vg17-msgs{
+  flex:1 !important;min-height:0 !important;max-height:none !important;
+  margin:10px 10px 0 !important;border-radius:11px !important;
+}
+.vgA-compose{ flex:none;padding:10px;border-top:1px solid var(--vgA-line2); }
+.vgA-compose .vg17-quick{
+  max-height:74px;overflow-y:auto;margin-bottom:8px !important;
+}
+.vgA-compose .vg17-quick button{
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;
+}
+
+/* En pantallas medianas el chat baja debajo; en móvil todo se apila */
+@media(max-width:1300px){
+  .vgA-grid{ grid-template-columns:260px 1fr;grid-template-rows:1fr auto;height:calc(100vh - 190px); }
+  .vgA-chat{ grid-column:1/-1;height:340px; }
+}
+@media(max-width:900px){
+  .vgA-grid{ grid-template-columns:1fr;grid-auto-rows:min-content;height:auto;gap:10px; }
+  .vgA-list{ max-height:280px; }
+  .vgA-detail .vgA-scroll{ max-height:none; }
+  .vgA-chat{ height:420px; }
 }
 
 /* ── Densidad dentro del admin: tarjetas más apretadas ── */
