@@ -26802,6 +26802,11 @@ function ensureAdminTabs(){
     s2.className='vg-admin-section vg17-scope'; s2.id='vgAdminSoporte';
     content.insertBefore(s2, qs('#vgAdminPedidos').nextSibling);
   }
+  if(!qs('#vgAdminImagenes')){
+    var s3=document.createElement('section');
+    s3.className='vg-admin-section vg17-scope'; s3.id='vgAdminImagenes';
+    content.insertBefore(s3, qs('#vgAdminSoporte').nextSibling);
+  }
 
   /* PestaÃ±as al principio: primero Pedidos, luego Soporte */
   if(!qs('#vgAdminModal .vg-admin-tab[data-tab="soporte"]')){
@@ -26817,7 +26822,17 @@ function ensureAdminTabs(){
     tabsBar.insertBefore(t1, tabsBar.firstChild);
   }
 
-  ['pedidos','soporte'].forEach(function(name){
+  if(!qs('#vgAdminModal .vg-admin-tab[data-tab="imagenes"]')){
+    var t3=document.createElement('button');
+    t3.className='vg-admin-tab'; t3.setAttribute('data-tab','imagenes');
+    t3.innerHTML='🖼 Imágenes';
+    /* Va después de Pedidos y Soporte: es mantenimiento, no uso diario */
+    var refSop=qs('#vgAdminModal .vg-admin-tab[data-tab="soporte"]');
+    if(refSop) tabsBar.insertBefore(t3, refSop.nextSibling);
+    else tabsBar.insertBefore(t3, tabsBar.firstChild);
+  }
+
+  ['pedidos','soporte','imagenes'].forEach(function(name){
     var b=qs('#vgAdminModal .vg-admin-tab[data-tab="'+name+'"]');
     if(b && !b.__vg17bound){ b.__vg17bound=true; b.onclick=function(){ showMineTab(name); }; }
   });
@@ -26829,11 +26844,112 @@ function showMineTab(name){
     b.classList.toggle('active', b.getAttribute('data-tab')===name);
   });
   qsa('#vgAdminModal .vg-admin-section').forEach(function(s){ s.classList.remove('active'); });
-  var sec=qs(name==='pedidos' ? '#vgAdminPedidos' : '#vgAdminSoporte');
+  var mapa={pedidos:'#vgAdminPedidos', soporte:'#vgAdminSoporte', imagenes:'#vgAdminImagenes'};
+  var sec=qs(mapa[name]||'#vgAdminPedidos');
   if(sec) sec.classList.add('active');
+  if(name==='imagenes'){ renderMigracion(sec); return; }
   A.view = (name==='pedidos') ? 'orders' : 'tickets';
   A.ref = null;
   loadAdmin();
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   MIGRACIÓN DE IMÁGENES imgur → Supabase Storage
+   Las fotos del catálogo viven en imgur, un servicio gratuito ajeno:
+   si las borra o limita el tráfico, la tienda se queda sin imágenes.
+   Esta herramienta las copia al bucket propio y reescribe la URL en
+   la tabla products. Requiere haber corrido antes el SQL de la Fase 21.
+   ═══════════════════════════════════════════════════════════════ */
+function renderMigracion(cont){
+  cont.innerHTML=
+    '<div class="vg17-box">'+
+      '<span>🖼 Imágenes del catálogo</span>'+
+      '<p style="margin:6px 0 12px;color:#8593b5;font-size:.8rem;line-height:1.55">'+
+        'Copia las fotos que hoy están en <b>imgur</b> a tu propio almacenamiento de Supabase. '+
+        'Así dejas de depender de un servicio gratuito ajeno que podría borrarlas o limitarte el tráfico.<br>'+
+        'Antes de usarla necesitas haber corrido <b>supabase_fase21_STORAGE_IMAGENES.sql</b>.</p>'+
+      '<div class="vg17-quick">'+
+        '<button id="mgAnalizar">🔍 Analizar catálogo</button>'+
+        '<button id="mgMigrar" style="background:linear-gradient(135deg,#8b5cf6,#19e6c1);color:#06121a;border-color:transparent">⬆ Migrar imágenes de imgur</button>'+
+      '</div>'+
+      '<div class="vg17-ok" id="mgEstado"></div>'+
+      '<div id="mgBarra" style="display:none;height:8px;border-radius:6px;background:rgba(255,255,255,.09);overflow:hidden;margin:10px 0">'+
+        '<div id="mgProgreso" style="height:100%;width:0;background:linear-gradient(90deg,#8b5cf6,#19e6c1);transition:width .25s"></div></div>'+
+      '<textarea id="mgLog" readonly style="width:100%;min-height:230px;margin-top:10px;border:1px solid rgba(255,255,255,.12);background:#0a0d16;color:#c8d2e8;border-radius:11px;padding:11px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:.76rem" placeholder="Aquí se mostrará el avance..."></textarea>'+
+    '</div>';
+
+  function log(t){
+    var ta=qs('#mgLog');
+    ta.value=(ta.value?ta.value+'\n':'')+t;
+    ta.scrollTop=ta.scrollHeight;
+  }
+
+  qs('#mgAnalizar').onclick=async function(){
+    var c=SB(); if(!c){ log('❌ Sin conexión.'); return; }
+    log('Analizando catálogo...');
+    var r=await c.from('products').select('id,title,image').limit(1000);
+    if(r.error){ log('❌ '+r.error.message); return; }
+    var prods=r.data||[];
+    var imgur=prods.filter(function(p){ return /imgur\.com/i.test(p.image||''); });
+    var propias=prods.filter(function(p){ return /supabase\.co\/storage/i.test(p.image||''); });
+    var otras=prods.length-imgur.length-propias.length;
+    log('✔ '+prods.length+' producto(s) en el catálogo:');
+    log('   · '+imgur.length+' con imagen en imgur (a migrar)');
+    log('   · '+propias.length+' ya en tu Supabase');
+    log('   · '+otras+' con otra fuente o sin imagen');
+    qs('#mgEstado').textContent = imgur.length
+      ? imgur.length+' imagen(es) por migrar.'
+      : 'No hay nada pendiente de migrar.';
+  };
+
+  qs('#mgMigrar').onclick=async function(){
+    var btn=this, c=SB();
+    if(!c){ log('❌ Sin conexión.'); return; }
+    if(!confirm('Se copiarán las imágenes de imgur a tu Supabase y se actualizará el catálogo.\n\n¿Continuar?')) return;
+    btn.disabled=true; btn.textContent='Migrando...';
+    qs('#mgBarra').style.display='block';
+    try{
+      var r=await c.from('products').select('id,title,image').limit(1000);
+      if(r.error) throw r.error;
+      var lista=(r.data||[]).filter(function(p){ return /imgur\.com/i.test(p.image||''); });
+      if(!lista.length){ log('No hay imágenes de imgur por migrar.'); return; }
+      log('Migrando '+lista.length+' imagen(es)...\n');
+      var ok=0, fallos=0;
+      for(var i=0;i<lista.length;i++){
+        var p=lista[i];
+        qs('#mgProgreso').style.width=Math.round((i/lista.length)*100)+'%';
+        try{
+          /* imgur permite CORS (Access-Control-Allow-Origin: *), por eso
+             el navegador sí puede descargar la imagen y reenviarla. */
+          var resp=await fetch(p.image,{mode:'cors'});
+          if(!resp.ok) throw new Error('HTTP '+resp.status);
+          var blob=await resp.blob();
+          var ext=(blob.type.split('/')[1]||'jpg').replace('jpeg','jpg');
+          var ruta='productos/'+p.id+'.'+ext;
+          var up=await c.storage.from('catalogo').upload(ruta,blob,{upsert:true,contentType:blob.type});
+          if(up.error) throw up.error;
+          var pub=c.storage.from('catalogo').getPublicUrl(ruta);
+          var nueva=pub.data.publicUrl;
+          var udp=await c.from('products').update({image:nueva}).eq('id',p.id);
+          if(udp.error) throw udp.error;
+          ok++;
+          log('✔ '+(i+1)+'/'+lista.length+' '+(p.title||p.id).slice(0,38)+'  ('+Math.round(blob.size/1024)+' KB)');
+        }catch(e){
+          fallos++;
+          log('✖ '+(i+1)+'/'+lista.length+' '+(p.title||p.id).slice(0,38)+' → '+(e.message||e));
+        }
+      }
+      qs('#mgProgreso').style.width='100%';
+      log('\n══════════════════════════════');
+      log('Terminado: '+ok+' migrada(s), '+fallos+' con error.');
+      if(ok) log('Recarga la tienda para ver las imágenes desde tu Supabase.');
+      qs('#mgEstado').textContent='Listo: '+ok+' migrada(s), '+fallos+' con error.';
+    }catch(e){
+      log('❌ '+(e.message||e));
+    }finally{
+      btn.disabled=false; btn.textContent='⬆ Migrar imágenes de imgur';
+    }
+  };
 }
 
 /* Se mantiene el candado de seguridad: se vuelve a validar la sesiÃ³n
