@@ -26258,6 +26258,20 @@ async function sendMsg(ref, role, text, isDelivery){
   }
   return r.data;
 }
+/* Fecha en lenguaje natural: para un mensaje reciente "hace 5 min"
+   dice más que una hora exacta, y evita que el cliente tenga que
+   calcular si le respondieron hace rato o apenas. */
+function hace(d){
+  try{
+    var seg=Math.floor((Date.now()-new Date(d).getTime())/1000);
+    if(seg<60) return 'hace un momento';
+    if(seg<3600) return 'hace '+Math.floor(seg/60)+' min';
+    if(seg<86400) return 'hace '+Math.floor(seg/3600)+' h';
+    if(seg<604800) return 'hace '+Math.floor(seg/86400)+' d';
+    return dateMX(d);
+  }catch(e){ return dateMX(d); }
+}
+
 function renderMsgs(list){
   if(!list||!list.length) return '<div class="vg17-empty">Sin mensajes todavía.</div>';
   return list.map(function(m){
@@ -26266,17 +26280,67 @@ function renderMsgs(list){
     else if(role.indexOf('system')>-1||role.indexOf('sistema')>-1) role='system';
     else role='client';
     var who = role==='admin'?'Vessel Games':role==='system'?'Sistema':'Tú';
-    return '<div class="vg17-msg '+role+(m.is_delivery?' delivery':'')+'">'+
-             '<small>'+esc(who)+' · '+esc(dateMX(m.created_at))+(m.is_delivery?' · ENTREGA':'')+'</small>'+
-             '<div>'+esc(m.message||'')+'</div>'+
+    var texto = m.message||'';
+    return '<div class="vg17-msg '+role+(m.is_delivery?' delivery':'')+'" title="'+esc(dateMX(m.created_at))+'">'+
+             '<small>'+esc(who)+' · '+esc(hace(m.created_at))+(m.is_delivery?' · ENTREGA':'')+'</small>'+
+             '<div>'+esc(texto)+'</div>'+
+             /* Los datos de entrega (correo, contraseña, código) son
+                justo lo que el cliente necesita copiar. Seleccionarlos
+                a mano en un teléfono es incómodo y propenso a cortar
+                mal el texto: se le da un botón. */
+             (m.is_delivery ? '<button class="vg17-copy" data-copy="'+esc(texto)+'">📋 Copiar datos</button>' : '')+
            '</div>';
   }).join('');
 }
+
+/* Copiar al portapapeles, delegado: sirve igual en el panel del
+   cliente y en el del admin, y sobrevive a que el chat se repinte. */
+document.addEventListener('click', function(ev){
+  var b = ev.target.closest && ev.target.closest('.vg17-copy');
+  if(!b) return;
+  ev.preventDefault(); ev.stopPropagation();
+  var txt = b.getAttribute('data-copy')||'';
+  var ok = function(){
+    var antes=b.textContent; b.textContent='✅ Copiado'; b.classList.add('done');
+    setTimeout(function(){ b.textContent=antes; b.classList.remove('done'); },1800);
+  };
+  if(navigator.clipboard && navigator.clipboard.writeText){
+    navigator.clipboard.writeText(txt).then(ok).catch(function(){ fallback(); });
+  } else fallback();
+  function fallback(){
+    /* navigator.clipboard no existe en http:// ni en navegadores viejos */
+    try{
+      var ta=document.createElement('textarea');
+      ta.value=txt; ta.style.position='fixed'; ta.style.opacity='0';
+      document.body.appendChild(ta); ta.select();
+      document.execCommand('copy'); document.body.removeChild(ta); ok();
+    }catch(e){ b.textContent='No se pudo copiar'; }
+  }
+}, true);
 
 /* ═══════════════════════════════════════════════════════════════
    MÓDULO 2 — PANEL DEL CLIENTE (chat condicional)
    ═══════════════════════════════════════════════════════════════ */
 var C = { view:'purchases', orders:[], ref:null, unread:0, poll:null, chan:null };
+
+/* Marcado de "ya lo vi" por pedido.
+   No se puede apagar orders.unread_client desde el cliente: la política
+   RLS deja actualizar pedidos solo al admin (y así debe seguir, es lo
+   que impide que alguien se desbloquee el chat solo). Por eso el punto
+   de "mensaje nuevo" se apaga en el navegador del cliente, y se vuelve
+   a encender cuando llega un mensaje nuevo del admin por realtime. */
+function seenMap(){
+  try{ return JSON.parse(localStorage.getItem('vg17_seen')||'{}'); }catch(e){ return {}; }
+}
+function markSeen(ref){
+  try{ var m=seenMap(); m[String(ref)]=Date.now(); localStorage.setItem('vg17_seen',JSON.stringify(m)); }catch(e){}
+}
+function clearSeen(ref){
+  try{ var m=seenMap(); delete m[String(ref)]; localStorage.setItem('vg17_seen',JSON.stringify(m)); }catch(e){}
+}
+function tieneNuevo(o){
+  return o.unread_client===true && !seenMap()[String(oid(o))];
+}
 
 function clientShell(){
   var p = window.vgGetLocalSession ? (window.vgGetLocalSession()||{}) : {};
@@ -26363,6 +26427,7 @@ function renderPurchases(body){
         var st=ostatus(o);
         var ini=String(otitle(o)).trim().charAt(0).toUpperCase()||'V';
         return '<div class="vg17-card st-'+esc(st)+' '+(oid(o)===C.ref?'active':'')+'" data-o="'+esc(oid(o))+'">'+
+          (tieneNuevo(o)?'<span class="vg17-newdot">Nuevo mensaje</span>':'')+
           '<div class="vg17-cardtop">'+
             '<span class="vg17-thumb">'+esc(ini)+'</span>'+
             '<div style="min-width:0;flex:1">'+
@@ -26418,19 +26483,31 @@ async function renderClientDetail(o){
           'Aquí verás los datos de tu entrega y podrás responder. Mientras tanto, '+
           'puedes seguir el estado de tu pedido arriba.</div>')+
     '</div>';
+  markSeen(oid(o));   /* al abrir el pedido, su aviso de "nuevo" se apaga */
   var list=await fetchMsgs(oid(o));
   var box=qs('#vg17CMsgs'); if(box){ box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight; }
   if(unlocked){
-    qs('#vg17CSend').onclick=async function(){
-      var ta=qs('#vg17CInput'), err=qs('#vg17CErr'), btn=this;
-      err.textContent=''; btn.disabled=true;
+    var ta=qs('#vg17CInput'), btn=qs('#vg17CSend'), err=qs('#vg17CErr');
+    async function enviar(){
+      var texto=(ta.value||'').trim();
+      if(!texto) return;
+      err.textContent=''; btn.disabled=true; ta.disabled=true;
       try{
-        await sendMsg(oid(o),'client',ta.value);
+        await sendMsg(oid(o),'client',texto);
         ta.value='';
         var l=await fetchMsgs(oid(o));
         var b=qs('#vg17CMsgs'); b.innerHTML=renderMsgs(l); b.scrollTop=b.scrollHeight;
       }catch(e){ err.textContent = e.message||String(e); }
-      finally{ btn.disabled=false; }
+      finally{ btn.disabled=false; ta.disabled=false; ta.focus(); }
+    }
+    btn.onclick=enviar;
+    /* Enter envía, Shift+Enter hace salto de línea — como en cualquier
+       app de mensajería. En móvil no se aplica: ahí el Enter del
+       teclado virtual debe seguir sirviendo para saltar de línea. */
+    ta.onkeydown=function(ev){
+      if(ev.key==='Enter' && !ev.shiftKey && window.innerWidth>900){
+        ev.preventDefault(); enviar();
+      }
     };
   }
 }
@@ -26444,6 +26521,7 @@ function startClientRealtime(){
       var m=p.new||{};
       if(String(m.sender_role)!=='admin') return;
       if(!C.orders.some(function(o){return oid(o)===String(m.thread_ref);})) return;
+      clearSeen(m.thread_ref);   /* vuelve a marcarse como no leído */
       beep();
       alertNew('Soporte respondió tu pedido', function(){ C.ref=String(m.thread_ref); loadClient(); });
       loadClient();
@@ -27085,6 +27163,7 @@ async function startGlobalNotifications(){
       var m=p.new||{};
       if(String(m.sender_role)!=='admin') return;
       if(N.orderIds.indexOf(String(m.thread_ref))===-1) return;
+      clearSeen(m.thread_ref);   /* vuelve a marcarse como no leído */
       beep();
       setUnread(N.count+1);
       var txt=(m.message||'').slice(0,70);
@@ -27739,6 +27818,43 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
 @media(prefers-reduced-motion:reduce){
   #vg17Client.active,#vg17Client.active *{ animation:none !important; }
 }
+
+/* ── Botón para copiar los datos de entrega ──────────────────────
+   Es la acción más importante del panel: el cliente compró una cuenta
+   o un código y lo que quiere es llevárselo. Antes tenía que
+   seleccionar el texto a mano, que en un teléfono es incómodo y a
+   menudo corta mal la selección. */
+.vg17-copy{
+  margin-top:9px;padding:9px 14px;border-radius:11px;cursor:pointer;
+  border:1px solid rgba(25,230,193,.45);
+  background:rgba(25,230,193,.14);color:#8ff5e3;
+  font-weight:900;font-size:.76rem;font-family:inherit;
+  display:inline-flex;align-items:center;gap:6px;transition:.16s;
+}
+.vg17-copy:hover{ background:rgba(25,230,193,.24);border-color:rgba(25,230,193,.7); }
+.vg17-copy:active{ transform:scale(.96); }
+.vg17-copy.done{ background:rgba(25,230,193,.32);color:#06121a;border-color:transparent; }
+/* En el chat del cliente el botón va alineado con la burbuja */
+#vg17Client .vg17-msg.client .vg17-copy{ margin-left:auto; }
+/* Los datos entregados se leen mejor en monoespaciada: distingue
+   la l de la 1 y la O del 0, que es justo donde se equivoca la gente
+   al teclear una contraseña. */
+.vg17-msg.delivery div{
+  font-family:ui-monospace,SFMono-Regular,'Cascadia Mono',Menlo,Consolas,monospace !important;
+  font-size:.85rem !important;letter-spacing:.01em;
+}
+
+/* ── Aviso de mensaje nuevo en la tarjeta del pedido ── */
+.vg17-newdot{
+  position:absolute;top:10px;right:10px;z-index:2;
+  padding:3px 9px;border-radius:999px;
+  background:#ff4d6d;color:#fff;font-size:.58rem;font-weight:900;
+  letter-spacing:.05em;text-transform:uppercase;
+  box-shadow:0 4px 14px rgba(255,77,109,.40);
+  animation:vg17pulse 2s ease-in-out infinite;
+}
+#vg17Client .vg17-card{ position:relative; }
+#vg17Client .vg17-card:has(.vg17-newdot) .vg17-cardtop{ padding-right:96px; }
 </style>
 
 </body>
