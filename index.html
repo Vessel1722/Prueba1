@@ -26060,6 +26060,53 @@ else init();
   border-color:rgba(139,92,246,.40) !important}
 #vgAdminPedidos.active,#vgAdminSoporte.active{display:block}
 
+/* ── Recompensas canjeables en el panel del cliente ── */
+.vgtk-prem-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(215px,1fr));gap:10px}
+.vgtk-prem{
+  padding:13px;border-radius:15px;
+  border:1px solid rgba(255,255,255,.10);
+  background:linear-gradient(160deg,rgba(255,255,255,.05),rgba(255,255,255,.02));
+  transition:.18s;
+}
+.vgtk-prem.listo{
+  border-color:rgba(232,191,109,.45);
+  background:linear-gradient(160deg,rgba(232,191,109,.14),rgba(232,191,109,.04));
+  box-shadow:0 6px 20px rgba(232,191,109,.14);
+}
+.vgtk-prem-top{display:flex;align-items:flex-start;gap:10px;margin-bottom:10px}
+.vgtk-prem-top .ico{font-size:1.5rem;line-height:1;flex:none}
+.vgtk-prem-top b{display:block;color:#fff;font-size:.9rem;font-weight:850}
+.vgtk-prem-top small{display:block;color:#8e9cba;font-size:.7rem;margin-top:2px;line-height:1.35}
+.vgtk-prem-top .costo{
+  flex:none;color:#e8bf6d;font-weight:900;font-size:1.02rem;
+  background:rgba(232,191,109,.14);padding:3px 9px;border-radius:9px;
+}
+/* Barra de avance hacia la recompensa: se ve cuánto falta */
+.vgtk-barra{height:6px;border-radius:6px;background:rgba(255,255,255,.09);overflow:hidden;margin-bottom:10px}
+.vgtk-barra i{display:block;height:100%;border-radius:6px;
+  background:linear-gradient(90deg,#8b5cf6,#e8bf6d);transition:width .4s ease}
+.vgtk-canjear{
+  width:100%;padding:10px;border-radius:11px;cursor:pointer;font-family:inherit;
+  font-weight:900;font-size:.8rem;border:0;
+  background:linear-gradient(135deg,#e8bf6d,#d6a84f);color:#2a1e05;transition:.16s;
+}
+.vgtk-canjear:hover:not(:disabled){filter:brightness(1.08)}
+.vgtk-canjear:active:not(:disabled){transform:scale(.97)}
+.vgtk-canjear:disabled{opacity:.5;cursor:not-allowed;background:rgba(255,255,255,.08);color:#8e9cba}
+.vgtk-falta{
+  text-align:center;padding:9px;border-radius:11px;
+  background:rgba(255,255,255,.04);color:#8e9cba;font-size:.75rem;font-weight:800;
+}
+.vgtk-pend{
+  padding:12px 14px;border-radius:13px;margin:8px 0 4px;
+  border:1px solid rgba(255,183,77,.36);background:rgba(255,183,77,.10);
+  color:#ffd68a;font-size:.82rem;line-height:1.5;
+}
+.vgtk-pend b{color:#fff}
+@media(max-width:640px){
+  .vgtk-prem-grid{grid-template-columns:1fr}
+}
+
 /* ── Cerrar sesión en el panel del cliente ──
    Faltaba: el panel solo tenía la ✕, que cierra pero deja la sesión
    abierta. En un equipo compartido eso deja la cuenta accesible. */
@@ -26825,6 +26872,8 @@ async function renderTokens(body){
       '<code style="display:block;color:#c4cee6;font-size:.78rem;word-break:break-all;background:rgba(0,0,0,.30);padding:10px 12px;border-radius:10px;margin-bottom:10px;font-family:ui-monospace,Menlo,Consolas,monospace">'+esc(link)+'</code>'+
       '<button class="vg17-btn primary" id="vgtkCopiaPanel" style="width:100%">Copiar mi link</button>'+
     '</div>'+
+    '<div class="vg17-box" id="vgtkRecompensas"><span>Canjea tus tokens</span>'+
+      '<div class="vg17-empty">Cargando recompensas...</div></div>'+
     '<div class="vg17-box"><span>Movimientos</span>'+
       (movs.length
         ? movs.map(function(m){
@@ -26838,6 +26887,8 @@ async function renderTokens(body){
           'Tu primer token llega cuando recibas tu primera compra.</div>')+
     '</div>';
 
+  pintarRecompensas();
+
   var b=qs('#vgtkCopiaPanel');
   if(b) b.onclick=function(){
     var btn=this;
@@ -26849,6 +26900,89 @@ async function renderTokens(body){
       }catch(e){}
     }
   };
+}
+
+/* ── Recompensas canjeables ────────────────────────────────────
+   Se pinta aparte del saldo porque necesita su propia consulta y
+   se repinta sola tras cada canje, sin recargar toda la pestaña. */
+async function pintarRecompensas(){
+  var caja=qs('#vgtkRecompensas');
+  if(!caja) return;
+  var c=SB(); if(!c) return;
+  var r=await c.rpc('vg_mis_recompensas');
+  if(r.error || !r.data){
+    caja.innerHTML='<span>Canjea tus tokens</span><div class="vg17-empty">No se pudieron cargar las recompensas.'+
+      (r.error?'<br><small>'+esc(r.error.message)+'</small>':'')+'</div>';
+    return;
+  }
+  var d=r.data;
+  var saldo=Number(d.saldo||0);
+  var n=function(x){ return (Math.round(Number(x||0)*100)/100).toString(); };
+  var lista=Array.isArray(d.recompensas)?d.recompensas:[];
+  var hist=Array.isArray(d.historial)?d.historial:[];
+
+  var aviso='';
+  if(d.pendiente){
+    aviso='<div class="vgtk-pend">⏳ <b>'+esc(d.pendiente.nombre)+'</b> solicitada. '+
+      'Te la entregamos por el chat en cuanto la preparemos.</div>';
+  }
+
+  caja.innerHTML='<span>Canjea tus tokens</span>'+
+    aviso+
+    '<p style="margin:6px 0 12px;color:#8e9cba;font-size:.79rem;line-height:1.5">'+
+      'Cuando te alcance, pide tu recompensa y nosotros te la entregamos.'+
+      (d.pendiente?'':' <b style="color:#e8bf6d">Al canjear, tu contador vuelve a 0</b> y empieza a sumar otra vez con tu siguiente compra.')+
+    '</p>'+
+    '<div class="vgtk-prem-grid">'+
+      lista.map(function(p){
+        var falta=Math.max(0, Number(p.costo)-saldo);
+        var pct=Math.min(100, Math.round(saldo/Number(p.costo)*100));
+        var puede=p.alcanza && !d.pendiente;
+        return '<div class="vgtk-prem'+(p.alcanza?' listo':'')+'">'+
+          '<div class="vgtk-prem-top">'+
+            '<span class="ico">'+esc(p.icono||'🎁')+'</span>'+
+            '<div style="min-width:0"><b>'+esc(p.nombre)+'</b>'+
+            '<small>'+esc(p.descripcion||'')+'</small></div>'+
+            '<span class="costo">'+n(p.costo)+'</span>'+
+          '</div>'+
+          '<div class="vgtk-barra"><i style="width:'+pct+'%"></i></div>'+
+          (p.alcanza
+            ? '<button class="vgtk-canjear" data-r="'+esc(p.id)+'" data-n="'+esc(p.nombre)+'"'+
+              (puede?'':' disabled')+'>'+(d.pendiente?'Tienes un canje pendiente':'Pedir esta recompensa')+'</button>'
+            : '<div class="vgtk-falta">Te faltan '+n(falta)+' token'+(falta===1?'':'s')+'</div>')+
+        '</div>';
+      }).join('')+
+    '</div>'+
+    (hist.length
+      ? '<div style="margin-top:14px"><span style="display:block;color:#8e9cba;font-size:.62rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Tus canjes</span>'+
+        hist.map(function(h){
+          var col = h.estado==='entregada'?'entregado':h.estado==='rechazada'?'cancelado':'pendiente';
+          var txt = h.estado==='entregada'?'Entregada':h.estado==='rechazada'?'Rechazada':'En proceso';
+          return '<div class="vgtk-mov"><div><b>'+esc(h.reward_nombre)+'</b>'+
+            '<small>'+esc(hace(h.created_at))+'</small></div>'+
+            '<span class="vg17-chip '+col+'">'+txt+'</span></div>';
+        }).join('')+'</div>'
+      : '');
+
+  qsa('.vgtk-canjear',caja).forEach(function(b){
+    if(b.disabled) return;
+    b.onclick=async function(){
+      var nombre=b.getAttribute('data-n');
+      if(!confirm('Vas a pedir: '+nombre+'\n\nTu contador de tokens volverá a 0 y empezará a sumar de nuevo con tu siguiente compra.\n\n¿Confirmas?')) return;
+      b.disabled=true; b.textContent='Enviando...';
+      try{
+        var res=await SB().rpc('vg_canjear_recompensa',{p_reward:b.getAttribute('data-r')});
+        if(res.error) throw res.error;
+        toast('Recompensa solicitada','Te avisaremos por el chat en cuanto esté lista.');
+        beep();
+        /* Se repinta toda la pestaña para reflejar el saldo nuevo */
+        loadClient();
+      }catch(e){
+        alert('No se pudo canjear: '+(e.message||e));
+        b.disabled=false; b.textContent='Pedir esta recompensa';
+      }
+    };
+  });
 }
 
 async function renderMyTickets(body){
@@ -26973,6 +27107,8 @@ function showMineTab(name){
    ═══════════════════════════════════════════════════════════════ */
 function renderAdminTokens(cont){
   cont.innerHTML=
+    '<div class="vg17-box" id="tkCanjes"><span>🎁 Recompensas solicitadas</span>'+
+      '<div class="vg17-empty">Cargando...</div></div>'+
     '<div class="vg17-box">'+
       '<span>Recompensas activas</span>'+
       '<div class="vg17-cards" id="tkReglas" style="margin-top:10px"></div>'+
@@ -26991,8 +27127,84 @@ function renderAdminTokens(cont){
       '<div id="tkLista" style="margin-top:10px"></div>'+
     '</div>';
 
+  cargarCanjes();
   cargarReglasAdmin();
   buscarUsuarios('');
+
+  async function cargarCanjes(){
+    var c=SB(), caja=qs('#tkCanjes');
+    if(!c||!caja) return;
+    var r=await c.from('vg_token_redemptions').select('*')
+          .order('created_at',{ascending:false}).limit(60);
+    if(r.error){
+      caja.innerHTML='<span>🎁 Recompensas solicitadas</span><div class="vg17-empty">Error: '+esc(r.error.message)+'</div>';
+      return;
+    }
+    var todos=r.data||[];
+    var pend=todos.filter(function(x){return x.estado==='solicitada';});
+    var otros=todos.filter(function(x){return x.estado!=='solicitada';}).slice(0,10);
+
+    caja.innerHTML='<span>🎁 Recompensas solicitadas'+
+      (pend.length?' · <b style="color:#ffd68a">'+pend.length+' pendiente(s)</b>':'')+'</span>'+
+      (pend.length
+        ? pend.map(fila).join('')
+        : '<div class="vg17-empty" style="padding:20px">Ninguna solicitud pendiente.</div>')+
+      (otros.length
+        ? '<div style="margin-top:12px"><span style="display:block;color:#8593b5;font-size:.62rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">Resueltas</span>'+
+          otros.map(function(x){
+            var col=x.estado==='entregada'?'entregado':'cancelado';
+            return '<div class="vgtk-mov"><div><b>'+esc(x.reward_nombre||'')+'</b>'+
+              '<small>'+esc(x.cliente_nombre||'')+' · '+esc(dateMX(x.created_at))+'</small></div>'+
+              '<span class="vg17-chip '+col+'">'+esc(x.estado)+'</span></div>';
+          }).join('')+'</div>'
+        : '');
+
+    function fila(x){
+      return '<div class="vg17-box" data-canje="'+esc(x.id)+'" style="margin-bottom:9px;border-color:rgba(232,191,109,.32);background:rgba(232,191,109,.06)">'+
+        '<div class="vg17-row">'+
+          '<div style="min-width:0"><b style="color:#fff;font-size:.95rem">'+esc(x.reward_nombre||'Recompensa')+'</b>'+
+          '<p style="margin:3px 0 0;color:#8593b5;font-size:.74rem">'+
+            esc(x.cliente_nombre||'Cliente')+
+            (x.cliente_email?' · '+esc(x.cliente_email):'')+
+            (x.cliente_phone?' · '+esc(x.cliente_phone):'')+'</p>'+
+          '<p style="margin:3px 0 0;color:#8593b5;font-size:.72rem">Costo: '+
+            (Math.round(Number(x.costo||0)*100)/100)+' tk · Tenía '+
+            (Math.round(Number(x.saldo_previo||0)*100)/100)+' tk · '+esc(dateMX(x.created_at))+'</p></div>'+
+          '<span style="color:#e8bf6d;font-weight:900;font-size:1.4rem;flex:none">'+esc(x.reward_nombre?'🎁':'')+'</span>'+
+        '</div>'+
+        '<input class="cj-nota" placeholder="Nota (opcional): datos entregados, motivo del rechazo..." style="width:100%;margin-top:9px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:10px;padding:9px 11px;font-family:inherit;font-size:.8rem">'+
+        '<div class="vg17-quick" style="margin-top:8px">'+
+          '<button class="cj-ok" style="background:linear-gradient(135deg,#19e6c1,#12b899);color:#04211b;border-color:transparent">Marcar entregada</button>'+
+          '<button class="cj-no">Rechazar y devolver tokens</button>'+
+        '</div><div class="vg17-ok cj-msg"></div>'+
+      '</div>';
+    }
+
+    qsa('[data-canje]',caja).forEach(function(card){
+      var id=card.getAttribute('data-canje');
+      var nota=qs('.cj-nota',card), msg=qs('.cj-msg',card);
+      function resolver(estado){
+        return async function(){
+          var txt = estado==='entregada' ? '¿Marcar esta recompensa como entregada?'
+                  : '¿Rechazar la solicitud? Se le devolverán los tokens al cliente.';
+          if(!confirm(txt)) return;
+          this.disabled=true; msg.textContent='';
+          try{
+            var r2=await SB().rpc('vg_admin_resolver_canje',
+              {p_canje:id, p_estado:estado, p_nota:nota.value||null});
+            if(r2.error) throw r2.error;
+            msg.textContent='Listo.';
+            cargarCanjes();
+            buscarUsuarios(qs('#tkBuscar').value.trim());
+          }catch(e){ msg.textContent='Error: '+(e.message||e); this.disabled=false; }
+        };
+      }
+      qs('.cj-ok',card).onclick=resolver('entregada');
+      qs('.cj-no',card).onclick=resolver('rechazada');
+    });
+  }
+  /* Se expone para que el aviso en tiempo real pueda refrescar la lista */
+  window.__vgCargarCanjes = cargarCanjes;
 
   qs('#tkBuscarBtn').onclick=function(){ buscarUsuarios(qs('#tkBuscar').value.trim()); };
   qs('#tkBuscar').onkeydown=function(ev){
@@ -27482,6 +27694,15 @@ function startAdminRealtime(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'vg_support_tickets'}, function(){
       beep();
       alertNew('🛠 Nuevo reporte de falla', function(){ A.view='tickets'; loadAdmin(); });
+    })
+    /* Alguien pidió su recompensa por tokens acumulados */
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'vg_token_redemptions'}, function(p){
+      var x=p.new||{};
+      beep();
+      alertNew('🎁 '+(x.cliente_nombre||'Un cliente')+' pidió: '+(x.reward_nombre||'una recompensa'),
+        function(){ showMineTab('tokens'); });
+      /* Si ya estás en la pestaña de tokens, se refresca sola */
+      if(typeof window.__vgCargarCanjes==='function') window.__vgCargarCanjes();
     })
     .subscribe();
 }
