@@ -26060,6 +26060,27 @@ else init();
   border-color:rgba(139,92,246,.40) !important}
 #vgAdminPedidos.active,#vgAdminSoporte.active{display:block}
 
+/* ── Cerrar sesión en el panel del cliente ──
+   Faltaba: el panel solo tenía la ✕, que cierra pero deja la sesión
+   abierta. En un equipo compartido eso deja la cuenta accesible. */
+.vg17-head-r{display:flex;align-items:center;gap:9px;flex:none}
+.vg17-salir{
+  padding:9px 15px;border-radius:12px;cursor:pointer;font-family:inherit;
+  font-size:.78rem;font-weight:850;white-space:nowrap;
+  border:1px solid rgba(255,77,109,.32);
+  background:rgba(255,77,109,.10);color:#ff9fb0;transition:.16s;
+}
+.vg17-salir:hover{background:rgba(255,77,109,.20);border-color:rgba(255,77,109,.55);color:#ffc2cd}
+.vg17-salir:active{transform:scale(.96)}
+.vg17-salir:disabled{opacity:.55;cursor:wait}
+@media(max-width:640px){
+  /* En móvil solo el icono, para no empujar el nombre del cliente */
+  .vg17-salir{padding:0;width:38px;height:38px;border-radius:50%;font-size:0;
+    display:flex;align-items:center;justify-content:center}
+  .vg17-salir::before{content:"⏻";font-size:1rem;line-height:1}
+  .vg17-head-r{gap:7px}
+}
+
 /* ── Contador de mensajes sin leer sobre el botón de cuenta ── */
 .vg17-badge{position:absolute;top:-5px;right:-5px;min-width:19px;height:19px;border-radius:10px;
   background:#ff4d6d;color:#fff;font-size:.63rem;font-weight:900;display:flex;align-items:center;
@@ -26451,7 +26472,10 @@ function clientShell(){
         '<div style="min-width:0"><h1>'+esc(nombre)+'</h1>'+
         '<p>'+esc(p.email||p.phone||'Pedidos, entregas y soporte')+'</p></div>'+
       '</div>'+
-    '<button class="vg17-x" id="vg17CX">×</button></div>'+
+    '<div class="vg17-head-r">'+
+      '<button class="vg17-salir" id="vg17CSalir">Cerrar sesión</button>'+
+      '<button class="vg17-x" id="vg17CX" title="Cerrar">×</button>'+
+    '</div></div>'+
     '<div class="vg17-tabs">'+
       '<button class="vg17-tab" data-v="purchases">Mis compras</button>'+
       '<button class="vg17-tab" data-v="tickets">Reportar falla</button>'+
@@ -26471,6 +26495,22 @@ window.vgOpenClientPanel = async function(view, ref){
   lockScroll();
   setUnread(0);   /* al entrar al panel se dan por vistos los avisos */
   qs('#vg17CX').onclick=closeClient;
+  var salir=qs('#vg17CSalir');
+  if(salir) salir.onclick=async function(){
+    if(!confirm('¿Cerrar tu sesión en Vessel Games?')) return;
+    this.disabled=true; this.textContent='Saliendo...';
+    try{
+      /* Se cierra el panel ANTES de salir: así se restaura el scroll de
+         la página y no queda el body bloqueado si el signOut tarda. */
+      closeClient();
+      if(typeof window.vgLogout==='function') await window.vgLogout();
+      else{ var c=SB(); if(c) await c.auth.signOut(); }
+      setUnread(0);
+      try{ localStorage.removeItem('vg17_seen'); }catch(e){}
+      if(typeof window.vgReloadWallet==='function') window.vgReloadWallet();
+      toast('Sesión cerrada','Vuelve cuando quieras.');
+    }catch(e){ alert('No se pudo cerrar la sesión: '+(e.message||e)); }
+  };
   C.view = view||'purchases'; C.ref = ref||null;
   qsa('#vg17Client .vg17-tab').forEach(function(b){
     b.onclick=function(){ C.view=b.dataset.v; C.ref=null; loadClient(); };
