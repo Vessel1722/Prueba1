@@ -24160,6 +24160,21 @@ async function loadProfileAndSaveSession(user){
 }
 
 /* ── UI del modal (login / registro con email) ── */
+/* Ladas de los países de habla hispana con más compradores, más los
+   de mayor volumen en la región. México va primero por ser el mercado
+   principal. Para agregar otro, basta con añadirlo a esta lista. */
+var LADAS = [
+  ['+52','🇲🇽 +52'],  ['+54','🇦🇷 +54'],  ['+57','🇨🇴 +57'],  ['+56','🇨🇱 +56'],
+  ['+51','🇵🇪 +51'],  ['+58','🇻🇪 +58'],  ['+593','🇪🇨 +593'],['+591','🇧🇴 +591'],
+  ['+595','🇵🇾 +595'],['+598','🇺🇾 +598'],['+502','🇬🇹 +502'],['+503','🇸🇻 +503'],
+  ['+504','🇭🇳 +504'],['+505','🇳🇮 +505'],['+506','🇨🇷 +506'],['+507','🇵🇦 +507'],
+  ['+509','🇭🇹 +509'],['+53','🇨🇺 +53'],  ['+1','🇺🇸 +1'],   ['+34','🇪🇸 +34'],
+  ['+55','🇧🇷 +55'],  ['+351','🇵🇹 +351']
+];
+var LADAS_HTML = LADAS.map(function(l){
+  return '<option value="'+l[0]+'">'+l[1]+'</option>';
+}).join('');
+
 function buildAuthModal(){
   var modal = qs('#vg10Auth');
   if(!modal) return;
@@ -24180,15 +24195,39 @@ function buildAuthModal(){
        '<input id="vgAuthLEmail" type="email" placeholder="Correo electrónico" autocomplete="email">' +
        '<input id="vgAuthLPass" type="password" placeholder="Contraseña" autocomplete="current-password">' +
        '<button class="vg10-btn primary" type="button" id="vg10LoginBtn" style="width:100%;margin-top:6px">Entrar a mi cuenta</button>' +
+       '<button type="button" id="vgAuthOlvide" style="width:100%;margin-top:10px;background:none;border:0;color:#19e6c1;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit;text-decoration:underline">Olvidé mi contraseña</button>' +
      '</div>' +
      /* REGISTRO */
      '<div id="vgAuthReg" style="display:none">' +
        '<input id="vgAuthRName" placeholder="Tu nombre" autocomplete="name">' +
        '<input id="vgAuthREmail" type="email" placeholder="Correo electrónico" autocomplete="email">' +
-       '<input id="vgAuthRPhone" type="tel" placeholder="WhatsApp (ej: 6611234567)" autocomplete="tel">' +
+       /* Lada aparte del número: así el teléfono queda bien guardado
+          para clientes de cualquier país, no solo de México. */
+       /* align-items:flex-start + el mismo margen abajo en los dos:
+          sin esto, el input hereda margin-bottom del modal y el select
+          no, y quedaban desalineados verticalmente. */
+       /* Se fija el margen COMPLETO en los dos: el modal aplica un
+          margin-top a los <input> que el <select> no hereda, y eso los
+          dejaba desalineados 8px en vertical. */
+       '<div style="display:flex;gap:8px;align-items:stretch">' +
+         '<select id="vgAuthRCC" style="width:118px;flex:none;margin:8px 0;height:48px">' + LADAS_HTML + '</select>' +
+         '<input id="vgAuthRPhone" type="tel" placeholder="Tu WhatsApp" autocomplete="tel" style="flex:1;min-width:0;margin:8px 0;height:48px">' +
+       '</div>' +
        '<input id="vgAuthRPass" type="password" placeholder="Contraseña (mínimo 6)" autocomplete="new-password">' +
        '<button class="vg10-btn primary" type="button" id="vg10RegBtn" style="width:100%;margin-top:6px">Crear cuenta gratis</button>' +
        '<p style="font-size:12px;color:#6b7590;text-align:center;margin:10px 0 0">Tu WhatsApp se usa solo para tus pedidos y entregas.</p>' +
+     '</div>' +
+     /* RECUPERAR CONTRASEÑA */
+     '<div id="vgAuthRecuperar" style="display:none">' +
+       '<p style="color:#9fb0ca;font-size:13px;margin:0 0 12px;line-height:1.5">Escribe el correo con el que te registraste. Verificaremos tu cuenta y te enviaremos una contraseña nueva por WhatsApp.</p>' +
+       '<input id="vgAuthRecEmail" type="email" placeholder="Correo electrónico" autocomplete="email">' +
+       '<div id="vgAuthRecInfo" style="display:none;margin:10px 0;padding:12px 14px;border-radius:12px;border:1px solid rgba(25,230,193,.30);background:rgba(25,230,193,.07)">' +
+         '<span style="display:block;color:#8ff5e3;font-size:11px;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px">Cuenta encontrada</span>' +
+         '<b id="vgAuthRecNombre" style="display:block;color:#fff;font-size:14px"></b>' +
+         '<span id="vgAuthRecTel" style="display:block;color:#c4cee6;font-size:13px;margin-top:3px"></span>' +
+       '</div>' +
+       '<button class="vg10-btn primary" type="button" id="vgAuthRecBtn" style="width:100%;margin-top:6px">Solicitar cambio de contraseña</button>' +
+       '<button type="button" id="vgAuthRecVolver" style="width:100%;margin-top:10px;background:none;border:0;color:#9fb0ca;font-weight:800;font-size:13px;cursor:pointer;font-family:inherit">Volver a iniciar sesión</button>' +
      '</div>' +
    '</div>';
 
@@ -24197,24 +24236,89 @@ function buildAuthModal(){
   qs('[data-vgauth-close]').onclick = closeAuth;
   qs('#vg10LoginBtn').onclick = doLogin;
   qs('#vg10RegBtn').onclick  = doRegister;
+
+  /* ── Recuperar contraseña ── */
+  qs('#vgAuthOlvide').onclick = function(){
+    switchTab('recuperar');
+    var e=qs('#vgAuthLEmail').value.trim();
+    if(e){ qs('#vgAuthRecEmail').value=e; buscarCuenta(); }
+  };
+  qs('#vgAuthRecVolver').onclick = function(){ switchTab('login'); };
+
+  /* Al escribir el correo se carga solo su teléfono, para que el
+     cliente confirme que es su cuenta antes de pedir el cambio. */
+  var tBusca=null;
+  qs('#vgAuthRecEmail').oninput = function(){
+    clearTimeout(tBusca);
+    qs('#vgAuthRecInfo').style.display='none';
+    tBusca=setTimeout(buscarCuenta, 550);
+  };
+  qs('#vgAuthRecBtn').onclick = solicitarCambio;
   modal.addEventListener('click', function(e){ if(e.target === modal) closeAuth(); });
   ['vgAuthLPass','vgAuthRPass'].forEach(function(id){
     var el = qs('#'+id); if(el) el.addEventListener('keydown', function(e){ if(e.key==='Enter'){ id==='vgAuthLPass'?doLogin():doRegister(); } });
   });
 }
 function switchTab(tab){
-  var isLogin = tab==='login';
-  qs('#vgAuthLogin').style.display = isLogin ? '' : 'none';
-  qs('#vgAuthReg').style.display   = isLogin ? 'none' : '';
-  qs('#vgAuthTabL').className = 'vg10-btn' + (isLogin?' primary':'');
-  qs('#vgAuthTabR').className = 'vg10-btn' + (isLogin?'':' primary');
-  qs('#vgAuthTabL').style.flex = '1'; qs('#vgAuthTabR').style.flex = '1';
+  var isLogin = tab==='login', esRec = tab==='recuperar';
+  qs('#vgAuthLogin').style.display = (isLogin && !esRec) ? '' : 'none';
+  qs('#vgAuthReg').style.display   = (tab==='register') ? '' : 'none';
+  var rec=qs('#vgAuthRecuperar'); if(rec) rec.style.display = esRec ? '' : 'none';
+  /* En la vista de recuperación se ocultan las pestañas: es un paso
+     aparte y tenerlas ahí solo confunde. */
+  var tabs=qs('#vgAuthTabL') ? qs('#vgAuthTabL').parentNode : null;
+  if(tabs) tabs.style.display = esRec ? 'none' : 'flex';
+  if(!esRec){
+    qs('#vgAuthTabL').className = 'vg10-btn' + (isLogin?' primary':'');
+    qs('#vgAuthTabR').className = 'vg10-btn' + (isLogin?'':' primary');
+    qs('#vgAuthTabL').style.flex = '1'; qs('#vgAuthTabR').style.flex = '1';
+  }
   msg('');
 }
 function msg(text, ok){
   var el = qs('#vgAuthMsg'); if(!el) return;
   el.textContent = text || '';
   el.style.color = ok ? '#34d399' : '#fb7185';
+}
+
+/* ── Recuperación de contraseña ─────────────────────────────── */
+async function buscarCuenta(){
+  var email=(qs('#vgAuthRecEmail')||{}).value||'';
+  var caja=qs('#vgAuthRecInfo');
+  if(!caja) return;
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email.trim())){ caja.style.display='none'; return; }
+  var c=SB(); if(!c) return;
+  try{
+    var r=await c.rpc('vg_buscar_cuenta',{p_email:email.trim()});
+    if(r.error || !r.data || !r.data.existe){ caja.style.display='none'; return; }
+    var d=r.data;
+    qs('#vgAuthRecNombre').textContent = d.nombre || 'Cliente';
+    qs('#vgAuthRecTel').textContent = d.tiene_telefono
+      ? 'WhatsApp: '+(d.phone_cc||'')+' '+(d.phone_oculto||'')
+      : 'Sin teléfono registrado';
+    caja.style.display='';
+  }catch(e){ caja.style.display='none'; }
+}
+
+async function solicitarCambio(){
+  var btn=qs('#vgAuthRecBtn');
+  var email=(qs('#vgAuthRecEmail').value||'').trim();
+  if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg('Escribe un correo válido.'); return; }
+  var c=SB(); if(!c){ msg('No hay conexión con el servidor.'); return; }
+  btn.disabled=true; btn.textContent='Enviando...';
+  try{
+    var r=await c.rpc('vg_solicitar_password',{p_email:email});
+    if(r.error) throw r.error;
+    /* Se responde igual exista o no la cuenta: decir "ese correo no
+       está registrado" permitiría averiguar quién tiene cuenta. */
+    msg('Solicitud enviada. Te contactaremos por WhatsApp con tu contraseña nueva.', true);
+    qs('#vgAuthRecBtn').style.display='none';
+    qs('#vgAuthRecInfo').style.display='none';
+  }catch(e){
+    msg('No se pudo enviar: '+(e.message||e));
+  }finally{
+    btn.disabled=false; btn.textContent='Solicitar cambio de contraseña';
+  }
 }
 function openAuth(){ buildAuthModal(); var m=qs('#vg10Auth'); if(m) m.classList.add('active'); }
 function closeAuth(){ var m=qs('#vg10Auth'); if(m) m.classList.remove('active'); window.__vgAuthIntent = null; }
@@ -24245,6 +24349,7 @@ async function doRegister(){
   var name  = (qs('#vgAuthRName')||{}).value || '';
   var email = ((qs('#vgAuthREmail')||{}).value || '').trim().toLowerCase();
   var phone = onlyDigits((qs('#vgAuthRPhone')||{}).value || '');
+  var cc    = ((qs('#vgAuthRCC')||{}).value || '+52');
   var pass  = (qs('#vgAuthRPass')||{}).value || '';
   if(!name.trim()){ msg('Escribe tu nombre.'); return; }
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg('Correo inválido.'); return; }
@@ -24255,7 +24360,7 @@ async function doRegister(){
   try{
     var r = await c.auth.signUp({
       email: email, password: pass,
-      options: { data: { name: name.trim(), phone: phone } }
+      options: { data: { name: name.trim(), phone: phone, phone_cc: cc } }
     });
     if(r.error){
       var m0 = r.error.message || '';
@@ -27639,12 +27744,112 @@ async function refreshAdminChat(ref){
   box.scrollTop=box.scrollHeight;
 }
 
+/* ═══════════════════════════════════════════════════════════════
+   SOLICITUDES DE CONTRASEÑA
+   Aquí NO se muestra la contraseña actual del cliente: Supabase la
+   guarda como hash irreversible y nadie puede leerla (es lo que
+   protege a tus clientes si la base se filtrara). En su lugar,
+   generas una temporal y se la mandas por WhatsApp.
+   ═══════════════════════════════════════════════════════════════ */
+async function renderPasswordRequests(cont){
+  var c=SB(); if(!c||!cont) return;
+  var r=await c.from('vg_password_requests').select('*')
+        .order('created_at',{ascending:false}).limit(50);
+  if(r.error){
+    cont.innerHTML='<span>🔑 Cambios de contraseña</span><div class="vg17-empty">Error: '+esc(r.error.message)+'</div>';
+    return;
+  }
+  var todos=r.data||[];
+  var pend=todos.filter(function(x){return x.estado==='pendiente';});
+  var otros=todos.filter(function(x){return x.estado!=='pendiente';}).slice(0,8);
+
+  cont.innerHTML='<span>🔑 Cambios de contraseña'+
+    (pend.length?' · <b style="color:#ffd68a">'+pend.length+' pendiente(s)</b>':'')+'</span>'+
+    (pend.length ? pend.map(fila).join('')
+                 : '<div class="vg17-empty" style="padding:20px">Ninguna solicitud pendiente.</div>')+
+    (otros.length
+      ? '<div style="margin-top:12px"><span style="display:block;color:#8593b5;font-size:.62rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:7px">Atendidas</span>'+
+        otros.map(function(x){
+          return '<div class="vgtk-mov"><div><b>'+esc(x.email)+'</b>'+
+            '<small>'+esc(dateMX(x.created_at))+'</small></div>'+
+            '<span class="vg17-chip '+(x.estado==='atendida'?'entregado':'cancelado')+'">'+esc(x.estado)+'</span></div>';
+        }).join('')+'</div>'
+      : '');
+
+  function fila(x){
+    var tel=(x.phone_cc||'')+(x.phone||'');
+    return '<div class="vg17-box" data-pw="'+esc(x.id)+'" style="margin-bottom:9px;border-color:rgba(139,92,246,.34);background:rgba(139,92,246,.07)">'+
+      '<div class="vg17-row"><div style="min-width:0">'+
+        '<b style="color:#fff;font-size:.94rem">'+esc(x.nombre||'Cliente')+'</b>'+
+        '<p style="margin:3px 0 0;color:#c4cee6;font-size:.8rem">📧 '+esc(x.email)+'</p>'+
+        (tel?'<p style="margin:2px 0 0;color:#c4cee6;font-size:.8rem">📱 '+esc(tel)+'</p>':'')+
+        '<p style="margin:3px 0 0;color:#8593b5;font-size:.72rem">Solicitado '+esc(dateMX(x.created_at))+'</p>'+
+      '</div>'+
+      (tel?'<a class="vg17-btn" target="_blank" rel="noopener" href="https://wa.me/'+esc(tel.replace(/[^0-9]/g,''))+'" style="flex:none;text-decoration:none">Abrir WhatsApp</a>':'')+
+      '</div>'+
+      '<div style="display:flex;gap:7px;margin-top:10px;flex-wrap:wrap">'+
+        '<input class="pw-nueva" placeholder="Contraseña nueva (o déjalo vacío para generarla)" style="flex:1;min-width:190px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;border-radius:10px;padding:9px 11px;font-family:inherit;font-size:.82rem">'+
+        '<button class="vg17-btn primary pw-gen">Generar y aplicar</button>'+
+        '<button class="vg17-btn pw-no">Rechazar</button>'+
+      '</div>'+
+      '<div class="pw-res" style="display:none;margin-top:10px;padding:12px;border-radius:12px;border:1px solid rgba(25,230,193,.40);background:rgba(25,230,193,.08)">'+
+        '<span style="display:block;color:#8ff5e3;font-size:.63rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px">Mándale estos datos</span>'+
+        '<div class="pw-datos" style="padding:10px 12px;border-radius:10px;background:rgba(0,0,0,.32);color:#e8f7f3;font-size:.84rem;white-space:pre-line;font-family:ui-monospace,Menlo,Consolas,monospace"></div>'+
+        '<button class="vg17-copy pw-copiar" style="margin-top:9px">📋 Copiar datos</button>'+
+      '</div>'+
+      '<div class="vg17-ok pw-msg"></div>'+
+    '</div>';
+  }
+
+  qsa('[data-pw]',cont).forEach(function(card){
+    var id=card.getAttribute('data-pw');
+    var msg=qs('.pw-msg',card), res=qs('.pw-res',card);
+    qs('.pw-gen',card).onclick=async function(){
+      var nueva=(qs('.pw-nueva',card).value||'').trim();
+      if(nueva && nueva.length<6){ msg.textContent='La contraseña debe tener al menos 6 caracteres.'; return; }
+      if(!confirm('Se cambiará la contraseña de esta cuenta.\n\nEl cliente ya no podrá entrar con la anterior.\n\n¿Continuar?')) return;
+      this.disabled=true; msg.textContent='';
+      try{
+        var r2=await SB().rpc('vg_admin_generar_password',{p_request:id, p_password:nueva||null});
+        if(r2.error) throw r2.error;
+        var d=r2.data;
+        var texto='Tu nueva contraseña de Vessel Games:\n\n'+
+                  'Correo: '+d.email+'\n'+
+                  'Contraseña: '+d.password+'\n\n'+
+                  'Entra y cámbiala desde tu cuenta.';
+        qs('.pw-datos',card).textContent=texto;
+        qs('.pw-copiar',card).setAttribute('data-copy',texto);
+        res.style.display='';
+        msg.textContent='Contraseña aplicada. Cópiala y mándasela ahora: no se vuelve a mostrar.';
+      }catch(e){ msg.textContent='Error: '+(e.message||e); this.disabled=false; }
+    };
+    qs('.pw-no',card).onclick=async function(){
+      if(!confirm('¿Rechazar esta solicitud?')) return;
+      this.disabled=true;
+      try{
+        var r3=await SB().rpc('vg_admin_rechazar_password',{p_request:id,p_nota:null});
+        if(r3.error) throw r3.error;
+        renderPasswordRequests(cont);
+      }catch(e){ msg.textContent='Error: '+(e.message||e); this.disabled=false; }
+    };
+  });
+}
+window.__vgCargarPasswords = renderPasswordRequests;
+
 async function renderAdminTickets(body){
   var c=SB();
+  /* Las solicitudes de contraseña van arriba de los reportes de falla:
+     son las que dejan al cliente sin poder entrar. */
+  body.innerHTML='<div class="vg17-box" id="vgPwReqs"><span>🔑 Cambios de contraseña</span>'+
+    '<div class="vg17-empty">Cargando...</div></div><div id="vgTicketsLista"></div>';
+  renderPasswordRequests(qs('#vgPwReqs'));
+  var lista=qs('#vgTicketsLista');
+
   var r=await c.from('vg_support_tickets').select('*').order('created_at',{ascending:false}).limit(200);
-  if(r.error){ body.innerHTML='<div class="vg17-empty">Error: '+esc(r.error.message)+'</div>'; return; }
+  if(r.error){ lista.innerHTML='<div class="vg17-empty">Error: '+esc(r.error.message)+'</div>'; return; }
   A.tickets=r.data||[];
-  if(!A.tickets.length){ body.innerHTML='<div class="vg17-empty">Sin reportes de falla.</div>'; return; }
+  if(!A.tickets.length){ lista.innerHTML='<div class="vg17-empty">Sin reportes de falla.</div>'; return; }
+  body=lista;
   body.innerHTML=A.tickets.map(function(t){
     return '<div class="vg17-box" data-t="'+esc(t.id)+'">'+
       '<div class="vg17-row"><b style="color:#fff">'+esc(t.product_name||'(reporte sin producto)')+'</b>'+
@@ -27758,6 +27963,16 @@ function startAdminRealtime(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'vg_support_tickets'}, function(){
       beep();
       alertNew('🛠 Nuevo reporte de falla', function(){ A.view='tickets'; loadAdmin(); });
+    })
+    /* Alguien olvidó su contraseña y pide cambio */
+    .on('postgres_changes',{event:'INSERT',schema:'public',table:'vg_password_requests'}, function(p){
+      var x=p.new||{};
+      beep();
+      alertNew('🔑 '+(x.nombre||'Un cliente')+' pidió cambio de contraseña',
+        function(){ showMineTab('soporte'); });
+      if(typeof window.__vgCargarPasswords==='function'){
+        var caja=qs('#vgPwReqs'); if(caja) window.__vgCargarPasswords(caja);
+      }
     })
     /* Alguien pidió su recompensa por tokens acumulados */
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'vg_token_redemptions'}, function(p){
