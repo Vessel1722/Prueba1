@@ -68,6 +68,10 @@ alter table public.vg_token_redemptions add column if not exists cliente_nombre 
 alter table public.vg_token_redemptions add column if not exists cliente_email  text;
 alter table public.vg_token_redemptions add column if not exists cliente_phone  text;
 alter table public.vg_token_redemptions add column if not exists saldo_previo   numeric;
+-- Cuánto se descontó de verdad. Es lo que se devuelve si se rechaza:
+-- si se devolviera el saldo previo completo, en modo "solo resta" se le
+-- estarían regalando tokens que nunca perdió.
+alter table public.vg_token_redemptions add column if not exists descontado     numeric;
 
 create index if not exists canjes_user_idx   on public.vg_token_redemptions(user_id, created_at desc);
 create index if not exists canjes_estado_idx on public.vg_token_redemptions(estado, created_at desc);
@@ -75,14 +79,20 @@ create index if not exists canjes_estado_idx on public.vg_token_redemptions(esta
 
 -- ─────────────────────────────────────────────────────────────
 -- 3. Cómo se descuenta al canjear
---    'reiniciar' → el saldo vuelve a 0 (lo que pediste).
---    'restar'    → solo se resta el costo de la recompensa.
---    Para cambiarlo:
---      update public.vg_token_config set valor=1 where clave='canje_solo_resta';
+--
+--    1 = solo se resta el costo (ACTIVO).
+--        Si junta 20 tokens y canjea uno de 5, le quedan 15.
+--        Es lo justo: quien más compra no pierde lo ahorrado, y el
+--        cliente frecuente sigue teniendo saldo para su siguiente premio.
+--
+--    0 = el saldo vuelve a 0 al canjear.
+--        Para volver a este modo:
+--        update public.vg_token_config set valor=0 where clave='canje_solo_resta';
 -- ─────────────────────────────────────────────────────────────
 insert into public.vg_token_config (clave, valor, nota) values
-  ('canje_solo_resta', 0, '0 = al canjear el saldo vuelve a 0 · 1 = solo se resta el costo')
-on conflict (clave) do nothing;
+  ('canje_solo_resta', 1, '1 = solo se resta el costo del premio · 0 = el saldo vuelve a 0')
+on conflict (clave) do update
+  set valor = excluded.valor, nota = excluded.nota;
 
 
 -- ─────────────────────────────────────────────────────────────
@@ -136,10 +146,10 @@ begin
   v_descuento := case when coalesce(v_solo_resta,false) then v_r.costo else v_saldo end;
 
   insert into public.vg_token_redemptions (
-    user_id, reward_id, reward_nombre, costo, saldo_previo, estado,
+    user_id, reward_id, reward_nombre, costo, saldo_previo, descontado, estado,
     cliente_nombre, cliente_email, cliente_phone
   ) values (
-    v_uid, v_r.id, v_r.nombre, v_r.costo, v_saldo, 'solicitada',
+    v_uid, v_r.id, v_r.nombre, v_r.costo, v_saldo, v_descuento, 'solicitada',
     v_u.name, v_u.email, v_u.phone
   ) returning * into v_canje;
 
@@ -237,10 +247,11 @@ begin
          entregada_at = case when p_estado='entregada' then now() else null end
    where id = p_canje;
 
-  -- Si se rechaza, se le devuelven los tokens que se le descontaron
+  -- Si se rechaza, se le devuelve EXACTAMENTE lo que se le descontó.
+  -- (En canjes viejos, sin la columna 'descontado', se cae al saldo previo.)
   if p_estado = 'rechazada' then
     perform public.vg_token_mover(
-      v_c.user_id, coalesce(v_c.saldo_previo,0), 'ajuste_admin', null,
+      v_c.user_id, coalesce(v_c.descontado, v_c.saldo_previo, 0), 'ajuste_admin', null,
       'Devolución por canje rechazado: ' || coalesce(v_c.reward_nombre,''), auth.uid()
     );
   end if;

@@ -26931,7 +26931,7 @@ async function pintarRecompensas(){
     aviso+
     '<p style="margin:6px 0 12px;color:#8e9cba;font-size:.79rem;line-height:1.5">'+
       'Cuando te alcance, pide tu recompensa y nosotros te la entregamos.'+
-      (d.pendiente?'':' <b style="color:#e8bf6d">Al canjear, tu contador vuelve a 0</b> y empieza a sumar otra vez con tu siguiente compra.')+
+      (d.pendiente?'':' <b style="color:#e8bf6d">Solo se descuenta lo que cuesta el premio</b>, el resto de tus tokens se queda para el siguiente.')+
     '</p>'+
     '<div class="vgtk-prem-grid">'+
       lista.map(function(p){
@@ -26947,7 +26947,7 @@ async function pintarRecompensas(){
           '</div>'+
           '<div class="vgtk-barra"><i style="width:'+pct+'%"></i></div>'+
           (p.alcanza
-            ? '<button class="vgtk-canjear" data-r="'+esc(p.id)+'" data-n="'+esc(p.nombre)+'"'+
+            ? '<button class="vgtk-canjear" data-r="'+esc(p.id)+'" data-n="'+esc(p.nombre)+'" data-c="'+esc(n(p.costo))+'"'+
               (puede?'':' disabled')+'>'+(d.pendiente?'Tienes un canje pendiente':'Pedir esta recompensa')+'</button>'
             : '<div class="vgtk-falta">Te faltan '+n(falta)+' token'+(falta===1?'':'s')+'</div>')+
         '</div>';
@@ -26968,7 +26968,8 @@ async function pintarRecompensas(){
     if(b.disabled) return;
     b.onclick=async function(){
       var nombre=b.getAttribute('data-n');
-      if(!confirm('Vas a pedir: '+nombre+'\n\nTu contador de tokens volverá a 0 y empezará a sumar de nuevo con tu siguiente compra.\n\n¿Confirmas?')) return;
+      var costo=b.getAttribute('data-c')||'';
+      if(!confirm('Vas a pedir: '+nombre+'\n\nSe descontarán '+costo+' tokens de tu saldo. El resto se queda para tu siguiente recompensa.\n\n¿Confirmas?')) return;
       b.disabled=true; b.textContent='Enviando...';
       try{
         var res=await SB().rpc('vg_canjear_recompensa',{p_reward:b.getAttribute('data-r')});
