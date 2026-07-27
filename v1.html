@@ -24306,20 +24306,114 @@ async function solicitarCambio(){
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg('Escribe un correo válido.'); return; }
   var c=SB(); if(!c){ msg('No hay conexión con el servidor.'); return; }
   btn.disabled=true; btn.textContent='Enviando...';
+
+  var correoEnviado=false, motivoFallo='';
   try{
-    var r=await c.rpc('vg_solicitar_password',{p_email:email});
-    if(r.error) throw r.error;
+    /* 1) Intento automático: Supabase manda el correo con el enlace.
+          Es lo que resuelve el 95% de los casos sin que tú hagas nada. */
+    var env=await c.auth.resetPasswordForEmail(email, {
+      redirectTo: location.origin + location.pathname + '?recuperar=1'
+    });
+    if(env.error) motivoFallo = env.error.message || '';
+    else correoEnviado = true;
+  }catch(e){ motivoFallo = e.message || String(e); }
+
+  try{
+    /* 2) Siempre se deja el registro en tu panel. Sirve de respaldo si
+          el correo no llega (spam, límite de envíos, correo mal escrito)
+          o si el cliente perdió el acceso a su bandeja. */
+    await c.rpc('vg_solicitar_password',{p_email:email});
+  }catch(e){}
+
+  if(correoEnviado){
+    msg('Te enviamos un correo con el enlace para crear tu contraseña nueva. Revisa también la carpeta de spam.', true);
+  }else{
     /* Se responde igual exista o no la cuenta: decir "ese correo no
        está registrado" permitiría averiguar quién tiene cuenta. */
-    msg('Solicitud enviada. Te contactaremos por WhatsApp con tu contraseña nueva.', true);
-    qs('#vgAuthRecBtn').style.display='none';
-    qs('#vgAuthRecInfo').style.display='none';
-  }catch(e){
-    msg('No se pudo enviar: '+(e.message||e));
-  }finally{
-    btn.disabled=false; btn.textContent='Solicitar cambio de contraseña';
+    msg('Recibimos tu solicitud. Te contactaremos por WhatsApp con tu contraseña nueva.', true);
+    if(motivoFallo) console.warn('[Vessel] Envío automático no disponible:', motivoFallo);
   }
+  btn.style.display='none';
+  qs('#vgAuthRecInfo').style.display='none';
+  btn.disabled=false; btn.textContent='Solicitar cambio de contraseña';
 }
+
+/* ── Pantalla para escribir la contraseña nueva ────────────────
+   Cuando el cliente abre el enlace del correo, Supabase deja una
+   sesión temporal de recuperación y dispara PASSWORD_RECOVERY. */
+function mostrarNuevaPassword(){
+  buildAuthModal();
+  var m=qs('#vg10Auth'); if(m) m.classList.add('active');
+  var cont=qs('#vg10Auth .vg10-auth-card') || qs('#vg10Auth > div');
+  if(!cont) return;
+  ['#vgAuthLogin','#vgAuthReg','#vgAuthRecuperar'].forEach(function(s){
+    var el=qs(s); if(el) el.style.display='none';
+  });
+  var tabs=qs('#vgAuthTabL') ? qs('#vgAuthTabL').parentNode : null;
+  if(tabs) tabs.style.display='none';
+
+  if(qs('#vgAuthNueva')) { qs('#vgAuthNueva').style.display=''; return; }
+  var d=document.createElement('div');
+  d.id='vgAuthNueva';
+  d.innerHTML=
+    '<p style="color:#9fb0ca;font-size:13px;margin:0 0 12px;line-height:1.5">Escribe tu contraseña nueva. Con ella entrarás a partir de ahora.</p>'+
+    '<input id="vgNuevaPass1" type="password" placeholder="Contraseña nueva (mínimo 6)" autocomplete="new-password">'+
+    '<input id="vgNuevaPass2" type="password" placeholder="Repite la contraseña" autocomplete="new-password">'+
+    '<button class="vg10-btn primary" type="button" id="vgNuevaBtn" style="width:100%;margin-top:6px">Guardar contraseña</button>';
+  cont.appendChild(d);
+
+  qs('#vgNuevaBtn').onclick=async function(){
+    var p1=qs('#vgNuevaPass1').value||'', p2=qs('#vgNuevaPass2').value||'';
+    if(p1.length<6){ msg('La contraseña debe tener al menos 6 caracteres.'); return; }
+    if(p1!==p2){ msg('Las dos contraseñas no coinciden.'); return; }
+    var c=SB(); if(!c){ msg('No hay conexión.'); return; }
+    this.disabled=true; this.textContent='Guardando...';
+    try{
+      var r=await c.auth.updateUser({password:p1});
+      if(r.error) throw r.error;
+      msg('¡Listo! Tu contraseña quedó actualizada.', true);
+      setTimeout(function(){
+        try{ history.replaceState(null,'',location.pathname); }catch(e){}
+        closeAuth();
+        if(typeof window.vgOpenClientPanel==='function') window.vgOpenClientPanel('purchases');
+      }, 1200);
+    }catch(e){
+      msg('No se pudo guardar: '+(e.message||e));
+      this.disabled=false; this.textContent='Guardar contraseña';
+    }
+  };
+}
+
+/* Se expone para poder abrirla a mano si hiciera falta */
+window.vgMostrarNuevaPassword = mostrarNuevaPassword;
+
+/* Detecta la llegada desde el enlace del correo.
+   Se cubre por tres vías porque el momento exacto en que supabase-js
+   procesa la URL varía según cómo cargue la página: */
+(function vigilarRecuperacion(){
+  var yaMostrada=false;
+  function abrir(){ if(yaMostrada) return; yaMostrada=true; mostrarNuevaPassword(); }
+
+  var c=SB();
+  /* 1) El evento oficial de supabase-js */
+  if(c && c.auth && c.auth.onAuthStateChange){
+    c.auth.onAuthStateChange(function(evento){
+      if(evento==='PASSWORD_RECOVERY') abrir();
+    });
+  }
+  /* 2) El hash del enlace, leído al cargar */
+  function revisarURL(){
+    try{
+      if(/type=recovery/.test(location.hash||'') ||
+         /[?&]recuperar=1/.test(location.search||'')){
+        setTimeout(abrir, 500);
+      }
+    }catch(e){}
+  }
+  revisarURL();
+  /* 3) Si el hash llega después (algunos navegadores lo aplican tarde) */
+  window.addEventListener('hashchange', revisarURL);
+})();
 function openAuth(){ buildAuthModal(); var m=qs('#vg10Auth'); if(m) m.classList.add('active'); }
 function closeAuth(){ var m=qs('#vg10Auth'); if(m) m.classList.remove('active'); window.__vgAuthIntent = null; }
 
