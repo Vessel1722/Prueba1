@@ -203,7 +203,10 @@ begin
     ), '[]'::json),
     'historial', coalesce((
       select json_agg(h) from (
-        select reward_nombre, costo, estado, created_at
+        -- nota_admin es lo que le escribes al resolver el canje (los
+        -- datos de la cuenta, el código, o el motivo del rechazo).
+        -- Sin traerla aquí, el cliente nunca veía tu mensaje.
+        select reward_nombre, costo, estado, created_at, nota_admin, entregada_at
           from public.vg_token_redemptions
          where user_id = v_uid
          order by created_at desc limit 10

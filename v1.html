@@ -26103,6 +26103,49 @@ else init();
   color:#ffd68a;font-size:.82rem;line-height:1.5;
 }
 .vgtk-pend b{color:#fff}
+
+/* ── Tarjeta de canje con el mensaje del admin ──
+   Aquí es donde el cliente reclama su premio: el mensaje que le
+   escribes al entregar (código, correo y contraseña, instrucciones)
+   se muestra destacado y con botón de copiar. */
+.vgtk-canje{
+  padding:12px 13px;border-radius:14px;margin-bottom:9px;
+  border:1px solid rgba(255,255,255,.09);background:rgba(255,255,255,.035);
+}
+.vgtk-canje.con-premio{
+  border-color:rgba(25,230,193,.38);
+  background:linear-gradient(160deg,rgba(25,230,193,.10),rgba(255,255,255,.02));
+}
+.vgtk-canje-top{display:flex;align-items:flex-start;justify-content:space-between;gap:10px}
+.vgtk-canje-top b{display:block;color:#fff;font-size:.88rem}
+.vgtk-canje-top small{display:block;color:#8e9cba;font-size:.68rem;margin-top:2px}
+.vgtk-canje-top .vg17-chip{flex:none;margin-top:0}
+
+.vgtk-premio-msg{margin-top:10px}
+.vgtk-premio-msg > span{
+  display:block;color:#8ff5e3;font-size:.63rem;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:6px;
+}
+.vgtk-premio-msg .dato{
+  padding:11px 13px;border-radius:11px;white-space:pre-line;word-break:break-word;
+  background:rgba(0,0,0,.32);border:1px solid rgba(25,230,193,.30);
+  color:#e8f7f3;font-size:.85rem;line-height:1.5;
+  /* Monoespaciada: distingue la l de la 1 y la O del 0, que es donde
+     la gente se equivoca al teclear una contraseña o un código. */
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+}
+.vgtk-premio-msg .vg17-copy{margin-top:9px}
+
+.vgtk-nota-msg{margin-top:9px}
+.vgtk-nota-msg > span{
+  display:block;color:#8e9cba;font-size:.62rem;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:5px;
+}
+.vgtk-nota-msg > div{
+  padding:10px 12px;border-radius:11px;
+  background:rgba(255,255,255,.045);border:1px solid rgba(255,255,255,.08);
+  color:#c4cee6;font-size:.81rem;line-height:1.5;white-space:pre-line;
+}
 @media(max-width:640px){
   .vgtk-prem-grid{grid-template-columns:1fr}
 }
@@ -26954,13 +26997,33 @@ async function pintarRecompensas(){
       }).join('')+
     '</div>'+
     (hist.length
-      ? '<div style="margin-top:14px"><span style="display:block;color:#8e9cba;font-size:.62rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:8px">Tus canjes</span>'+
+      ? '<div style="margin-top:16px"><span style="display:block;color:#8e9cba;font-size:.62rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px">Tus canjes</span>'+
         hist.map(function(h){
-          var col = h.estado==='entregada'?'entregado':h.estado==='rechazada'?'cancelado':'pendiente';
-          var txt = h.estado==='entregada'?'Entregada':h.estado==='rechazada'?'Rechazada':'En proceso';
-          return '<div class="vgtk-mov"><div><b>'+esc(h.reward_nombre)+'</b>'+
-            '<small>'+esc(hace(h.created_at))+'</small></div>'+
-            '<span class="vg17-chip '+col+'">'+txt+'</span></div>';
+          var entregada = h.estado==='entregada';
+          var rechazada = h.estado==='rechazada';
+          var col = entregada?'entregado':rechazada?'cancelado':'pendiente';
+          var txt = entregada?'Entregada':rechazada?'Rechazada':'En proceso';
+          var nota = (h.nota_admin||'').trim();
+          return '<div class="vgtk-canje'+(entregada&&nota?' con-premio':'')+'">'+
+            '<div class="vgtk-canje-top">'+
+              '<div style="min-width:0"><b>'+esc(h.reward_nombre)+'</b>'+
+              '<small>Solicitada '+esc(hace(h.created_at))+
+                (entregada&&h.entregada_at?' · entregada '+esc(hace(h.entregada_at)):'')+'</small></div>'+
+              '<span class="vg17-chip '+col+'">'+txt+'</span>'+
+            '</div>'+
+            /* El mensaje del admin es lo que el cliente necesita para
+               reclamar su premio: va destacado y con botón de copiar. */
+            (nota
+              ? (entregada
+                  ? '<div class="vgtk-premio-msg"><span>🎁 Tu recompensa</span>'+
+                    '<div class="dato">'+esc(nota)+'</div>'+
+                    '<button class="vg17-copy" data-copy="'+esc(nota)+'">📋 Copiar datos</button></div>'
+                  : '<div class="vgtk-nota-msg"><span>Mensaje de Vessel Games</span>'+
+                    '<div>'+esc(nota)+'</div></div>')
+              : (entregada
+                  ? '<div class="vgtk-nota-msg"><div>Ya te la entregamos. Si no la recibiste, escríbenos por el chat de tu pedido.</div></div>'
+                  : ''))+
+          '</div>';
         }).join('')+'</div>'
       : '');
 
@@ -27866,6 +27929,20 @@ async function startGlobalNotifications(){
     .on('postgres_changes',{event:'INSERT',schema:'public',table:'orders'}, function(p){
       var o=p.new||{};
       if(o.id && N.orderIds.indexOf(String(o.id))===-1) N.orderIds.push(String(o.id));
+    })
+    /* Su recompensa fue resuelta: se le avisa al momento. Sin esto
+       tendría que entrar a "Mis tokens" a ver si ya le respondiste. */
+    .on('postgres_changes',{event:'UPDATE',schema:'public',table:'vg_token_redemptions'}, function(p){
+      var x=p.new||{}, antes=p.old||{};
+      if(antes.estado===x.estado) return;           /* no cambió el estado */
+      if(x.estado!=='entregada' && x.estado!=='rechazada') return;
+      beep();
+      var msg = x.estado==='entregada'
+        ? '🎁 ¡Tu recompensa está lista! — '+(x.reward_nombre||'')
+        : 'Tu canje de '+(x.reward_nombre||'')+' no procedió. Te devolvimos tus tokens.';
+      alertNew(msg, function(){ window.vgOpenClientPanel('tokens'); });
+      /* Si ya está viendo sus tokens, se refresca sola */
+      if(qs('#vg17Client').classList.contains('active') && C.view==='tokens') loadClient();
     })
     .subscribe();
 }
