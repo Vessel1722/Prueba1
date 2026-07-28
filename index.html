@@ -15960,7 +15960,19 @@ function readRetroSelectedFromDOM(){
   const cards=$$('#retroGridContainer .vg-retro-game.active,#retroGridContainer .retro-game.active');
   return cards.map(card=>{
     const name=(card.querySelector('h4')?.textContent||'Juego Xbox Retro').trim();
-    const price=parseMoney(card.querySelector('.vg-retro-price,.retro-price')?.textContent||'0');
+    const nodo=card.querySelector('.vg-retro-price,.retro-price');
+    /* SIEMPRE se suma en pesos. El módulo de moneda guarda el importe
+       original en data-vg-mxn; si en su lugar se leyera el texto que se
+       ve en pantalla, estando en USD se sumarían dólares como si fueran
+       pesos y el total se volvería a convertir: 4.12+4.12+5.88 acababa
+       mostrando $0.83 USD en vez de $14.12 USD. */
+    let price=0;
+    if(nodo){
+      const guardado=nodo.dataset ? nodo.dataset.vgMxn : null;
+      price = (guardado!=null && guardado!=='' && !isNaN(Number(guardado)))
+        ? Number(guardado)
+        : parseMoney(nodo.textContent||'0');
+    }
     return {name,price};
   }).filter(g=>g.name);
 }
