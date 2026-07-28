@@ -15456,16 +15456,30 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
   }
 
   function registerPriceNodes(){
+    /* Esta lista se quedaba corta: la oferta principal (#ffOfferPrice,
+       #ffOnlyPrice), el modal de pago y varias vistas de producto no
+       estaban, así que al cambiar a USD esos precios seguían en pesos. */
     const selectors = [
       '.price',
       '.service-carousel-price',
       '.vg-retro-price',
+      '.retro-price',
+      '.vg-xbox-price',
+      '.vgqv-price',
+      '.cart-price-box',
       '#retroSubtotal',
       '#retroDiscount',
       '#retroTotal',
       '#cartSubtotal',
       '#cartTotal',
       '#modalPrice',
+      /* Oferta principal del inicio */
+      '#ffOfferPrice',
+      '#ffOnlyPrice',
+      '#fPrice',
+      /* Modal de pago */
+      '#payModalTotal',
+      '#payOriginalTotal',
       '.option strong',
       '.option-price'
     ];
@@ -15504,6 +15518,34 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 
     try{ localStorage.setItem('vg_currency', currentCurrency); }catch(e){}
   }
+
+  /* El catálogo se repinta al filtrar, buscar o abrir un modal, y esos
+     precios nuevos nacían siempre en pesos aunque el cliente hubiera
+     elegido USD. Este vigilante los convierte en cuanto aparecen.
+     La bandera "aplicando" evita que el propio cambio de texto vuelva
+     a disparar el observador en bucle. */
+  let aplicandoMoneda = false;
+  function vigilarPreciosNuevos(){
+    if(!document.body) return;
+    let pendiente = false;
+    new MutationObserver(() => {
+      if(aplicandoMoneda || pendiente) return;
+      pendiente = true;
+      /* Se usa setTimeout y NO requestAnimationFrame: rAF no se ejecuta
+         cuando la pestaña está en segundo plano o no visible, y ahí los
+         precios nuevos se quedaban en pesos hasta volver a la pestaña. */
+      setTimeout(() => {
+        pendiente = false;
+        if(currentCurrency === 'MXN') return;   /* en pesos no hay nada que convertir */
+        aplicandoMoneda = true;
+        try{ updatePrices(); }
+        finally{ setTimeout(() => { aplicandoMoneda = false; }, 30); }
+      }, 60);
+    }).observe(document.body, {childList:true, subtree:true});
+  }
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', vigilarPreciosNuevos);
+  else vigilarPreciosNuevos();
 
   function addTrustStrip(){
     const hero = document.querySelector('.hero .lead, .hero p');
@@ -29676,6 +29718,153 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 else init();
 })();
 </script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 28 — Tema nuevo del panel del cliente
+     Pasa del gris plano a un tema con profundidad: superficies de
+     cristal sobre un fondo con aurora suave, acentos de marca y
+     jerarquía más marcada. Va al final para ganar la cascada.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-tema-cliente-v28">
+#vg17Client{
+  --cl-borde:rgba(255,255,255,.10);
+  --cl-borde-vivo:rgba(139,92,246,.38);
+  --cl-texto:#e9eefb;
+  --cl-suave:#93a2c4;
+  --cl-morado:#8b5cf6;
+  --cl-turquesa:#19e6c1;
+  /* Aurora de fondo: tres focos suaves en vez de negro plano */
+  background:
+    radial-gradient(115% 58% at 6% -10%, rgba(139,92,246,.20), transparent 62%),
+    radial-gradient(95% 48% at 98% 2%, rgba(25,230,193,.13), transparent 58%),
+    radial-gradient(90% 60% at 50% 108%, rgba(139,92,246,.10), transparent 60%),
+    #06070f !important;
+}
+/* Textura muy sutil para que el fondo no se vea "muerto" */
+#vg17Client::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background-image:radial-gradient(rgba(255,255,255,.035) 1px, transparent 1px);
+  background-size:26px 26px;opacity:.5;
+}
+#vg17Client .vg17-wrap{position:relative;z-index:1}
+
+/* ── Cabecera de cristal ── */
+#vg17Client .vg17-top{
+  background:linear-gradient(180deg,rgba(10,12,22,.92),rgba(10,12,22,.62)) !important;
+  backdrop-filter:blur(18px) saturate(1.3);
+  border-bottom:1px solid var(--cl-borde) !important;
+  border-radius:0 0 20px 20px;
+  padding:16px 14px !important;
+  margin:0 -2px;
+}
+#vg17Client .vg17-avatar{
+  border-radius:16px;
+  box-shadow:0 10px 28px rgba(139,92,246,.45), inset 0 1px 0 rgba(255,255,255,.40);
+}
+
+/* ── Pestañas tipo píldora con relieve ── */
+#vg17Client .vg17-tabs{gap:8px !important;padding:16px 0 18px !important}
+#vg17Client .vg17-tab:not(.active){
+  background:rgba(255,255,255,.05) !important;
+  border-color:var(--cl-borde) !important;
+  backdrop-filter:blur(8px);
+}
+#vg17Client .vg17-tab.active{
+  box-shadow:0 10px 26px rgba(139,92,246,.38), inset 0 1px 0 rgba(255,255,255,.30) !important;
+}
+
+/* ── Tarjetas de cristal ── */
+#vg17Client .vg17-stat,
+#vg17Client .vg17-box,
+#vg17Client .vg17-card{
+  background:linear-gradient(158deg,rgba(255,255,255,.075),rgba(255,255,255,.022)) !important;
+  border:1px solid var(--cl-borde) !important;
+  backdrop-filter:blur(12px);
+  box-shadow:0 10px 30px rgba(0,0,0,.30), inset 0 1px 0 rgba(255,255,255,.07);
+}
+#vg17Client .vg17-stat{border-radius:20px !important;overflow:hidden}
+#vg17Client .vg17-stat::before{width:4px !important}
+#vg17Client .vg17-stat b{
+  background:linear-gradient(135deg,#fff,#c3d0f0);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+#vg17Client .vg17-box{border-radius:20px !important}
+#vg17Client .vg17-box > span{
+  color:var(--cl-suave) !important;
+  font-size:.64rem !important;letter-spacing:.13em !important;
+}
+#vg17Client .vg17-card{border-radius:19px !important}
+#vg17Client .vg17-card:hover{
+  transform:translateY(-3px);
+  border-color:var(--cl-borde-vivo) !important;
+  box-shadow:0 16px 38px rgba(139,92,246,.20), inset 0 1px 0 rgba(255,255,255,.09) !important;
+}
+#vg17Client .vg17-card.active{
+  background:linear-gradient(150deg,rgba(139,92,246,.20),rgba(25,230,193,.07)) !important;
+  border-color:var(--cl-borde-vivo) !important;
+}
+#vg17Client .vg17-thumb{
+  box-shadow:0 6px 18px rgba(139,92,246,.30), inset 0 1px 0 rgba(255,255,255,.25);
+}
+
+/* ── Encabezado del pedido ── */
+#vg17Client .vg17-hero{
+  border-radius:22px !important;
+  border-color:var(--cl-borde-vivo) !important;
+  box-shadow:0 14px 40px rgba(139,92,246,.18);
+}
+#vg17Client .vg17-hero-price{
+  background:linear-gradient(135deg,#8ff5e3,#19e6c1);
+  -webkit-background-clip:text;background-clip:text;
+  -webkit-text-fill-color:transparent;
+}
+
+/* ── Chat ── */
+#vg17Client .vg17-msgs{
+  border-radius:20px !important;
+  border-color:var(--cl-borde) !important;
+  box-shadow:inset 0 2px 14px rgba(0,0,0,.35);
+}
+#vg17Client .vg17-inputbar{
+  border-radius:20px !important;
+  backdrop-filter:blur(10px);
+  box-shadow:inset 0 1px 0 rgba(255,255,255,.06);
+}
+#vg17Client .vg17-btn.primary{
+  box-shadow:0 10px 26px rgba(139,92,246,.36), inset 0 1px 0 rgba(255,255,255,.30) !important;
+}
+#vg17Client .vg17-btn:not(.primary):not(.ok){
+  background:rgba(255,255,255,.055) !important;
+  border-color:var(--cl-borde) !important;
+  backdrop-filter:blur(8px);
+}
+
+/* ── Formularios ── */
+#vg17Client .vg17-form input,
+#vg17Client .vg17-form select,
+#vg17Client .vg17-form textarea{
+  background:rgba(255,255,255,.055) !important;
+  border-color:var(--cl-borde) !important;
+  border-radius:15px !important;
+  backdrop-filter:blur(8px);
+}
+
+/* ── Recompensas ── */
+#vg17Client .vgtk-prem{border-radius:18px !important;backdrop-filter:blur(10px)}
+#vg17Client .vgtk-prem.listo{box-shadow:0 10px 28px rgba(232,191,109,.20)}
+
+/* ── Estado vacío ── */
+#vg17Client .vg17-empty{color:var(--cl-suave) !important}
+
+@media(max-width:900px){
+  #vg17Client .vg17-top{border-radius:0 0 16px 16px;padding:12px !important}
+  #vg17Client .vg17-stat,#vg17Client .vg17-box{border-radius:17px !important}
+  #vg17Client .vg17-card{border-radius:16px !important}
+  /* El desenfoque en muchas superficies pesa en móvil: se aligera */
+  #vg17Client .vg17-card,#vg17Client .vg17-stat{backdrop-filter:none}
+}
+</style>
 
 <!-- ════════════════════════════════════════════════════════════════
      FASE 27 — Encimamientos en móvil (Xbox Retro y Actas Gob)
