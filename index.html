@@ -13862,7 +13862,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 <div id="vgPageLoader"><div class="vgpl-inner"><div class="vgpl-mark">VG</div><div class="vgpl-spinner"></div></div></div>
 <header class="topbar">
 <div class="nav">
-<a class="brand" href="javascript:void(0)" onclick="showHome()"><img alt="Vessel Games logo" decoding="async" id="brandLogo" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%2319e6c1'/%3E%3Cstop offset='.55' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%23ff5da8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%23080a12'/%3E%3Cpath d='M14 18h10l8 24 8-24h10L38 50H26L14 18z' fill='url(%23g)'/%3E%3Ccircle cx='48' cy='16' r='5' fill='%2319e6c1'/%3E%3C/svg%3E'"/><span>Vessel Games<small>Catálogo digital premium</small></span></a>
+<a class="brand" href="javascript:void(0)" onclick="showHome()"><div class="vg-brand-ring"><img alt="Vessel Games logo" decoding="async" id="brandLogo" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%2319e6c1'/%3E%3Cstop offset='.55' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%23ff5da8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%23080a12'/%3E%3Cpath d='M14 18h10l8 24 8-24h10L38 50H26L14 18z' fill='url(%23g)'/%3E%3Ccircle cx='48' cy='16' r='5' fill='%2319e6c1'/%3E%3C/svg%3E'"/></div><span>Vessel <i class="vg-wm">Games</i><small>Catálogo digital premium</small></span></a>
 <label class="searchbar">🔎 <input id="globalSearch" oninput="renderProducts()" placeholder="Buscar juegos, cuentas, software, monedas..."/></label>
 <div class="nav-actions"><button class="pill" onclick="vgOpenCotizar()">Cotizar</button><button class="pill" onclick="showSection('all')">Catálogo</button>
 <div aria-label="Cambiar moneda" class="vg-currency-toggle" id="vgCurrencyToggle">
@@ -30625,6 +30625,92 @@ else init();
 /* Respeta a quien pidió menos movimiento */
 @media(prefers-reduced-motion:reduce){
   #vg17Client::after{animation:none;display:none}
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 30 — Encabezado: marco neón en el logo y degradado en el nombre
+     Va al final porque hay unas quince reglas repartidas por el archivo
+     que tocan .brand; esta es la última que lee el navegador.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-marca-v30">
+/* ── Anillo de degradado alrededor del logo ──
+   El degradado es el fondo del contenedor y la imagen se monta encima
+   dejando 2px libres: eso dibuja el marco sin necesidad de un borde,
+   que no admite degradados. */
+html body .nav a.brand .vg-brand-ring{
+  width:44px;height:44px;flex:none;padding:2px;
+  border-radius:13px;
+  background:linear-gradient(135deg,#19e6c1,#8b5cf6 55%,#ff5da8);
+  box-shadow:0 0 20px rgba(25,230,193,.35);
+  display:block;line-height:0;
+  transition:box-shadow .2s, transform .2s;
+}
+html body .nav a.brand:hover .vg-brand-ring{
+  box-shadow:0 0 26px rgba(25,230,193,.55);
+  transform:translateY(-1px);
+}
+html body .nav a.brand .vg-brand-ring > img{
+  width:100% !important;height:100% !important;
+  border-radius:11px !important;
+  display:block !important;
+  object-fit:cover !important;
+  background:#080a12 !important;
+  margin:0 !important;box-shadow:none !important;border:0 !important;
+}
+
+/* ── Nombre de la marca ── */
+html body .nav a.brand > span{
+  font-family:'Barlow Condensed',Inter,system-ui,sans-serif !important;
+  font-size:22px !important;
+  font-weight:800 !important;
+  letter-spacing:1.6px !important;
+  text-transform:uppercase !important;
+  line-height:1 !important;
+  color:#eef0fa !important;
+}
+/* "GAMES" en degradado: da jerarquía sin ocupar ni un píxel más */
+html body .nav a.brand .vg-wm{
+  font-style:normal !important;
+  background:linear-gradient(90deg,#19e6c1,#8b5cf6) !important;
+  -webkit-background-clip:text !important;background-clip:text !important;
+  -webkit-text-fill-color:transparent !important;
+  color:#19e6c1;   /* respaldo si el navegador no recorta el fondo */
+}
+
+/* ── Subtítulo ──
+   Antes iba a 8.96px y en verde: ilegible y compitiendo con el nombre.
+   Ahora sube a 10px y baja a gris, que es su papel real. */
+html body .nav a.brand > span > small{
+  display:block !important;
+  font-family:Inter,system-ui,sans-serif !important;
+  font-size:10px !important;
+  font-weight:700 !important;
+  letter-spacing:1.6px !important;
+  text-transform:uppercase !important;
+  color:#7c8ba3 !important;
+  margin-top:3px !important;
+  line-height:1.1 !important;
+}
+
+/* ── Móvil ──
+   "Catálogo digital premium" a 10px no cabe junto a los botones de la
+   barra: se cortaba con puntos suspensivos ("CATÁLOGO DIGITAL PREMI…").
+   Aquí se acorta el texto en vez de encogerlo hasta lo ilegible. */
+@media(max-width:640px){
+  html body .nav a.brand .vg-brand-ring{width:42px;height:42px;border-radius:12px}
+  html body .nav a.brand .vg-brand-ring > img{border-radius:10px !important}
+  html body .nav a.brand > span{font-size:20px !important;letter-spacing:1.4px !important}
+  html body .nav a.brand > span > small{
+    font-size:0 !important;letter-spacing:0 !important;
+  }
+  html body .nav a.brand > span > small::after{
+    content:"Catálogo digital";
+    font-size:9.5px;letter-spacing:1.3px;
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  html body .nav a.brand:hover .vg-brand-ring{transform:none}
 }
 </style>
 
