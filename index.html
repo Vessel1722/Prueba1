@@ -15467,16 +15467,20 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
       '.vg-xbox-price',
       '.vgqv-price',
       '.cart-price-box',
-      '#retroSubtotal',
-      '#retroDiscount',
-      '#retroTotal',
+      /* Los totales del retro NO van aquí: se escriben solos en la
+         moneda elegida (ver updateRetroDOMTotals). Si además los
+         convirtiera este módulo, los dos se pisarían y volvería el
+         parpadeo entre MXN y USD. */
       '#cartSubtotal',
       '#cartTotal',
       '#modalPrice',
-      /* Oferta principal del inicio */
+      /* Oferta principal del inicio: el total y CADA paquete */
       '#ffOfferPrice',
       '#ffOnlyPrice',
       '#fPrice',
+      '.ff-package em',
+      '.ff-only-package em',
+      '.vgoffer-pkg-row .price',
       /* Modal de pago */
       '#payModalTotal',
       '#payOriginalTotal',
@@ -15487,7 +15491,14 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
     document.querySelectorAll(selectors.join(',')).forEach(node => {
       const text = node.textContent || '';
       if(!text.includes('$')) return;
-      if(!node.dataset.vgMxn){
+      /* Se vuelve a leer si el texto sigue en pesos. Antes solo se
+         guardaba la primera vez, y en totales que cambian solos (los
+         del modal retro, el carrito) el valor del caché se quedaba
+         viejo: al convertir se escribía un importe equivocado y el
+         código de la tienda lo reescribía en pesos, entrando los dos
+         en un ciclo de ida y vuelta. */
+      const enPesos = /MXN/i.test(text) || !/USD/i.test(text);
+      if(!node.dataset.vgMxn || enPesos){
         const parsed = parseMoney(text);
         if(parsed !== null && !Number.isNaN(parsed)){
           node.dataset.vgMxn = String(parsed);
@@ -15496,14 +15507,30 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
     });
   }
 
+  /* Expresión del importe con su moneda, para poder sustituir SOLO esa
+     parte y no borrar el texto que la rodea. */
+  const RE_IMPORTE = /-?\$\s*[\d,]+(?:\.\d+)?(?:\s*(?:MXN|USD))?/i;
+
   function updatePrices(){
     registerPriceNodes();
 
-    document.querySelectorAll('[data-vg-mxn], [data-vgMxn]').forEach(node => {
-      const raw = node.dataset.vgMxn || node.dataset.vgMxn;
-      const value = Number(raw);
+    document.querySelectorAll('[data-vg-mxn]').forEach(node => {
+      const value = Number(node.dataset.vgMxn);
       if(Number.isNaN(value)) return;
-      node.textContent = currentCurrency === 'USD' ? usd(value) : mxn(value);
+      const nuevo = currentCurrency === 'USD' ? usd(value) : mxn(value);
+      const actual = node.textContent || '';
+
+      /* Si el nodo lleva más texto que el precio (por ejemplo el botón
+         "Comprar 3 juegos · $15 MXN"), se reemplaza únicamente el
+         importe. Antes se sobrescribía todo el contenido y el botón
+         se quedaba solo con la cifra. */
+      const soloPrecio = actual.trim().replace(RE_IMPORTE, '').trim() === '';
+      if(soloPrecio){
+        if(actual !== nuevo) node.textContent = nuevo;
+      }else if(RE_IMPORTE.test(actual)){
+        const reemplazado = actual.replace(RE_IMPORTE, nuevo);
+        if(actual !== reemplazado) node.textContent = reemplazado;
+      }
     });
   }
 
@@ -15518,6 +15545,17 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 
     try{ localStorage.setItem('vg_currency', currentCurrency); }catch(e){}
   }
+
+  /* Se expone el formateador para que el resto del sitio pueda escribir
+     los importes ya en la moneda elegida, en vez de escribirlos en pesos
+     y que este módulo los reconvierta después. Eso último provocaba
+     parpadeo en los totales que se refrescan solos (el modal retro los
+     reescribe cada 800 ms). */
+  window.vgFormatPrecio = function(valorMXN){
+    var n = Number(valorMXN||0);
+    return currentCurrency === 'USD' ? usd(n) : mxn(n);
+  };
+  window.vgMonedaActual = function(){ return currentCurrency; };
 
   /* El catálogo se repinta al filtrar, buscar o abrir un modal, y esos
      precios nuevos nacían siempre en pesos aunque el cliente hubiera
@@ -15934,13 +15972,21 @@ function retroCalcDOM(){
 }
 function updateRetroDOMTotals(){
   const t=retroCalcDOM();
+  /* Se escribe directamente en la moneda elegida. Antes se escribía
+     siempre en pesos y el módulo de moneda lo reconvertía a dólares;
+     como esta función corre cada 800 ms, los dos se pisaban y el total
+     parpadeaba entre MXN y USD sin parar. */
+  const f = (typeof window.vgFormatPrecio === 'function') ? window.vgFormatPrecio : money;
   const c=$('#retroCount'), s=$('#retroSubtotal'), d=$('#retroDiscount'), total=$('#retroTotal');
   if(c) c.textContent=t.games.length;
-  if(s) s.textContent=money(t.subtotal);
-  if(d) d.textContent='-'+money(t.discount);
-  if(total) total.textContent=money(t.total);
+  if(s && s.textContent!==f(t.subtotal)) s.textContent=f(t.subtotal);
+  if(d && d.textContent!=='-'+f(t.discount)) d.textContent='-'+f(t.discount);
+  if(total && total.textContent!==f(t.total)) total.textContent=f(t.total);
   const btn=$('#retroModal .retro-footer .modal-actions .primary.whatsapp');
-  if(btn) btn.textContent=t.games.length?`Comprar ${t.games.length} juego${t.games.length===1?'':'s'} · ${money(t.total)}`:'Selecciona juegos para comprar';
+  if(btn){
+    const txt=t.games.length?`Comprar ${t.games.length} juego${t.games.length===1?'':'s'} · ${f(t.total)}`:'Selecciona juegos para comprar';
+    if(btn.textContent!==txt) btn.textContent=txt;
+  }
   return t;
 }
 const oldToggle=window.toggleRetroGame;
