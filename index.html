@@ -30151,5 +30151,454 @@ else init();
 })();
 </script>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 29 — Panel del comprador con identidad gamer (HUD)
+     Cambia el lenguaje visual: en vez de tarjetas redondeadas
+     genéricas, se usan cortes angulares tipo interfaz de videojuego,
+     marcos de esquina, neón y tipografía de consola.
+     Va al final del archivo para ganar la cascada.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-hud-gamer-v29">
+#vg17Client{
+  --hud-cyan:#22f5d3;
+  --hud-violeta:#a855f7;
+  --hud-rosa:#ff3d81;
+  --hud-ambar:#ffb547;
+  --hud-linea:rgba(34,245,211,.30);
+  --hud-panel:rgba(10,14,26,.86);
+  --hud-panel2:rgba(14,19,36,.92);
+  background:
+    radial-gradient(120% 55% at 8% -12%, rgba(168,85,247,.24), transparent 60%),
+    radial-gradient(100% 50% at 96% 0%, rgba(34,245,211,.16), transparent 55%),
+    linear-gradient(180deg,#05070f,#080b16 55%,#05070f) !important;
+}
+/* Rejilla técnica de fondo, como la cuadrícula de un HUD */
+#vg17Client::before{
+  content:"";position:fixed;inset:0;pointer-events:none;z-index:0;opacity:.5;
+  background-image:
+    linear-gradient(rgba(34,245,211,.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(34,245,211,.045) 1px, transparent 1px);
+  background-size:44px 44px;
+  -webkit-mask-image:radial-gradient(120% 80% at 50% 0%, #000 35%, transparent 78%);
+          mask-image:radial-gradient(120% 80% at 50% 0%, #000 35%, transparent 78%);
+}
+/* Línea de escaneo que recorre el panel muy lentamente.
+   Se anima con transform, no con "top": así el navegador la mueve en la
+   capa de composición y no repinta el panel en cada cuadro. */
+#vg17Client::after{
+  content:"";position:fixed;left:0;right:0;top:0;height:120px;
+  pointer-events:none;z-index:0;will-change:transform;
+  background:linear-gradient(180deg,transparent,rgba(34,245,211,.055),transparent);
+  animation:hudScan 9s linear infinite;
+}
+@keyframes hudScan{ from{transform:translateY(-140px)} to{transform:translateY(100vh)} }
+
+/* El contenido va por encima de la rejilla y del barrido.
+   Sin esto, los pseudo-elementos (posicionados, z-index:0) se pintarían
+   sobre las tarjetas, que están en flujo normal. */
+#vg17Client .vg17-wrap{position:relative;z-index:1}
+
+/* ── Cabecera: ficha de jugador ── */
+#vg17Client .vg17-top{
+  background:linear-gradient(100deg,rgba(168,85,247,.16),rgba(10,14,26,.94) 45%) !important;
+  border:1px solid var(--hud-linea) !important;
+  border-radius:0 !important;
+  /* Corte angular en la esquina, como un visor */
+  clip-path:polygon(0 0, 100% 0, 100% calc(100% - 16px), calc(100% - 16px) 100%, 0 100%);
+  box-shadow:0 0 0 1px rgba(0,0,0,.5), 0 14px 40px rgba(0,0,0,.5),
+             inset 0 1px 0 rgba(34,245,211,.14);
+  margin:0 0 4px !important;
+  padding:14px 16px !important;
+}
+#vg17Client .vg17-top h1{
+  font-family:ui-monospace,'Cascadia Mono',Consolas,monospace !important;
+  text-transform:uppercase !important;
+  letter-spacing:.06em !important;
+  font-size:1.12rem !important;
+  color:#eafffb !important;
+  text-shadow:0 0 18px rgba(34,245,211,.5);
+}
+#vg17Client .vg17-top p{
+  font-family:ui-monospace,Consolas,monospace !important;
+  font-size:.7rem !important;letter-spacing:.08em;color:#6fe9d2 !important;opacity:.85;
+}
+/* Avatar como placa de rango */
+#vg17Client .vg17-avatar{
+  border-radius:0 !important;
+  clip-path:polygon(22% 0, 100% 0, 100% 78%, 78% 100%, 0 100%, 0 22%);
+  background:linear-gradient(135deg,var(--hud-violeta),var(--hud-cyan)) !important;
+  box-shadow:0 0 26px rgba(34,245,211,.55), inset 0 1px 0 rgba(255,255,255,.5) !important;
+  font-family:ui-monospace,Consolas,monospace !important;
+}
+
+/* ── Pestañas tipo selector de menú ── */
+/* Sin clip-path a propósito: el globo de mensajes sin leer (.vg17-dot)
+   va posicionado fuera del borde de la pestaña y un recorte lo borraría. */
+#vg17Client .vg17-tab{
+  border-radius:3px !important;
+  font-family:ui-monospace,Consolas,monospace !important;
+  text-transform:uppercase !important;
+  letter-spacing:.07em !important;
+  font-size:.72rem !important;
+  border:1px solid rgba(255,255,255,.12) !important;
+  background:rgba(255,255,255,.04) !important;
+  color:#9fb4cf !important;
+  transition:.15s !important;
+}
+#vg17Client .vg17-tab:not(.active):hover{
+  border-color:var(--hud-linea) !important;color:#d9fff8 !important;
+  box-shadow:0 0 18px rgba(34,245,211,.18) !important;
+}
+#vg17Client .vg17-tab.active{
+  background:linear-gradient(135deg,var(--hud-violeta),var(--hud-cyan)) !important;
+  color:#05131a !important;border-color:transparent !important;
+  box-shadow:0 0 26px rgba(34,245,211,.45), 0 0 44px rgba(168,85,247,.22) !important;
+}
+
+/* ── Módulos HUD: estadísticas ── */
+#vg17Client .vg17-stat{
+  position:relative;
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  background:linear-gradient(150deg,var(--hud-panel2),rgba(8,11,22,.9)) !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+  box-shadow:inset 0 1px 0 rgba(34,245,211,.10) !important;
+  padding:14px 15px !important;
+}
+#vg17Client .vg17-stat::before{
+  width:3px !important;
+  background:linear-gradient(180deg,var(--hud-cyan),var(--hud-violeta)) !important;
+  box-shadow:0 0 14px rgba(34,245,211,.7);
+}
+#vg17Client .vg17-stat span{
+  font-family:ui-monospace,Consolas,monospace !important;
+  color:#6d87a8 !important;letter-spacing:.16em !important;font-size:.58rem !important;
+}
+#vg17Client .vg17-stat b{
+  font-family:ui-monospace,'Cascadia Mono',Consolas,monospace !important;
+  background:linear-gradient(135deg,#eafffb,var(--hud-cyan)) !important;
+  -webkit-background-clip:text !important;background-clip:text !important;
+  -webkit-text-fill-color:transparent !important;
+  text-shadow:none !important;font-size:1.55rem !important;
+}
+#vg17Client .vg17-stat i{filter:drop-shadow(0 0 8px rgba(34,245,211,.6))}
+
+/* ── Paneles con marcos de esquina ── */
+#vg17Client .vg17-box{
+  position:relative;
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 16px) 0, 100% 16px, 100% 100%, 16px 100%, 0 calc(100% - 16px));
+  background:linear-gradient(155deg,var(--hud-panel),rgba(8,11,22,.88)) !important;
+  border:1px solid rgba(255,255,255,.09) !important;
+  padding:16px !important;
+}
+#vg17Client .vg17-box > span{
+  font-family:ui-monospace,Consolas,monospace !important;
+  color:var(--hud-cyan) !important;letter-spacing:.16em !important;
+  font-size:.6rem !important;opacity:.9;
+}
+
+/* ── Tarjetas de pedido: fichas de misión ── */
+#vg17Client .vg17-card{
+  position:relative;
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+  background:linear-gradient(150deg,var(--hud-panel2),rgba(8,11,22,.86)) !important;
+  border:1px solid rgba(255,255,255,.09) !important;
+  transition:transform .16s, box-shadow .16s, border-color .16s !important;
+}
+#vg17Client .vg17-card:hover{
+  transform:translateX(3px) !important;
+  border-color:var(--hud-linea) !important;
+  box-shadow:0 0 26px rgba(34,245,211,.16), -3px 0 0 var(--hud-cyan) !important;
+}
+#vg17Client .vg17-card.active{
+  background:linear-gradient(140deg,rgba(168,85,247,.22),rgba(34,245,211,.07)) !important;
+  border-color:rgba(34,245,211,.45) !important;
+  box-shadow:0 0 34px rgba(34,245,211,.20), inset 0 0 30px rgba(168,85,247,.10) !important;
+}
+#vg17Client .vg17-card h4{letter-spacing:.01em !important}
+#vg17Client .vg17-card p{font-family:ui-monospace,Consolas,monospace !important;font-size:.68rem !important}
+#vg17Client .vg17-thumb{
+  border-radius:0 !important;
+  clip-path:polygon(20% 0, 100% 0, 100% 80%, 80% 100%, 0 100%, 0 20%);
+  background:linear-gradient(135deg,rgba(168,85,247,.75),rgba(34,245,211,.55)) !important;
+  box-shadow:0 0 18px rgba(34,245,211,.35) !important;
+  font-family:ui-monospace,Consolas,monospace !important;
+}
+#vg17Client .vg17-price{
+  font-family:ui-monospace,'Cascadia Mono',Consolas,monospace !important;
+  color:var(--hud-cyan) !important;
+  text-shadow:0 0 14px rgba(34,245,211,.45);
+}
+#vg17Client .vg17-listhead{
+  font-family:ui-monospace,Consolas,monospace !important;
+  color:var(--hud-cyan) !important;letter-spacing:.18em !important;opacity:.85;
+}
+
+/* ── Chips de estado tipo etiqueta de misión ── */
+#vg17Client .vg17-chip{
+  border-radius:0 !important;
+  clip-path:polygon(6px 0, 100% 0, calc(100% - 6px) 100%, 0 100%);
+  font-family:ui-monospace,Consolas,monospace !important;
+  letter-spacing:.1em !important;padding:4px 11px !important;
+}
+#vg17Client .vg17-chip.entregado{box-shadow:0 0 16px rgba(34,245,211,.28)}
+#vg17Client .vg17-chip.pendiente{box-shadow:0 0 16px rgba(255,181,71,.24)}
+
+/* ── Ficha del pedido: barra de progreso tipo XP ── */
+#vg17Client .vg17-hero{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 20px) 0, 100% 20px, 100% 100%, 20px 100%, 0 calc(100% - 20px));
+  border:1px solid rgba(34,245,211,.28) !important;
+  box-shadow:0 0 40px rgba(34,245,211,.12), inset 0 1px 0 rgba(34,245,211,.16) !important;
+}
+#vg17Client .vg17-hero h3{
+  font-family:ui-monospace,'Cascadia Mono',Consolas,monospace !important;
+  letter-spacing:.02em !important;
+}
+#vg17Client .vg17-hero p{font-family:ui-monospace,Consolas,monospace !important}
+#vg17Client .vg17-hero-price{
+  font-family:ui-monospace,'Cascadia Mono',Consolas,monospace !important;
+  text-shadow:0 0 22px rgba(34,245,211,.45);
+}
+#vg17Client .vg17-step.done span{
+  box-shadow:0 0 0 4px rgba(34,245,211,.14), 0 0 20px rgba(34,245,211,.75) !important;
+}
+#vg17Client .vg17-step small{
+  font-family:ui-monospace,Consolas,monospace !important;
+  text-transform:uppercase;letter-spacing:.1em;font-size:.6rem !important;
+}
+
+/* ── Chat tipo consola ── */
+#vg17Client .vg17-msgs{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  background:linear-gradient(180deg,#05080f,#070b16) !important;
+  border:1px solid rgba(34,245,211,.16) !important;
+  box-shadow:inset 0 0 40px rgba(34,245,211,.05) !important;
+}
+#vg17Client .vg17-msg small{
+  font-family:ui-monospace,Consolas,monospace !important;
+  letter-spacing:.06em;text-transform:uppercase;font-size:.6rem !important;
+}
+#vg17Client .vg17-msg div{border-radius:3px !important}
+#vg17Client .vg17-msg.admin div{
+  border-left:2px solid var(--hud-cyan) !important;
+  box-shadow:0 0 20px rgba(34,245,211,.14) !important;
+}
+#vg17Client .vg17-msg.client div{
+  border-right:2px solid var(--hud-violeta) !important;
+  box-shadow:0 0 20px rgba(168,85,247,.16) !important;
+}
+#vg17Client .vg17-msg.delivery div{
+  border:1px solid var(--hud-cyan) !important;
+  box-shadow:0 0 30px rgba(34,245,211,.30) !important;
+}
+#vg17Client .vg17-inputbar{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  border:1px solid rgba(34,245,211,.20) !important;
+  background:rgba(6,10,18,.9) !important;
+}
+#vg17Client .vg17-inputbar:focus-within{
+  border-color:var(--hud-cyan) !important;
+  box-shadow:0 0 26px rgba(34,245,211,.22) !important;
+}
+
+/* ── Botones tipo acción de juego ── */
+#vg17Client .vg17-btn{
+  border-radius:0 !important;
+  clip-path:polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  font-family:ui-monospace,Consolas,monospace !important;
+  text-transform:uppercase !important;letter-spacing:.08em !important;
+  font-size:.76rem !important;
+}
+#vg17Client .vg17-btn.primary{
+  background:linear-gradient(135deg,var(--hud-violeta),var(--hud-cyan)) !important;
+  color:#05131a !important;
+  box-shadow:0 0 26px rgba(34,245,211,.40), 0 0 50px rgba(168,85,247,.20) !important;
+}
+#vg17Client .vg17-ico,#vg17Client .vg17-copy{
+  border-radius:0 !important;
+  clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+}
+#vg17Client .vg17-salir{
+  border-radius:0 !important;
+  clip-path:polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  font-family:ui-monospace,Consolas,monospace !important;
+  text-transform:uppercase !important;letter-spacing:.07em !important;font-size:.7rem !important;
+}
+#vg17Client .vg17-x{
+  border-radius:0 !important;
+  clip-path:polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+}
+
+/* ── Aviso de mensaje nuevo ── */
+#vg17Client .vg17-newdot{
+  border-radius:0 !important;
+  clip-path:polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  font-family:ui-monospace,Consolas,monospace !important;
+  box-shadow:0 0 20px rgba(255,61,129,.6) !important;
+}
+
+/* ── Recompensas ── */
+#vg17Client .vgtk-prem{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  background:linear-gradient(150deg,var(--hud-panel2),rgba(8,11,22,.86)) !important;
+}
+#vg17Client .vgtk-prem.listo{
+  border-color:rgba(255,181,71,.50) !important;
+  box-shadow:0 0 30px rgba(255,181,71,.20) !important;
+}
+#vg17Client .vgtk-prem-top b{font-family:ui-monospace,Consolas,monospace !important}
+#vg17Client .vgtk-prem-top .costo{
+  border-radius:0 !important;
+  clip-path:polygon(5px 0, 100% 0, calc(100% - 5px) 100%, 0 100%);
+  font-family:ui-monospace,Consolas,monospace !important;
+}
+#vg17Client .vgtk-barra{border-radius:0 !important;height:5px !important}
+#vg17Client .vgtk-barra i{
+  border-radius:0 !important;
+  background:linear-gradient(90deg,var(--hud-violeta),var(--hud-cyan)) !important;
+  box-shadow:0 0 14px rgba(34,245,211,.6);
+}
+#vg17Client .vgtk-canjear{
+  border-radius:0 !important;
+  clip-path:polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  font-family:ui-monospace,Consolas,monospace !important;
+  text-transform:uppercase !important;letter-spacing:.07em !important;
+}
+
+/* ── Formularios ── */
+#vg17Client .vg17-form input,
+#vg17Client .vg17-form select,
+#vg17Client .vg17-form textarea{
+  border-radius:0 !important;
+  clip-path:polygon(8px 0, 100% 0, 100% calc(100% - 8px), calc(100% - 8px) 100%, 0 100%, 0 8px);
+  background:rgba(6,10,18,.85) !important;
+  border-color:rgba(34,245,211,.18) !important;
+}
+#vg17Client .vg17-form input:focus,
+#vg17Client .vg17-form select:focus,
+#vg17Client .vg17-form textarea:focus{
+  border-color:var(--hud-cyan) !important;
+  box-shadow:0 0 22px rgba(34,245,211,.20) !important;
+}
+#vg17Client .vg17-form label > span{
+  font-family:ui-monospace,Consolas,monospace !important;
+  text-transform:uppercase;letter-spacing:.09em;font-size:.66rem !important;
+  color:#8fb3cc !important;
+}
+
+/* ── Aviso de chat bloqueado ── */
+#vg17Client .vg17-lock{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 14px) 0, 100% 14px, 100% 100%, 14px 100%, 0 calc(100% - 14px));
+  border-color:rgba(168,85,247,.40) !important;
+  box-shadow:inset 0 0 30px rgba(168,85,247,.10) !important;
+}
+
+/* ── Móvil: se aligeran los efectos para no cargar el rendimiento ── */
+@media(max-width:900px){
+  #vg17Client::after{display:none}           /* fuera la línea de escaneo */
+  #vg17Client::before{opacity:.35}
+  #vg17Client .vg17-top{clip-path:polygon(0 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%)}
+  #vg17Client .vg17-stat{clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px))}
+  #vg17Client .vg17-box,
+  #vg17Client .vg17-card{clip-path:polygon(0 0, calc(100% - 11px) 0, 100% 11px, 100% 100%, 11px 100%, 0 calc(100% - 11px))}
+  #vg17Client .vg17-card:hover{transform:none !important}
+  #vg17Client .vg17-stat b{font-size:1.3rem !important}
+}
+/* ── Avisos y elementos sueltos ── */
+#vg17Client .vg17-dot{
+  border-radius:0 !important;
+  clip-path:polygon(4px 0, 100% 0, calc(100% - 4px) 100%, 0 100%);
+  font-family:ui-monospace,Consolas,monospace !important;
+  box-shadow:0 0 14px rgba(255,61,129,.65) !important;
+}
+#vg17Client .vg17-emojis{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+  border-color:rgba(34,245,211,.18) !important;
+}
+#vg17Client .vg17-emojis button{border-radius:0 !important}
+#vg17Client .vg17-emojis button:hover{background:rgba(34,245,211,.24) !important}
+#vg17Client .vg17-att,
+#vg17Client .vg17-proof img,
+#vg17Client .vg17-prevbox img{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+#vg17Client .vg17-warn{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+#vg17Client .vg17-empty{
+  font-family:ui-monospace,Consolas,monospace !important;
+  letter-spacing:.04em;
+}
+#vg17Client .vg17-ok,
+#vg17Client .vg17-err{font-family:ui-monospace,Consolas,monospace !important}
+
+/* ── Sección de tokens: se mantiene el dorado (es la "moneda"),
+      pero con las mismas formas angulares del resto del HUD ── */
+#vg17Client .vgtk-sec{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 26px) 0, 100% 26px, 100% 100%, 26px 100%, 0 calc(100% - 26px));
+  border-color:rgba(214,168,79,.34) !important;
+  background:
+    radial-gradient(90% 70% at 12% 0%, rgba(214,168,79,.16), transparent 60%),
+    radial-gradient(70% 60% at 95% 100%, rgba(168,85,247,.18), transparent 60%),
+    linear-gradient(160deg,#12172b,#080b16) !important;
+  box-shadow:0 0 46px rgba(214,168,79,.10) !important;
+}
+#vg17Client .vgtk-badge,
+#vg17Client .vgtk-premio,
+#vg17Client .vgtk-regla,
+#vg17Client .vgtk-mini div,
+#vg17Client .vgtk-falta,
+#vg17Client .vgtk-pend,
+#vg17Client .vgtk-canje,
+#vg17Client .vgtk-linkbox,
+#vg17Client .vgtk-mov{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+#vg17Client .vgtk-saldo{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+  box-shadow:inset 0 0 40px rgba(214,168,79,.10) !important;
+}
+#vg17Client .vgtk-saldo b{
+  font-family:ui-monospace,'Cascadia Mono',Consolas,monospace !important;
+  text-shadow:0 0 26px rgba(214,168,79,.55);
+}
+#vg17Client .vgtk-saldo span,
+#vg17Client .vgtk-badge,
+#vg17Client .vgtk-premio span,
+#vg17Client .vgtk-regla .n,
+#vg17Client .vgtk-premio b{font-family:ui-monospace,Consolas,monospace !important}
+#vg17Client .vgtk-btn{
+  border-radius:0 !important;
+  clip-path:polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+  font-family:ui-monospace,Consolas,monospace !important;
+  text-transform:uppercase !important;letter-spacing:.07em !important;
+}
+#vg17Client .vgtk-premio-msg .dato,
+#vg17Client .vgtk-nota-msg > div{
+  border-radius:0 !important;
+  clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+#vg17Client .vgtk-premio-msg > span,
+#vg17Client .vgtk-nota-msg > span{font-family:ui-monospace,Consolas,monospace !important}
+
+/* Respeta a quien pidió menos movimiento */
+@media(prefers-reduced-motion:reduce){
+  #vg17Client::after{animation:none;display:none}
+}
+</style>
+
 </body>
 </html>
