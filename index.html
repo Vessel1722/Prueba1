@@ -13864,7 +13864,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 <div class="nav">
 <a class="brand" href="javascript:void(0)" onclick="showHome()"><img alt="Vessel Games logo" decoding="async" id="brandLogo" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%2319e6c1'/%3E%3Cstop offset='.55' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%23ff5da8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%23080a12'/%3E%3Cpath d='M14 18h10l8 24 8-24h10L38 50H26L14 18z' fill='url(%23g)'/%3E%3Ccircle cx='48' cy='16' r='5' fill='%2319e6c1'/%3E%3C/svg%3E'"/><span>Vessel Games<small>Catálogo digital premium</small></span></a>
 <label class="searchbar">🔎 <input id="globalSearch" oninput="renderProducts()" placeholder="Buscar juegos, cuentas, software, monedas..."/></label>
-<div class="nav-actions"><button class="pill" onclick="openWhatsAppGeneral()">WhatsApp</button><button class="pill" onclick="showSection('all')">Catálogo</button>
+<div class="nav-actions"><button class="pill" onclick="vgOpenCotizar()">Cotizar</button><button class="pill" onclick="showSection('all')">Catálogo</button>
 <div aria-label="Cambiar moneda" class="vg-currency-toggle" id="vgCurrencyToggle">
 <button class="vg-currency-option active" data-currency="MXN" type="button">MXN</button>
 <button class="vg-currency-option" data-currency="USD" type="button">USD</button>
@@ -13888,7 +13888,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 <span class="badge">Entrega rápida · Catálogo digital</span>
 <h1>Tu siguiente nivel <span>empieza aquí</span></h1>
 <p class="lead">Marketplace digital con juegos, monedas, streaming, cuentas, software y servicios para redes. Elige una sección y entra a una interfaz dedicada para ver productos con foto, nombre, opciones y precio.</p>
-<div class="hero-actions"><button class="primary" onclick="showSection('all')">Ver catálogo completo</button><button class="secondary" onclick="openWhatsAppGeneral()">Pedir por WhatsApp</button></div>
+<div class="hero-actions"><button class="primary" onclick="showSection('all')">Ver catálogo completo</button><button class="secondary" onclick="vgOpenCotizar()">Cotizar un servicio</button></div>
 </div>
 </div>
 </div>
@@ -13957,7 +13957,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 </div>
 <div class="vg-faq-item">
 <button class="vg-faq-q" onclick="vgToggleFaq(this)"><span>¿Es seguro comprar aquí?</span><span class="vg-faq-icon">+</span></button>
-<div class="vg-faq-a">Sí. Todo el proceso de pago y entrega se confirma por WhatsApp directamente contigo. Puedes seguir el estado de tu pedido en el mismo chat.</div>
+<div class="vg-faq-a">Sí. Todo el proceso de pago y entrega se confirma en el chat de tu cuenta. Puedes seguir el estado de tu pedido ahí mismo.</div>
 </div>
 <div class="vg-faq-item">
 <button class="vg-faq-q" onclick="vgToggleFaq(this)"><span>¿Qué hago si ya pagué y no recibo nada?</span><span class="vg-faq-icon">+</span></button>
@@ -14232,11 +14232,11 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 </article>
 <article class="condition-service-card">
 <b>Pedidos especiales</b>
-<p>Si buscas algo que no aparece en el catálogo, puedes cotizarlo directamente por WhatsApp antes de pagar.</p>
+<p>Si buscas algo que no aparece en el catálogo, pide tu cotización desde el chat de tu cuenta y te respondemos ahí mismo.</p>
 </article>
 </div>
 <div class="conditions-service-note">
-<b>Nota:</b> Todo pedido se confirma por WhatsApp antes de procesarse para evitar errores en producto, opción, precio o método de pago.
+<b>Nota:</b> Todo pedido se confirma en el chat de tu cuenta antes de procesarse para evitar errores en producto, opción, precio o método de pago.
           </div>
 </section>
 <div id="vgToast"><div class="vg-toast-icon">✓</div><div class="vg-toast-text"><b>Agregado al carrito</b><span>Puedes seguir comprando sin abrir el carrito.</span></div></div>
@@ -14244,7 +14244,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 <div class="vg-clean-footer">
 <div>
 <b>Vessel Games</b>
-<p>Catálogo digital premium · Atención por WhatsApp · Entrega estimada de 20 minutos a 2 horas según flujo de pedidos.</p>
+<p>Catálogo digital premium · Atención por chat en el sitio · Entrega estimada de 20 minutos a 2 horas según flujo de pedidos.</p>
 <div class="vg-footer-payments">
 <span class="vg-footer-payments-label">Métodos de pago aceptados</span>
 <div class="vg-footer-payment-badges">
@@ -14256,7 +14256,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
 </div>
 </div>
 <div class="vg-clean-footer-links">
-<a href="javascript:void(0)" onclick="openWhatsAppGeneral()">WhatsApp</a>
+<a href="javascript:void(0)" onclick="vgOpenCotizar()">Cotizar</a>
 <a href="#condiciones-servicio">Condiciones</a>
 <a href="javascript:void(0)" onclick="showSection('all')">Catálogo</a>
 </div>
@@ -15512,7 +15512,7 @@ body.vg-light .review-card,.vg-light .home-compact-card,.vg-light .how-step,.vg-
       strip.className = 'vg-trust-strip';
       strip.innerHTML = `
         <span class="vg-trust-chip">⏱ Entrega 20 min - 2 hrs</span>
-        <span class="vg-trust-chip purple">💬 Confirmación por WhatsApp</span>
+        <span class="vg-trust-chip purple">💬 Chat de entrega en el sitio</span>
         <span class="vg-trust-chip green">✓ Catálogo digital</span>
       `;
       hero.insertAdjacentElement('afterend', strip);
@@ -24307,113 +24307,25 @@ async function solicitarCambio(){
   var c=SB(); if(!c){ msg('No hay conexión con el servidor.'); return; }
   btn.disabled=true; btn.textContent='Enviando...';
 
-  var correoEnviado=false, motivoFallo='';
+  /* Proceso MANUAL a propósito: la solicitud llega a tu panel de
+     Soporte y tú generas la contraseña y se la mandas. Se descartó el
+     envío automático por correo porque depende de tener SMTP propio
+     configurado; sin él, Supabase limita los envíos a unos pocos por
+     hora y muchos caen en spam, dejando al cliente sin poder entrar. */
   try{
-    /* 1) Intento automático: Supabase manda el correo con el enlace.
-          Es lo que resuelve el 95% de los casos sin que tú hagas nada. */
-    var env=await c.auth.resetPasswordForEmail(email, {
-      redirectTo: location.origin + location.pathname + '?recuperar=1'
-    });
-    if(env.error) motivoFallo = env.error.message || '';
-    else correoEnviado = true;
-  }catch(e){ motivoFallo = e.message || String(e); }
-
-  try{
-    /* 2) Siempre se deja el registro en tu panel. Sirve de respaldo si
-          el correo no llega (spam, límite de envíos, correo mal escrito)
-          o si el cliente perdió el acceso a su bandeja. */
     await c.rpc('vg_solicitar_password',{p_email:email});
-  }catch(e){}
-
-  if(correoEnviado){
-    msg('Te enviamos un correo con el enlace para crear tu contraseña nueva. Revisa también la carpeta de spam.', true);
-  }else{
     /* Se responde igual exista o no la cuenta: decir "ese correo no
        está registrado" permitiría averiguar quién tiene cuenta. */
-    msg('Recibimos tu solicitud. Te contactaremos por WhatsApp con tu contraseña nueva.', true);
-    if(motivoFallo) console.warn('[Vessel] Envío automático no disponible:', motivoFallo);
+    msg('Recibimos tu solicitud. Te contactaremos para darte tu contraseña nueva.', true);
+    btn.style.display='none';
+    qs('#vgAuthRecInfo').style.display='none';
+  }catch(e){
+    msg('No se pudo enviar: '+(e.message||e));
+  }finally{
+    btn.disabled=false; btn.textContent='Solicitar cambio de contraseña';
   }
-  btn.style.display='none';
-  qs('#vgAuthRecInfo').style.display='none';
-  btn.disabled=false; btn.textContent='Solicitar cambio de contraseña';
 }
 
-/* ── Pantalla para escribir la contraseña nueva ────────────────
-   Cuando el cliente abre el enlace del correo, Supabase deja una
-   sesión temporal de recuperación y dispara PASSWORD_RECOVERY. */
-function mostrarNuevaPassword(){
-  buildAuthModal();
-  var m=qs('#vg10Auth'); if(m) m.classList.add('active');
-  var cont=qs('#vg10Auth .vg10-auth-card') || qs('#vg10Auth > div');
-  if(!cont) return;
-  ['#vgAuthLogin','#vgAuthReg','#vgAuthRecuperar'].forEach(function(s){
-    var el=qs(s); if(el) el.style.display='none';
-  });
-  var tabs=qs('#vgAuthTabL') ? qs('#vgAuthTabL').parentNode : null;
-  if(tabs) tabs.style.display='none';
-
-  if(qs('#vgAuthNueva')) { qs('#vgAuthNueva').style.display=''; return; }
-  var d=document.createElement('div');
-  d.id='vgAuthNueva';
-  d.innerHTML=
-    '<p style="color:#9fb0ca;font-size:13px;margin:0 0 12px;line-height:1.5">Escribe tu contraseña nueva. Con ella entrarás a partir de ahora.</p>'+
-    '<input id="vgNuevaPass1" type="password" placeholder="Contraseña nueva (mínimo 6)" autocomplete="new-password">'+
-    '<input id="vgNuevaPass2" type="password" placeholder="Repite la contraseña" autocomplete="new-password">'+
-    '<button class="vg10-btn primary" type="button" id="vgNuevaBtn" style="width:100%;margin-top:6px">Guardar contraseña</button>';
-  cont.appendChild(d);
-
-  qs('#vgNuevaBtn').onclick=async function(){
-    var p1=qs('#vgNuevaPass1').value||'', p2=qs('#vgNuevaPass2').value||'';
-    if(p1.length<6){ msg('La contraseña debe tener al menos 6 caracteres.'); return; }
-    if(p1!==p2){ msg('Las dos contraseñas no coinciden.'); return; }
-    var c=SB(); if(!c){ msg('No hay conexión.'); return; }
-    this.disabled=true; this.textContent='Guardando...';
-    try{
-      var r=await c.auth.updateUser({password:p1});
-      if(r.error) throw r.error;
-      msg('¡Listo! Tu contraseña quedó actualizada.', true);
-      setTimeout(function(){
-        try{ history.replaceState(null,'',location.pathname); }catch(e){}
-        closeAuth();
-        if(typeof window.vgOpenClientPanel==='function') window.vgOpenClientPanel('purchases');
-      }, 1200);
-    }catch(e){
-      msg('No se pudo guardar: '+(e.message||e));
-      this.disabled=false; this.textContent='Guardar contraseña';
-    }
-  };
-}
-
-/* Se expone para poder abrirla a mano si hiciera falta */
-window.vgMostrarNuevaPassword = mostrarNuevaPassword;
-
-/* Detecta la llegada desde el enlace del correo.
-   Se cubre por tres vías porque el momento exacto en que supabase-js
-   procesa la URL varía según cómo cargue la página: */
-(function vigilarRecuperacion(){
-  var yaMostrada=false;
-  function abrir(){ if(yaMostrada) return; yaMostrada=true; mostrarNuevaPassword(); }
-
-  var c=SB();
-  /* 1) El evento oficial de supabase-js */
-  if(c && c.auth && c.auth.onAuthStateChange){
-    c.auth.onAuthStateChange(function(evento){
-      if(evento==='PASSWORD_RECOVERY') abrir();
-    });
-  }
-  /* 2) El hash del enlace, leído al cargar */
-  function revisarURL(){
-    try{
-      if(/type=recovery/.test(location.hash||'') ||
-         /[?&]recuperar=1/.test(location.search||'')){
-        setTimeout(abrir, 500);
-      }
-    }catch(e){}
-  }
-  revisarURL();
-  /* 3) Si el hash llega después (algunos navegadores lo aplican tarde) */
-  window.addEventListener('hashchange', revisarURL);
-})();
 function openAuth(){ buildAuthModal(); var m=qs('#vg10Auth'); if(m) m.classList.add('active'); }
 function closeAuth(){ var m=qs('#vg10Auth'); if(m) m.classList.remove('active'); window.__vgAuthIntent = null; }
 
@@ -26768,6 +26680,7 @@ function clientShell(){
     '<div class="vg17-tabs">'+
       '<button class="vg17-tab" data-v="purchases">Mis compras</button>'+
       '<button class="vg17-tab" data-v="tickets">Reportar falla</button>'+
+      '<button class="vg17-tab" data-v="cotizar">Cotizar</button>'+
       '<button class="vg17-tab" data-v="tokens">Mis tokens</button>'+
       '<button class="vg17-tab" data-v="mytickets">Mis reportes</button>'+
     '</div><div id="vg17CBody"></div></div>';
@@ -26821,6 +26734,7 @@ async function loadClient(){
   qsa('#vg17Client .vg17-tab').forEach(function(b){ b.classList.toggle('active', b.dataset.v===C.view); });
   body.innerHTML='<div class="vg17-empty">Cargando...</div>';
   if(C.view==='tickets')   return renderTicketForm(body);
+  if(C.view==='cotizar')   return renderCotizar(body);
   if(C.view==='tokens')    return renderTokens(body);
   if(C.view==='mytickets') return renderMyTickets(body);
   try{ C.orders = await myOrders(); }
@@ -27086,6 +27000,67 @@ async function renderTicketForm(body){
 }
 
 /* ── Mis tokens: saldo, link de referido e historial ──────────── */
+/* ── Cotizar un servicio desde el chat interno ─────────────────
+   Sustituye lo que antes mandaba a WhatsApp. La cotización entra como
+   un pedido en estado "pendiente" sin monto, así te llega a la bandeja
+   igual que una compra y le puedes responder por el mismo chat. */
+async function renderCotizar(body){
+  var c=SB(); if(!c){ body.innerHTML='<div class="vg17-empty">Sin conexión.</div>'; return; }
+  body.innerHTML=
+    '<div class="vg17-box vg17-form">'+
+      '<h3 style="margin:0 0 4px;color:#fff">¿No encuentras lo que buscas?</h3>'+
+      '<p style="margin:0 0 16px;color:#93a0bd;font-size:.82rem;line-height:1.5">'+
+        'Dinos qué necesitas y te cotizamos aquí mismo, en el chat de tu cuenta. '+
+        'Te respondemos con el precio y la disponibilidad.</p>'+
+      '<label><span>¿Qué servicio o juego buscas? *</span>'+
+        '<input id="cz_que" placeholder="Ej. Xbox Game Pass 3 meses, monedas de FIFA, licencia Office..."></label>'+
+      '<label><span>Plataforma o región <i style="color:#8e9cba;font-style:normal">(si aplica)</i></span>'+
+        '<input id="cz_plat" placeholder="Ej. Xbox Series, PC, cuenta de México..."></label>'+
+      '<label><span>Detalles adicionales</span>'+
+        '<textarea id="cz_detalle" placeholder="Cantidad, fechas, o cualquier dato que nos ayude a cotizarte mejor."></textarea></label>'+
+      '<div class="vg17-err" id="cz_err"></div><div class="vg17-ok" id="cz_ok"></div>'+
+      '<button class="vg17-btn primary" id="cz_send" style="width:100%">Enviar cotización</button>'+
+    '</div>';
+
+  qs('#cz_send').onclick=async function(){
+    var err=qs('#cz_err'), ok=qs('#cz_ok'), btn=this;
+    err.textContent=''; ok.textContent='';
+    var que=(qs('#cz_que').value||'').trim();
+    var plat=(qs('#cz_plat').value||'').trim();
+    var det=(qs('#cz_detalle').value||'').trim();
+    if(que.length<3){ err.textContent='Escribe qué servicio o juego buscas.'; return; }
+    btn.disabled=true; btn.textContent='Enviando...';
+    try{
+      var titulo='Cotización: '+que;
+      var r=await c.rpc('vg_create_order_v17',{
+        p_items:[{title:titulo, option:plat||'Sin especificar', price:0}],
+        p_total:0,
+        p_product_title:titulo,
+        p_product_option:plat||'',
+        p_delivery_data:det||'',
+        p_source:'cotizacion'
+      });
+      if(r.error) throw r.error;
+      ok.textContent='✅ Cotización enviada. Te respondemos en el chat de este pedido.';
+      var id=r.data && (r.data.id || (r.data[0]&&r.data[0].id));
+      setTimeout(function(){ C.view='purchases'; C.ref=id?String(id):null; loadClient(); }, 1300);
+    }catch(e){ err.textContent='No se pudo enviar: '+(e.message||e); }
+    finally{ btn.disabled=false; btn.textContent='Enviar cotización'; }
+  };
+}
+
+/* Abre el panel directo en la cotización. Si no hay sesión, primero
+   se pide entrar: la cotización necesita una cuenta para poder
+   responderle al cliente por su chat. */
+window.vgOpenCotizar=function(){
+  var c=SB();
+  if(!c){ alert('No hay conexión con el servidor.'); return; }
+  c.auth.getSession().then(function(s){
+    if(s && s.data && s.data.session) window.vgOpenClientPanel('cotizar');
+    else if(window.vgOpenAuth) window.vgOpenAuth();
+  });
+};
+
 async function renderTokens(body){
   var c=SB();
   if(!c){ body.innerHTML='<div class="vg17-empty">Sin conexión.</div>'; return; }
@@ -29701,6 +29676,137 @@ if(document.readyState==='loading') document.addEventListener('DOMContentLoaded'
 else init();
 })();
 </script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 27 — Encimamientos en móvil (Xbox Retro y Actas Gob)
+     Medido en el modal real a 390px de ancho:
+       · La nota de arriba tenía overflow:hidden con 17.6px de alto
+         fijo, así que el texto se cortaba a media palabra.
+       · El botón verde recibía 118px para 30 caracteres, por eso
+         se leía "...iona juegos para co".
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-movil-encimados-v27">
+@media(max-width:760px){
+  /* ── Cabecera del modal Xbox Retro ── */
+  html body #retroModal .retro-top-shell{
+    display:block !important;
+    height:auto !important;
+    min-height:0 !important;
+    padding:12px 12px 10px !important;
+  }
+  html body #retroModal .retro-head{
+    display:block !important;
+    height:auto !important;
+    padding-right:52px !important;   /* espacio para la ✕ */
+  }
+  html body #retroModal .retro-head h2{
+    font-size:1.15rem !important;
+    line-height:1.2 !important;
+    margin:0 0 6px !important;
+  }
+  /* La nota se deja respirar: alto automático y hasta dos líneas */
+  html body #retroModal .retro-sales-note{
+    height:auto !important;
+    min-height:0 !important;
+    max-height:none !important;
+    overflow:visible !important;
+    white-space:normal !important;
+    display:block !important;
+    margin:0 0 10px !important;
+    padding:8px 10px !important;
+    font-size:.72rem !important;
+    line-height:1.4 !important;
+    border-radius:10px !important;
+  }
+  html body #retroModal .retro-sales-note p{
+    margin:0 !important;
+    white-space:normal !important;
+    overflow:visible !important;
+  }
+  html body #retroModal .retro-controls{
+    display:block !important;
+    height:auto !important;
+    margin:0 !important;
+  }
+  html body #retroModal .retro-controls input,
+  html body #retroModal .retro-controls select{
+    width:100% !important;
+    margin:0 0 8px !important;
+  }
+
+  /* ── Barra inferior: el botón necesita su propia línea ── */
+  /* Se apila todo: los contadores arriba y el botón abajo. Repartirlo
+     en dos columnas dejaba 57px por contador y 118px al botón, y los
+     tres textos salían cortados. */
+  html body #retroModal .retro-footer{
+    display:flex !important;
+    flex-direction:column !important;
+    align-items:stretch !important;
+    gap:9px !important;
+    padding:10px !important;
+    height:auto !important;
+  }
+  html body #retroModal .retro-footer .retro-totals{
+    display:flex !important;
+    flex-direction:row !important;
+    align-items:center !important;
+    justify-content:space-between !important;
+    gap:10px !important;
+    width:100% !important;
+    flex-wrap:wrap !important;
+  }
+  html body #retroModal .retro-footer .retro-totals span,
+  html body #retroModal .retro-footer .retro-totals strong{
+    width:auto !important;
+    white-space:nowrap !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    font-size:.76rem !important;
+  }
+  html body #retroModal .retro-footer .modal-actions{
+    width:100% !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px !important;
+  }
+  /* El botón a ancho completo: así el texto cabe entero */
+  html body #retroModal .retro-footer .modal-actions button{
+    width:100% !important;
+    white-space:normal !important;
+    overflow:visible !important;
+    text-overflow:clip !important;
+    font-size:.85rem !important;
+    padding:12px 10px !important;
+    line-height:1.25 !important;
+    min-height:46px !important;
+    height:auto !important;
+  }
+
+  /* ── Actas Gob: mismo problema de cabecera encimada ── */
+  html body .modal .modal-card .modal-info > .badge,
+  html body #productModal .modal-info > .badge{
+    position:static !important;
+    display:inline-block !important;
+    margin-bottom:8px !important;
+  }
+  html body #productModal .modal-info h2,
+  html body .modal-card h2{
+    line-height:1.2 !important;
+    margin:0 0 8px !important;
+    padding-right:48px !important;
+  }
+  /* El texto de entrega estimada dejaba de verse detrás de la lista */
+  html body #productModal .modal-info > p,
+  html body .modal-card .modal-info > p{
+    height:auto !important;
+    max-height:none !important;
+    overflow:visible !important;
+    white-space:normal !important;
+    margin:0 0 10px !important;
+    line-height:1.45 !important;
+  }
+}
+</style>
 
 <!-- ════════════════════════════════════════════════════════════════
      FASE 22 — Proporción de las fotos de producto
