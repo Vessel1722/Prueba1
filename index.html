@@ -30720,6 +30720,172 @@ else init();
 </style>
 
 <!-- ════════════════════════════════════════════════════════════════
+     FASE 40 — Los datos de pago solo para quien tiene cuenta
+
+     Hasta ahora el número de tarjeta y el nombre del titular se veían
+     nada más abrir el carrito, sin cuenta ni nada. Los veía cualquiera
+     que pasara por la página, no solo quien iba a comprar.
+
+     Ahora, sin sesión iniciada, en su lugar sale un aviso con los dos
+     botones para entrar o registrarse. El total del pedido sí se sigue
+     viendo: eso es lo que el cliente necesita para decidir.
+
+     En cuanto inicia sesión, los datos aparecen solos, sin tener que
+     volver a empezar el pedido.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-pago-privado-v40">
+#paymentModal.vg-pago-bloqueado .vg-pay-methods,
+#paymentModal.vg-pago-bloqueado .vg-pay-copy-all,
+#paymentModal.vg-pago-bloqueado .vg-pay-coupon-row,
+#paymentModal.vg-pago-bloqueado .vg-coupon-msg,
+#paymentModal.vg-pago-bloqueado .vg-payment-contact-grid,
+#paymentModal.vg-pago-bloqueado .vg-pay-proof,
+#paymentModal.vg-pago-bloqueado .vg-pay-actions{
+  display:none !important;
+}
+#vgPagoCandado{
+  margin:18px 0 6px;padding:26px 22px;text-align:center;
+  border:1px solid rgba(34,245,211,.28);
+  background:
+    radial-gradient(80% 70% at 50% 0%, rgba(34,245,211,.10), transparent 70%),
+    linear-gradient(160deg,#101527,#0a0d18);
+  clip-path:polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+#vgPagoCandado .ico{font-size:2.4rem;line-height:1;display:block;margin-bottom:12px}
+#vgPagoCandado h4{
+  margin:0 0 8px;color:#fff;font-size:1.08rem;font-weight:900;
+  font-family:ui-monospace,Consolas,monospace;letter-spacing:.04em;
+}
+#vgPagoCandado p{margin:0 auto 18px;color:#9aa8c4;font-size:.86rem;line-height:1.55;max-width:34ch}
+#vgPagoCandado .botones{display:flex;gap:10px;justify-content:center;flex-wrap:wrap}
+#vgPagoCandado button{
+  padding:13px 22px;cursor:pointer;font-family:inherit;
+  font-size:.86rem;font-weight:900;border-radius:0;
+  clip-path:polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  transition:.15s;
+}
+#vgPagoCandado .entrar{
+  border:0;background:linear-gradient(120deg,#22f5d3,#a855f7);color:#04211b;
+  box-shadow:0 0 26px rgba(34,245,211,.30);
+}
+#vgPagoCandado .crear{
+  border:1px solid rgba(255,255,255,.20);background:rgba(255,255,255,.05);color:#e8edf9;
+}
+#vgPagoCandado button:hover{filter:brightness(1.08)}
+#vgPagoCandado button:active{transform:scale(.97)}
+#vgPagoCandado .nota{
+  margin:16px 0 0;color:#6d7d95;font-size:.74rem;line-height:1.5;
+}
+@media(max-width:640px){
+  #vgPagoCandado{padding:22px 16px}
+  #vgPagoCandado .botones{flex-direction:column}
+  #vgPagoCandado button{width:100%}
+}
+</style>
+
+<script id="vg-pago-privado-js-v40">
+(function(){
+  'use strict';
+  if(window.__VG40__) return; window.__VG40__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function modal(){ return document.getElementById('paymentModal'); }
+
+  function candado(){
+    var m = modal(); if(!m) return null;
+    var c = document.getElementById('vgPagoCandado');
+    if(c) return c;
+    c = document.createElement('div');
+    c.id = 'vgPagoCandado';
+    c.innerHTML =
+      '<span class="ico">🔒</span>'+
+      '<h4>Datos de pago protegidos</h4>'+
+      '<p>Entra a tu cuenta para ver dónde depositar. Así podemos darle seguimiento a tu pedido y avisarte cuando esté entregado.</p>'+
+      '<div class="botones">'+
+        '<button type="button" class="entrar">Iniciar sesión</button>'+
+        '<button type="button" class="crear">Crear cuenta gratis</button>'+
+      '</div>'+
+      '<p class="nota">Crear la cuenta toma menos de un minuto y te deja el chat de entrega abierto.</p>';
+
+    function abrirAuth(){
+      try{ if(typeof window.vgOpenAuth === 'function') window.vgOpenAuth(); }catch(e){}
+    }
+    c.querySelector('.entrar').onclick = abrirAuth;
+    c.querySelector('.crear').onclick  = function(){
+      abrirAuth();
+      /* Se salta a la pestaña de registro, que es a lo que vino */
+      setTimeout(function(){
+        var b = Array.prototype.filter.call(
+          document.querySelectorAll('#vg10Auth button'),
+          function(x){ return x.textContent.trim() === 'Crear cuenta'; })[0];
+        if(b) b.click();
+      }, 350);
+    };
+
+    /* Justo debajo del encabezado con el total, para que el importe se
+       siga viendo y el aviso quede donde estaban los datos. */
+    var head = m.querySelector('.vg-pay-header');
+    var cont = m.querySelector('.vg-pay-modal-new') || m.firstElementChild || m;
+    if(head && head.parentNode) head.parentNode.insertBefore(c, head.nextSibling);
+    else cont.appendChild(c);
+    return c;
+  }
+
+  var conSesion = null;
+
+  function pintar(){
+    var m = modal(); if(!m) return;
+    var c = candado(); if(!c) return;
+    var bloquear = (conSesion === false);
+    m.classList.toggle('vg-pago-bloqueado', bloquear);
+    c.style.display = bloquear ? '' : 'none';
+  }
+
+  async function revisar(){
+    var c = cli();
+    if(!c){ conSesion = true; pintar(); return; }   /* sin servidor no se estorba */
+    try{
+      var s = await c.auth.getSession();
+      conSesion = !!(s && s.data && s.data.session);
+    }catch(e){ conSesion = true; }
+    pintar();
+  }
+
+  function envolver(){
+    if(typeof window.openPaymentModal !== 'function' || window.openPaymentModal.__vg40) return false;
+    var anterior = window.openPaymentModal;
+    var envuelto = function(){
+      var r = anterior.apply(this, arguments);
+      revisar();
+      /* Otros parches repintan el modal después de abrirlo */
+      [120, 400, 900].forEach(function(ms){ setTimeout(pintar, ms); });
+      return r;
+    };
+    envuelto.__vg40 = true;
+    window.openPaymentModal = envuelto;
+    return true;
+  }
+
+  function arrancar(){
+    if(!envolver()){
+      var n = 0;
+      var t = setInterval(function(){ if(envolver() || ++n > 60) clearInterval(t); }, 250);
+    }
+    /* Al entrar o salir de la cuenta se revisa otra vez, así el cliente
+       ve los datos sin reiniciar el pedido. */
+    var c = cli();
+    if(c && c.auth && c.auth.onAuthStateChange){
+      c.auth.onAuthStateChange(function(){ revisar(); });
+    }
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
      FASE 39 — Zona táctil de los favoritos
 
      El corazón de cada tarjeta mide 34x34 en el móvil, por debajo de
