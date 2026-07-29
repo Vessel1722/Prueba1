@@ -27269,13 +27269,22 @@ async function pintarRecompensas(){
            emoji de siempre, para que los premios viejos no se rompan. */
         var foto = String(p.imagen||'').trim();
         return '<div class="vgtk-prem'+(p.alcanza?' listo':'')+(foto?' con-foto':'')+'">'+
+          /* Dos copias de la misma imagen: la de atrás desenfocada para
+             rellenar el hueco, la de delante entera. Así una portada
+             vertical de Xbox (177×265) se ve completa y una foto
+             apaisada también, sin recortar ninguna de las dos. */
+          /* Todas las tarjetas llevan cabecera, con foto o con el emoji
+             en grande. Si unas la tuvieran y otras no, la rejilla
+             estiraría a las de al lado y quedarían medio vacías. */
           (foto
-            ? '<div class="vgtk-prem-foto"><img src="'+esc(foto)+'" alt="'+esc(p.nombre)+'"'+
+            ? '<div class="vgtk-prem-foto">'+
+              '<img class="fondo" src="'+esc(foto)+'" alt="" aria-hidden="true"'+
+              ' loading="lazy" decoding="async" referrerpolicy="no-referrer">'+
+              '<img class="frente" src="'+esc(foto)+'" alt="'+esc(p.nombre)+'"'+
               ' loading="lazy" decoding="async" referrerpolicy="no-referrer"'+
-              ' onerror="this.closest(\'.vgtk-prem-foto\').remove()"></div>'
-            : '')+
+              ' onerror="this.closest(\'.vgtk-prem-foto\').classList.add(\'sinfoto\')"></div>'
+            : '<div class="vgtk-prem-foto sinfoto"><span>'+esc(p.icono||'🎁')+'</span></div>')+
           '<div class="vgtk-prem-top">'+
-            (foto ? '' : '<span class="ico">'+esc(p.icono||'🎁')+'</span>')+
             '<div style="min-width:0"><b>'+esc(p.nombre)+'</b>'+
             '<small>'+esc(p.descripcion||'')+'</small></div>'+
             '<span class="costo">'+n(p.costo)+'</span>'+
@@ -30652,15 +30661,51 @@ else init();
      contenido entero cada vez que se abren.
      ════════════════════════════════════════════════════════════════ -->
 <style id="vg-premios-portada-v33">
-/* ── Foto en la tarjeta de premio del cliente ── */
+/* ── Foto en la tarjeta de premio del cliente ──
+   Alto fijo a propósito, no proporción: las portadas de juego son
+   verticales (177×265 en la tienda de Xbox) y las fotos de otros
+   premios son apaisadas. Con una proporción fija habría que recortar
+   una de las dos. Así la imagen entra entera (object-fit:contain) y el
+   hueco lo llena una copia desenfocada de ella misma. */
 .vgtk-prem-foto{
+  position:relative;
   margin:-13px -13px 11px;
-  aspect-ratio:16/9;overflow:hidden;background:#0a0d16;
+  height:186px;overflow:hidden;background:#0a0d16;
   border-bottom:1px solid rgba(214,168,79,.20);
 }
-.vgtk-prem-foto img{width:100%;height:100%;object-fit:cover;display:block}
-.vgtk-prem.con-foto{overflow:hidden}
+.vgtk-prem-foto .fondo{
+  position:absolute;inset:-8%;width:116%;height:116%;
+  object-fit:cover;filter:blur(17px) brightness(.42) saturate(1.15);
+}
+.vgtk-prem-foto .frente{
+  position:relative;width:100%;height:100%;
+  object-fit:contain;display:block;
+}
+/* Premio sin foto: el emoji en grande sobre un panel dorado tenue.
+   Ocupa lo mismo que una foto, así la rejilla queda pareja. */
+.vgtk-prem-foto.sinfoto{
+  display:flex;align-items:center;justify-content:center;
+  background:
+    radial-gradient(70% 70% at 50% 40%, rgba(214,168,79,.16), transparent 70%),
+    linear-gradient(160deg,#141828,#0a0d16);
+}
+.vgtk-prem-foto.sinfoto span{font-size:3.2rem;line-height:1;filter:drop-shadow(0 6px 16px rgba(0,0,0,.5))}
+.vgtk-prem-foto.sinfoto img{display:none}
+.vgtk-prem{overflow:hidden}
 #vg17Client .vgtk-prem-foto{border-bottom-color:rgba(214,168,79,.28)}
+
+/* Todas las tarjetas de premio miden lo mismo y el botón queda abajo.
+   Antes la que llevaba foto estiraba su fila y las demás se quedaban
+   con un hueco enorme debajo del botón. */
+.vgtk-prem-grid{align-items:stretch}
+.vgtk-prem{display:flex;flex-direction:column}
+.vgtk-prem .vgtk-barra{margin-top:auto}
+.vgtk-prem .vgtk-canjear,
+.vgtk-prem .vgtk-falta{margin-top:0}
+
+@media(max-width:640px){
+  .vgtk-prem-foto{height:210px}
+}
 
 /* ── Panel admin: gestor de premios y editor de portada ── */
 .vgap-grid{display:grid;grid-template-columns:1fr 1fr;gap:9px;margin-top:9px}
@@ -30688,7 +30733,9 @@ textarea.vgap-in{min-height:56px;resize:vertical}
   display:flex;align-items:center;justify-content:center;font-size:1.25rem;
   border:1px solid rgba(255,255,255,.09);
 }
-.vgap-mini img{width:100%;height:100%;object-fit:cover;display:block}
+/* contain, no cover: una portada de juego es vertical y con cover
+   se vería solo una franja del centro */
+.vgap-mini img{width:100%;height:100%;object-fit:contain;display:block}
 .vgap-fila .txt{min-width:0;flex:1}
 .vgap-fila .txt b{display:block;color:#fff;font-size:.87rem}
 .vgap-fila .txt small{display:block;color:#8593b5;font-size:.72rem;margin-top:2px}
@@ -30707,6 +30754,10 @@ textarea.vgap-in{min-height:56px;resize:vertical}
   color:#6d7d95;font-size:.76rem;text-align:center;padding:10px;
 }
 .vgap-prev img,.vgap-prev video{width:100%;height:100%;object-fit:cover;display:block}
+/* La vista previa del premio muestra la imagen entera; la de la portada
+   sí va recortada, porque así es como se verá en el hero. */
+#vgapPrev{aspect-ratio:auto;height:200px;background:#0a0d16}
+#vgapPrev img{object-fit:contain}
 .vgap-msg{min-height:20px;font-size:.79rem;font-weight:800;margin-top:8px}
 .vgap-msg.ok{color:#8ff5e3}
 .vgap-msg.err{color:#ff92a8}
