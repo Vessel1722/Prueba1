@@ -30629,6 +30629,193 @@ else init();
 </style>
 
 <!-- ════════════════════════════════════════════════════════════════
+     FASE 32 — Panel del comprador: llegar al chat sin dar vueltas
+
+     Dos problemas distintos, uno por tamaño de pantalla:
+
+     MÓVIL — .vg17-split colapsa a una sola columna, así que la lista de
+     pedidos queda arriba y el detalle (con el chat) abajo del todo. Con
+     14 pedidos hay que recorrer la lista entera para llegar al chat.
+     Solución: maestro/detalle. Al tocar un pedido se oculta la lista y
+     se muestra solo ese pedido, con un botón para volver.
+
+     ESCRITORIO — la columna del detalle se queda anclada arriba. Si
+     eliges un pedido del final de la lista, el chat queda fuera de
+     pantalla y hay que subir otra vez. Solución: la columna del detalle
+     se vuelve pegajosa y acompaña el scroll.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-panel-detalle-v32">
+/* ── Escritorio: el detalle acompaña el scroll ── */
+@media(min-width:901px){
+  #vg17Client .vg17-split > #vg17CDetail{
+    position:sticky;
+    /* 78px = alto del encabezado pegajoso del panel */
+    top:78px;
+    max-height:calc(100vh - 96px);
+    overflow-y:auto;
+    overscroll-behavior:contain;
+    scrollbar-width:thin;
+  }
+  #vg17Client .vg17-split > #vg17CDetail::-webkit-scrollbar{width:8px}
+  #vg17Client .vg17-split > #vg17CDetail::-webkit-scrollbar-thumb{
+    background:rgba(34,245,211,.22);border-radius:0;
+  }
+  /* En escritorio nunca se oculta la lista ni aparece el botón volver */
+  #vg17Client .vg17-volver{display:none !important}
+}
+
+/* ── Móvil: maestro/detalle ── */
+@media(max-width:900px){
+  #vg17Client .vg17-split.vg17-viendo-detalle > .vg17-list{display:none !important}
+  #vg17Client .vg17-split:not(.vg17-viendo-detalle) > #vg17CDetail{display:none !important}
+
+  #vg17Client .vg17-volver{
+    display:flex;align-items:center;gap:9px;width:100%;
+    margin:0 0 12px;padding:12px 14px;
+    border:1px solid rgba(34,245,211,.30);
+    background:linear-gradient(100deg,rgba(34,245,211,.12),rgba(168,85,247,.08));
+    color:#8ff5e3;font-family:ui-monospace,Consolas,monospace;
+    font-size:.78rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+    cursor:pointer;border-radius:0;
+    clip-path:polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px);
+  }
+  #vg17Client .vg17-volver:active{transform:scale(.985)}
+  #vg17Client .vg17-volver b{
+    margin-left:auto;color:#7f8ea6;font-weight:800;letter-spacing:0;text-transform:none;
+    font-size:.72rem;
+  }
+  /* Con la lista oculta el chat puede respirar */
+  #vg17Client .vg17-split.vg17-viendo-detalle .vg17-msgs{
+    max-height:none !important;
+    min-height:46vh !important;
+  }
+}
+</style>
+
+<script id="vg-panel-detalle-js-v32">
+/* Maestro/detalle del panel del comprador.
+   Se hace desde fuera, sin tocar renderPurchases: esa función rehace
+   todo el cuerpo en cada clic, así que aquí solo se guarda el estado y
+   se vuelve a aplicar cuando el DOM cambia. */
+(function(){
+  'use strict';
+  var MOVIL = 900;
+  var viendoDetalle = false;
+
+  function esMovil(){ return window.innerWidth <= MOVIL; }
+  function panel(){ return document.getElementById('vg17Client'); }
+  function split(){ return document.querySelector('#vg17Client .vg17-split'); }
+
+  function aplicar(){
+    var sp = split();
+    if(!sp) return;
+    sp.classList.toggle('vg17-viendo-detalle', viendoDetalle);
+
+    var det = document.getElementById('vg17CDetail');
+    if(!det) return;
+
+    var btn = det.querySelector('.vg17-volver');
+    if(viendoDetalle){
+      if(!btn){
+        btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'vg17-volver';
+        /* El conteo ayuda a saber que no se perdió nada al entrar */
+        var n = sp.querySelectorAll('.vg17-list [data-o]').length;
+        btn.innerHTML = '&larr; Volver a mis pedidos' + (n ? '<b>'+n+' pedidos</b>' : '');
+        det.insertBefore(btn, det.firstChild);
+      }
+    }else if(btn){
+      btn.remove();
+    }
+  }
+
+  /* Fase de captura: corre ANTES del onclick de la tarjeta, que rehace
+     el cuerpo entero. Si se escuchara en burbuja, para entonces el
+     elemento ya no existiría en el documento. */
+  document.addEventListener('click', function(ev){
+    var t = ev.target;
+    if(!t || !t.closest) return;
+
+    if(t.closest('#vg17Client .vg17-volver')){
+      viendoDetalle = false;
+      aplicar();
+      var p = panel(); if(p) p.scrollTop = 0;
+      return;
+    }
+    if(t.closest('#vg17Client .vg17-list [data-o]')){
+      if(esMovil()){
+        viendoDetalle = true;
+        /* El detalle se dibuja después del re-render; se aplica en el
+           siguiente turno y el observador de abajo lo reafirma. */
+        setTimeout(function(){ aplicar(); var p=panel(); if(p) p.scrollTop=0; }, 0);
+      }
+      return;
+    }
+    /* Cambiar de pestaña sale del detalle */
+    if(t.closest('#vg17Client .vg17-tab')){
+      viendoDetalle = false;
+    }
+  }, true);
+
+  /* renderPurchases reescribe #vg17CBody en cada clic; sin esto el
+     estado se perdería y volvería a verse la lista. */
+  function vigilar(){
+    var p = panel(); if(!p) return;
+    new MutationObserver(function(){
+      if(!esMovil()){
+        var sp = split();
+        if(sp) sp.classList.remove('vg17-viendo-detalle');
+        var b = document.querySelector('#vg17Client .vg17-volver');
+        if(b) b.remove();
+        return;
+      }
+      aplicar();
+    }).observe(p, {childList:true, subtree:true});
+  }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', vigilar);
+  else vigilar();
+
+  /* Al girar el teléfono o cambiar el tamaño se recalcula el modo */
+  var tmr;
+  window.addEventListener('resize', function(){
+    clearTimeout(tmr);
+    tmr = setTimeout(function(){
+      if(!esMovil()){
+        var sp = split(); if(sp) sp.classList.remove('vg17-viendo-detalle');
+        var b = document.querySelector('#vg17Client .vg17-volver'); if(b) b.remove();
+      }else{
+        aplicar();
+      }
+    }, 150);
+  });
+
+  /* Si se abre el panel apuntando a un pedido concreto (por ejemplo
+     desde el aviso de "nuevo mensaje"), se entra directo a ese pedido
+     en vez de dejar al cliente en la lista. */
+  function envolverApertura(){
+    var orig = window.vgOpenClientPanel;
+    if(typeof orig !== 'function' || orig.__vg32) return false;
+    var envuelto = function(view, ref){
+      viendoDetalle = !!(ref && esMovil());
+      var r = orig.apply(this, arguments);
+      setTimeout(aplicar, 60);
+      return r;
+    };
+    envuelto.__vg32 = true;
+    window.vgOpenClientPanel = envuelto;
+    return true;
+  }
+  if(!envolverApertura()){
+    var intentos = 0;
+    var t = setInterval(function(){
+      if(envolverApertura() || ++intentos > 60) clearInterval(t);
+    }, 250);
+  }
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
      FASE 31 — Actas Gob en móvil: la nota de entrega se encimaba
      con la lista de opciones.
 
