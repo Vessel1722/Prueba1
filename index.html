@@ -30629,6 +30629,53 @@ else init();
 </style>
 
 <!-- ════════════════════════════════════════════════════════════════
+     FASE 31 — Actas Gob en móvil: la nota de entrega se encimaba
+     con la lista de opciones.
+
+     Causa: .modal-body es una rejilla y la regla que gana por debajo de
+     820px declara "auto auto minmax(0,1fr) auto". Son cuatro filas para
+     cuatro elementos (etiqueta, título, nota, opciones), pero la fila
+     elástica quedó en la TERCERA, o sea en la nota. Como la tarjeta
+     tiene alto fijo y overflow:hidden, esa fila se resolvía a 0px: la
+     nota se quedaba sin alto, su texto se salía de la caja y aterrizaba
+     justo encima de la primera opción.
+
+     Medido antes del arreglo: nota y #modalOptions empezaban las dos en
+     top 123px, y la fila de la nota valía 0px (38px 72px 0px 400px).
+
+     Arreglo: la fila elástica pasa a la lista de opciones, que es la
+     que debe encoger y llevar el scroll. La nota recupera su "auto".
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-actas-movil-v31">
+@media(max-width:820px){
+  html body #productModal.vg-actas-pro-modal .modal-body{
+    grid-template-rows:auto auto auto minmax(0,1fr) !important;
+  }
+  /* La lista es la que se desplaza; sin esto, al encogerla se cortarían
+     las últimas opciones sin manera de llegar a ellas. */
+  html body #productModal.vg-actas-pro-modal #modalOptions{
+    overflow-y:auto !important;
+    overscroll-behavior:contain !important;
+    -webkit-overflow-scrolling:touch;
+  }
+  /* La nota vuelve a ocupar lo que mide su texto. */
+  html body #productModal.vg-actas-pro-modal .modal-delivery-note{
+    min-height:0 !important;height:auto !important;
+    overflow:visible !important;
+    align-self:start !important;
+  }
+  /* El título llevaba 48px de margen y otros 48 de relleno a la derecha
+     (96 en total) para esquivar la ✕, que solo mide 42. En pantallas
+     angostas eso lo estrujaba y lo partía en más renglones. */
+  html body #productModal.vg-actas-pro-modal #modalTitle{
+    margin:6px 0 10px 0 !important;
+    padding-right:54px !important;
+    overflow-wrap:anywhere;
+  }
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
      FASE 30 — Encabezado: marco neón en el logo y degradado en el nombre
      Va al final porque hay unas quince reglas repartidas por el archivo
      que tocan .brand; esta es la última que lee el navegador.
