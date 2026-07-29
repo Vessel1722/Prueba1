@@ -13873,6 +13873,27 @@ window.vgBaseUrl = function(){
   }catch(e){}
   return 'https://www.vesselgames.xyz';   /* al abrir el archivo suelto */
 };
+
+/* Tamaño de las portadas retro que sirve Bing.
+
+   Se pedían a 800x1200 con calidad 95 y se muestran a unos 150 px de
+   ancho en el móvil: 147 KB por imagen para pintar una miniatura. Con
+   catorce de ellas en la primera pantalla eran más de 2 MB.
+
+   Ahora se pide lo que de verdad cabe, contando la densidad de la
+   pantalla del teléfono. Medido con la misma portada:
+     800x1200 qlt95 -> 147 KB     (antes)
+     400x600  qlt80 ->  61 KB
+     300x450  qlt75 ->  33 KB     (móvil)                          */
+window.vgBingSize = function(){
+  var dpr = Math.min(window.devicePixelRatio || 1, 2);
+  var visible = (window.innerWidth <= 640) ? 160 : 300;
+  var w = Math.round(visible * dpr);
+  if(w < 240) w = 240;
+  if(w > 480) w = 480;
+  return '&w=' + w + '&h=' + Math.round(w * 1.5) +
+         '&c=7&rs=1&qlt=' + (w <= 340 ? 75 : 80) + '&p=0&o=5&pid=1.7&mkt=en-US';
+};
 </script>
 <style>
 #vgPageLoader{position:fixed;inset:0;z-index:999999;background:#05070d;display:flex;align-items:center;justify-content:center;transition:opacity .35s ease, visibility .35s ease}
@@ -14876,7 +14897,7 @@ window.vgBaseUrl = function(){
     const isClassic = String(game.platform || '').toLowerCase().includes('cl');
     const platformQuery = isClassic ? 'original xbox front cover box art' : 'xbox 360 front cover box art';
     const q = `"${cleanName}" ${platformQuery} -youtube -thumbnail -disc -disk -manual`;
-    return 'https://tse4.mm.bing.net/th?q=' + encodeURIComponent(q) + '&w=800&h=1200&c=7&rs=1&qlt=95&p=0&o=5&pid=1.7&mkt=en-US';
+    return 'https://tse4.mm.bing.net/th?q=' + encodeURIComponent(q) + ''+window.vgBingSize();
   }
   window.adjustRetroImage = function adjustRetroImage(img){
     if(!img) return;
@@ -19529,7 +19550,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   function setLocal(rows){try{localStorage.setItem(LOCAL,JSON.stringify(rows||[]))}catch(e){}}
   function mergedGames(){var map=new Map(); baseGames().forEach(function(g){map.set(String(g.id),g)}); (overrideRows&&overrideRows.length?overrideRows:getLocal()).forEach(function(row){var g=rowToGame(row); if(g.id)map.set(String(g.id),Object.assign({},map.get(String(g.id))||{},g))}); return Array.from(map.values())}
   function loadOverridesAsync(){overrideRows=getLocal(); var client=sb(); if(!client)return Promise.resolve(false); return client.from('products_admin').select('*').like('product_id',PREFIX+'%').then(function(res){if(res&&!res.error&&Array.isArray(res.data)){overrideRows=res.data;setLocal(overrideRows);return true} return false}).catch(function(){return false})}
-  function imgFor(g){if(g.image)return normalizeImage(g.image); if(window.RETRO_GAME_IMAGES&&window.RETRO_GAME_IMAGES[g.name])return normalizeImage(window.RETRO_GAME_IMAGES[g.name]); var clean=String(g.name||'').replace(/[®™]/g,'').replace(/\+/g,' plus ').replace(/[:]+/g,' ').replace(/\s+/g,' ').trim(); if(clean)return 'https://tse4.mm.bing.net/th?q='+encodeURIComponent('"'+clean+'" '+(String(g.platform||'').toLowerCase().includes('cl')?'original xbox':'xbox 360')+' front cover box art')+'&w=800&h=1200&c=7&rs=1&qlt=95&p=0&o=5&pid=1.7&mkt=en-US'; return fallbackCover(g.name,g.platform)}
+  function imgFor(g){if(g.image)return normalizeImage(g.image); if(window.RETRO_GAME_IMAGES&&window.RETRO_GAME_IMAGES[g.name])return normalizeImage(window.RETRO_GAME_IMAGES[g.name]); var clean=String(g.name||'').replace(/[®™]/g,'').replace(/\+/g,' plus ').replace(/[:]+/g,' ').replace(/\s+/g,' ').trim(); if(clean)return 'https://tse4.mm.bing.net/th?q='+encodeURIComponent('"'+clean+'" '+(String(g.platform||'').toLowerCase().includes('cl')?'original xbox':'xbox 360')+' front cover box art')+''+window.vgBingSize(); return fallbackCover(g.name,g.platform)}
   function platformWanted(){var v=String((qs('#retroPlatform')&&qs('#retroPlatform').value)||'all').toLowerCase(); if(v==='360'||v.indexOf('360')>=0)return 'xbox 360'; if(v.indexOf('cl')>=0)return 'clásico'; return 'all'}
   function filteredGames(){var q=String((qs('#retroSearch')&&qs('#retroSearch').value)||'').trim().toLowerCase();var p=platformWanted();return mergedGames().filter(function(g){var gp=String(g.platform||'').toLowerCase(); return g.status!=='hidden'&&(p==='all'||gp===p)&&(!q||String(g.name||'').toLowerCase().indexOf(q)>=0)})}
   function calc(){var subtotal=selected.reduce(function(s,g){return s+Number(g.price||0)},0);var discount=selected.length>=3?Math.round(subtotal*.10):0;return {subtotal:subtotal,discount:discount,total:subtotal-discount}}
@@ -30665,6 +30686,82 @@ else init();
 /* Respeta a quien pidió menos movimiento */
 @media(prefers-reduced-motion:reduce){
   #vg17Client::after{animation:none;display:none}
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 36 — Fluidez en el móvil
+
+     Medido en el sitio en vivo a 390px de ancho:
+       · 93 elementos con backdrop-filter, y 65 de ellos eran el botón
+         de vista rápida de cada tarjeta. Un desenfoque por tarjeta que
+         el teléfono tiene que recalcular en cada cuadro del scroll,
+         encima de imágenes que se mueven. Su fondo ya era casi opaco
+         (0.82), así que el desenfoque no aportaba nada a la vista.
+       · 133 imágenes de producto con un filtro de color decorativo
+         (saturate/contrast). Cada imagen filtrada se compone aparte.
+       · Las portadas retro se pedían a 800x1200 con calidad 95 para
+         enseñarlas a 150px. Eso se arregla arriba, en vgBingSize.
+
+     En el escritorio se deja todo como estaba: ahí sobra potencia y el
+     acabado con desenfoque se ve mejor.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-fluidez-movil-v36">
+@media(max-width:900px){
+
+  /* ── El desenfoque más caro: uno por tarjeta ── */
+  html body .vg-quickview-btn{
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+    background:rgba(10,13,22,.93) !important;
+  }
+
+  /* ── Barra superior: es fija, así que se redesenfoca en cada cuadro
+        mientras se hace scroll. Opaca queda igual de bien. ── */
+  html body header.topbar{
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+    background:rgba(7,8,15,.97) !important;
+  }
+
+  /* ── Fondos de ventanas: ya son opacos al 72-92%, el desenfoque
+        detrás no se aprecia y cuesta una capa entera ── */
+  html body .modal,
+  html body .cart,
+  html body .vg10-overlay,
+  html body .vg-pro-overlay,
+  html body .vg-wish-modal,
+  html body .vg-admin-head,
+  html body .vg-admin-tabs,
+  html body .retro-footer,
+  html body .ff-media-caption,
+  html body .vg-gallery-arrow{
+    backdrop-filter:none !important;
+    -webkit-backdrop-filter:none !important;
+  }
+  html body .modal, html body .cart{ background:rgba(0,0,0,.88) !important; }
+  html body .vg-wish-modal{ background:rgba(0,0,0,.86) !important; }
+  html body .ff-media-caption{ background:rgba(8,12,25,.86) !important; }
+  html body .vg-gallery-arrow{ background:rgba(7,8,15,.92) !important; }
+
+  /* ── Filtro de color de las fotos de producto ──
+        Se conserva en la portada, donde oscurecer la imagen es lo que
+        hace legible el texto de encima. */
+  html body img:not(.hero-bg):not(.vgtk-prem-foto .fondo){
+    filter:none !important;
+  }
+
+  /* ── Que el navegador no pinte lo que está fuera de pantalla ──
+        content-visibility le deja saltarse el diseño y el pintado de
+        las secciones que aún no se ven. La altura estimada evita que
+        la barra de scroll dé saltos. */
+  html body .home-sections > section,
+  html body .vg-faq,
+  html body .vg-reviews-section,
+  html body footer{
+    content-visibility:auto;
+    contain-intrinsic-size:auto 600px;
+  }
 }
 </style>
 
