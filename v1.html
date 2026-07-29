@@ -30720,6 +30720,28 @@ else init();
 </style>
 
 <!-- ════════════════════════════════════════════════════════════════
+     FASE 39 — Zona táctil de los favoritos
+
+     El corazón de cada tarjeta mide 34x34 en el móvil, por debajo de
+     los 44px que recomiendan tanto Apple como Google. Con el dedo se
+     falla y se acaba abriendo el producto en vez de guardarlo.
+
+     Se agranda solo la zona que responde al dedo, con un área invisible
+     alrededor. El corazón se sigue viendo del mismo tamaño: el diseño
+     no cambia en nada.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-tactil-v39">
+@media(max-width:900px){
+  html body .vg-fav-btn{position:relative}
+  html body .vg-fav-btn::before{
+    content:"";position:absolute;
+    top:-6px;right:-6px;bottom:-6px;left:-6px;   /* 34 + 12 = 46px */
+    border-radius:inherit;
+  }
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
      FASE 38 — Los comprobantes dejan de servirse en abierto
 
      El almacén de comprobantes era público: se podían listar las
