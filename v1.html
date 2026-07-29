@@ -30646,6 +30646,164 @@ else init();
 </style>
 
 <!-- ════════════════════════════════════════════════════════════════
+     FASE 34 — Acceso rápido al panel de administración
+
+     Escribir el código en el buscador cada vez es un estorbo para el
+     dueño. Este botón sale SOLO si la sesión de Supabase que hay
+     abierta es de administrador, y al pulsarlo llama a vgAdminOpen,
+     que vuelve a comprobar el rol contra la base de datos. O sea: es
+     un atajo, no una puerta trasera. El código del buscador sigue
+     existiendo para entrar desde un equipo sin sesión iniciada.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-admin-atajo-v34">
+#vgAdminFab{
+  position:fixed;right:18px;bottom:18px;
+  /* Por debajo de cualquier ventana del sitio (producto 9000, retro
+     9999, carrito 9000): el atajo solo hace falta en la página normal,
+     y si flotara encima de un modal estorbaría al comprar. */
+  z-index:8000;
+  display:none;align-items:center;gap:10px;
+  padding:12px 16px 12px 13px;
+  border:1px solid rgba(34,245,211,.42);
+  background:linear-gradient(120deg,rgba(15,20,34,.97),rgba(10,13,22,.97));
+  color:#8ff5e3;cursor:pointer;
+  font-family:ui-monospace,Consolas,monospace;
+  font-size:.76rem;font-weight:800;letter-spacing:.08em;text-transform:uppercase;
+  box-shadow:0 10px 30px rgba(0,0,0,.5), 0 0 26px rgba(34,245,211,.16);
+  clip-path:polygon(12px 0, 100% 0, 100% calc(100% - 12px), calc(100% - 12px) 100%, 0 100%, 0 12px);
+  transition:.16s;
+}
+#vgAdminFab.ver{display:flex}
+#vgAdminFab:hover{border-color:rgba(34,245,211,.75);box-shadow:0 12px 34px rgba(0,0,0,.55), 0 0 34px rgba(34,245,211,.30)}
+#vgAdminFab:active{transform:scale(.97)}
+#vgAdminFab .ico{font-size:1.05rem;line-height:1}
+#vgAdminFab .num{
+  min-width:22px;height:22px;padding:0 6px;border-radius:11px;
+  background:#ff3d81;color:#fff;font-size:.7rem;font-weight:900;
+  display:none;align-items:center;justify-content:center;
+  box-shadow:0 0 14px rgba(255,61,129,.6);
+  animation:vgFabLat 1.9s ease-in-out infinite;
+}
+#vgAdminFab .num.ver{display:flex}
+@keyframes vgFabLat{0%,100%{transform:scale(1)}50%{transform:scale(1.13)}}
+@media(max-width:640px){
+  /* Arriba de la barra inferior del navegador móvil */
+  #vgAdminFab{right:12px;bottom:14px;padding:10px 13px 10px 11px;font-size:.7rem}
+  #vgAdminFab .txt{display:none}
+}
+@media(prefers-reduced-motion:reduce){ #vgAdminFab .num{animation:none} }
+</style>
+
+<script id="vg-admin-atajo-js-v34">
+(function(){
+  'use strict';
+  if(window.__VG34__) return; window.__VG34__ = true;
+
+  var LLAVE = 'vg_soy_admin_v1';
+  var fab, num, timer;
+
+  function cliente(){
+    return (typeof window.vgGetSB === 'function') ? window.vgGetSB() : null;
+  }
+
+  function crear(){
+    if(document.getElementById('vgAdminFab')) return;
+    fab = document.createElement('button');
+    fab.id = 'vgAdminFab';
+    fab.type = 'button';
+    fab.title = 'Abrir el panel de administración en Pedidos';
+    fab.innerHTML = '<span class="ico">🛡</span><span class="txt">Panel</span><span class="num"></span>';
+    fab.onclick = function(){
+      if(typeof window.vgAdminOpen === 'function') window.vgAdminOpen();
+    };
+    document.body.appendChild(fab);
+    num = fab.querySelector('.num');
+  }
+
+  function mostrar(si){
+    if(!fab) return;
+    fab.classList.toggle('ver', !!si);
+    if(si) contarPendientes();
+  }
+
+  /* Cuántos pedidos están esperando que los atiendas. Es lo primero que
+     uno quiere saber al entrar, así que va en el propio botón. */
+  async function contarPendientes(){
+    var c = cliente(); if(!c || !num) return;
+    try{
+      var r = await c.from('orders')
+                .select('id', {count:'exact', head:true})
+                .eq('status', 'pendiente');
+      var n = r.count || 0;
+      num.textContent = n > 99 ? '99+' : String(n);
+      num.classList.toggle('ver', n > 0);
+      fab.title = n
+        ? n+' pedido'+(n===1?'':'s')+' pendiente'+(n===1?'':'s')+' · abrir el panel'
+        : 'Abrir el panel de administración en Pedidos';
+    }catch(e){ /* si falla, el botón sigue sirviendo sin el contador */ }
+  }
+
+  async function revisarRol(){
+    var c = cliente();
+    if(!c){ mostrar(false); return; }
+    var s = await c.auth.getSession();
+    if(!s || !s.data || !s.data.session){
+      try{ sessionStorage.removeItem(LLAVE); }catch(e){}
+      mostrar(false);
+      return;
+    }
+    /* Se guarda el resultado por sesión de pestaña para no preguntar a
+       la base de datos en cada carga. El permiso real lo vuelve a
+       comprobar vgAdminOpen al abrir, así que esto solo decide si se
+       dibuja el botón. */
+    var guardado = null;
+    try{ guardado = sessionStorage.getItem(LLAVE); }catch(e){}
+    if(guardado === '1'){ mostrar(true); return; }
+    if(guardado === '0'){ mostrar(false); return; }
+
+    try{
+      var r = await c.rpc('is_admin');
+      var ok = !r.error && r.data === true;
+      try{ sessionStorage.setItem(LLAVE, ok ? '1' : '0'); }catch(e){}
+      mostrar(ok);
+    }catch(e){ mostrar(false); }
+  }
+
+  function arrancar(){
+    crear();
+    revisarRol();
+    /* Al iniciar o cerrar sesión el botón tiene que aparecer o irse */
+    var c = cliente();
+    if(c && c.auth && c.auth.onAuthStateChange){
+      c.auth.onAuthStateChange(function(){
+        try{ sessionStorage.removeItem(LLAVE); }catch(e){}
+        revisarRol();
+      });
+    }
+    /* El contador se refresca solo mientras la pestaña está a la vista */
+    clearInterval(timer);
+    timer = setInterval(function(){
+      if(!document.hidden && fab && fab.classList.contains('ver')) contarPendientes();
+    }, 45000);
+    document.addEventListener('visibilitychange', function(){
+      if(!document.hidden && fab && fab.classList.contains('ver')) contarPendientes();
+    });
+  }
+
+  /* El cliente de Supabase se crea durante el arranque; se espera a que
+     exista en vez de asumir que ya está. */
+  function esperar(intentos){
+    if(cliente()){ arrancar(); return; }
+    if((intentos||0) > 40) { crear(); return; }
+    setTimeout(function(){ esperar((intentos||0)+1); }, 300);
+  }
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', function(){ esperar(0); });
+  else esperar(0);
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
      FASE 33 — Premios editables (con foto) y portada editable
 
      Requiere haber corrido supabase_fase33_PREMIOS_Y_PORTADA.sql
@@ -30756,8 +30914,33 @@ textarea.vgap-in{min-height:56px;resize:vertical}
 .vgap-prev img,.vgap-prev video{width:100%;height:100%;object-fit:cover;display:block}
 /* La vista previa del premio muestra la imagen entera; la de la portada
    sí va recortada, porque así es como se verá en el hero. */
-#vgapPrev{aspect-ratio:auto;height:200px;background:#0a0d16}
+#vgapPrev{aspect-ratio:auto;height:220px;max-width:360px;background:#0a0d16}
 #vgapPrev img{object-fit:contain}
+#vgapPrevPortada{max-width:560px}
+
+/* Tope de ancho en las secciones que inyecto.
+   En una pantalla ancha el panel llega a 1900px, y una caja con
+   proporción 16/9 y sin tope medía más de 1000px de alto: estiraba el
+   panel por encima de la pantalla y el encabezado con la ✕ quedaba
+   fuera, sin manera de cerrarlo. */
+#vgapPremios, #vgapPortada{max-width:1080px}
+
+/* ── Candado para que el panel nunca vuelva a quedar inalcanzable ──
+   El modal centra el panel; si el panel crece más que la pantalla, su
+   mitad de arriba queda fuera y no hay forma de llegar a la ✕. Con esto
+   el panel jamás pasa del alto de la ventana y el contenido siempre
+   lleva su propio scroll, meta lo que meta dentro. */
+html body #vgAdminModal .vg-admin-panel{
+  max-height:100vh !important;
+  max-height:100dvh !important;
+  overflow:hidden !important;
+}
+html body #vgAdminModal .vg-admin-content{
+  overflow-y:auto !important;
+  min-height:0 !important;
+}
+/* Salida de emergencia siempre visible, pase lo que pase con el diseño */
+#vgAdminModal.active .vg-admin-head{position:relative;z-index:5}
 .vgap-msg{min-height:20px;font-size:.79rem;font-weight:800;margin-top:8px}
 .vgap-msg.ok{color:#8ff5e3}
 .vgap-msg.err{color:#ff92a8}
