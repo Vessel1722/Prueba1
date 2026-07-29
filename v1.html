@@ -30720,6 +30720,86 @@ else init();
 </style>
 
 <!-- ════════════════════════════════════════════════════════════════
+     FASE 38 — Los comprobantes dejan de servirse en abierto
+
+     El almacén de comprobantes era público: se podían listar las
+     carpetas y descargar el comprobante de pago de cualquier cliente
+     con solo pedir la URL. Al cerrarlo (fase 38 del SQL) esas
+     direcciones dejan de responder, y las que quedaron guardadas en los
+     pedidos apuntan justo a ese formato público.
+
+     Esto las cambia al vuelo por enlaces firmados de un minuto, que
+     Supabase solo entrega a quien tiene permiso: tú, y el cliente dueño
+     del pedido. No hay que tocar los pedidos ya guardados.
+     ════════════════════════════════════════════════════════════════ -->
+<script id="vg-comprobantes-firmados-v38">
+(function(){
+  'use strict';
+  if(window.__VG38__) return; window.__VG38__ = true;
+
+  var PUB = '/storage/v1/object/public/comprobantes/';
+  var cache = {};          /* ruta -> url firmada, para no pedirla dos veces */
+
+  function cliente(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+
+  function rutaDe(url){
+    var i = String(url||'').indexOf(PUB);
+    if(i < 0) return null;
+    try{ return decodeURIComponent(String(url).slice(i + PUB.length).split('?')[0]); }
+    catch(e){ return null; }
+  }
+
+  async function firmar(ruta){
+    if(cache[ruta]) return cache[ruta];
+    var c = cliente(); if(!c) return null;
+    try{
+      var r = await c.storage.from('comprobantes').createSignedUrl(ruta, 60);
+      if(r.error || !r.data) return null;
+      cache[ruta] = r.data.signedUrl;
+      /* El enlace caduca al minuto; se olvida antes para no reusar uno muerto */
+      setTimeout(function(){ delete cache[ruta]; }, 50000);
+      return cache[ruta];
+    }catch(e){ return null; }
+  }
+
+  async function arreglar(img){
+    if(!img || img.dataset.vg38) return;
+    var ruta = rutaDe(img.getAttribute('src'));
+    if(!ruta) return;
+    img.dataset.vg38 = '1';
+    var url = await firmar(ruta);
+    if(url) img.src = url;
+  }
+
+  function barrer(raiz){
+    var nodos = (raiz||document).querySelectorAll ? (raiz||document).querySelectorAll('img') : [];
+    Array.prototype.forEach.call(nodos, function(i){
+      if(String(i.getAttribute('src')||'').indexOf(PUB) >= 0) arreglar(i);
+    });
+  }
+
+  function arrancar(){
+    barrer(document);
+    /* Los comprobantes se pintan al abrir un pedido, así que hay que
+       estar pendiente de lo que se añade después. */
+    new MutationObserver(function(muts){
+      muts.forEach(function(m){
+        Array.prototype.forEach.call(m.addedNodes || [], function(n){
+          if(n.nodeType !== 1) return;
+          if(n.tagName === 'IMG') arreglar(n);
+          else barrer(n);
+        });
+      });
+    }).observe(document.documentElement, {childList:true, subtree:true});
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
      FASE 37 — El desplegable de la lada, más corto
 
      Era un <select> nativo con 22 países. El navegador lo abre entero,
