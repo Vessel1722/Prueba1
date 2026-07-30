@@ -30745,6 +30745,25 @@ html body .card .imgbox,
 html body .service-carousel-card .imgbox{
   border:0 !important;
 }
+
+/* ── 1b. El corazón dejaba la foto descentrada ──
+   .imgbox es flex. El botón de favoritos estaba en position:relative,
+   así que contaba como un elemento más de la fila: la caja mide 190px
+   pero tenía que acomodar 190 de foto + 32 del corazón, y al centrar
+   los dos empujaba la foto 15.8px a la izquierda. Se salía por la
+   izquierda y dejaba un hueco oscuro por la derecha.
+
+   Sacándolo del flujo con position:absolute, la foto recupera todo el
+   ancho y el corazón se queda donde toca, arriba a la derecha. */
+html body .imgbox .vg-fav-btn{
+  position:absolute !important;
+  top:10px !important;
+  right:10px !important;
+  left:auto !important;
+  bottom:auto !important;
+  margin:0 !important;
+  z-index:5;
+}
 html body .card .imgbox > img,
 html body .service-carousel-card .imgbox > img{
   width:100% !important;height:100% !important;
