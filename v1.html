@@ -30798,11 +30798,23 @@ html body .service-carousel-card .imgbox > img{
   box-shadow:0 0 18px rgba(34,245,211,.16);
 }
 @media(max-width:900px){
-  /* Sin sesión sí se enseña el texto: es lo que hace que la gente entre */
-  #vg-account-btn.vg-sin-sesion #vgAbLabel{
-    display:inline !important;
-    font-size:.72rem;font-weight:900;letter-spacing:.02em;margin-left:6px;
+  /* Sin sesión sí se enseña el texto: es lo que hace que la gente entre.
+     El botón estaba clavado a 46px de ancho, así que la palabra no cabía
+     aunque se pintara; aquí se le deja crecer con su contenido. */
+  html body #vg-account-btn.vg-sin-sesion{
+    width:auto !important;
+    min-width:46px;
+    padding:0 12px 0 5px !important;
   }
+  html body #vg-account-btn.vg-sin-sesion #vgAbLabel{
+    display:inline-block !important;
+    font-size:.72rem;font-weight:900;letter-spacing:.02em;white-space:nowrap;
+  }
+}
+/* En pantallas muy angostas manda el espacio: solo el icono */
+@media(max-width:370px){
+  html body #vg-account-btn.vg-sin-sesion{width:46px !important;padding:0 !important}
+  html body #vg-account-btn.vg-sin-sesion #vgAbLabel{display:none !important}
 }
 </style>
 
