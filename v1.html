@@ -30814,14 +30814,17 @@ html body .service-carousel-card .imgbox > img{
 /* El botón "Entrar" ocupa unos 40px más que el icono solo, y eso deja
    sin sitio al nombre de la marca, que volvía a cortarse en "VESSEL GA…".
    Se le baja el cuerpo y se acorta el subtítulo para que quepan los dos. */
+/* El .brand.brand repetido es a propósito: sube el peso de la regla por
+   encima de la de la fase 30, que va después en el archivo y si no
+   ganaría ella con sus 17px. */
 @media(max-width:430px){
-  html body .nav a.brand > span{
+  html body .nav a.brand.brand > span{
     font-size:15px !important;
     letter-spacing:.8px !important;
   }
-  html body .nav a.brand > span > small::after{
-    content:"Catálogo";
-    font-size:8.5px;letter-spacing:1px;
+  html body .nav a.brand.brand > span > small::after{
+    content:"Catálogo" !important;
+    font-size:8.5px !important;letter-spacing:1px !important;
   }
 }
 
