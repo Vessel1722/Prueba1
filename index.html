@@ -30811,6 +30811,20 @@ html body .service-carousel-card .imgbox > img{
     font-size:.72rem;font-weight:900;letter-spacing:.02em;white-space:nowrap;
   }
 }
+/* El botón "Entrar" ocupa unos 40px más que el icono solo, y eso deja
+   sin sitio al nombre de la marca, que volvía a cortarse en "VESSEL GA…".
+   Se le baja el cuerpo y se acorta el subtítulo para que quepan los dos. */
+@media(max-width:430px){
+  html body .nav a.brand > span{
+    font-size:15px !important;
+    letter-spacing:.8px !important;
+  }
+  html body .nav a.brand > span > small::after{
+    content:"Catálogo";
+    font-size:8.5px;letter-spacing:1px;
+  }
+}
+
 /* En pantallas muy angostas manda el espacio: solo el icono */
 @media(max-width:370px){
   html body #vg-account-btn.vg-sin-sesion{width:46px !important;padding:0 !important}
