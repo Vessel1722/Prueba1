@@ -28643,28 +28643,24 @@ html body .floating-whatsapp.vg-wa-hidden{
 'use strict';
 if(window.__VG_LEGAL__) return; window.__VG_LEGAL__ = true;
 
-/* DATOS QUE DEBES COMPLETAR
-   Sustituye los valores por los reales de tu negocio. Mientras digan
-   [PENDIENTE], el documento se muestra con un aviso indicándolo. */
+/* Datos del negocio que aparecen en el documento.
+   El contacto va por el chat de la cuenta y por WhatsApp, que es como
+   de verdad se atiende aquí. Si algún día das de alta el negocio y
+   quieres poner razón social y domicilio, se agregan aquí y salen solos
+   en el apartado "Responsable y contacto". */
 var EMPRESA = {
   nombre:    'Vessel Games',
-  titular:   '[PENDIENTE: tu nombre completo o razón social]',
-  domicilio: '[PENDIENTE: domicilio fiscal completo]',
-  correo:    '[PENDIENTE: correo de contacto para temas de privacidad]',
+  titular:   'Vessel Games',
+  domicilio: '',                       /* vacío = no se menciona */
+  correo:    '',                       /* vacío = solo se ofrece el chat y WhatsApp */
   whatsapp:  '+52 661 107 8412',
   sitio:     'vesselgames.xyz'
 };
 var ACTUALIZADO = '25 de julio de 2026';
 
-function faltanDatos(){
-  return Object.keys(EMPRESA).some(function(k){ return String(EMPRESA[k]).indexOf('[PENDIENTE')===0; });
-}
-function aviso(){
-  return faltanDatos()
-    ? '<div class="vg-legal-note">Documento incompleto: faltan por definir los datos de identificación '+
-      'del responsable. Complétalos en el bloque <b>vg-legal-js</b> antes de considerarlo vigente.</div>'
-    : '';
-}
+/* El aviso de "documento incompleto" se quitó: los datos de contacto ya
+   son los definitivos (chat de la cuenta y WhatsApp). */
+function aviso(){ return ''; }
 
 var PRIVACIDAD =
   aviso()+
@@ -28717,11 +28713,13 @@ var PRIVACIDAD =
   '</ul>'+
 
   '<h3>4. Responsable y contacto</h3>'+
-  '<p><strong>'+EMPRESA.titular+'</strong>, quien opera comercialmente como <strong>'+EMPRESA.nombre+'</strong>'+
-  (String(EMPRESA.domicilio).indexOf('[PENDIENTE')===0 ? '' : ', con domicilio en '+EMPRESA.domicilio)+'.</p>'+
-  '<p>Para cualquier duda sobre el tratamiento de tus datos, o para ejercer tus derechos de acceso, '+
-  'rectificación, cancelación u oposición (ARCO), escríbenos a <strong>'+EMPRESA.correo+'</strong> '+
-  'o por WhatsApp al <strong>'+EMPRESA.whatsapp+'</strong>.</p>'+
+  '<p>El responsable del tratamiento de tus datos es <strong>'+EMPRESA.nombre+'</strong>'+
+  (String(EMPRESA.domicilio).trim() ? ', con domicilio en '+EMPRESA.domicilio : '')+'.</p>'+
+  '<p>Para cualquier duda sobre tus datos, o si quieres consultarlos, corregirlos o pedir que los '+
+  'borremos, escríbenos por el <strong>chat de tu cuenta</strong> en el sitio'+
+  (String(EMPRESA.correo).trim() ? ' o al correo <strong>'+EMPRESA.correo+'</strong>' : '')+
+  ', o por WhatsApp al <strong>'+EMPRESA.whatsapp+'</strong>. '+
+  'Te respondemos por la misma vía.</p>'+
 
   '<p style="margin-top:16px">Al continuar navegando y realizar una compra en '+
   '<a href="https://www.vesselgames.xyz" target="_blank" rel="noopener">www.vesselgames.xyz</a>, '+
