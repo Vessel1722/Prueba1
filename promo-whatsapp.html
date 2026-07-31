@@ -1,0 +1,119 @@
+<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<title>Vessel Games · imagen para WhatsApp</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@700;800&family=Inter:wght@400;600;800;900&display=swap" rel="stylesheet">
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:#05070d;display:flex;align-items:flex-start;justify-content:center;padding:24px;
+  font-family:Inter,system-ui,sans-serif;min-height:100vh}
+.aviso{position:fixed;top:0;left:0;right:0;padding:9px;text-align:center;background:#111827;color:#8ff5e3;
+  font-size:13px;font-weight:800;z-index:9;border-bottom:1px solid rgba(34,245,211,.3)}
+
+/* 1080 x 1350 — la proporción 4:5 que WhatsApp no recorta */
+.card{
+  width:1080px;height:1350px;flex:none;position:relative;overflow:hidden;
+  margin-top:44px;padding:64px 60px;color:#eef0fa;
+  background:
+    radial-gradient(70% 45% at 12% 0%, rgba(34,245,211,.16), transparent 60%),
+    radial-gradient(65% 45% at 95% 100%, rgba(168,85,247,.20), transparent 60%),
+    linear-gradient(165deg,#111730,#080b16 60%,#05070d);
+}
+.card::before{
+  content:"";position:absolute;inset:0;pointer-events:none;opacity:.05;
+  background-image:linear-gradient(rgba(34,245,211,.7) 1px,transparent 1px),
+                   linear-gradient(90deg,rgba(34,245,211,.7) 1px,transparent 1px);
+  background-size:56px 56px;
+  -webkit-mask-image:linear-gradient(180deg,#000,transparent 60%);
+          mask-image:linear-gradient(180deg,#000,transparent 60%);
+}
+.card > *{position:relative}
+
+.marca{display:flex;align-items:center;gap:18px;margin-bottom:34px}
+.marca .anillo{width:88px;height:88px;flex:none;padding:3px;border-radius:24px;
+  background:linear-gradient(135deg,#22f5d3,#8b5cf6 55%,#ff5da8);box-shadow:0 0 40px rgba(34,245,211,.35)}
+.marca .anillo img{width:100%;height:100%;border-radius:21px;display:block;background:#080a12;object-fit:cover}
+.marca .nom{font-family:'Barlow Condensed',sans-serif;font-size:46px;font-weight:800;
+  letter-spacing:3px;text-transform:uppercase;line-height:1}
+.marca .nom i{font-style:normal;background:linear-gradient(90deg,#22f5d3,#a855f7);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.marca .sub{color:#7f8ea6;font-size:17px;font-weight:800;letter-spacing:3px;text-transform:uppercase;margin-top:6px}
+
+h1{font-family:'Barlow Condensed',sans-serif;font-size:82px;font-weight:800;line-height:.94;
+  text-transform:uppercase;letter-spacing:1px;margin-bottom:18px}
+h1 em{font-style:normal;background:linear-gradient(90deg,#22f5d3,#a855f7);
+  -webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent}
+.entrada{color:#9aa8c4;font-size:25px;line-height:1.4;margin-bottom:30px;max-width:52ch}
+
+.tokens{padding:30px 34px;margin-bottom:30px;
+  border:2px solid rgba(214,168,79,.42);
+  background:radial-gradient(70% 80% at 18% 0%, rgba(214,168,79,.16), transparent 65%),
+             linear-gradient(160deg,rgba(214,168,79,.10),rgba(255,255,255,.02));
+  clip-path:polygon(0 0, calc(100% - 30px) 0, 100% 30px, 100% 100%, 30px 100%, 0 calc(100% - 30px))}
+.tokens h2{color:#f0d090;font-size:36px;font-weight:900;text-transform:uppercase;letter-spacing:1px;margin-bottom:20px}
+.gana{display:grid;grid-template-columns:1fr 1fr;gap:18px;margin-bottom:20px}
+.gana div{padding:20px 18px;text-align:center;border:1px solid rgba(214,168,79,.3);background:rgba(0,0,0,.3);
+  clip-path:polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px))}
+.gana b{display:block;color:#f0d090;font-size:56px;font-weight:900;line-height:1;
+  font-family:ui-monospace,'Cascadia Mono',Consolas,monospace}
+.gana span{display:block;color:#e8edf9;font-size:23px;font-weight:800;margin-top:12px;line-height:1.3}
+.gana small{display:block;color:#9aa8c4;font-size:19px;margin-top:5px}
+.clave{padding:18px 22px;border-left:6px solid #22f5d3;background:rgba(34,245,211,.10);
+  color:#cfeee8;font-size:24px;line-height:1.5}
+.clave b{color:#8ff5e3}
+.clave{font-size:22px}
+
+.lista{display:grid;grid-template-columns:1fr 1fr;gap:20px 24px}
+/* El ">" es necesario: sin él la regla alcanzaba también al div de dentro
+   y ponía el título y la descripción uno al lado del otro. */
+.lista > div{display:flex;gap:16px;align-items:flex-start}
+.lista > div > div{flex:1;min-width:0}
+.lista .ico{font-size:34px;line-height:1;flex:none}
+.lista b{display:block;color:#fff;font-size:25px;font-weight:850;margin-bottom:4px}
+.lista span{display:block;color:#8e9cba;font-size:20px;line-height:1.4}
+
+.pie{position:absolute;left:60px;right:60px;bottom:56px;display:flex;align-items:center;
+  justify-content:space-between;gap:24px;padding-top:30px;border-top:1px solid rgba(255,255,255,.10)}
+.pie .url{font-family:ui-monospace,Consolas,monospace;font-size:34px;font-weight:900;color:#8ff5e3;letter-spacing:1px}
+.pie .pagos{color:#6d7d95;font-size:19px;font-weight:700;text-align:right;line-height:1.4}
+</style></head><body>
+<div class="aviso">Ábrela a pantalla completa y toma captura (Win + Shift + S). La tarjeta mide 1080×1350, el tamaño que WhatsApp no recorta.</div>
+
+<div class="card">
+  <div class="marca">
+    <div class="anillo"><img src="logo.png" alt=""></div>
+    <div>
+      <div class="nom">Vessel <i>Games</i></div>
+      <div class="sub">Catálogo digital</div>
+    </div>
+  </div>
+
+  <h1>Comprar aquí<br><em>te devuelve algo</em></h1>
+  <p class="entrada">Cada compra y cada persona que traigas te acerca a un premio gratis.</p>
+
+  <div class="tokens">
+    <h2>🪙 Gana tokens</h2>
+    <div class="gana">
+      <div><b>0.25</b><span>por cada compra tuya</span></div>
+      <div><b>1.0</b><span>por cada amigo que traigas</span><small>en su primera compra</small></div>
+    </div>
+    <div class="clave"><b>Solo se descuenta lo que cuesta el premio.</b><br>
+      Si juntas 8 y pides uno de 5, te quedan 3. No se reinicia y no caduca.</div>
+  </div>
+
+  <div class="lista">
+    <div><span class="ico">⚡</span><div><b>Entrega en 20 min a 2 h</b>
+      <span>Ves el estado de tu pedido en todo momento.</span></div></div>
+    <div><span class="ico">💬</span><div><b>Chat por cada pedido</b>
+      <span>Tu entrega queda guardada en tu cuenta.</span></div></div>
+    <div><span class="ico">🛠</span><div><b>Reportas y te damos seguimiento</b>
+      <span>Con número de reporte y respuesta.</span></div></div>
+    <div><span class="ico">🎁</span><div><b>Netflix, MAX, VIX y más</b>
+      <span>Los premios que puedes canjear con tus tokens.</span></div></div>
+  </div>
+
+  <div class="pie">
+    <div class="url">www.vesselgames.xyz</div>
+    <div class="pagos">BBVA · Spin by OXXO<br>PayPal · Binance Pay</div>
+  </div>
+</div>
+</body></html>
