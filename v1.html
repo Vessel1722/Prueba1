@@ -33,6 +33,18 @@
 <link href="apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180">
 <link href="./apple-touch-icon.png" rel="apple-touch-icon" sizes="180x180"/>
 <meta content="#08090F" name="theme-color"/>
+
+<!-- ─── App instalable (PWA) ───────────────────────────────────────
+     Con esto el cliente puede instalar la tienda en su teléfono desde
+     el propio navegador: le queda el icono en la pantalla de inicio y
+     abre a pantalla completa, sin barra de direcciones. No hace falta
+     Play Store ni que nadie descargue un APK.
+     El mismo manifiesto sirve después para generar el APK. -->
+<link rel="manifest" href="/manifest.json">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Vessel Games">
 <script id="vg-supabase-public-config-v42">
   window.VG_SUPABASE_URL = "https://qlczzaajxvvkyuqqdjmu.supabase.co";
   window.VG_SUPABASE_ANON_KEY = "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InFsY3p6YWFqeHZ2a3l1cXFkam11Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzk0MDY4OTMsImV4cCI6MjA5NDk4Mjg5M30.p5A25H8epCHRmxHQjuMWa1iO_4Qqg5w0aCrlI-Ehjhc";
@@ -30716,6 +30728,145 @@ else init();
   #vg17Client::after{animation:none;display:none}
 }
 </style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 44 — App instalable
+
+     Registra el service worker y ofrece el botón de instalar cuando
+     Android dice que se puede. Casi nadie encuentra la opción en el
+     menú del navegador, así que hay que enseñarla.
+
+     El aviso sale una sola vez cada 15 días si lo cierran, y nunca
+     cuando la tienda ya está abierta como app.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-app-v44">
+#vgInstalar{
+  position:fixed;left:12px;right:12px;bottom:14px;z-index:8200;
+  display:none;align-items:center;gap:12px;padding:13px 14px;
+  border:1px solid rgba(34,245,211,.40);
+  background:linear-gradient(110deg,rgba(13,18,32,.98),rgba(10,13,22,.98));
+  box-shadow:0 12px 34px rgba(0,0,0,.55), 0 0 26px rgba(34,245,211,.14);
+  clip-path:polygon(13px 0, 100% 0, 100% calc(100% - 13px), calc(100% - 13px) 100%, 0 100%, 0 13px);
+}
+#vgInstalar.ver{display:flex}
+#vgInstalar img{width:42px;height:42px;flex:none;border-radius:11px}
+#vgInstalar .txt{flex:1;min-width:0}
+#vgInstalar b{display:block;color:#fff;font-size:.87rem;font-weight:900}
+#vgInstalar span{display:block;color:#8e9cba;font-size:.75rem;line-height:1.35;margin-top:2px}
+#vgInstalar .si{
+  flex:none;padding:11px 16px;border:0;cursor:pointer;
+  background:linear-gradient(120deg,#22f5d3,#a855f7);color:#04211b;
+  font-family:inherit;font-size:.8rem;font-weight:900;
+  clip-path:polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+}
+#vgInstalar .no{
+  flex:none;width:30px;height:30px;padding:0;border:0;background:transparent;
+  color:#6d7d95;font-size:1.2rem;cursor:pointer;line-height:1;
+}
+@media(min-width:901px){ #vgInstalar{left:auto;right:18px;width:400px} }
+</style>
+
+<script id="vg-app-js-v44">
+(function(){
+  'use strict';
+  if(window.__VG44__) return; window.__VG44__ = true;
+
+  var LLAVE = 'vg_instalar_pospuesto';
+  var DIAS  = 15;
+  var evento = null;
+
+  function yaEsApp(){
+    return window.matchMedia('(display-mode: standalone)').matches ||
+           window.navigator.standalone === true;
+  }
+  function pospuesto(){
+    try{
+      var t = Number(localStorage.getItem(LLAVE) || 0);
+      return t && (Date.now() - t) < DIAS*24*60*60*1000;
+    }catch(e){ return false; }
+  }
+
+  /* ── Service worker ── */
+  if('serviceWorker' in navigator && location.protocol === 'https:'){
+    window.addEventListener('load', function(){
+      navigator.serviceWorker.register('/sw.js').then(function(reg){
+        /* Si hay una versión nueva esperando, se activa sin pedir nada:
+           la página va siempre a la red primero, así que no hay riesgo
+           de dejar al cliente con precios viejos. */
+        if(reg.waiting) reg.waiting.postMessage('vg-actualizar');
+        reg.addEventListener('updatefound', function(){
+          var nuevo = reg.installing;
+          if(!nuevo) return;
+          nuevo.addEventListener('statechange', function(){
+            if(nuevo.state === 'installed' && navigator.serviceWorker.controller)
+              nuevo.postMessage('vg-actualizar');
+          });
+        });
+      }).catch(function(){ /* sin service worker la tienda funciona igual */ });
+    });
+  }
+
+  /* ── Botón de instalar ── */
+  function caja(){
+    var c = document.getElementById('vgInstalar');
+    if(c) return c;
+    c = document.createElement('div');
+    c.id = 'vgInstalar';
+    c.innerHTML =
+      '<img src="/icon-192.png" alt="">'+
+      '<div class="txt"><b>Instala Vessel Games</b>'+
+        '<span>Ábrela desde tu pantalla de inicio, sin buscar el navegador.</span></div>'+
+      '<button type="button" class="si">Instalar</button>'+
+      '<button type="button" class="no" aria-label="Ahora no">×</button>';
+
+    c.querySelector('.si').onclick = async function(){
+      if(!evento) return;
+      c.classList.remove('ver');
+      evento.prompt();
+      try{ await evento.userChoice; }catch(e){}
+      evento = null;
+    };
+    c.querySelector('.no').onclick = function(){
+      c.classList.remove('ver');
+      try{ localStorage.setItem(LLAVE, String(Date.now())); }catch(e){}
+    };
+    document.body.appendChild(c);
+    return c;
+  }
+
+  window.addEventListener('beforeinstallprompt', function(ev){
+    ev.preventDefault();
+    evento = ev;
+    if(yaEsApp() || pospuesto()) return;
+    /* Se deja mirar la tienda antes de ofrecerle nada */
+    setTimeout(function(){ if(evento) caja().classList.add('ver'); }, 12000);
+  });
+
+  window.addEventListener('appinstalled', function(){
+    var c = document.getElementById('vgInstalar');
+    if(c) c.classList.remove('ver');
+    evento = null;
+    try{ localStorage.removeItem(LLAVE); }catch(e){}
+  });
+
+  /* Accesos directos del icono: /?ir=compras y /?ir=tokens */
+  function atajo(){
+    var ir = new URLSearchParams(location.search||'').get('ir');
+    if(!ir) return;
+    var vista = (ir === 'tokens') ? 'tokens' : 'purchases';
+    var n = 0;
+    var t = setInterval(function(){
+      if(typeof window.vgOpenClientPanel === 'function'){
+        clearInterval(t);
+        window.vgOpenClientPanel(vista);
+      }else if(++n > 40) clearInterval(t);
+    }, 250);
+  }
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', atajo, {once:true});
+  else atajo();
+})();
+</script>
 
 <!-- ════════════════════════════════════════════════════════════════
      FASE 43 — Sección "Por qué elegirnos"
