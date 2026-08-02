@@ -30775,6 +30775,24 @@ else init();
 html body #productModal.vg-actas-pro-modal .modal-body{
   grid-template-rows:auto auto auto auto minmax(0,1fr) !important;
 }
+
+/* ── El cuerpo tiene que llenar la tarjeta, en móvil Y en escritorio ──
+   Medido a 903x790: la tarjeta ocupaba 758px pero el cuerpo se quedaba
+   en 260, del alto de su contenido. La lista de 31 servicios acababa con
+   18px y sobraban 378px muertos entre la lista y los botones.
+
+   La tarjeta es una rejilla y no declara filas, así que su única fila se
+   ajusta al contenido en vez de estirarse. Con minmax(0,1fr) el cuerpo
+   ocupa toda la altura y la lista se queda con lo que de verdad sobra. */
+html body #productModal.vg-actas-pro-modal .modal-card{
+  grid-template-rows:minmax(0,1fr) !important;
+  align-items:stretch !important;
+}
+html body #productModal.vg-actas-pro-modal .modal-body{
+  height:100% !important;
+  min-height:0 !important;
+  align-self:stretch !important;
+}
 </style>
 
 <script id="vg-garantia-js-v49">
