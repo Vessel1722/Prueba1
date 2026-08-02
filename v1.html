@@ -30834,21 +30834,126 @@ else init();
       return;
     }
 
-    /* Se reutiliza el pintado original si existe; si no, uno simple */
-    if(typeof window.renderUsersTable === 'function'){
-      try{ window.renderUsersTable(usuarios); return; }catch(e){ /* sigue abajo */ }
-    }
-    wrap.innerHTML = '<table class="vg-admin-table" style="width:100%"><thead><tr>'+
-      '<th>Nombre</th><th>Correo</th><th>WhatsApp</th><th>Tokens</th><th>Alta</th>'+
-      '</tr></thead><tbody>'+
-      usuarios.map(function(u){
+    pintar(wrap, usuarios);
+  }
+
+  /* Tabla propia con buscador y borrado. No se usa la original porque
+     no tenía forma de quitar una cuenta, que es lo que hacía falta para
+     limpiar las de prueba. */
+  var _lista = [];
+
+  function pintar(wrap, usuarios){
+    _lista = usuarios;
+    wrap.innerHTML =
+      '<div style="display:flex;gap:9px;align-items:center;flex-wrap:wrap;margin-bottom:12px">'+
+        '<input id="vgUsrBuscar" placeholder="Buscar por nombre, correo o WhatsApp..." '+
+        'style="flex:1;min-width:200px;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);'+
+        'color:#fff;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:.85rem">'+
+        '<span id="vgUsrCuenta" style="color:#8593b5;font-size:.8rem;font-weight:800"></span>'+
+        '<button id="vgUsrHuerfanos" style="border:1px solid rgba(255,183,77,.4);background:rgba(255,183,77,.10);'+
+        'color:#ffd68a;border-radius:10px;padding:10px 13px;font-size:.78rem;font-weight:850;cursor:pointer">'+
+        '🧹 Limpiar fichas sin cuenta</button>'+
+      '</div>'+
+      '<div id="vgUsrMsg" style="min-height:20px;font-size:.82rem;font-weight:800;margin-bottom:8px"></div>'+
+      '<div id="vgUsrCuerpo"></div>';
+
+    qs('#vgUsrBuscar').oninput = function(){ filas(this.value); };
+    qs('#vgUsrHuerfanos').onclick = limpiarHuerfanos;
+    filas('');
+  }
+
+  function qs(s){ return document.querySelector(s); }
+
+  function msg(txt, ok){
+    var m = qs('#vgUsrMsg'); if(!m) return;
+    m.style.color = ok ? '#8ff5e3' : '#ff92a8';
+    m.textContent = txt || '';
+  }
+
+  function filas(filtro){
+    var f = String(filtro||'').trim().toLowerCase();
+    var vis = !f ? _lista : _lista.filter(function(u){
+      return [u.name,u.email,u.phone,u.referral_code].join(' ').toLowerCase().indexOf(f) >= 0;
+    });
+    var cnt = qs('#vgUsrCuenta');
+    if(cnt) cnt.textContent = vis.length + ' de ' + _lista.length;
+
+    var cuerpo = qs('#vgUsrCuerpo');
+    if(!vis.length){ cuerpo.innerHTML = '<div style="padding:16px;color:#8593b5">Nadie coincide con esa búsqueda.</div>'; return; }
+
+    cuerpo.innerHTML =
+      '<div style="overflow-x:auto"><table style="width:100%;border-collapse:collapse;font-size:.84rem">'+
+      '<thead><tr style="color:#8e9cba;font-size:.68rem;text-transform:uppercase;letter-spacing:.08em">'+
+        '<th style="text-align:left;padding:8px">Nombre</th>'+
+        '<th style="text-align:left;padding:8px">Correo</th>'+
+        '<th style="text-align:left;padding:8px">WhatsApp</th>'+
+        '<th style="text-align:right;padding:8px">Tokens</th>'+
+        '<th style="text-align:left;padding:8px">Alta</th>'+
+        '<th style="padding:8px"></th></tr></thead><tbody>'+
+      vis.map(function(u){
         var w = u.vg_token_wallet || {};
-        return '<tr><td>'+esc(u.name||'(sin nombre)')+'</td>'+
-          '<td>'+esc(u.email||'')+'</td>'+
-          '<td>'+esc(u.phone||'')+'</td>'+
-          '<td>'+(Math.round(Number(w.balance||0)*100)/100)+'</td>'+
-          '<td>'+(u.created_at? new Date(u.created_at).toLocaleDateString('es-MX') : '')+'</td></tr>';
-      }).join('')+'</tbody></table>';
+        var admin = u.is_admin === true;
+        return '<tr style="border-top:1px solid rgba(255,255,255,.07)">'+
+          '<td style="padding:9px 8px;color:#fff;font-weight:800">'+esc(u.name||'(sin nombre)')+
+            (admin?' <span style="color:#8ff5e3;font-size:.7rem">ADMIN</span>':'')+'</td>'+
+          '<td style="padding:9px 8px;color:#c4cee6">'+esc(u.email||'—')+'</td>'+
+          '<td style="padding:9px 8px;color:#c4cee6">'+esc(u.phone||'—')+'</td>'+
+          '<td style="padding:9px 8px;text-align:right;color:#e8bf6d;font-weight:900">'+
+            (Math.round(Number(w.balance||0)*100)/100)+'</td>'+
+          '<td style="padding:9px 8px;color:#8593b5">'+
+            (u.created_at? new Date(u.created_at).toLocaleDateString('es-MX') : '—')+'</td>'+
+          '<td style="padding:9px 8px;text-align:right">'+
+            (admin
+              ? '<span style="color:#5a6180;font-size:.75rem">protegida</span>'
+              : '<button data-borrar="'+esc(u.id)+'" data-nombre="'+esc(u.name||'esta cuenta')+'" '+
+                'style="border:1px solid rgba(255,77,109,.4);background:rgba(255,77,109,.10);color:#ffabbc;'+
+                'border-radius:9px;padding:7px 11px;font-size:.75rem;font-weight:850;cursor:pointer">Borrar</button>')+
+          '</td></tr>';
+      }).join('')+'</tbody></table></div>';
+
+    Array.prototype.forEach.call(cuerpo.querySelectorAll('[data-borrar]'), function(b){
+      b.onclick = function(){ borrar(b.getAttribute('data-borrar'), b.getAttribute('data-nombre')); };
+    });
+  }
+
+  async function borrar(id, nombre){
+    var c = cli(); if(!c) return;
+
+    /* Primero se mira qué cuelga de esa cuenta, para avisar de verdad */
+    var res = await c.rpc('vg_admin_usuario_resumen', {p_id:id});
+    if(res.error){
+      msg(/does not exist|function/i.test(res.error.message)
+        ? 'Falta correr supabase_fase47_BORRAR_USUARIOS.sql en Supabase.'
+        : res.error.message, false);
+      return;
+    }
+    var d = res.data || {};
+    var aviso = 'Vas a borrar a "' + (d.nombre || nombre) + '".\n\n';
+    if(d.pedidos > 0)   aviso += '⚠ Tiene ' + d.pedidos + ' pedido(s), que se borrarán con su chat.\n';
+    if(d.referidos > 0) aviso += '· Refirió a ' + d.referidos + ' persona(s); esas cuentas se quedan, solo pierden el vínculo.\n';
+    aviso += '\nEsto no se puede deshacer. ¿Continuar?';
+    if(!confirm(aviso)) return;
+
+    var r = await c.rpc('vg_admin_borrar_usuario', {p_id:id, p_con_pedidos:(d.pedidos > 0)});
+    if(r.error){ msg('No se pudo borrar: ' + r.error.message, false); return; }
+    msg('Cuenta borrada: ' + ((r.data && r.data.nombre) || nombre), true);
+    cargar();
+  }
+
+  async function limpiarHuerfanos(){
+    var c = cli(); if(!c) return;
+    if(!confirm('Quita las fichas de cuentas que ya no existen en Authentication.\n\n'+
+                'Son las que borraste desde Supabase y se quedaron aquí colgando.\n'+
+                'No toca administradores. ¿Continuar?')) return;
+    var r = await c.rpc('vg_admin_limpiar_huerfanos');
+    if(r.error){
+      msg(/does not exist|function/i.test(r.error.message)
+        ? 'Falta correr supabase_fase47_BORRAR_USUARIOS.sql en Supabase.'
+        : r.error.message, false);
+      return;
+    }
+    msg('Fichas huérfanas quitadas: ' + (r.data || 0), true);
+    cargar();
   }
 
   /* Se sustituye la original cuando exista */
