@@ -30759,6 +30759,15 @@ else init();
 }
 /* En el modal de Actas la caja va dentro de la rejilla, sin estirarla */
 #productModal.vg-actas-pro-modal .vg-garantia{align-self:start;margin:10px 0 0}
+
+/* Con la garantía dentro son CINCO elementos en la rejilla de Actas:
+   etiqueta, título, nota, garantía y la lista de opciones. La fila
+   elástica tiene que ser la última, la de las opciones: es la que debe
+   encoger y llevar el scroll. Las reglas originales dejaban el 1fr en
+   medio y la lista se aplastaba a 0px. */
+html body #productModal.vg-actas-pro-modal .modal-body{
+  grid-template-rows:auto auto auto auto minmax(0,1fr) !important;
+}
 </style>
 
 <script id="vg-garantia-js-v49">
@@ -30785,10 +30794,17 @@ else init();
     caja.className = 'vg-garantia';
     caja.innerHTML = HTML;
 
-    /* Justo antes de los botones de compra, que es donde se decide */
-    var acciones = cuerpo.querySelector('.modal-actions');
-    if(acciones && acciones.parentNode === cuerpo) cuerpo.insertBefore(caja, acciones);
-    else cuerpo.appendChild(caja);
+    /* Va justo debajo de la nota de entrega, arriba del todo.
+       Antes se ponía antes de .modal-actions, pero esos botones son
+       sticky: quedaban flotando por encima y la garantía terminaba
+       apareciendo DEBAJO de ellos, que es donde nadie la lee. */
+    var nota = cuerpo.querySelector('.modal-delivery-note');
+    if(nota && nota.parentNode === cuerpo) cuerpo.insertBefore(caja, nota.nextSibling);
+    else{
+      var opciones = cuerpo.querySelector('#modalOptions');
+      if(opciones && opciones.parentNode === cuerpo) cuerpo.insertBefore(caja, opciones);
+      else cuerpo.appendChild(caja);
+    }
   }
 
   /* El modal lo abren y repintan varios módulos, así que se vigila en
@@ -33363,8 +33379,12 @@ html body #vgAdminModal .vg-admin-content{
      ════════════════════════════════════════════════════════════════ -->
 <style id="vg-actas-movil-v31">
 @media(max-width:820px){
+  /* Cinco filas: etiqueta, título, nota de entrega, línea de garantía y
+     la lista de opciones, que es la única que debe encoger y llevar el
+     scroll. Al agregar la garantía (fase 49) esta rejilla se quedó corta
+     y la lista se aplastaba a 0px. */
   html body #productModal.vg-actas-pro-modal .modal-body{
-    grid-template-rows:auto auto auto minmax(0,1fr) !important;
+    grid-template-rows:auto auto auto auto minmax(0,1fr) !important;
   }
   /* La lista es la que se desplaza; sin esto, al encogerla se cortarían
      las últimas opciones sin manera de llegar a ellas. */
