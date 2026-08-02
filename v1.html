@@ -30730,6 +30730,46 @@ else init();
 </style>
 
 <!-- ════════════════════════════════════════════════════════════════
+     FASE 48 — Que el texto del carrusel se lea siempre
+
+     Las tarjetas del carrusel ponen la foto de fondo y el texto encima,
+     sin nada que los separe. El título y la descripción llevaban sombra,
+     pero el precio no llevaba nada: sobre una imagen clara —el degradado
+     de Adobe, el logo de MAX— desaparecía.
+
+     Se añade un velo degradado entre la foto y el texto: transparente
+     arriba para que la imagen se siga viendo, y oscuro abajo justo donde
+     va el texto. Es lo que hacen Netflix y Steam con sus portadas.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-legible-v48">
+/* El velo va en la capa de información, que ya está encima de la foto */
+html body .service-carousel-card .service-carousel-info{
+  background:linear-gradient(
+    180deg,
+    rgba(5,8,15,0)    0%,
+    rgba(5,8,15,.20) 38%,
+    rgba(5,8,15,.72) 72%,
+    rgba(5,8,15,.93) 100%
+  ) !important;
+}
+/* El precio era el único sin sombra y es el dato que más importa */
+html body .service-carousel-card .service-carousel-price{
+  text-shadow:0 1px 3px rgba(0,0,0,.85), 0 0 12px rgba(0,0,0,.6) !important;
+  font-weight:900 !important;
+}
+html body .service-carousel-card b,
+html body .service-carousel-card small{
+  text-shadow:0 1px 3px rgba(0,0,0,.85) !important;
+}
+/* La etiqueta de categoría se apoya en un fondo sólido, no traslúcido */
+html body .service-carousel-card .tag{
+  background:rgba(5,8,15,.72) !important;
+  border:1px solid rgba(25,230,193,.30) !important;
+  color:#8ff5e3 !important;
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
      FASE 46 — La lista de usuarios del panel volvía vacía
 
      vgAdminLoadUsers hacía  _allUsers = res.data || []  sin mirar nunca
