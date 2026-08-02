@@ -30792,6 +30792,11 @@ html body #productModal.vg-actas-pro-modal .modal-body{
   height:100% !important;
   min-height:0 !important;
   align-self:stretch !important;
+  /* Y sobre todo esto: había un max-height de 66dvh que lo dejaba en
+     658px dentro de una tarjeta de 868. Ese tope existe para que el
+     cuerpo no tape la foto del producto en las fichas normales, pero en
+     Actas la foto está oculta, así que ahí solo ahogaba la lista. */
+  max-height:none !important;
 }
 </style>
 
