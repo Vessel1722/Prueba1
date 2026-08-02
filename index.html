@@ -30757,6 +30757,13 @@ else init();
 @media(max-width:640px){
   .vg-garantia{padding:11px 12px;font-size:.79rem;margin:10px 0 4px}
 }
+/* Pantalla baja (teléfono acostado): la caja se encoge para no comerse
+   el espacio de la lista de opciones, que es lo que hay que poder elegir. */
+@media(max-height:560px){
+  .vg-garantia{padding:8px 11px;font-size:.74rem;margin:8px 0 2px}
+  .vg-garantia .fino{display:none}
+  .vg-garantia .ico{font-size:1rem}
+}
 /* En el modal de Actas la caja va dentro de la rejilla, sin estirarla */
 #productModal.vg-actas-pro-modal .vg-garantia{align-self:start;margin:10px 0 0}
 
