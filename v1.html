@@ -30730,6 +30730,143 @@ else init();
 </style>
 
 <!-- ════════════════════════════════════════════════════════════════
+     FASE 46 — La lista de usuarios del panel volvía vacía
+
+     vgAdminLoadUsers hacía  _allUsers = res.data || []  sin mirar nunca
+     res.error. Supabase NO lanza excepción cuando una consulta falla:
+     devuelve {data:null, error:{...}}. Así que cualquier fallo acababa
+     pintando "No hay usuarios registrados aun", que es justo lo
+     contrario de lo que pasaba: había usuarios, pero la consulta no
+     llegaba a traerlos.
+
+     La consulta pide vg_token_wallet incrustado, y eso exige una llave
+     foránea entre las dos tablas. Si falta, PostgREST responde con un
+     error en vez de datos.
+
+     Aquí se reemplaza por una versión que:
+       · mira el error y lo enseña, con el motivo de verdad;
+       · si el fallo es de la relación incrustada, reintenta sin ella y
+         trae los saldos por separado, para que la lista salga igual;
+       · aguanta nombres vacíos, que antes reventaban al pintar la
+         inicial del avatar.
+     ════════════════════════════════════════════════════════════════ -->
+<script id="vg-admin-usuarios-js-v46">
+(function(){
+  'use strict';
+  if(window.__VG46__) return; window.__VG46__ = true;
+
+  function cli(){
+    if(typeof window.vgGetSB === 'function') return window.vgGetSB();
+    return null;
+  }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  function aviso(wrap, texto, detalle){
+    wrap.innerHTML =
+      '<div style="padding:18px;border:1px solid rgba(255,77,109,.35);'+
+      'background:rgba(255,77,109,.08);border-radius:12px;color:#ffabbc;'+
+      'font-size:.86rem;line-height:1.55">'+
+      '<b style="display:block;color:#fff;margin-bottom:6px">'+esc(texto)+'</b>'+
+      (detalle ? '<span style="color:#e8a9b6;font-family:ui-monospace,Consolas,monospace;'+
+                 'font-size:.78rem">'+esc(detalle)+'</span>' : '')+
+      '</div>';
+  }
+
+  async function cargar(){
+    var wrap = document.getElementById('vgUsersTableWrap');
+    if(!wrap) return;
+    wrap.innerHTML = '<div style="text-align:center;padding:32px;color:#5a6180">Cargando usuarios...</div>';
+
+    var c = cli();
+    if(!c){ aviso(wrap, 'No hay conexión con el servidor.'); return; }
+
+    var CAMPOS = 'id,name,phone,email,referral_code,created_at,is_admin';
+
+    /* 1er intento: con los saldos incrustados */
+    var r = await c.from('vg_users')
+      .select(CAMPOS + ', vg_token_wallet(balance,total_purchases,total_earned)')
+      .order('created_at', {ascending:false})
+      .limit(200);
+
+    var usuarios = null;
+
+    if(!r.error){
+      usuarios = r.data || [];
+    }else{
+      /* 2º intento: sin la relación, que es lo que suele fallar */
+      var r2 = await c.from('vg_users')
+        .select(CAMPOS)
+        .order('created_at', {ascending:false})
+        .limit(200);
+
+      if(r2.error){
+        var m = r2.error.message || String(r2.error);
+        if(/permission|policy|row-level/i.test(m)){
+          aviso(wrap, 'La base de datos no te deja ver los usuarios.',
+                'Tu cuenta tiene que tener is_admin = true en vg_users. Detalle: ' + m);
+        }else{
+          aviso(wrap, 'No se pudieron cargar los usuarios.', m);
+        }
+        return;
+      }
+
+      usuarios = r2.data || [];
+
+      /* Los saldos se traen aparte y se pegan por user_id */
+      try{
+        var w = await c.from('vg_token_wallet').select('user_id,balance,total_purchases,total_earned');
+        if(!w.error && w.data){
+          var porId = {};
+          w.data.forEach(function(x){ porId[String(x.user_id)] = x; });
+          usuarios.forEach(function(u){ u.vg_token_wallet = porId[String(u.id)] || null; });
+        }
+      }catch(e){}
+    }
+
+    if(!usuarios.length){
+      wrap.innerHTML =
+        '<div style="padding:20px;color:#8593b5;font-size:.87rem;line-height:1.55">'+
+        'La consulta funcionó pero no devolvió ninguna fila.<br>'+
+        'Si sabes que hay cuentas registradas, revisa que el disparador '+
+        '<b>handle_new_user</b> esté creando la ficha en vg_users al darse de alta.'+
+        '</div>';
+      return;
+    }
+
+    /* Se reutiliza el pintado original si existe; si no, uno simple */
+    if(typeof window.renderUsersTable === 'function'){
+      try{ window.renderUsersTable(usuarios); return; }catch(e){ /* sigue abajo */ }
+    }
+    wrap.innerHTML = '<table class="vg-admin-table" style="width:100%"><thead><tr>'+
+      '<th>Nombre</th><th>Correo</th><th>WhatsApp</th><th>Tokens</th><th>Alta</th>'+
+      '</tr></thead><tbody>'+
+      usuarios.map(function(u){
+        var w = u.vg_token_wallet || {};
+        return '<tr><td>'+esc(u.name||'(sin nombre)')+'</td>'+
+          '<td>'+esc(u.email||'')+'</td>'+
+          '<td>'+esc(u.phone||'')+'</td>'+
+          '<td>'+(Math.round(Number(w.balance||0)*100)/100)+'</td>'+
+          '<td>'+(u.created_at? new Date(u.created_at).toLocaleDateString('es-MX') : '')+'</td></tr>';
+      }).join('')+'</tbody></table>';
+  }
+
+  /* Se sustituye la original cuando exista */
+  function reemplazar(){
+    if(typeof window.vgAdminLoadUsers !== 'function') return false;
+    if(window.vgAdminLoadUsers.__vg46) return true;
+    cargar.__vg46 = true;
+    window.vgAdminLoadUsers = cargar;
+    return true;
+  }
+  if(!reemplazar()){
+    var n = 0;
+    var t = setInterval(function(){ if(reemplazar() || ++n > 80) clearInterval(t); }, 250);
+  }
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
      FASE 44 — App instalable
 
      Registra el service worker y ofrece el botón de instalar cuando
