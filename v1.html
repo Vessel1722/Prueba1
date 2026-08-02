@@ -30798,6 +30798,19 @@ html body #productModal.vg-actas-pro-modal .modal-body{
      Actas la foto está oculta, así que ahí solo ahogaba la lista. */
   max-height:none !important;
 }
+
+/* Los botones de compra van flotando abajo (absolutos, 130px de alto a
+   8px del borde = 138px). El cuerpo reservaba 128px, así que la última
+   opción de la lista se metía debajo de ellos. Se reserva lo que de
+   verdad ocupan, más un respiro. */
+html body #productModal.vg-actas-pro-modal .modal-body{
+  padding-bottom:152px !important;
+}
+@media(min-width:821px){
+  html body #productModal.vg-actas-pro-modal .modal-body{
+    padding-bottom:124px !important;
+  }
+}
 </style>
 
 <script id="vg-garantia-js-v49">
