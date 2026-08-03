@@ -33898,5 +33898,254 @@ html body .nav a.brand > span > small{
 }
 </style>
 
-</body>
-</html>
+<style id="vg-admin-resumen-v52">
+.vgres{display:grid;grid-template-columns:repeat(auto-fit,minmax(132px,1fr));gap:9px;margin-bottom:12px}
+.vgres-c{
+  padding:12px 13px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.035);
+  clip-path:polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 10px 100%, 0 calc(100% - 10px));
+}
+.vgres-c span{display:block;color:#8e9cba;font-size:.6rem;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
+.vgres-c b{display:block;color:#fff;font-size:1.35rem;font-weight:900;margin-top:5px;
+  font-family:ui-monospace,Consolas,monospace}
+.vgres-c small{display:block;color:#7f8ea6;font-size:.68rem;margin-top:2px}
+.vgres-c.alerta{border-color:rgba(255,183,77,.42);background:rgba(255,183,77,.09)}
+.vgres-c.alerta b{color:#ffd68a}
+.vgres-c.dinero b{color:#22f5d3}
+
+.vgbusca{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:11px}
+.vgbusca input{
+  flex:1;min-width:170px;border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);
+  color:#fff;border-radius:10px;padding:9px 12px;font-family:inherit;font-size:.83rem;
+}
+.vgbusca input:focus{outline:none;border-color:rgba(34,245,211,.45)}
+.vgbusca select{
+  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#fff;
+  border-radius:10px;padding:9px 10px;font-family:inherit;font-size:.83rem;
+}
+.vgbusca .cuenta{align-self:center;color:#8593b5;font-size:.76rem;font-weight:800}
+
+.vgvence{margin-bottom:12px;padding:13px;border:1px solid rgba(255,183,77,.34);
+  background:rgba(255,183,77,.07);
+  clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px))}
+.vgvence > span{display:block;color:#ffd68a;font-size:.64rem;font-weight:900;
+  letter-spacing:.1em;text-transform:uppercase;margin-bottom:9px}
+.vgvence-f{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:7px 0;border-top:1px solid rgba(255,255,255,.07);font-size:.81rem}
+.vgvence-f:first-of-type{border-top:0}
+.vgvence-f b{color:#fff;font-weight:800}
+.vgvence-f small{display:block;color:#8593b5;font-size:.72rem}
+.vgvence-f .dias{flex:none;color:#ffd68a;font-weight:900;font-family:ui-monospace,Consolas,monospace}
+
+/* Selector de periodo al entregar */
+#vgPeriodoFondo{position:fixed;inset:0;z-index:2147483600;display:none;
+  align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.84)}
+#vgPeriodoFondo.ver{display:flex}
+#vgPeriodoCaja{width:100%;max-width:360px;background:#0d1120;border:1px solid rgba(34,245,211,.30);
+  padding:24px 22px;color:#eef0fa;font-family:Inter,system-ui,sans-serif;
+  clip-path:polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px))}
+#vgPeriodoCaja h4{margin:0 0 6px;color:#fff;font-size:1.05rem;font-weight:900}
+#vgPeriodoCaja p{margin:0 0 16px;color:#8e9cba;font-size:.82rem;line-height:1.5}
+#vgPeriodoCaja .ops{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+#vgPeriodoCaja .ops button{padding:12px;cursor:pointer;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);color:#e8edf9;font-family:inherit;font-size:.85rem;font-weight:850}
+#vgPeriodoCaja .ops button:hover{border-color:rgba(34,245,211,.5);color:#8ff5e3}
+#vgPeriodoCaja .ops button.nada{grid-column:1/-1;border-color:rgba(255,255,255,.10);color:#8593b5}
+</style>
+
+<script id="vg-admin-resumen-js-v52">
+(function(){
+  'use strict';
+  if(window.__VG52__) return; window.__VG52__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function dinero(n){ return '$'+Math.round(Number(n||0)).toLocaleString('es-MX'); }
+
+  /* ═══ 1. Resumen del día ═══ */
+  async function resumen(){
+    var cont = document.getElementById('vgAdminPedidos');
+    if(!cont || !cont.classList.contains('active')) return;
+    if(cont.querySelector('.vgres')) return;
+    if(!cont.children.length) return;
+
+    var caja = document.createElement('div');
+    caja.innerHTML =
+      '<div class="vgres" id="vgResumen">'+
+        '<div class="vgres-c dinero"><span>Vendido hoy</span><b>—</b><small>pedidos entregados</small></div>'+
+        '<div class="vgres-c"><span>Pedidos hoy</span><b>—</b><small>de cualquier estado</small></div>'+
+        '<div class="vgres-c alerta"><span>Pendientes</span><b>—</b><small>esperando que los atiendas</small></div>'+
+        '<div class="vgres-c"><span>Esta semana</span><b>—</b><small>vendido en 7 días</small></div>'+
+      '</div>';
+    cont.insertBefore(caja.firstChild, cont.firstChild);
+
+    var c = cli(); if(!c) return;
+    var r = await c.from('orders').select('id,status,total,created_at,source').limit(1000);
+    if(r.error || !r.data) return;
+
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+    var sem = new Date(Date.now() - 7*24*60*60*1000);
+    var ped = r.data.filter(function(o){ return String(o.source||'') !== 'recommendation'; });
+
+    var deHoy   = ped.filter(function(o){ return new Date(o.created_at) >= hoy; });
+    var vendHoy = deHoy.filter(function(o){ return o.status === 'entregado'; })
+                       .reduce(function(s,o){ return s + Number(o.total||0); }, 0);
+    var vendSem = ped.filter(function(o){ return new Date(o.created_at) >= sem && o.status === 'entregado'; })
+                     .reduce(function(s,o){ return s + Number(o.total||0); }, 0);
+    var pend    = ped.filter(function(o){ return o.status === 'pendiente'; }).length;
+
+    var cs = document.querySelectorAll('#vgResumen .vgres-c b');
+    if(cs[0]) cs[0].textContent = dinero(vendHoy);
+    if(cs[1]) cs[1].textContent = deHoy.length;
+    if(cs[2]) cs[2].textContent = pend;
+    if(cs[3]) cs[3].textContent = dinero(vendSem);
+
+    var tarjPend = document.querySelectorAll('#vgResumen .vgres-c')[2];
+    if(tarjPend) tarjPend.classList.toggle('alerta', pend > 0);
+
+    porVencer(cont);
+  }
+
+  /* ═══ 2. A quién le vence pronto ═══ */
+  async function porVencer(cont){
+    if(cont.querySelector('.vgvence')) return;
+    var c = cli(); if(!c) return;
+    var r = await c.rpc('vg_admin_por_vencer', {p_dias:7});
+    if(r.error || !r.data || !r.data.length) return;
+
+    var d = document.createElement('div');
+    d.className = 'vgvence';
+    d.innerHTML = '<span>⏳ Vencen esta semana · '+r.data.length+'</span>'+
+      r.data.slice(0,6).map(function(x){
+        var dias = Number(x.dias||0);
+        return '<div class="vgvence-f"><div style="min-width:0">'+
+          '<b>'+esc(x.cliente)+'</b><small>'+esc(x.producto)+
+          (x.telefono ? ' · '+esc(x.telefono) : '')+'</small></div>'+
+          '<span class="dias">'+ (dias < 0 ? 'vencida' : dias+'d') +'</span></div>';
+      }).join('');
+
+    var res = cont.querySelector('.vgres');
+    if(res && res.nextSibling) cont.insertBefore(d, res.nextSibling);
+    else cont.insertBefore(d, cont.firstChild);
+  }
+
+  /* ═══ 3. Buscador sobre la lista de pedidos ═══ */
+  function buscador(){
+    var cont = document.getElementById('vgAdminPedidos');
+    if(!cont || !cont.classList.contains('active')) return;
+    var lista = cont.querySelector('.vg17-list');
+    if(!lista || cont.querySelector('.vgbusca')) return;
+
+    var b = document.createElement('div');
+    b.className = 'vgbusca';
+    b.innerHTML =
+      '<input id="vgBuscaPed" placeholder="Buscar por cliente, producto o número...">'+
+      '<select id="vgFiltroEstado">'+
+        '<option value="">Todos los estados</option>'+
+        '<option value="pendiente">Pendientes</option>'+
+        '<option value="proceso">En proceso</option>'+
+        '<option value="entregado">Entregados</option>'+
+        '<option value="cancelado">Cancelados</option>'+
+      '</select>'+
+      '<span class="cuenta" id="vgCuentaPed"></span>';
+    lista.parentNode.insertBefore(b, lista);
+
+    function filtrar(){
+      var q = (document.getElementById('vgBuscaPed').value||'').trim().toLowerCase();
+      var e = document.getElementById('vgFiltroEstado').value;
+      var tarjetas = lista.querySelectorAll('[data-o]');
+      var n = 0;
+      Array.prototype.forEach.call(tarjetas, function(t){
+        var txt = (t.textContent||'').toLowerCase();
+        var okQ = !q || txt.indexOf(q) >= 0;
+        var okE = !e || t.className.indexOf('st-'+e) >= 0;
+        var ver = okQ && okE;
+        t.style.display = ver ? '' : 'none';
+        if(ver) n++;
+      });
+      document.getElementById('vgCuentaPed').textContent = n + ' de ' + tarjetas.length;
+    }
+    document.getElementById('vgBuscaPed').oninput = filtrar;
+    document.getElementById('vgFiltroEstado').onchange = filtrar;
+    filtrar();
+  }
+
+  /* ═══ 4. Al entregar, preguntar el periodo ═══ */
+  function periodoCaja(){
+    var f = document.getElementById('vgPeriodoFondo');
+    if(f) return f;
+    f = document.createElement('div');
+    f.id = 'vgPeriodoFondo';
+    f.innerHTML = '<div id="vgPeriodoCaja"></div>';
+    f.addEventListener('click', function(ev){ if(ev.target===f) f.classList.remove('ver'); });
+    document.body.appendChild(f);
+    return f;
+  }
+
+  function preguntarPeriodo(idPedido, nombre){
+    var f = periodoCaja();
+    var c = f.querySelector('#vgPeriodoCaja');
+    c.innerHTML =
+      '<h4>¿Por cuánto tiempo?</h4>'+
+      '<p>'+esc(nombre||'Este pedido')+'<br>'+
+      'Con esto el cliente ve cuándo se le acaba y tú sabes a quién escribirle antes.</p>'+
+      '<div class="ops">'+
+        '<button data-m="1">1 mes</button>'+
+        '<button data-m="3">3 meses</button>'+
+        '<button data-m="6">6 meses</button>'+
+        '<button data-m="12">12 meses</button>'+
+        '<button class="nada" data-m="">No vence (recarga o código)</button>'+
+      '</div>';
+
+    Array.prototype.forEach.call(c.querySelectorAll('[data-m]'), function(b){
+      b.onclick = async function(){
+        f.classList.remove('ver');
+        var m = b.getAttribute('data-m');
+        var cl = cli(); if(!cl) return;
+        var r = await cl.rpc('vg_admin_entregar', {
+          p_order: idPedido,
+          p_meses: m ? Number(m) : null
+        });
+        if(r.error){
+          if(/does not exist|function/i.test(r.error.message))
+            alert('Falta correr supabase_fase50_RENOVACIONES.sql en Supabase.');
+          else alert('No se pudo guardar el periodo: ' + r.error.message);
+          return;
+        }
+        if(typeof window.showToast === 'function')
+          window.showToast('Entregado', m ? ('Vence en '+m+' mes(es)') : 'Sin vencimiento');
+      };
+    });
+    f.classList.add('ver');
+  }
+
+  /* Se escucha en burbuja: el manejador original ya puso el estado, y
+     aquí solo se añade el periodo encima. Así no se pelea con su código. */
+  document.addEventListener('click', function(ev){
+    var b = ev.target && ev.target.closest && ev.target.closest('[data-st="entregado"]');
+    if(!b) return;
+    var det = b.closest('#vgAdminDetalle, .vg17-hero, #vg17ADetail, .vg-admin-section') || document;
+    var t = det.querySelector('.vg17-hero-top h3, h3');
+    var nombre = t ? t.textContent.trim() : '';
+    var card = document.querySelector('#vgAdminPedidos .vg17-card.active[data-o]');
+    var id = card ? card.getAttribute('data-o') : null;
+    if(!id) return;
+    setTimeout(function(){ preguntarPeriodo(id, nombre); }, 400);
+  });
+
+  function arrancar(){
+    /* Solo el panel de administración, por lo mismo: un observador
+       sobre todo el documento se dispara constantemente sin necesidad. */
+    var modal = document.getElementById('vgAdminModal');
+    if(modal){
+      new MutationObserver(function(){ resumen(); buscador(); })
+        .observe(modal, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    }
+    [600, 1800, 3500].forEach(function(ms){ setTimeout(function(){ resumen(); buscador(); }, ms); });
+  }
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
