@@ -30754,26 +30754,42 @@ else init();
   var TITULO_BASE = document.title;
   var DESC_BASE   = (document.querySelector('meta[name=description]')||{}).content || '';
 
+  /* Guarda de bucle. La versión anterior escribía en <head> desde un
+     observador que vigilaba todo el documento: cada escritura volvía a
+     dispararlo y la página se colgaba. Ahora se recuerda lo último
+     aplicado y no se toca nada si no cambió. */
+  var ultimo = null;
+  var escribiendo = false;
+
   function meta(sel, valor){
     var e = document.querySelector(sel);
     if(e && valor != null) e.setAttribute(e.hasAttribute('content')?'content':'value', valor);
   }
 
   function limpiar(){
+    if(ultimo === null) return;      /* ya estaba limpio: no tocar nada */
+    ultimo = null;
+    escribiendo = true;
     document.title = TITULO_BASE;
     meta('meta[name=description]', DESC_BASE);
     meta('meta[property="og:title"]', TITULO_BASE);
     meta('meta[property="og:description"]', DESC_BASE);
     var j = document.getElementById('vgJsonLdProducto');
     if(j) j.remove();
+    escribiendo = false;
   }
 
   function aplicar(){
+    if(escribiendo) return;
+
     var m = document.getElementById('productModal');
     if(!m || !m.classList.contains('active')){ limpiar(); return; }
 
     var t = (document.getElementById('modalTitle')||{}).textContent || '';
     if(!t.trim()) return;
+    if(t.trim() === ultimo) return;  /* mismo producto: nada que rehacer */
+    ultimo = t.trim();
+    escribiendo = true;
     var cat = (document.getElementById('modalCat')||{}).textContent || '';
     var img = m.querySelector('.modal-img img');
 
@@ -30824,13 +30840,24 @@ else init();
     s.id = 'vgJsonLdProducto';
     s.textContent = JSON.stringify(datos);
     document.head.appendChild(s);
+
+    escribiendo = false;
   }
 
   function arrancar(){
-    new MutationObserver(function(){ aplicar(); })
-      .observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
-    [400, 1200].forEach(function(ms){ setTimeout(aplicar, ms); });
-    window.addEventListener('popstate', function(){ setTimeout(aplicar, 200); });
+    /* Se vigila SOLO la clase del modal, no el documento entero. Antes
+       observaba todo con subtree, y como esta función escribe en <head>,
+       cada escritura la volvía a disparar: bucle infinito y pestaña
+       colgada. */
+    var m = document.getElementById('productModal');
+    if(m){
+      new MutationObserver(function(){ aplicar(); })
+        .observe(m, {attributes:true, attributeFilter:['class']});
+    }
+    /* El título tarda en llegar tras abrir, por eso un par de repasos */
+    document.addEventListener('click', function(){ setTimeout(aplicar, 700); });
+    window.addEventListener('popstate', function(){ setTimeout(aplicar, 400); });
+    setTimeout(aplicar, 1500);
   }
   if(document.readyState === 'loading')
     document.addEventListener('DOMContentLoaded', arrancar, {once:true});
@@ -31085,8 +31112,13 @@ else init();
   });
 
   function arrancar(){
-    new MutationObserver(function(){ resumen(); buscador(); })
-      .observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    /* Solo el panel de administración, por lo mismo: un observador
+       sobre todo el documento se dispara constantemente sin necesidad. */
+    var modal = document.getElementById('vgAdminModal');
+    if(modal){
+      new MutationObserver(function(){ resumen(); buscador(); })
+        .observe(modal, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    }
     [600, 1800, 3500].forEach(function(ms){ setTimeout(function(){ resumen(); buscador(); }, ms); });
   }
   if(document.readyState === 'loading')
@@ -31380,9 +31412,15 @@ else init();
   }
 
   function arrancar(){
-    new MutationObserver(function(){
-      if(document.querySelector('#vg17Client.active')){ pestana(); botonRecibo(); }
-    }).observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    /* Se vigila SOLO el panel del cliente, no el documento entero. Un
+       observador sobre todo el árbol se dispara con cada latido del
+       chat y de los temporizadores, y eso es CPU tirada a la basura. */
+    var panel = document.getElementById('vg17Client');
+    if(panel){
+      new MutationObserver(function(){
+        if(panel.classList.contains('active')){ pestana(); botonRecibo(); }
+      }).observe(panel, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    }
     [500, 1500, 3000].forEach(function(ms){
       setTimeout(function(){ if(document.querySelector('#vg17Client.active')){ pestana(); botonRecibo(); } }, ms);
     });
@@ -31515,10 +31553,14 @@ html body #productModal.vg-actas-pro-modal .modal-body{
   }
 
   /* El modal lo abren y repintan varios módulos, así que se vigila en
-     vez de engancharse a una sola función. */
+     vez de engancharse a una sola función. Solo el modal, no todo el
+     documento: observar el árbol entero cuesta CPU en cada latido. */
   function arrancar(){
-    new MutationObserver(function(){ poner(); })
-      .observe(document.documentElement, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    var m = document.getElementById('productModal');
+    if(m){
+      new MutationObserver(function(){ poner(); })
+        .observe(m, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    }
     [300, 900, 2000].forEach(function(ms){ setTimeout(poner, ms); });
   }
   if(document.readyState === 'loading')
