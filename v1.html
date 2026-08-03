@@ -30736,6 +30736,301 @@ else init();
 }
 </style>
 
+<style id="vg-suscripciones-v51">
+.vgsub{display:grid;gap:11px}
+.vgsub-item{
+  padding:15px;border:1px solid rgba(255,255,255,.10);
+  background:rgba(255,255,255,.035);
+  clip-path:polygon(0 0, calc(100% - 13px) 0, 100% 13px, 100% 100%, 13px 100%, 0 calc(100% - 13px));
+}
+.vgsub-item.pronto{border-color:rgba(255,183,77,.45);background:rgba(255,183,77,.07)}
+.vgsub-item.vencida{border-color:rgba(255,77,109,.45);background:rgba(255,77,109,.07)}
+.vgsub-top{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:10px}
+.vgsub-top b{display:block;color:#fff;font-size:.95rem;font-weight:850}
+.vgsub-top small{display:block;color:#8e9cba;font-size:.74rem;margin-top:2px}
+.vgsub-dias{
+  flex:none;text-align:center;padding:7px 12px;
+  font-family:ui-monospace,Consolas,monospace;font-weight:900;
+  border:1px solid rgba(34,245,211,.30);background:rgba(34,245,211,.10);color:#8ff5e3;
+  clip-path:polygon(7px 0, 100% 0, 100% calc(100% - 7px), calc(100% - 7px) 100%, 0 100%, 0 7px);
+}
+.vgsub-dias b{display:block;font-size:1.25rem;line-height:1;color:inherit}
+.vgsub-dias span{display:block;font-size:.6rem;letter-spacing:.08em;text-transform:uppercase;margin-top:3px;opacity:.8}
+.vgsub-item.pronto  .vgsub-dias{border-color:rgba(255,183,77,.42);background:rgba(255,183,77,.12);color:#ffd68a}
+.vgsub-item.vencida .vgsub-dias{border-color:rgba(255,77,109,.45);background:rgba(255,77,109,.12);color:#ffabbc}
+.vgsub-barra{height:5px;background:rgba(255,255,255,.09);overflow:hidden;margin-bottom:11px}
+.vgsub-barra i{display:block;height:100%;background:linear-gradient(90deg,#22f5d3,#a855f7)}
+.vgsub-item.pronto  .vgsub-barra i{background:linear-gradient(90deg,#ffb74d,#ff8a3d)}
+.vgsub-item.vencida .vgsub-barra i{background:linear-gradient(90deg,#ff3d81,#ff6b6b)}
+.vgsub-renovar{
+  width:100%;padding:11px;cursor:pointer;border:0;
+  background:linear-gradient(120deg,#22f5d3,#a855f7);color:#04211b;
+  font-family:inherit;font-size:.83rem;font-weight:900;
+  clip-path:polygon(9px 0, 100% 0, 100% calc(100% - 9px), calc(100% - 9px) 100%, 0 100%, 0 9px);
+}
+.vgsub-renovar:active{transform:scale(.985)}
+.vgsub-nota{color:#8593b5;font-size:.78rem;line-height:1.5;margin-bottom:14px}
+
+/* ── Comprobante ── */
+.vgrec-fondo{
+  position:fixed;inset:0;z-index:31000;display:none;
+  align-items:center;justify-content:center;padding:18px;
+  background:rgba(0,0,0,.82);
+}
+.vgrec-fondo.ver{display:flex}
+.vgrec{
+  width:100%;max-width:400px;background:#0d1120;color:#eef0fa;
+  border:1px solid rgba(34,245,211,.28);padding:26px 24px;
+  font-family:Inter,system-ui,sans-serif;
+}
+.vgrec-head{display:flex;align-items:center;gap:12px;margin-bottom:20px;
+  padding-bottom:16px;border-bottom:1px dashed rgba(255,255,255,.16)}
+.vgrec-head img{width:44px;height:44px;border-radius:11px;flex:none}
+.vgrec-head b{display:block;color:#fff;font-size:1.02rem;font-weight:900;letter-spacing:.04em}
+.vgrec-head span{display:block;color:#8593b5;font-size:.7rem;letter-spacing:.1em;text-transform:uppercase}
+.vgrec-fila{display:flex;justify-content:space-between;gap:14px;padding:8px 0;font-size:.85rem}
+.vgrec-fila span{color:#8e9cba}
+.vgrec-fila b{color:#fff;text-align:right;font-weight:800}
+.vgrec-total{margin-top:14px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.16);
+  display:flex;justify-content:space-between;align-items:baseline}
+.vgrec-total span{color:#8e9cba;font-size:.82rem}
+.vgrec-total b{color:#22f5d3;font-size:1.5rem;font-weight:900;font-family:ui-monospace,Consolas,monospace}
+.vgrec-pie{margin-top:18px;padding-top:14px;border-top:1px dashed rgba(255,255,255,.16);
+  color:#6d7d95;font-size:.7rem;line-height:1.5;text-align:center}
+.vgrec-btns{display:flex;gap:9px;margin-top:16px}
+.vgrec-btns button{flex:1;padding:11px;cursor:pointer;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);color:#e8edf9;font-family:inherit;font-size:.8rem;font-weight:850}
+.vgrec-btns .principal{border:0;background:linear-gradient(120deg,#22f5d3,#a855f7);color:#04211b}
+.vg17-recibo{
+  margin-top:9px;padding:9px 13px;cursor:pointer;
+  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);color:#c4cee6;
+  font-family:ui-monospace,Consolas,monospace;font-size:.72rem;font-weight:800;
+  letter-spacing:.06em;text-transform:uppercase;border-radius:0;
+}
+.vg17-recibo:hover{border-color:rgba(34,245,211,.45);color:#8ff5e3}
+</style>
+
+<script id="vg-suscripciones-js-v51">
+(function(){
+  'use strict';
+  if(window.__VG51__) return; window.__VG51__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function dinero(n){
+    return (typeof window.vgFormatPrecio==='function')
+      ? window.vgFormatPrecio(n)
+      : '$'+Number(n||0).toLocaleString('es-MX')+' MXN';
+  }
+  function fecha(s){
+    try{ return new Date(s).toLocaleDateString('es-MX',{day:'numeric',month:'long',year:'numeric'}); }
+    catch(e){ return ''; }
+  }
+
+  /* ═══ Pestaña de suscripciones ═══ */
+  function pestana(){
+    var tabs = document.querySelector('#vg17Client .vg17-tabs');
+    if(!tabs || tabs.querySelector('[data-v="subs"]')) return;
+    var b = document.createElement('button');
+    b.className = 'vg17-tab';
+    b.setAttribute('data-v','subs');
+    b.textContent = 'Mis suscripciones';
+    /* Después de "Mis compras", que es donde el cliente la va a buscar */
+    var compras = tabs.querySelector('[data-v="purchases"]');
+    if(compras && compras.nextSibling) tabs.insertBefore(b, compras.nextSibling);
+    else tabs.appendChild(b);
+
+    b.onclick = function(){
+      Array.prototype.forEach.call(tabs.children, function(x){ x.classList.remove('active'); });
+      b.classList.add('active');
+      render();
+    };
+  }
+
+  async function render(){
+    var cuerpo = document.getElementById('vg17CBody');
+    if(!cuerpo) return;
+    cuerpo.innerHTML = '<div class="vg17-empty">Cargando tus suscripciones...</div>';
+
+    var c = cli();
+    if(!c){ cuerpo.innerHTML = '<div class="vg17-empty">Sin conexión con el servidor.</div>'; return; }
+
+    var r = await c.rpc('vg_mis_suscripciones');
+    if(r.error){
+      cuerpo.innerHTML = '<div class="vg17-empty">'+
+        (/does not exist|function/i.test(r.error.message)
+          ? 'Falta correr <b>supabase_fase50_RENOVACIONES.sql</b> en Supabase.'
+          : esc(r.error.message))+'</div>';
+      return;
+    }
+
+    var lista = r.data || [];
+    if(!lista.length){
+      cuerpo.innerHTML =
+        '<div class="vg17-empty" style="padding:34px 18px;line-height:1.6">'+
+        'Todavía no tienes suscripciones activas.<br>'+
+        '<span style="color:#7f8ea6;font-size:.85rem">Cuando compres un servicio por mes '+
+        '(Netflix, MAX, Prime Video...) aquí verás cuándo se te acaba y podrás renovarlo de un toque.</span>'+
+        '</div>';
+      return;
+    }
+
+    cuerpo.innerHTML =
+      '<p class="vgsub-nota">Aquí ves lo que tienes activo y cuánto le queda. '+
+      'Te avisamos antes de que se acabe para que no te quedes sin servicio.</p>'+
+      '<div class="vgsub">'+ lista.map(tarjeta).join('') +'</div>';
+
+    Array.prototype.forEach.call(cuerpo.querySelectorAll('[data-renovar]'), function(b){
+      b.onclick = function(){ renovar(b.getAttribute('data-renovar'), b.getAttribute('data-nombre')); };
+    });
+  }
+
+  function tarjeta(s){
+    var dias = Number(s.dias||0);
+    var venc = s.vencida === true;
+    var clase = venc ? 'vencida' : (dias <= 5 ? 'pronto' : '');
+    var total = Number(s.periodo_meses||1) * 30;
+    var pct = venc ? 0 : Math.max(4, Math.min(100, Math.round(dias/total*100)));
+
+    return '<div class="vgsub-item '+clase+'">'+
+      '<div class="vgsub-top">'+
+        '<div style="min-width:0">'+
+          '<b>'+esc(s.producto)+'</b>'+
+          '<small>'+ (s.opcion ? esc(s.opcion)+' · ' : '') +
+            (venc ? 'Venció el ' : 'Vence el ') + esc(fecha(s.vence_at)) +'</small>'+
+        '</div>'+
+        '<div class="vgsub-dias"><b>'+ (venc ? '—' : dias) +'</b>'+
+          '<span>'+ (venc ? 'vencida' : (dias===1?'día':'días')) +'</span></div>'+
+      '</div>'+
+      '<div class="vgsub-barra"><i style="width:'+pct+'%"></i></div>'+
+      '<button class="vgsub-renovar" data-renovar="'+esc(s.id)+'" data-nombre="'+esc(s.producto)+'">'+
+        (venc ? 'Volver a contratar' : 'Renovar ahora') +'</button>'+
+    '</div>';
+  }
+
+  /* Renovar = abrir el mismo producto para que compre igual que la
+     primera vez. No se cobra nada solo, que sería una sorpresa fea. */
+  function renovar(id, nombre){
+    var servicios = window.SERVICES || [];
+    var p = servicios.filter(function(x){
+      return String(x.title||'').toLowerCase().indexOf(String(nombre||'').toLowerCase().slice(0,14)) >= 0;
+    })[0];
+
+    if(p && typeof window.openProduct === 'function'){
+      if(typeof window.vgCloseClientPanel === 'function') window.vgCloseClientPanel();
+      var panel = document.getElementById('vg17Client');
+      if(panel) panel.classList.remove('active');
+      document.body.style.overflow = '';
+      setTimeout(function(){ window.openProduct(p.id); }, 250);
+    }else if(typeof window.showSection === 'function'){
+      var panel2 = document.getElementById('vg17Client');
+      if(panel2) panel2.classList.remove('active');
+      document.body.style.overflow = '';
+      setTimeout(function(){ window.showSection('all'); }, 200);
+    }
+  }
+
+  /* ═══ Comprobante de compra ═══ */
+  function caja(){
+    var d = document.getElementById('vgReciboFondo');
+    if(d) return d;
+    d = document.createElement('div');
+    d.id = 'vgReciboFondo';
+    d.className = 'vgrec-fondo';
+    d.innerHTML = '<div class="vgrec" id="vgReciboCaja"></div>';
+    d.addEventListener('click', function(ev){ if(ev.target === d) d.classList.remove('ver'); });
+    document.body.appendChild(d);
+    return d;
+  }
+
+  window.vgVerRecibo = function(datos){
+    var f = caja();
+    var c = f.querySelector('#vgReciboCaja');
+    c.innerHTML =
+      '<div class="vgrec-head">'+
+        '<img src="/icon-192.png" alt="">'+
+        '<div><b>VESSEL GAMES</b><span>Comprobante de compra</span></div>'+
+      '</div>'+
+      '<div class="vgrec-fila"><span>Pedido</span><b>#'+esc(datos.id)+'</b></div>'+
+      '<div class="vgrec-fila"><span>Fecha</span><b>'+esc(datos.fecha)+'</b></div>'+
+      '<div class="vgrec-fila"><span>Producto</span><b>'+esc(datos.producto)+'</b></div>'+
+      (datos.opcion ? '<div class="vgrec-fila"><span>Opción</span><b>'+esc(datos.opcion)+'</b></div>' : '')+
+      '<div class="vgrec-fila"><span>Estado</span><b>'+esc(datos.estado)+'</b></div>'+
+      '<div class="vgrec-total"><span>Total pagado</span><b>'+esc(datos.total)+'</b></div>'+
+      '<div class="vgrec-pie">Gracias por tu compra.<br>www.vesselgames.xyz</div>'+
+      '<div class="vgrec-btns">'+
+        '<button class="principal" id="vgRecCopiar">Copiar datos</button>'+
+        '<button id="vgRecCerrar">Cerrar</button>'+
+      '</div>';
+
+    c.querySelector('#vgRecCerrar').onclick = function(){ f.classList.remove('ver'); };
+    c.querySelector('#vgRecCopiar').onclick = function(){
+      var txt = 'VESSEL GAMES — Comprobante de compra\n'+
+        'Pedido: #'+datos.id+'\nFecha: '+datos.fecha+'\nProducto: '+datos.producto+
+        (datos.opcion? '\nOpción: '+datos.opcion : '')+
+        '\nEstado: '+datos.estado+'\nTotal: '+datos.total+'\n\nwww.vesselgames.xyz';
+      var b = this;
+      if(navigator.clipboard && navigator.clipboard.writeText){
+        navigator.clipboard.writeText(txt).then(function(){
+          b.textContent = '✓ Copiado';
+          setTimeout(function(){ b.textContent = 'Copiar datos'; }, 1800);
+        }).catch(function(){ prompt('Copia tu comprobante:', txt); });
+      }else prompt('Copia tu comprobante:', txt);
+    };
+    f.classList.add('ver');
+  };
+
+  /* Botón de comprobante dentro del detalle del pedido */
+  function botonRecibo(){
+    var det = document.getElementById('vg17CDetail');
+    if(!det || det.querySelector('.vg17-recibo')) return;
+    var hero = det.querySelector('.vg17-hero');
+    if(!hero) return;
+
+    var titulo = (hero.querySelector('h3')||{}).textContent || 'Pedido';
+    var sub    = (hero.querySelector('p')||{}).textContent || '';
+    var precio = (hero.querySelector('.vg17-hero-price')||{}).textContent || '';
+    var chip   = (det.querySelector('.vg17-chip')||{}).textContent || 'Pendiente';
+    var partes = sub.split('·');
+
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'vg17-recibo';
+    b.textContent = '🧾 Ver comprobante';
+    b.onclick = function(){
+      window.vgVerRecibo({
+        id:       (partes[0]||'').replace(/[^0-9a-zA-Z]/g,'').slice(0,8),
+        fecha:    (partes[1]||'').trim(),
+        producto: titulo.trim(),
+        opcion:   '',
+        estado:   chip.trim(),
+        total:    precio.trim()
+      });
+    };
+    hero.appendChild(b);
+  }
+
+  function arrancar(){
+    /* Se vigila SOLO el panel del cliente, no el documento entero. Un
+       observador sobre todo el árbol se dispara con cada latido del
+       chat y de los temporizadores, y eso es CPU tirada a la basura. */
+    var panel = document.getElementById('vg17Client');
+    if(panel){
+      new MutationObserver(function(){
+        if(panel.classList.contains('active')){ pestana(); botonRecibo(); }
+      }).observe(panel, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    }
+    [500, 1500, 3000].forEach(function(ms){
+      setTimeout(function(){ if(document.querySelector('#vg17Client.active')){ pestana(); botonRecibo(); } }, ms);
+    });
+  }
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 <!-- ════════════════════════════════════════════════════════════════
      FASE 49 — Decir qué pasa si algo falla, donde se decide la compra
 
