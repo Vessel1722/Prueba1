@@ -30761,6 +30761,17 @@ else init();
   border-radius:10px;padding:9px 10px;font-family:inherit;font-size:.83rem;
 }
 .vgbusca .cuenta{align-self:center;color:#8593b5;font-size:.76rem;font-weight:800}
+/* Dentro de la columna de pedidos: pegado bajo el encabezado y sin
+   robarle alto al listado, que tiene que seguir siendo el que se
+   desplaza. */
+.vgA-list .vgbusca{
+  flex:none;margin:0;padding:9px;gap:7px;
+  border-bottom:1px solid rgba(255,255,255,.07);
+  background:rgba(255,255,255,.02);
+}
+.vgA-list .vgbusca input{min-width:0;font-size:.79rem;padding:8px 10px}
+.vgA-list .vgbusca select{flex:1;min-width:0;font-size:.75rem;padding:7px 8px}
+.vgA-list .vgbusca .cuenta{flex:none;font-size:.7rem}
 
 .vgvence{margin-bottom:12px;padding:13px;border:1px solid rgba(255,183,77,.34);
   background:rgba(255,183,77,.07);
@@ -30800,6 +30811,9 @@ else init();
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
   function dinero(n){ return '$'+Math.round(Number(n||0)).toLocaleString('es-MX'); }
 
+  var cache = { datos:null, hora:0 };
+  var intentos = 0;
+
   /* ═══ 1. Resumen del día ═══ */
   async function resumen(){
     var cont = document.getElementById('vgAdminPedidos');
@@ -30816,14 +30830,23 @@ else init();
         '<div class="vgres-c"><span>Esta semana</span><b>—</b><small>vendido en 7 días</small></div>'+
       '</div>';
     cont.insertBefore(caja.firstChild, cont.firstChild);
+    ajustarAlto(cont);
 
-    var c = cli(); if(!c) return;
-    var r = await c.from('orders').select('id,status,total,created_at,source').limit(1000);
-    if(r.error || !r.data) return;
+    /* La lista se vuelve a dibujar cada vez que se abre un pedido, así
+       que el resumen se re-inserta muy seguido. Con una copia guardada
+       por 20 segundos no se hace una consulta de red en cada clic. */
+    var lista = cache.datos;
+    if(!lista || Date.now() - cache.hora > 20000){
+      var c = cli(); if(!c) return;
+      var r = await c.from('orders').select('id,status,total,created_at,source').limit(1000);
+      if(r.error || !r.data) return;
+      lista = r.data;
+      cache.datos = lista; cache.hora = Date.now();
+    }
 
     var hoy = new Date(); hoy.setHours(0,0,0,0);
     var sem = new Date(Date.now() - 7*24*60*60*1000);
-    var ped = r.data.filter(function(o){ return String(o.source||'') !== 'recommendation'; });
+    var ped = lista.filter(function(o){ return String(o.source||'') !== 'recommendation'; });
 
     var deHoy   = ped.filter(function(o){ return new Date(o.created_at) >= hoy; });
     var vendHoy = deHoy.filter(function(o){ return o.status === 'entregado'; })
@@ -30865,13 +30888,32 @@ else init();
     var res = cont.querySelector('.vgres');
     if(res && res.nextSibling) cont.insertBefore(d, res.nextSibling);
     else cont.insertBefore(d, cont.firstChild);
+    ajustarAlto(cont);
+  }
+
+  /* Las tres columnas del panel tienen alto fijo (100vh - 200px). Si se
+     mete algo encima sin descontarlo, el chat se sale de la pantalla y
+     hay que hacer scroll para llegar a él. */
+  function ajustarAlto(cont){
+    if(window.innerWidth <= 900) return;
+    var g = cont.querySelector('.vgA-grid'); if(!g) return;
+    var extra = 0;
+    ['.vgres', '.vgvence'].forEach(function(s){
+      var e = cont.querySelector(s);
+      if(e) extra += e.getBoundingClientRect().height + 12;
+    });
+    g.style.height = 'calc(100vh - ' + Math.round(200 + extra) + 'px)';
   }
 
   /* ═══ 3. Buscador sobre la lista de pedidos ═══ */
   function buscador(){
     var cont = document.getElementById('vgAdminPedidos');
     if(!cont || !cont.classList.contains('active')) return;
-    var lista = cont.querySelector('.vg17-list');
+    /* La columna de pedidos del panel se llama .vgA-list (con su propio
+       .vgA-scroll dentro). Antes se buscaba .vg17-list, que es la del
+       panel del CLIENTE, y por eso el buscador nunca aparecía. */
+    var col   = cont.querySelector('.vgA-list');
+    var lista = col ? col.querySelector('.vgA-scroll') : cont.querySelector('.vg17-list');
     if(!lista || cont.querySelector('.vgbusca')) return;
 
     var b = document.createElement('div');
@@ -30957,29 +30999,78 @@ else init();
     f.classList.add('ver');
   }
 
-  /* Se escucha en burbuja: el manejador original ya puso el estado, y
-     aquí solo se añade el periodo encima. Así no se pelea con su código. */
+  /* Hay DOS formas de dejar un pedido entregado y antes solo se
+     escuchaba una:
+
+       · el botón de estado  [data-st="entregado"]
+       · el botón grande de abajo  #vg17ADelivBtn  ("Enviar entrega y
+         marcar como entregado"), que es el que de verdad se usa.
+
+     Además no se pregunta a ciegas: se espera a confirmar que el pedido
+     QUEDÓ entregado. Si se cancela el aviso de confirmación, no se
+     pregunta nada. */
+  function esperarEntregado(id, nombre){
+    var t0 = Date.now();
+    (function revisar(){
+      var fila = document.querySelector('#vgAdminPedidos [data-o="' + id + '"]');
+      if(fila && /st-entregado/.test(fila.className)){
+        preguntarPeriodo(id, nombre);
+        return;
+      }
+      if(Date.now() - t0 > 15000) return;   /* se canceló o falló: silencio */
+      setTimeout(revisar, 300);
+    })();
+  }
+
   document.addEventListener('click', function(ev){
-    var b = ev.target && ev.target.closest && ev.target.closest('[data-st="entregado"]');
+    if(!ev.target || !ev.target.closest) return;
+    var b = ev.target.closest('#vg17ADelivBtn, [data-st="entregado"]');
     if(!b) return;
-    var det = b.closest('#vgAdminDetalle, .vg17-hero, #vg17ADetail, .vg-admin-section') || document;
-    var t = det.querySelector('.vg17-hero-top h3, h3');
-    var nombre = t ? t.textContent.trim() : '';
-    var card = document.querySelector('#vgAdminPedidos .vg17-card.active[data-o]');
-    var id = card ? card.getAttribute('data-o') : null;
+    if(!b.closest('#vgAdminPedidos')) return;
+
+    var fila = document.querySelector(
+      '#vgAdminPedidos .vgA-row.active[data-o], #vgAdminPedidos .vg17-card.active[data-o]');
+    var id = fila ? fila.getAttribute('data-o') : null;
     if(!id) return;
-    setTimeout(function(){ preguntarPeriodo(id, nombre); }, 400);
+    if(fila && /st-entregado/.test(fila.className)) return;  /* ya estaba */
+
+    var t = document.querySelector('#vg17ADetail .vgA-idtop b');
+    esperarEntregado(id, t ? t.textContent.trim() : '');
   });
 
   function arrancar(){
-    /* Solo el panel de administración, por lo mismo: un observador
-       sobre todo el documento se dispara constantemente sin necesidad. */
-    var modal = document.getElementById('vgAdminModal');
-    if(modal){
-      new MutationObserver(function(){ resumen(); buscador(); })
-        .observe(modal, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    /* El panel vive dentro de una función cerrada y no expone su
+       dibujado, así que se vigila la sección de pedidos: cada vez que
+       la re-dibuja hay que volver a poner el resumen y el buscador.
+
+       Se agrupan los avisos en uno solo por cuadro de animación: si no,
+       un innerHTML suelta cientos de mutaciones seguidas y se llamaría
+       cientos de veces. Las propias funciones se salen solas si ya
+       está puesto, así que insertar no vuelve a disparar nada. */
+    /* La sección se crea al abrir el panel por primera vez. Se espera,
+       pero no para siempre: si el visitante nunca es administrador, esto
+       deja de intentarlo al minuto y no gasta nada. */
+    var cont = document.getElementById('vgAdminPedidos');
+    if(!cont){
+      if(++intentos < 70) setTimeout(arrancar, 900);
+      return;
     }
-    [600, 1800, 3500].forEach(function(ms){ setTimeout(function(){ resumen(); buscador(); }, ms); });
+
+    var pendiente = false;
+    new MutationObserver(function(){
+      if(pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(function(){
+        pendiente = false;
+        try{ resumen(); buscador(); }catch(e){}
+      });
+    }).observe(cont, {childList:true, subtree:true});
+
+    [400, 1200, 2600].forEach(function(ms){ setTimeout(function(){ resumen(); buscador(); }, ms); });
+    window.addEventListener('resize', function(){
+      var c = document.getElementById('vgAdminPedidos');
+      if(c) ajustarAlto(c);
+    });
   }
   if(document.readyState === 'loading')
     document.addEventListener('DOMContentLoaded', arrancar, {once:true});
