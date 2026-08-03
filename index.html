@@ -29877,9 +29877,16 @@ async function init(){
   colocar();
   /* Si el usuario inicia sesión después, se repinta con sus datos */
   var c=SB();
+  /* Sin sesión no hay wallet que cargar, y cargarWallet() llama a
+     getSession() por dentro. Encadenar eso desde este escucha alimentaba
+     la avalancha de eventos de sesión que colgaba la pestaña. */
   if(c && c.auth && c.auth.onAuthStateChange){
-    c.auth.onAuthStateChange(function(){
-      cargarWallet().then(pintarSeccion);
+    c.auth.onAuthStateChange(function(ev, sess){
+      if(!sess){ wallet = null; pintarSeccion(); return; }
+      c.rpc('vg_mi_wallet').then(function(r){
+        if(!r.error) wallet = r.data;
+        pintarSeccion();
+      }).catch(function(){});
     });
   }
 }
@@ -31695,8 +31702,17 @@ html body .service-carousel-card .imgbox > img{
     revisarSesion();
 
     var c = cli();
+    /* Se usa la sesión que el propio evento entrega. Llamar a
+       getSession() aquí dentro provocaba una avalancha: getSession puede
+       emitir otro evento de sesión, que vuelve a disparar este escucha
+       y los demás, y cada vuelta deja un temporizador de refresco de 30s
+       colgado. Medido: 28 temporizadores nuevos en 6 segundos, y la
+       pestaña acababa colgada. */
     if(c && c.auth && c.auth.onAuthStateChange){
-      c.auth.onAuthStateChange(function(){ revisarSesion(); });
+      c.auth.onAuthStateChange(function(ev, sess){
+        conSesion = !!sess;
+        pintarCuenta();
+      });
     }
 
     /* El catálogo y el encabezado se repintan solos varias veces durante
@@ -31883,8 +31899,13 @@ html body .service-carousel-card .imgbox > img{
     /* Al entrar o salir de la cuenta se revisa otra vez, así el cliente
        ve los datos sin reiniciar el pedido. */
     var c = cli();
+    /* Igual que arriba: la sesión llega en el evento. Pedirla otra vez
+       con getSession() encadenaba eventos y dejaba temporizadores. */
     if(c && c.auth && c.auth.onAuthStateChange){
-      c.auth.onAuthStateChange(function(){ revisar(); });
+      c.auth.onAuthStateChange(function(ev, sess){
+        conSesion = !!sess;
+        pintar();
+      });
     }
   }
 
@@ -32544,10 +32565,18 @@ html body .service-carousel-card .imgbox > img{
     revisarRol();
     /* Al iniciar o cerrar sesión el botón tiene que aparecer o irse */
     var c = cliente();
+    /* Sin getSession() aquí dentro: encadenaba eventos y dejaba
+       temporizadores de refresco colgados. Si el evento trae sesión se
+       consulta el rol una vez; si no, se oculta el botón y ya. */
     if(c && c.auth && c.auth.onAuthStateChange){
-      c.auth.onAuthStateChange(function(){
+      c.auth.onAuthStateChange(function(ev, sess){
         try{ sessionStorage.removeItem(LLAVE); }catch(e){}
-        revisarRol();
+        if(!sess){ mostrar(false); return; }
+        c.rpc('is_admin').then(function(r){
+          var ok = !r.error && r.data === true;
+          try{ sessionStorage.setItem(LLAVE, ok ? '1' : '0'); }catch(e){}
+          mostrar(ok);
+        }).catch(function(){ mostrar(false); });
       });
     }
     /* El contador se refresca solo mientras la pestaña está a la vista */
