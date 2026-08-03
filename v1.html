@@ -30987,9 +30987,13 @@ else init();
           p_meses: m ? Number(m) : null
         });
         if(r.error){
-          if(/does not exist|function/i.test(r.error.message))
+          var m = String(r.error.message || '');
+          if(/uuid/i.test(m))
+            alert('Falta correr supabase_fase54_ARREGLA_PERIODO.sql en Supabase.\n\n'+
+                  'La función todavía pide el pedido como uuid y los tuyos son números.');
+          else if(/does not exist|schema cache|function/i.test(m))
             alert('Falta correr supabase_fase50_RENOVACIONES.sql en Supabase.');
-          else alert('No se pudo guardar el periodo: ' + r.error.message);
+          else alert('No se pudo guardar el periodo: ' + m);
           return;
         }
         if(typeof window.showToast === 'function')
