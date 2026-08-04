@@ -35010,6 +35010,35 @@ html body .nav a.brand > span > small{
     return String(s||'').toLowerCase().normalize('NFD').replace(ACENTOS,'');
   }
 
+  /* Busca en el catálogo el producto de un pedido viejo. Primero por
+     nombre exacto; si no, por parecido, porque el título guardado en el
+     pedido puede traer la opción pegada ("Netflix Nueva · 1 Mes"). */
+  function productoDe(titulo){
+    var lista = Array.isArray(window.SERVICES) ? window.SERVICES : [];
+    var t = llano(titulo);
+    if(!t) return null;
+    for(var i=0;i<lista.length;i++){
+      if(lista[i] && llano(lista[i].title) === t) return lista[i];
+    }
+    var mejor = null, largo = 0;
+    for(var j=0;j<lista.length;j++){
+      var lt = llano(lista[j] && lista[j].title);
+      if(lt && t.indexOf(lt) >= 0 && lt.length > largo){ mejor = lista[j]; largo = lt.length; }
+    }
+    return mejor;
+  }
+
+  /* El panel del cliente tapa la ventana del producto, así que hay que
+     quitarlo de en medio antes de abrirla. */
+  function cerrarPanelCliente(){
+    if(typeof window.vgCloseClientPanel === 'function'){
+      try{ window.vgCloseClientPanel(); return; }catch(e){}
+    }
+    var p = document.getElementById('vg17Client');
+    if(p) p.classList.remove('active');
+    document.body.style.overflow = '';
+  }
+
   function fotoDe(titulo){
     var lista = Array.isArray(window.SERVICES) ? window.SERVICES : [];
     var t = llano(titulo);
@@ -35034,21 +35063,56 @@ html body .nav a.brand > span > small{
       var titulo = String(o.product_name || it.title || '').trim();
       if(!titulo) throw new Error('Ese pedido no tiene producto guardado.');
 
-      if(!Array.isArray(window.cart)) window.cart = [];
-      window.cart.push({
-        title:  titulo,
-        option: String(o.product_option || it.option || it.name || ''),
-        price:  Number(it.price != null ? it.price : (o.total || 0)),
-        image:  fotoDe(titulo)
-      });
-      if(typeof window.updateCartCount === 'function') window.updateCartCount();
+      var opcion = String(o.product_option || it.option || it.name || '').trim();
 
-      btn.textContent = '✓ Agregado al carrito';
-      if(typeof window.showToast === 'function')
-        window.showToast('Listo', titulo + ' volvió a tu carrito.');
-      setTimeout(function(){
-        if(typeof window.openCart === 'function') window.openCart();
-      }, 550);
+      /* El carrito NO es window.cart: es una variable interna de la
+         página. Meterle cosas por fuera crea un carrito paralelo que
+         nadie mira —que es justo lo que pasaba—. Así que se recorre el
+         mismo camino que el botón de comprar de siempre: se abre el
+         producto, se elige su opción y se usa su propio "agregar". */
+      var prod = productoDe(titulo);
+      if(!prod) throw new Error('Ese producto ya no está en el catálogo. '+
+        'Búscalo arriba o pídelo en Cotizar un servicio.');
+      if(typeof window.openProduct !== 'function')
+        throw new Error('No se pudo abrir el producto.');
+
+      cerrarPanelCliente();
+      window.openProduct(prod.id);
+      await new Promise(function(r){ setTimeout(r, 260); });
+
+      var modal = document.getElementById('productModal');
+      if(!modal || !modal.classList.contains('active'))
+        throw new Error('No se pudo abrir el producto.');
+
+      /* Se elige la opción pulsando la que ya está en pantalla, para que
+         corra el manejador de la página y no quede a medias. */
+      var elegida = false;
+      if(opcion){
+        var ops = modal.querySelectorAll('#modalOptions .option');
+        for(var i=0;i<ops.length;i++){
+          var nom = ops[i].querySelector('b');
+          if(nom && llano(nom.textContent) === llano(opcion)){
+            ops[i].click(); elegida = true; break;
+          }
+        }
+      }
+
+      if(elegida || !opcion){
+        if(typeof window.addSelectedToCart === 'function') window.addSelectedToCart();
+        btn.textContent = '✓ Agregado al carrito';
+        setTimeout(function(){
+          if(typeof window.openCart === 'function') window.openCart();
+        }, 380);
+      }else{
+        /* La opción que compró ya no existe —cambiaron los paquetes—.
+           Se le deja el producto abierto para que elija, en vez de
+           meterle al carrito algo que no pidió. */
+        btn.disabled = false;
+        btn.textContent = '🔁 Volver a comprar';
+        if(typeof window.showToast === 'function')
+          window.showToast('Elige la opción',
+            'Ya no existe «' + opcion + '». Escoge la que quieras.');
+      }
     }catch(e){
       btn.disabled = false;
       btn.textContent = '🔁 Volver a comprar';
