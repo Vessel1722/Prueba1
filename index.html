@@ -26639,17 +26639,33 @@ function alertNew(text, onClick){
 }
 
 /* ── Datos ───────────────────────────────────────────────────── */
+
+/* Las reseñas de los clientes se guardan en esta misma tabla, con
+   source='recommendation'. No son ventas: no tienen comprobante, ni
+   chat, ni nada que entregar, y aparecían en la lista de pedidos
+   estorbando. Se ven y se aprueban en la pestaña Recomendaciones.
+
+   Se filtran aquí en vez de con .neq('source','recommendation') porque
+   los pedidos normales traen source en nulo, y en Postgres una
+   comparación contra nulo no es "distinto": es "no se sabe". Con neq se
+   habrían caído TODOS los pedidos de la lista. */
+function sinResenas(filas){
+  return (filas||[]).filter(function(o){
+    return String((o && o.source) || '') !== 'recommendation';
+  });
+}
+
 async function myOrders(){
   var c=SB(); if(!c) throw new Error('Sin conexión con el servidor.');
   var r=await c.from('orders').select('*').order('created_at',{ascending:false}).limit(300);
   if(r.error) throw r.error;
-  return r.data||[];   /* RLS ya filtra: el cliente solo recibe los suyos */
+  return sinResenas(r.data);   /* RLS ya filtra: el cliente solo recibe los suyos */
 }
 async function allOrders(){
   var c=SB(); if(!c) throw new Error('Sin conexión con el servidor.');
   var r=await c.from('orders').select('*').order('created_at',{ascending:false}).limit(500);
   if(r.error) throw r.error;
-  return r.data||[];
+  return sinResenas(r.data);
 }
 async function fetchMsgs(ref){
   var c=SB(); if(!c||!ref) return [];
