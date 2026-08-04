@@ -15316,34 +15316,48 @@ window.vgBingSize = function(){
     return String(query||'').toLowerCase();
   }
 
+  /* Quien busca desde el teléfono casi nunca escribe los acentos.
+     Antes "creditos" no encontraba "Créditos Halo Infinite" y el
+     buscador respondía "sin coincidencias" teniendo el producto.
+     Se limpian los dos lados: lo que se escribe y lo que se compara.
+
+     El rango va con códigos y no con los acentos de verdad porque son
+     caracteres invisibles y cualquier editor puede comérselos. */
+  const VG_ACENTOS = new RegExp('[\\u0300-\\u036f]', 'g');
+  function sinAcentos(s){
+    return String(s || '').toLowerCase().normalize('NFD').replace(VG_ACENTOS, '');
+  }
+
   function productText(p){
-    return [
+    return sinAcentos([
       p.title,
       p.displayTitle,
       p.description,
       p.categoryName,
       (p.options || []).map(o => o.name).join(' ')
-    ].join(' ').toLowerCase();
+    ].join(' '));
   }
 
   function scoreProduct(p, q, expanded){
     const text = productText(p);
+    const titulo = sinAcentos(p.title);
+    const cat = sinAcentos(p.categoryName);
     let score = 0;
     if(text.includes(q)) score += 120;
-    if((p.title || '').toLowerCase().includes(q)) score += 90;
-    if((p.categoryName || '').toLowerCase().includes(q)) score += 24;
+    if(titulo.includes(q)) score += 90;
+    if(cat.includes(q)) score += 24;
     expanded.split(/\s+/).filter(Boolean).forEach(word => {
       if(text.includes(word)) score += 10;
-      if((p.title || '').toLowerCase().includes(word)) score += 14;
-      if((p.categoryName || '').toLowerCase().includes(word)) score += 6;
+      if(titulo.includes(word)) score += 14;
+      if(cat.includes(word)) score += 6;
     });
     return score;
   }
 
   function searchAllProducts(rawQuery){
-    const q = String(rawQuery || '').trim().toLowerCase();
+    const q = sinAcentos(String(rawQuery || '').trim());
     if(!q) return [];
-    const expanded = expandedSearch(q);
+    const expanded = sinAcentos(expandedSearch(q));
     return getAllServices()
       .map(p => ({ p, score: scoreProduct(p, q, expanded) }))
       .filter(x => x.score > 0)
@@ -34711,6 +34725,387 @@ html body .nav a.brand > span > small{
     [500, 1400, 2800].forEach(function(ms){ setTimeout(revisar, ms); });
   }
   var intentos = 0;
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 59 · Cinco mejoras
+
+       · Pantalla "Hoy" en el panel: todo lo que te toca, en una vista.
+       · Buscador que sugiere mientras escribes.
+       · Volver a comprar desde un pedido viejo.
+       · El disparo diario de los avisos de renovación.
+
+     La respuesta fuera de horario no está aquí: vive en la base de
+     datos, porque tiene que contestar aunque nadie tenga la página
+     abierta.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-mejoras-v59">
+
+/* ── Pantalla Hoy ────────────────────────────────────────────── */
+.vghoy{display:grid;gap:13px}
+.vghoy-tit{display:flex;align-items:baseline;gap:10px;margin-bottom:2px}
+.vghoy-tit h3{margin:0;font-size:1.02rem;font-weight:900;color:#fff}
+.vghoy-tit span{font-size:.76rem;color:#8593b5}
+.vghoy-caja{border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.035);
+  border-radius:14px;overflow:hidden}
+.vghoy-cab{display:flex;align-items:center;justify-content:space-between;gap:10px;
+  padding:11px 14px;border-bottom:1px solid rgba(255,255,255,.08);
+  background:linear-gradient(180deg,rgba(255,255,255,.04),transparent)}
+.vghoy-cab b{font-size:.68rem;font-weight:900;letter-spacing:.13em;text-transform:uppercase;
+  color:#8593b5}
+.vghoy-num{font-family:ui-monospace,Consolas,monospace;font-size:.9rem;font-weight:900;
+  padding:2px 10px;border-radius:999px}
+.vghoy-num.cero{background:rgba(255,255,255,.06);color:#7f8ea6}
+.vghoy-num.hay{background:rgba(255,183,77,.16);color:#ffd68a}
+.vghoy-num.urge{background:rgba(255,77,109,.18);color:#ff9db0}
+.vghoy-fila{display:flex;align-items:center;justify-content:space-between;gap:12px;
+  padding:11px 14px;border-top:1px solid rgba(255,255,255,.055);
+  cursor:pointer;transition:background .14s}
+.vghoy-fila:first-of-type{border-top:0}
+.vghoy-fila:hover{background:rgba(255,255,255,.05)}
+.vghoy-fila > div{min-width:0}
+.vghoy-fila b{display:block;font-size:.85rem;font-weight:800;color:#fff;
+  overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.vghoy-fila small{display:block;font-size:.73rem;color:#8593b5;margin-top:1px}
+.vghoy-lado{flex:none;text-align:right}
+.vghoy-lado i{display:block;font-style:normal;font-family:ui-monospace,Consolas,monospace;
+  font-size:.86rem;font-weight:900;color:#22f5d3}
+.vghoy-lado em{display:block;font-style:normal;font-size:.68rem;color:#8593b5;margin-top:1px}
+.vghoy-lado .dias{color:#ffd68a}
+.vghoy-nada{padding:26px 14px;text-align:center;color:#7f8ea6;font-size:.82rem}
+.vghoy-nada b{display:block;color:#8ff5e3;font-size:.9rem;margin-bottom:3px}
+.vghoy-cargando{padding:22px 14px;text-align:center;color:#8593b5;font-size:.82rem}
+
+/* ── Volver a comprar ───────────────────────────────────────── */
+.vgotra{margin:11px 0 0;display:flex;gap:9px;flex-wrap:wrap}
+.vgotra button{
+  flex:1;min-width:150px;padding:11px 14px;cursor:pointer;
+  border:1px solid rgba(34,245,211,.34);background:rgba(34,245,211,.09);
+  color:#8ff5e3;font-family:inherit;font-size:.82rem;font-weight:850;
+  border-radius:11px;transition:.15s;
+}
+.vgotra button:hover{background:rgba(34,245,211,.16);border-color:rgba(34,245,211,.55)}
+.vgotra button:disabled{opacity:.55;cursor:default}
+</style>
+
+<script id="vg-mejoras-js-v59">
+(function(){
+  'use strict';
+  if(window.__VG59__) return; window.__VG59__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+  function dinero(n){ return '$'+Math.round(Number(n||0)).toLocaleString('es-MX'); }
+
+  /* ═══════════════════════════════════════════════════════════
+     1 · PANTALLA "HOY"
+
+     El panel tiene quince pestañas. Lo que de verdad te toca hacer
+     está repartido entre tres de ellas y es fácil que algo se quede
+     sin atender un día entero. Esto lo junta en una sola vista, y va
+     primero en la fila de pestañas por eso mismo.
+     ═══════════════════════════════════════════════════════════ */
+  function montarHoy(){
+    var modal = document.getElementById('vgAdminModal');
+    if(!modal) return false;
+    var tabs = modal.querySelector('.vg-admin-tabs');
+    var cont = modal.querySelector('.vg-admin-content');
+    if(!tabs || !cont) return false;
+    if(document.getElementById('vgAdminHoy')) return true;
+
+    var sec = document.createElement('section');
+    sec.className = 'vg-admin-section';
+    sec.id = 'vgAdminHoy';
+    sec.innerHTML = '<div class="vghoy"><div class="vghoy-cargando">Cargando…</div></div>';
+    cont.insertBefore(sec, cont.firstChild);
+
+    var b = document.createElement('button');
+    b.className = 'vg-admin-tab';
+    b.setAttribute('data-tab', 'hoy');
+    b.textContent = '⭑ Hoy';
+    tabs.insertBefore(b, tabs.firstChild);
+
+    /* Se enciende a mano y no con el manejador de pestañas de la
+       página, porque ese ya corrió antes de que esta pestaña
+       existiera y no la conoce. */
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-tab'),
+        function(x){ x.classList.toggle('active', x === b); });
+      Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-section'),
+        function(s){ s.classList.toggle('active', s === sec); });
+      cargarHoy();
+    });
+
+    return true;
+  }
+
+  function irAPedido(id){
+    var modal = document.getElementById('vgAdminModal');
+    if(!modal) return;
+    var tab = Array.prototype.filter.call(modal.querySelectorAll('.vg-admin-tab'),
+      function(t){ return (t.getAttribute('data-tab')||'') === 'pedidos'
+                       || /pedidos/i.test(t.textContent||''); })[0];
+    if(tab) tab.click();
+    if(!id) return;
+    /* La lista tarda en dibujarse: se busca la fila unas cuantas veces
+       y se deja de intentar. */
+    var t0 = Date.now();
+    (function busca(){
+      var fila = document.querySelector('#vgAdminPedidos [data-o="' + id + '"]');
+      if(fila){ fila.click(); fila.scrollIntoView({block:'center'}); return; }
+      if(Date.now() - t0 < 6000) setTimeout(busca, 250);
+    })();
+  }
+
+  function irASeccion(nombre){
+    var modal = document.getElementById('vgAdminModal');
+    if(!modal) return;
+    var tab = Array.prototype.filter.call(modal.querySelectorAll('.vg-admin-tab'),
+      function(t){ return (t.getAttribute('data-tab')||'') === nombre
+                       || new RegExp(nombre,'i').test(t.textContent||''); })[0];
+    if(tab) tab.click();
+  }
+
+  function caja(titulo, n, clase, cuerpo){
+    return '<div class="vghoy-caja">'+
+      '<div class="vghoy-cab"><b>'+esc(titulo)+'</b>'+
+        '<span class="vghoy-num '+clase+'">'+n+'</span></div>'+
+      cuerpo+'</div>';
+  }
+
+  async function cargarHoy(){
+    var raiz = document.querySelector('#vgAdminHoy .vghoy');
+    if(!raiz) return;
+    var c = cli();
+    if(!c){ raiz.innerHTML = '<div class="vghoy-cargando">Sin conexión con el servidor.</div>'; return; }
+    raiz.innerHTML = '<div class="vghoy-cargando">Cargando…</div>';
+
+    var hoy = new Date(); hoy.setHours(0,0,0,0);
+
+    var res = await Promise.all([
+      c.from('orders').select('id,status,total,created_at,source,product_name,items,customer_name,client_name')
+       .order('created_at',{ascending:false}).limit(400),
+      c.rpc('vg_admin_por_vencer', {p_dias:7}),
+      c.from('vg_support_tickets').select('id,product_name,problem_description,status,created_at,customer_name')
+       .order('created_at',{ascending:false}).limit(100)
+    ]);
+
+    var pedidos = (res[0] && !res[0].error && res[0].data) ? res[0].data : [];
+    var vencen  = (res[1] && !res[1].error && Array.isArray(res[1].data)) ? res[1].data : [];
+    var tickets = (res[2] && !res[2].error && res[2].data) ? res[2].data : [];
+
+    pedidos = pedidos.filter(function(o){ return String(o.source||'') !== 'recommendation'; });
+    var pend = pedidos.filter(function(o){ return String(o.status||'') === 'pendiente'; });
+    var abiertos = tickets.filter(function(t){ return String(t.status||'') !== 'resuelto'; });
+
+    var vendHoy = pedidos.filter(function(o){
+      return new Date(o.created_at) >= hoy && o.status === 'entregado'; })
+      .reduce(function(s,o){ return s + Number(o.total||0); }, 0);
+
+    function nombre(o){
+      return String(o.product_name || (o.items && o.items[0] && o.items[0].title) || 'Pedido');
+    }
+
+    var html = '<div class="vghoy-tit"><h3>Lo que te toca hoy</h3>'+
+      '<span>Vendido hoy: <b style="color:#22f5d3">'+dinero(vendHoy)+'</b></span></div>';
+
+    /* ── Pedidos pendientes ── */
+    html += caja('Pedidos esperándote', pend.length,
+      pend.length ? (pend.length > 4 ? 'urge' : 'hay') : 'cero',
+      pend.length
+        ? pend.slice(0,8).map(function(o){
+            var h = new Date(o.created_at);
+            var mins = Math.round((Date.now() - h.getTime())/60000);
+            var espera = mins < 60 ? mins+' min' : Math.round(mins/60)+' h';
+            return '<div class="vghoy-fila" data-ped="'+esc(String(o.id))+'">'+
+              '<div><b>'+esc(nombre(o))+'</b>'+
+              '<small>'+esc(o.customer_name||o.client_name||'Cliente')+'</small></div>'+
+              '<div class="vghoy-lado"><i>'+dinero(o.total)+'</i>'+
+              '<em class="'+(mins>120?'dias':'')+'">esperando '+espera+'</em></div></div>';
+          }).join('')
+        : '<div class="vghoy-nada"><b>Nada pendiente</b>Todos los pedidos están atendidos.</div>');
+
+    /* ── Por vencer ── */
+    html += caja('Suscripciones por vencer', vencen.length,
+      vencen.length ? 'hay' : 'cero',
+      vencen.length
+        ? vencen.slice(0,8).map(function(x){
+            var d = Number(x.dias||0);
+            return '<div class="vghoy-fila" data-ped="'+esc(String(x.id))+'">'+
+              '<div><b>'+esc(x.cliente||'Cliente')+'</b>'+
+              '<small>'+esc(x.producto||'')+(x.telefono?' · '+esc(x.telefono):'')+'</small></div>'+
+              '<div class="vghoy-lado"><i class="dias">'+(d<0?'vencida':d+' días')+'</i>'+
+              '<em>'+dinero(x.total)+'</em></div></div>';
+          }).join('')
+        : '<div class="vghoy-nada"><b>Ninguna por vencer</b>Nadie se te va esta semana.</div>');
+
+    /* ── Tickets ── */
+    html += caja('Tickets sin resolver', abiertos.length,
+      abiertos.length ? 'hay' : 'cero',
+      abiertos.length
+        ? abiertos.slice(0,6).map(function(t){
+            var q = String(t.problem_description||'').replace(/\s+/g,' ').trim();
+            return '<div class="vghoy-fila" data-tk="1">'+
+              '<div><b>'+esc(t.product_name||'Ticket')+'</b>'+
+              '<small>'+esc(t.customer_name||'Cliente')+
+              (q ? ' · '+esc(q.slice(0,54))+(q.length>54?'…':'') : '')+'</small></div>'+
+              '<div class="vghoy-lado"><em>'+esc(String(t.status||'abierto'))+'</em></div></div>';
+          }).join('')
+        : '<div class="vghoy-nada"><b>Bandeja limpia</b>No hay tickets abiertos.</div>');
+
+    raiz.innerHTML = html;
+
+    Array.prototype.forEach.call(raiz.querySelectorAll('[data-ped]'), function(f){
+      f.onclick = function(){ irAPedido(f.getAttribute('data-ped')); };
+    });
+    Array.prototype.forEach.call(raiz.querySelectorAll('[data-tk]'), function(f){
+      f.onclick = function(){ irASeccion('soporte'); };
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     2 · AVISOS DE RENOVACIÓN, UNA VEZ AL DÍA
+
+     Si tu proyecto tiene tarea programada, esto no hace falta y no
+     estorba: la función no repite avisos. Si no la tiene, este es el
+     que los dispara, la primera vez que abres el panel cada día.
+     ═══════════════════════════════════════════════════════════ */
+  async function renovacionesDelDia(){
+    try{
+      var hoy = new Date().toISOString().slice(0,10);
+      if(localStorage.getItem('vg_renov_dia') === hoy) return;
+      var c = cli(); if(!c) return;
+      var r = await c.rpc('vg_avisar_renovaciones');
+      if(r.error) return;                     /* falta el SQL: se calla */
+      localStorage.setItem('vg_renov_dia', hoy);
+      var n = (r.data && r.data.avisados) || 0;
+      if(n > 0 && typeof window.showToast === 'function')
+        window.showToast('Avisos enviados', 'Se avisó a ' + n + ' cliente(s) que su suscripción vence.');
+    }catch(e){}
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     4 · VOLVER A COMPRAR
+     ═══════════════════════════════════════════════════════════ */
+  function idPedidoCliente(){
+    var card = document.querySelector('#vg17Client .vg17-card.active[data-o]')
+            || document.querySelector('.vg17-card.active[data-o]');
+    return card ? card.getAttribute('data-o') : null;
+  }
+
+  /* Compara sin acentos y sin mayúsculas: el título guardado en el
+     pedido no siempre viene escrito igual que el del catálogo.
+
+     El rango va con códigos y no con los acentos de verdad porque son
+     caracteres invisibles: pegados tal cual, cualquier editor puede
+     comérselos sin avisar. */
+  var ACENTOS = new RegExp('[\\u0300-\\u036f]', 'g');
+  function llano(s){
+    return String(s||'').toLowerCase().normalize('NFD').replace(ACENTOS,'');
+  }
+
+  function fotoDe(titulo){
+    var lista = Array.isArray(window.SERVICES) ? window.SERVICES : [];
+    var t = llano(titulo);
+    for(var i=0;i<lista.length;i++){
+      if(lista[i] && llano(lista[i].title) === t) return lista[i].image || '';
+    }
+    for(var j=0;j<lista.length;j++){
+      if(lista[j] && t.indexOf(llano(lista[j].title)) >= 0) return lista[j].image || '';
+    }
+    return '';
+  }
+
+  async function volverAComprar(id, btn){
+    var c = cli(); if(!c) return;
+    btn.disabled = true; btn.textContent = 'Agregando…';
+    try{
+      var r = await c.from('orders').select('product_name,product_option,total,items')
+                     .eq('id', id).limit(1);
+      if(r.error || !r.data || !r.data.length) throw new Error('No encontré ese pedido.');
+      var o = r.data[0];
+      var it = (o.items && o.items[0]) || {};
+      var titulo = String(o.product_name || it.title || '').trim();
+      if(!titulo) throw new Error('Ese pedido no tiene producto guardado.');
+
+      if(!Array.isArray(window.cart)) window.cart = [];
+      window.cart.push({
+        title:  titulo,
+        option: String(o.product_option || it.option || it.name || ''),
+        price:  Number(it.price != null ? it.price : (o.total || 0)),
+        image:  fotoDe(titulo)
+      });
+      if(typeof window.updateCartCount === 'function') window.updateCartCount();
+
+      btn.textContent = '✓ Agregado al carrito';
+      if(typeof window.showToast === 'function')
+        window.showToast('Listo', titulo + ' volvió a tu carrito.');
+      setTimeout(function(){
+        if(typeof window.openCart === 'function') window.openCart();
+      }, 550);
+    }catch(e){
+      btn.disabled = false;
+      btn.textContent = '🔁 Volver a comprar';
+      alert(e.message || String(e));
+    }
+  }
+
+  function ponerBotonOtra(){
+    var det = document.getElementById('vg17CDetail');
+    if(!det) return;
+    var hero = det.querySelector('.vg17-hero');
+    if(!hero) return;
+    var id = idPedidoCliente();
+    if(!id) return;
+
+    var ya = det.querySelector('.vgotra');
+    if(ya && ya.getAttribute('data-para') === id) return;
+    if(ya) ya.remove();
+
+    var d = document.createElement('div');
+    d.className = 'vgotra';
+    d.setAttribute('data-para', id);
+    d.innerHTML = '<button type="button">🔁 Volver a comprar</button>';
+    d.querySelector('button').onclick = function(){ volverAComprar(id, this); };
+
+    /* Debajo de la caja de reseña si la hay, si no pegado al encabezado */
+    var resena = det.querySelector('.vgres55');
+    var ancla = resena || hero;
+    ancla.parentNode.insertBefore(d, ancla.nextSibling);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     Arranque
+     ═══════════════════════════════════════════════════════════ */
+  var intentos = 0;
+  function arrancar(){
+
+    var panelC = document.getElementById('vg17Client');
+    if(panelC && !panelC.dataset.vg59){
+      panelC.dataset.vg59 = '1';
+      var pend = false;
+      new MutationObserver(function(){
+        if(pend) return; pend = true;
+        requestAnimationFrame(function(){ pend = false; try{ ponerBotonOtra(); }catch(e){} });
+      }).observe(panelC, {childList:true, subtree:true});
+    }
+
+    var modal = document.getElementById('vgAdminModal');
+    if(modal && !modal.dataset.vg59){
+      if(montarHoy()){
+        modal.dataset.vg59 = '1';
+        renovacionesDelDia();
+      }
+    }
+
+    if(++intentos < 90) setTimeout(arrancar, 1000);
+  }
 
   if(document.readyState === 'loading')
     document.addEventListener('DOMContentLoaded', arrancar, {once:true});
