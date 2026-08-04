@@ -18298,6 +18298,18 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     }
   }
   function getClient(){
+    /* El mismo cliente que usa el resto de la página. Antes esta parte
+       se creaba el suyo aparte, y ese no llevaba la sesión iniciada: las
+       consultas salían como visitante anónimo. Desde la auditoría de
+       seguridad un anónimo no puede leer la tabla de pedidos, así que la
+       pestaña Recomendaciones salía vacía aunque hubiera reseñas.
+
+       La copia de abajo se queda solo por si el cliente principal aún no
+       está listo cuando se carga la página. */
+    if(typeof window.vgGetSB === 'function'){
+      const compartido = window.vgGetSB();
+      if(compartido) return compartido;
+    }
     const cfg = readCfg();
     if(!window.supabase || !cfg.url || !cfg.anon) return null;
     if(!window.__vgReviewsSB || window.__vgReviewsSBSig !== cfg.url + '|' + cfg.anon.slice(0,10)){
@@ -18351,6 +18363,20 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   async function loadPublicReviews(){
     const client = getClient();
     if(!client){ renderPublicReviews(fallbackReviews); return; }
+
+    /* Quien entra sin cuenta —que es casi todo el que llega por primera
+       vez, justo el que más necesita leer opiniones— no puede consultar
+       la tabla de pedidos, y con razón: ahí están los comprobantes y los
+       teléfonos de los clientes. La función vg_resenas_publicas devuelve
+       únicamente las reseñas ya aprobadas, sin abrir nada más. */
+    const rpc = await client.rpc('vg_resenas_publicas');
+    if(!rpc.error && Array.isArray(rpc.data) && rpc.data.length){
+      renderPublicReviews(rpc.data);
+      return;
+    }
+
+    /* Si la función todavía no está puesta, se intenta a la antigua:
+       para un administrador con sesión abierta sí funciona. */
     const res = await client.from('orders')
       .select('id,created_at,source,status,total,items,notes,client_name')
       .eq('source', REVIEW_SOURCE)
