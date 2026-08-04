@@ -34366,5 +34366,314 @@ html body .nav a.brand > span > small{
 
 
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 55 · La reseña, desde el propio pedido
+
+     El mensaje automático mandaba al cliente a la página de inicio a
+     buscar la sección de reseñas y a reescribir qué compró. Casi nadie
+     hace ese viaje. Aquí el botón aparece dentro de su pedido, ya sabe
+     qué producto es, y son dos toques.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-resena-v55">
+.vgres55{
+  margin:11px 0 0;padding:14px 15px;
+  border:1px solid rgba(255,214,138,.30);
+  background:linear-gradient(135deg,rgba(255,214,138,.10),rgba(255,214,138,.03));
+  clip-path:polygon(0 0, calc(100% - 12px) 0, 100% 12px, 100% 100%, 12px 100%, 0 calc(100% - 12px));
+}
+.vgres55 b{display:block;color:#ffd68a;font-size:.86rem;font-weight:900;margin-bottom:3px}
+.vgres55 small{display:block;color:#9aa7c2;font-size:.76rem;line-height:1.45;margin-bottom:11px}
+.vgres55 button{
+  width:100%;padding:12px;cursor:pointer;border:0;
+  background:linear-gradient(135deg,#ffd68a,#f5b342);color:#241a05;
+  font-family:inherit;font-size:.87rem;font-weight:900;letter-spacing:.02em;
+  clip-path:polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px));
+}
+.vgres55 button:hover{filter:brightness(1.07)}
+.vgres55 button:disabled{opacity:.55;cursor:default;filter:none}
+.vgres55.hecha{border-color:rgba(34,245,211,.30);
+  background:linear-gradient(135deg,rgba(34,245,211,.10),rgba(34,245,211,.03))}
+.vgres55.hecha b{color:#8ff5e3}
+.vgres55.hecha small{margin-bottom:0}
+
+/* ── La ventana ── */
+#vgRes55Fondo{position:fixed;inset:0;z-index:2147483601;display:none;
+  align-items:center;justify-content:center;padding:18px;background:rgba(0,0,0,.86)}
+#vgRes55Fondo.ver{display:flex}
+#vgRes55Caja{
+  width:100%;max-width:400px;max-height:92vh;overflow-y:auto;
+  background:#0d1120;border:1px solid rgba(255,214,138,.30);
+  padding:24px 22px;color:#eef0fa;font-family:Inter,system-ui,sans-serif;
+  clip-path:polygon(0 0, calc(100% - 18px) 0, 100% 18px, 100% 100%, 18px 100%, 0 calc(100% - 18px));
+}
+#vgRes55Caja h4{margin:0 0 4px;color:#fff;font-size:1.1rem;font-weight:900}
+#vgRes55Caja .prod{margin:0 0 18px;color:#8e9cba;font-size:.82rem;line-height:1.5}
+#vgRes55Caja .prod b{color:#cfd8ee;font-weight:800}
+
+/* Estrellas grandes: en el teléfono se falla el toque con cualquier
+   cosa más chica, y una reseña que empieza mal no se termina. */
+#vgRes55Estrellas{display:flex;gap:4px;justify-content:center;margin-bottom:16px}
+#vgRes55Estrellas button{
+  width:46px;height:46px;flex:none;padding:0;cursor:pointer;border:0;background:none;
+  font-size:1.9rem;line-height:1;color:#39415c;transition:transform .12s,color .12s;
+}
+#vgRes55Estrellas button.on{color:#ffd15c}
+#vgRes55Estrellas button:hover{transform:scale(1.14)}
+#vgRes55Nota{text-align:center;color:#ffd68a;font-size:.78rem;font-weight:800;
+  margin:-10px 0 16px;min-height:1.1em}
+
+#vgRes55Caja input,#vgRes55Caja textarea{
+  width:100%;box-sizing:border-box;margin-bottom:10px;
+  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);
+  color:#fff;border-radius:10px;padding:10px 12px;
+  font-family:inherit;font-size:.85rem;
+}
+#vgRes55Caja textarea{min-height:96px;resize:vertical;line-height:1.5}
+#vgRes55Caja input:focus,#vgRes55Caja textarea:focus{outline:none;border-color:rgba(255,214,138,.5)}
+#vgRes55Cuenta{display:block;text-align:right;color:#67718c;font-size:.7rem;margin:-6px 0 12px}
+#vgRes55Caja .pie{display:grid;grid-template-columns:1fr 1.6fr;gap:8px}
+#vgRes55Caja .pie button{padding:12px;cursor:pointer;border:0;font-family:inherit;
+  font-size:.85rem;font-weight:900;
+  clip-path:polygon(0 0, calc(100% - 9px) 0, 100% 9px, 100% 100%, 9px 100%, 0 calc(100% - 9px))}
+#vgRes55Caja .pie .no{background:rgba(255,255,255,.06);color:#8593b5}
+#vgRes55Caja .pie .si{background:linear-gradient(135deg,#ffd68a,#f5b342);color:#241a05}
+#vgRes55Caja .pie button:disabled{opacity:.5;cursor:default}
+#vgRes55Msg{display:block;margin-top:11px;font-size:.79rem;line-height:1.45;min-height:1em}
+#vgRes55Msg.mal{color:#ff9db0}
+#vgRes55Msg.bien{color:#8ff5e3}
+</style>
+
+<script id="vg-resena-js-v55">
+(function(){
+  'use strict';
+  if(window.__VG55__) return; window.__VG55__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  var NOTAS = ['', 'Muy mal', 'Mal', 'Regular', 'Bien', '¡Excelente!'];
+
+  /* Pedidos que ya tienen reseña. Se pregunta una vez y se guarda: el
+     detalle del pedido se vuelve a dibujar en cada clic y no tiene
+     sentido preguntar lo mismo cada vez. */
+  var hechas = null;
+  var cargando = null;
+
+  function cargarHechas(){
+    if(hechas) return Promise.resolve(hechas);
+    if(cargando) return cargando;
+    var c = cli();
+    if(!c){ hechas = {}; return Promise.resolve(hechas); }
+    cargando = c.rpc('vg_mis_resenas').then(function(r){
+      hechas = {};
+      if(!r.error && Array.isArray(r.data))
+        r.data.forEach(function(id){ hechas[String(id)] = true; });
+      cargando = null;
+      return hechas;
+    }).catch(function(){ hechas = {}; cargando = null; return hechas; });
+    return cargando;
+  }
+
+  /* ═══ La ventana ═══ */
+  var estrellas = 5, idActual = null, prodActual = '';
+
+  function caja(){
+    var f = document.getElementById('vgRes55Fondo');
+    if(f) return f;
+    f = document.createElement('div');
+    f.id = 'vgRes55Fondo';
+    f.innerHTML =
+      '<div id="vgRes55Caja">'+
+        '<h4>¿Cómo te fue?</h4>'+
+        '<p class="prod" id="vgRes55Prod"></p>'+
+        '<div id="vgRes55Estrellas"></div>'+
+        '<div id="vgRes55Nota"></div>'+
+        '<input id="vgRes55Nombre" maxlength="40" placeholder="Tu nombre o iniciales (opcional)">'+
+        '<textarea id="vgRes55Texto" maxlength="260" '+
+          'placeholder="¿Llegó rápido? ¿Te resolvimos las dudas? Cuéntalo con tus palabras."></textarea>'+
+        '<span id="vgRes55Cuenta">0 / 260</span>'+
+        '<div class="pie">'+
+          '<button type="button" class="no" id="vgRes55No">Ahora no</button>'+
+          '<button type="button" class="si" id="vgRes55Si">Enviar reseña</button>'+
+        '</div>'+
+        '<span id="vgRes55Msg"></span>'+
+      '</div>';
+    document.body.appendChild(f);
+
+    f.addEventListener('click', function(ev){ if(ev.target === f) cerrar(); });
+    document.getElementById('vgRes55No').onclick = cerrar;
+    document.getElementById('vgRes55Si').onclick = enviar;
+
+    var ta = document.getElementById('vgRes55Texto');
+    ta.addEventListener('input', function(){
+      document.getElementById('vgRes55Cuenta').textContent = ta.value.length + ' / 260';
+    });
+
+    var e = document.getElementById('vgRes55Estrellas');
+    for(var i = 1; i <= 5; i++){
+      var b = document.createElement('button');
+      b.type = 'button';
+      b.setAttribute('data-e', i);
+      b.setAttribute('aria-label', i + ' estrellas');
+      b.textContent = '★';
+      e.appendChild(b);
+    }
+    e.addEventListener('click', function(ev){
+      var b = ev.target.closest('[data-e]');
+      if(b) pintarEstrellas(Number(b.getAttribute('data-e')));
+    });
+    return f;
+  }
+
+  function pintarEstrellas(n){
+    estrellas = n;
+    Array.prototype.forEach.call(
+      document.querySelectorAll('#vgRes55Estrellas button'),
+      function(b){ b.classList.toggle('on', Number(b.getAttribute('data-e')) <= n); });
+    document.getElementById('vgRes55Nota').textContent = NOTAS[n] || '';
+  }
+
+  function cerrar(){
+    var f = document.getElementById('vgRes55Fondo');
+    if(f) f.classList.remove('ver');
+  }
+
+  function abrir(id, producto){
+    idActual = id; prodActual = producto || '';
+    caja().classList.add('ver');
+    document.getElementById('vgRes55Prod').innerHTML =
+      'Tu opinión sobre <b>' + esc(prodActual || 'este pedido') + '</b>.<br>'+
+      'Se publica solo si la aprobamos, y te ganas tokens por dejarla.';
+    document.getElementById('vgRes55Texto').value = '';
+    document.getElementById('vgRes55Cuenta').textContent = '0 / 260';
+    document.getElementById('vgRes55Msg').textContent = '';
+    document.getElementById('vgRes55Msg').className = '';
+    document.getElementById('vgRes55Si').disabled = false;
+    document.getElementById('vgRes55Si').textContent = 'Enviar reseña';
+    pintarEstrellas(5);
+  }
+
+  async function enviar(){
+    var msg = document.getElementById('vgRes55Msg');
+    var btn = document.getElementById('vgRes55Si');
+    var texto = (document.getElementById('vgRes55Texto').value || '').trim();
+    var nombre = (document.getElementById('vgRes55Nombre').value || '').trim();
+
+    if(texto.length < 10){
+      msg.className = 'mal';
+      msg.textContent = 'Escribe un poco más, con diez letras no se entiende.';
+      return;
+    }
+    var c = cli();
+    if(!c){ msg.className='mal'; msg.textContent='No hay conexión con el servidor.'; return; }
+
+    btn.disabled = true; btn.textContent = 'Enviando...';
+    msg.className = ''; msg.textContent = '';
+
+    var r = await c.rpc('vg_dejar_resena', {
+      p_order: idActual, p_estrellas: estrellas, p_texto: texto, p_nombre: nombre || null
+    });
+
+    if(r.error){
+      var m = String(r.error.message || '');
+      btn.disabled = false; btn.textContent = 'Enviar reseña';
+      msg.className = 'mal';
+      msg.textContent = /does not exist|schema cache/i.test(m)
+        ? 'Falta correr supabase_fase55_RESENA_DIRECTA.sql en Supabase.'
+        : m;
+      return;
+    }
+
+    var tok = Number((r.data && r.data.tokens) || 0);
+    if(hechas) hechas[String(idActual)] = true;
+    cerrar();
+    pintarAviso(idActual, true, tok);
+    if(typeof window.vgReloadWallet === 'function') window.vgReloadWallet();
+    if(typeof window.showToast === 'function')
+      window.showToast('¡Gracias!', tok > 0
+        ? 'Tu reseña quedó en revisión y ganaste ' + tok + ' tokens.'
+        : 'Tu reseña quedó en revisión.');
+  }
+
+  /* ═══ El botón dentro del pedido ═══ */
+  function pintarAviso(id, hecha, tokens){
+    var det = document.getElementById('vg17CDetail');
+    if(!det) return;
+    var vieja = det.querySelector('.vgres55');
+    if(vieja) vieja.remove();
+
+    var hero = det.querySelector('.vg17-hero');
+    if(!hero) return;
+
+    var d = document.createElement('div');
+    d.className = 'vgres55' + (hecha ? ' hecha' : '');
+    /* Con esto se sabe de qué pedido es el aviso que ya está puesto y no
+       se vuelve a dibujar en cada re-dibujado del panel. */
+    d.setAttribute('data-para', id);
+    d.innerHTML = hecha
+      ? '<b>✓ Gracias por tu reseña</b><small>Queda en revisión y se publica en cuanto la aprobemos.'+
+        (tokens > 0 ? ' Ganaste <b style="display:inline">'+tokens+' tokens</b>.' : '')+'</small>'
+      : '<b>⭐ ¿Nos dejas tu reseña?</b>'+
+        '<small>Te toma diez segundos, nos ayuda un montón y te ganas tokens para tu próxima compra.</small>'+
+        '<button type="button">⭐ Dejar mi reseña</button>';
+
+    if(!hecha){
+      var titulo = hero.querySelector('h3');
+      var nombre = titulo ? titulo.textContent.trim() : '';
+      d.querySelector('button').onclick = function(){ abrir(id, nombre); };
+    }
+    hero.parentNode.insertBefore(d, hero.nextSibling);
+  }
+
+  function idDelPedido(){
+    var card = document.querySelector('#vg17Client .vg17-card.active[data-o]')
+            || document.querySelector('.vg17-card.active[data-o]');
+    return card ? card.getAttribute('data-o') : null;
+  }
+
+  async function revisar(){
+    var det = document.getElementById('vg17CDetail');
+    if(!det) return;
+    var hero = det.querySelector('.vg17-hero');
+    /* Solo tiene sentido pedir reseña de algo que ya se entregó */
+    if(!hero || !/st-entregado/.test(hero.className)){
+      var v = det.querySelector('.vgres55'); if(v) v.remove();
+      return;
+    }
+    var id = idDelPedido();
+    if(!id) return;
+    /* Ya está puesto para este mismo pedido: no rehacerlo */
+    var puesto = det.querySelector('.vgres55');
+    if(puesto && puesto.getAttribute('data-para') === id) return;
+
+    var h = await cargarHechas();
+    /* El panel pudo cambiar de pedido mientras se preguntaba */
+    if(idDelPedido() !== id) return;
+    pintarAviso(id, !!h[String(id)], 0);
+  }
+
+  function arrancar(){
+    var panel = document.getElementById('vg17Client');
+    if(!panel){
+      if(++intentos < 70) setTimeout(arrancar, 900);
+      return;
+    }
+    var pendiente = false;
+    new MutationObserver(function(){
+      if(pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(function(){ pendiente = false; try{ revisar(); }catch(e){} });
+    }).observe(panel, {childList:true, subtree:true});
+    [500, 1400, 2800].forEach(function(ms){ setTimeout(revisar, ms); });
+  }
+  var intentos = 0;
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
 </body>
 </html>
