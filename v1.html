@@ -35725,6 +35725,19 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   var API = 'https://fortnite-api.com/v2/shop?language=es';
   var LLAVE = 'vg_fn_tienda_v2';
 
+  /* Versión de la FORMA de los datos guardados, no de la tienda.
+
+     La copia se guarda en el navegador del cliente y vale todo el día.
+     Al añadir campos nuevos —la fecha de salida, la ficha de la canción,
+     la descripción— las copias de antes seguían siendo válidas por
+     fecha pero les faltaban esos datos, así que las novedades no salían
+     y no había ningún error que lo delatara.
+
+     Subiendo este número, cualquier copia con otra forma se descarta y
+     se vuelve a pedir. Hay que subirlo SIEMPRE que se añada o se quite
+     un campo en normalizar(). */
+  var FORMA = 3;
+
   var tienda = null;
   var cargando = false;
   var filtro = 'todo';
@@ -35836,7 +35849,10 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   function leerCache(){
     try{
       var c = JSON.parse(localStorage.getItem(LLAVE) || 'null');
-      if(c && c.fecha && Array.isArray(c.articulos) && c.articulos.length) return c;
+      /* La forma cuenta tanto como la fecha: una copia de hoy con la
+         forma vieja es tan inservible como una de ayer. */
+      if(c && c.forma === FORMA && c.fecha &&
+         Array.isArray(c.articulos) && c.articulos.length) return c;
     }catch(e){}
     return null;
   }
@@ -35879,7 +35895,7 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
          rango, y dentro de cada una por la prioridad que manda Epic. */
       arts.sort(function(x,y){ return (y.o - x.o) || (y.p - x.p); });
 
-      tienda = { fecha: (j.data.date || new Date().toISOString()), articulos: arts };
+      tienda = { forma: FORMA, fecha: (j.data.date || new Date().toISOString()), articulos: arts };
       guardarCache(tienda);
       if(typeof window.renderNav === 'function') try{ window.renderNav(); }catch(e){}
       return tienda;
