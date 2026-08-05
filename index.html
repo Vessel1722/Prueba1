@@ -35216,6 +35216,28 @@ html body .nav a.brand > span > small{
 <style id="vg-fortnite-v62">
 #productsGrid:has(.vgfn-mosaico){display:block !important}
 
+/* ─────────────────────────────────────────────────────────────
+   EL ANCHO DE TODA LA PÁGINA
+
+   Esto NO es de Fortnite: afecta a todas tus secciones.
+
+   El body es una rejilla con justify-items:center. Eso hace que su
+   contenido se encoja a su tamaño natural y se centre, en vez de
+   ocupar el ancho disponible. En una pantalla de 1920 el catálogo se
+   quedaba en 1135 y la zona de productos en 811: se desperdiciaba el
+   42% de la pantalla, con los servicios igual que con Fortnite.
+
+   Estirándolo, la zona de productos pasa de 811 a 1156.
+   ───────────────────────────────────────────────────────────── */
+html body > main{ justify-self:stretch; width:100%; }
+
+/* En Fortnite se quita además la columna de categorías: enumera
+   productos del catálogo y ninguno de la tienda de Fortnite está ahí,
+   así que salían todas en cero ocupando 260px. Sin ella el mosaico
+   llega a 1436. */
+html body.vgfn-activo #marketView .layout{ grid-template-columns:minmax(0,1fr) !important; }
+html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !important; }
+
 .vgfn-cab{
   display:flex;align-items:center;justify-content:space-between;gap:14px;flex-wrap:wrap;
   padding:15px 18px;margin-bottom:18px;
@@ -35264,6 +35286,11 @@ html body .nav a.brand > span > small{
   font-style:normal;font-size:.82rem;font-weight:700;color:#7f8ea6;
   letter-spacing:.14em;padding-top:3px;
 }
+/* Los destacados abren la tienda, así que su título va más grande y en
+   el azul de Fortnite, como el "Lo más vendido" del juego. */
+.vgfn-dest > h4{font-size:1.95rem;color:#7fdcff}
+.vgfn-dest > h4 em{color:#5c7fa8}
+.vgfn-dest{padding-bottom:6px;border-bottom:1px solid rgba(255,255,255,.08);margin-bottom:26px}
 
 /* ── El mosaico ──────────────────────────────────────────────
    Todos los tamaños que manda la API son "N por 1", así que las
@@ -35516,14 +35543,22 @@ html body .nav a.brand > span > small{
       i: img,
       v: Number(e.finalPrice || 0),
       vr: Number(e.regularPrice || 0),
-      /* La sección y su orden salen tal cual del juego: layout.name es
-         el título que ves en la tienda y layout.index el lugar que
-         ocupa. Los 18 artículos que llegan sin sección son reales y no
-         están repetidos, así que se conservan; van al final bajo un
-         título propio, porque inventarles una sección de Fortnite que
-         no existe sería mentir sobre lo que trae la tienda. */
-      s: (e.layout && e.layout.name) || 'Más artículos',
-      o: (e.layout && typeof e.layout.index === 'number') ? e.layout.index : 9999,
+      /* La sección y su orden salen tal cual del juego.
+
+         El orden es layout.rank de MAYOR a menor. Antes se usaba
+         layout.index y salía casi al revés: la web abre con Escuadrón
+         del subidón y a mí me abría con Taquilla ardiente. Comprobado
+         contra fortnite.com: ordenando por rank las quince secciones
+         quedan en el mismo orden, una por una.
+
+         Los 21 artículos que llegan sin sección son los que la web
+         agrupa al final: los tres vehículos en "Accesorios de vehículo"
+         y el resto en "Lotes y ofertas especiales". */
+      s: (e.layout && e.layout.name) ||
+         (/veh|rueda|estela|carrocer/i.test(tipo) ? 'Accesorios de vehículo'
+                                                  : 'Lotes y ofertas especiales'),
+      o: (e.layout && typeof e.layout.rank === 'number') ? e.layout.rank
+         : (/veh|rueda|estela|carrocer/i.test(tipo) ? -1 : -2),
       p: Number(e.sortPriority || 0),
       w: ancho,
       c1: hex(col.color1, '#2a3350'),
@@ -35575,9 +35610,9 @@ html body .nav a.brand > span > small{
         vistos[clave] = true;
         arts.push(a);
       }
-      /* Mismo orden que en el juego: por sección y dentro de ella por
-         la prioridad que manda Epic. */
-      arts.sort(function(x,y){ return (x.o - y.o) || (y.p - x.p); });
+      /* Mismo orden que en el juego: las secciones de mayor a menor
+         rango, y dentro de cada una por la prioridad que manda Epic. */
+      arts.sort(function(x,y){ return (y.o - x.o) || (y.p - x.p); });
 
       tienda = { fecha: (j.data.date || new Date().toISOString()), articulos: arts };
       guardarCache(tienda);
@@ -35670,10 +35705,34 @@ html body .nav a.brand > span > small{
       porSeccion[a.s].push(a);
     });
 
+    /* ── Destacados de hoy ────────────────────────────────────
+       Fortnite abre su tienda con "Lo más vendido de hoy". Esa lista
+       la arma su web con cifras de ventas que Epic NO publica en
+       ninguna API, así que no se puede copiar tal cual y llamarla así
+       sería inventar un dato.
+
+       Lo que sí publica Epic es a qué artículos les da los mosaicos
+       grandes, que es donde pone lo que quiere empujar ese día. Con
+       eso se arma una fila de destacados de verdad, y se llama por su
+       nombre. Solo aparece sin filtros ni búsqueda, para no estorbar
+       cuando alguien busca algo concreto. */
+    if(filtro === 'todo' && !q){
+      var dest = lista.filter(function(a){ return a.w >= 3; });
+      lista.forEach(function(a){
+        if(dest.length >= 6) return;
+        if(a.w === 2 && a.vr > a.v && dest.indexOf(a) < 0) dest.push(a);
+      });
+      if(dest.length >= 3){
+        porSeccion['__dest'] = dest.slice(0, 6);
+        orden.unshift('__dest');
+      }
+    }
+
     var html = cabecera();
     orden.forEach(function(s){
-      html += '<section class="vgfn-seccion">'+
-        '<h4>'+esc(s)+'<em>'+porSeccion[s].length+'</em></h4>'+
+      var titulo = (s === '__dest') ? 'Destacados de hoy' : s;
+      html += '<section class="vgfn-seccion'+(s==='__dest'?' vgfn-dest':'')+'">'+
+        '<h4>'+esc(titulo)+'<em>'+porSeccion[s].length+'</em></h4>'+
         '<div class="vgfn-mosaico">'+ porSeccion[s].map(mosaico).join('') +'</div></section>';
     });
     grid.innerHTML = html;
@@ -35860,6 +35919,7 @@ html body .nav a.brand > span > small{
       var orig = window.showSection;
       var nueva = function(cat){
         var r = orig.apply(this, arguments);
+        document.body.classList.toggle('vgfn-activo', cat === 'fortnite');
         if(cat === 'fortnite'){
           var t = document.getElementById('productsTitle');
           if(t) t.textContent = 'Tienda de Fortnite de hoy';
