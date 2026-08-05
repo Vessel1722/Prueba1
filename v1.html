@@ -35439,6 +35439,45 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   .vgfn-t.gira img{transform:none}
 }
 
+/* ── Ficha de la canción ─────────────────────────────────────
+   Sube desde abajo al pasar por encima. En pantalla táctil se queda
+   siempre visible, porque ahí no hay "pasar por encima" y si no la
+   información no se vería nunca. */
+.vgfn-mus{
+  position:absolute;left:0;right:0;bottom:0;z-index:4;
+  padding:11px 11px 74px;
+  background:linear-gradient(0deg,rgba(4,6,12,.96) 62%,rgba(4,6,12,.80) 84%,transparent);
+  transform:translateY(100%);opacity:0;
+  transition:transform .2s ease, opacity .2s ease;
+  pointer-events:none;
+}
+.vgfn-t:hover .vgfn-mus,.vgfn-t.gira .vgfn-mus{transform:translateY(0);opacity:1}
+.vgfn-mus-ar{
+  margin:0 0 2px;font-family:'Barlow Condensed',Inter,sans-serif;
+  font-size:1rem;font-weight:800;color:#fff;line-height:1.15;
+  text-transform:uppercase;letter-spacing:.01em;
+  display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+}
+.vgfn-mus-d{
+  margin:0 0 8px;font-size:.66rem;font-weight:700;color:#7fdcff;
+  letter-spacing:.08em;text-transform:uppercase;
+}
+.vgfn-dif{display:grid;grid-template-columns:1fr 1fr;gap:3px 10px}
+.vgfn-dif span{display:flex;align-items:center;gap:3px}
+.vgfn-dif b{
+  font-size:.56rem;font-weight:800;color:#8fa0bd;letter-spacing:.08em;
+  text-transform:uppercase;width:26px;flex:none;
+}
+.vgfn-dif i{
+  width:5px;height:9px;border-radius:1px;background:rgba(255,255,255,.16);flex:none;
+}
+.vgfn-dif i.on{background:#7fdcff}
+/* En pantalla táctil la ficha no se muestra: taparía el nombre y el
+   precio, que es lo que el cliente necesita ver. Ahí el artista va en
+   la línea de debajo del título, que se arma en el guion. */
+@media (hover:none){ .vgfn-mus{display:none} }
+@media (prefers-reduced-motion:reduce){ .vgfn-mus{transition:none} }
+
 .vgfn-estado{
   padding:46px 18px;text-align:center;color:#8593b5;font-size:.88rem;
   border:1px dashed rgba(255,255,255,.14);border-radius:16px;
@@ -35564,7 +35603,20 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       c1: hex(col.color1, '#2a3350'),
       c2: hex(col.color2, '#121726'),
       c3: hex(col.color3, '#5b6f9c'),
-      b: (e.banner && e.banner.value) || ''
+      b: (e.banner && e.banner.value) || '',
+
+      /* Ficha de la canción, para las 125 pistas que trae la tienda.
+         La API no da audio —solo título, artista, año, BPM, duración y
+         dificultad— así que no hay demo posible desde aquí. Con estos
+         datos se arma la ficha que enseña el juego en Festival, que es
+         lo que de verdad mira quien va a comprar una pista. */
+      mu: tr ? {
+        ar: tr.artist || '',
+        an: tr.releaseYear || 0,
+        bpm: tr.bpm || 0,
+        du: tr.duration || 0,
+        dif: tr.difficulty || null
+      } : null
     };
   }
 
@@ -35636,6 +35688,42 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     return '<div class="vgfn-mosaico">' + h + '</div>';
   }
 
+  /* ── Ficha de la canción ──────────────────────────────────────
+     Las barras de dificultad son las mismas cuatro que enseña Festival
+     (voz, guitarra, bajo, batería) sobre una escala de 0 a 6. */
+  var INSTRUS = [['vocals','Voz'],['guitar','Guit'],['bass','Bajo'],['drums','Bat']];
+
+  function minutos(seg){
+    seg = Math.round(Number(seg)||0);
+    if(!seg) return '';
+    var m = Math.floor(seg/60), s = seg % 60;
+    return m + ':' + (s<10?'0':'') + s;
+  }
+
+  function fichaMusica(mu){
+    if(!mu) return '';
+    var linea = [mu.ar, mu.an || ''].filter(Boolean).join(' · ');
+    var datos = [];
+    if(mu.bpm) datos.push(mu.bpm + ' BPM');
+    if(mu.du)  datos.push(minutos(mu.du));
+
+    var barras = '';
+    if(mu.dif){
+      barras = '<div class="vgfn-dif">' + INSTRUS.map(function(par){
+        var n = Math.max(0, Math.min(6, Number(mu.dif[par[0]] || 0)));
+        var puntos = '';
+        for(var i=1;i<=6;i++) puntos += '<i'+(i<=n?' class="on"':'')+'></i>';
+        return '<span><b>'+par[1]+'</b>'+puntos+'</span>';
+      }).join('') + '</div>';
+    }
+
+    return '<div class="vgfn-mus">'+
+      (linea ? '<p class="vgfn-mus-ar">'+esc(linea)+'</p>' : '')+
+      (datos.length ? '<p class="vgfn-mus-d">'+esc(datos.join(' · '))+'</p>' : '')+
+      barras+
+    '</div>';
+  }
+
   function mosaico(a){
     var mxn = aPesos(a.v);
     var rebaja = a.vr > a.v;
@@ -35651,10 +35739,12 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       '<img src="'+esc(a.i)+'" alt="'+esc(a.n)+'" loading="lazy" decoding="async" '+
         'referrerpolicy="no-referrer" onerror="this.style.display=\'none\'">'+
       cinta+
+      fichaMusica(a.mu)+
       '<button class="vgfn-add" type="button" aria-label="Agregar '+esc(a.n)+' al carrito">+</button>'+
       '<div class="vgfn-pie">'+
         '<p class="vgfn-nom">'+esc(a.n)+'</p>'+
-        '<p class="vgfn-tipo">'+esc(a.t)+(a.r?' · '+esc(a.r):'')+'</p>'+
+        '<p class="vgfn-tipo">'+esc(a.t)+
+          (a.mu && a.mu.ar ? ' · '+esc(a.mu.ar) : (a.r ? ' · '+esc(a.r) : ''))+'</p>'+
         '<div class="vgfn-precio">'+
           '<span class="vgfn-mxn">'+pesos(mxn)+'</span>'+
           '<span class="vgfn-pav"><span class="vgfn-moneda"></span>'+
