@@ -35381,16 +35381,42 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   box-shadow:0 0 0 1px rgba(255,255,255,.35) inset;
 }
 
-/* Cinta de descuento, como la del juego */
-.vgfn-cinta{
+/* Cintas de la esquina, como las del juego. Van en columna para que la
+   segunda caiga debajo de la primera sin cuentas de posición. */
+.vgfn-cintas{
   position:absolute;left:0;top:11px;z-index:4;
+  display:flex;flex-direction:column;align-items:flex-start;gap:4px;
+  max-width:88%;
+}
+/* display e interlineado van forzados: alguna de las capas de estilos
+   que ya trae la página les ponía display:flex, y con eso la etiqueta
+   crecía hasta 41px de alto en vez de los 18 que le tocan. */
+.vgfn-cinta{
+  display:inline-block !important;
+  line-height:1.25 !important;
+  min-height:0 !important;
   background:#ffd400;color:#241a05;
   font-family:'Barlow Condensed',Inter,sans-serif;
   font-size:.78rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;
   padding:3px 10px 3px 9px;border-radius:0 4px 4px 0;
   box-shadow:0 2px 8px rgba(0,0,0,.4);
+  white-space:nowrap;
 }
-.vgfn-cinta.info{background:#7fdcff;color:#06203a}
+/* La de lo que incluye va más discreta: es un dato, no una oferta. Y
+   con una sola línea siempre: la más larga que manda la tienda es
+   "Accesorio mochilero reactivo", que partida en dos tapaba media
+   pieza. Si no cabe, se corta con puntos suspensivos. */
+/* Alto fijo a propósito. Con alto automático esta etiqueta salía de
+   41px —el doble de la amarilla— y no logré identificar cuál de las
+   capas de estilos de la página se lo estaba imponiendo. Con una
+   medida exacta no hay nada que discutir. */
+.vgfn-cinta.info{
+  background:rgba(127,220,255,.92);color:#06203a;
+  font-size:.64rem;letter-spacing:.06em;
+  height:18px !important;padding:0 9px 0 8px !important;
+  display:flex !important;align-items:center;
+  max-width:100%;overflow:hidden;text-overflow:ellipsis;
+}
 
 /* Botón de agregar: aparece al pasar por encima, siempre visible al tacto */
 .vgfn-add{
@@ -35903,12 +35929,18 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   function mosaico(a){
     var mxn = aPesos(a.v);
     var rebaja = a.vr > a.v;
-    var cinta = '';
-    if(rebaja){
-      cinta = '<span class="vgfn-cinta">Ahorras '+pesos(aPesos(a.vr) - mxn)+'</span>';
-    }else if(a.b && !/pavos/i.test(a.b)){
-      cinta = '<span class="vgfn-cinta info">'+esc(a.b)+'</span>';
-    }
+    /* Las dos etiquetas van en una columna: si hay ahorro, el aviso de
+       lo que incluye cae debajo; si no lo hay, sube a ese sitio solo.
+       Antes eran excluyentes y el aviso desaparecía en cuanto el
+       artículo estaba rebajado, que es justo cuando más se mira.
+
+       El descuento en pavos no se enseña: el cliente paga pesos, y ya
+       se le dice cuánto ahorra en su moneda. */
+    var etiquetas = '';
+    if(rebaja) etiquetas += '<span class="vgfn-cinta">Ahorras '+pesos(aPesos(a.vr)-mxn)+'</span>';
+    if(a.b && !/pavos/i.test(a.b))
+      etiquetas += '<span class="vgfn-cinta info">'+esc(a.b)+'</span>';
+    var cinta = etiquetas ? '<div class="vgfn-cintas">'+etiquetas+'</div>' : '';
     return '<article class="vgfn-t'+(a.w>1?' w'+a.w:'')+'" data-fn="'+esc(a.id)+'">'+
       '<span class="vgfn-fondo" style="background:linear-gradient(155deg,'+a.c1+','+a.c2+')"></span>'+
       '<span class="vgfn-luz" style="background:radial-gradient(circle,'+a.c3+' 0%,transparent 64%)"></span>'+
