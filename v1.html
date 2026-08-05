@@ -35487,29 +35487,58 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 }
 .vgfn-portada:after{
   content:"";position:absolute;inset:0;
-  background:linear-gradient(90deg,#070910 22%,rgba(7,9,16,.72) 48%,rgba(7,9,16,.10) 78%,transparent);
+  background:linear-gradient(90deg,#070910 38%,rgba(7,9,16,.78) 56%,rgba(7,9,16,.12) 80%,transparent);
 }
 .vgfn-portada img{
-  position:absolute;bottom:-6%;height:118%;width:auto;
+  position:absolute;
   opacity:0;transform:translateY(14px);
-  filter:drop-shadow(0 10px 26px rgba(0,0,0,.55));
   animation:vgfnEntra .5s ease forwards;
   animation-delay:calc(var(--i) * .07s);
-  right:calc(2% + var(--i) * 15%);
   z-index:calc(5 - var(--i));
 }
 @keyframes vgfnEntra{ to{opacity:1;transform:translateY(0)} }
+
+/* Recortes (Fortnite): PNG sin fondo, de pie sobre la portada.
+   El alto se queda por debajo del 100% a propósito. Antes iban al 118%
+   para que llenaran y lo que pasaba era que se les cortaban los pies:
+   una figura recortada tiene que caber entera o parece un error. */
+.vgfn-portada.recortes img{
+  bottom:6%;height:84%;width:auto;
+  right:calc(2% + var(--i) * 11%);
+  filter:drop-shadow(0 10px 26px rgba(0,0,0,.55));
+}
+
+/* Cartas (el resto): son fotos con fondo, así que se enseñan como
+   tarjetas en abanico, ligeramente giradas. Puestas a sangre como los
+   recortes se verían como trozos de imagen pegados. */
+/* El abanico se queda en la mitad derecha. El texto de la portada ocupa
+   hasta 700px y antes las tarjetas se le encimaban a la descripción. */
+.vgfn-portada.cartas img{
+  bottom:15%;height:58%;width:auto;max-width:18%;
+  object-fit:cover;border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  right:calc(2% + var(--i) * 6.5%);
+  box-shadow:0 14px 34px rgba(0,0,0,.55);
+  transform:translateY(14px) rotate(calc((var(--i) - 2) * 3deg));
+}
+@keyframes vgfnEntraCarta{
+  to{opacity:1;transform:translateY(0) rotate(calc((var(--i) - 2) * 3deg))}
+}
+.vgfn-portada.cartas img{animation-name:vgfnEntraCarta}
+
 /* Cuántas imágenes se ponen lo decide el guion, no esta media query:
    contar allí evita depender de ganarle en especificidad a las capas
    de estilos que ya trae la página. Aquí solo se recolocan. */
 @media(max-width:900px){
-  .vgfn-portada img{height:96%;right:calc(-2% + var(--i) * 34%)}
+  .vgfn-portada.recortes img{height:70%;right:calc(0% + var(--i) * 32%)}
+  .vgfn-portada.cartas img{height:48%;max-width:38%;right:calc(4% + var(--i) * 30%)}
   .vgfn-portada:after{
     background:linear-gradient(90deg,#070910 34%,rgba(7,9,16,.80) 62%,rgba(7,9,16,.25));
   }
 }
 @media(prefers-reduced-motion:reduce){
   .vgfn-portada img{animation:none;opacity:1;transform:none}
+  .vgfn-portada.cartas img{transform:rotate(calc((var(--i) - 2) * 3deg))}
 }
 
 /* ── Buscador propio de la sección ────────────────────────── */
@@ -36293,17 +36322,15 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       var nueva = function(cat){
         var r = orig.apply(this, arguments);
         document.body.classList.toggle('vgfn-activo', cat === 'fortnite');
+        /* La portada se rehace siempre, para cualquier sección: cada
+           una se ilustra con lo suyo y así los recortes de Fortnite no
+           se quedan encima de la portada de Streaming o de Actas. */
+        portada(cat);
         if(cat === 'fortnite'){
           var t = document.getElementById('productsTitle');
           if(t) t.textContent = 'Tienda de Fortnite de hoy';
           pintar();
-          portada();
-          if(!tienda) traerTienda(false).then(function(){ pintar(); portada(); });
-        }else{
-          /* Al salir se quita: si no, los renders de Fortnite se
-             quedarían encima de la portada de Streaming o de Actas. */
-          var p = document.querySelector('#marketView .section-hero .vgfn-portada');
-          if(p) p.remove();
+          if(!tienda) traerTienda(false).then(function(){ pintar(); portada('fortnite'); });
         }
         return r;
       };
@@ -36359,21 +36386,12 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
      los de las piezas grandes, que son las que Epic promociona— y se
      renueva sola cada mañana sin que nadie suba nada.
      ═══════════════════════════════════════════════════════════ */
-  function portada(){
+  function portada(cat){
     var hero = document.querySelector('#marketView .section-hero');
     if(!hero) return;
 
     var vieja = hero.querySelector('.vgfn-portada');
     if(vieja) vieja.remove();
-    if(!tienda || !tienda.articulos || !tienda.articulos.length) return;
-
-    /* Se prefieren las piezas anchas —las que Epic destaca ese día— y
-       se completa con lo primero que haya. Se pide render de verdad y
-       no icono: un icono de 256px estirado a media portada se ve mal. */
-    var candidatos = tienda.articulos.filter(function(a){
-      return a.i && a.i.indexOf('newdisplayassets') > 0;
-    });
-    var grandes = candidatos.filter(function(a){ return a.w >= 2; });
 
     /* Cuántas caben se decide aquí y no en el CSS. En una portada de
        355px la cuarta y la quinta se salen por la izquierda y se
@@ -36381,17 +36399,50 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
        de ganar una pelea de especificidad contra decenas de capas de
        estilos que ya trae la página. Contando aquí no hay pelea. */
     var cuantas = window.innerWidth < 900 ? 2 : 5;
+    var urls = [], modo = '';
 
-    var elegidos = grandes.concat(candidatos.filter(function(a){
-      return grandes.indexOf(a) < 0;
-    })).slice(0, cuantas);
-    if(elegidos.length < 2) return;
+    if(cat === 'fortnite'){
+      if(!tienda || !tienda.articulos || !tienda.articulos.length) return;
+      /* Se prefieren las piezas anchas —las que Epic destaca ese día— y
+         se completa con lo primero que haya. Solo renders de verdad: un
+         icono de 256px estirado a media portada se ve pixelado. */
+      var cand = tienda.articulos.filter(function(a){
+        return a.i && a.i.indexOf('newdisplayassets') > 0;
+      });
+      var grandes = cand.filter(function(a){ return a.w >= 2; });
+      urls = grandes.concat(cand.filter(function(a){ return grandes.indexOf(a) < 0; }))
+                    .slice(0, cuantas).map(function(a){ return a.i; });
+      modo = 'recortes';   /* PNG sin fondo: van de pie sobre la portada */
+    }else{
+      /* Las demás secciones se ilustran con sus propios productos. No
+         hace falta buscar fotos ni subirlas: las que ya se enseñan en
+         el catálogo son exactamente lo que la sección vende, y si un
+         día cambias un producto, la portada cambia con él. */
+      var S = Array.isArray(window.SERVICES) ? window.SERVICES : [];
+      var props = S.filter(function(s){
+        return s && s.image && (cat === 'all' || s.category === cat);
+      });
+      /* Para "Todos" se toma uno de cada categoría, que enseña la
+         variedad en vez de cinco cosas parecidas. */
+      if(cat === 'all'){
+        var vistas = {}, mezcla = [];
+        props.forEach(function(s){
+          if(vistas[s.category]) return;
+          vistas[s.category] = true; mezcla.push(s);
+        });
+        props = mezcla;
+      }
+      urls = props.slice(0, cuantas).map(function(s){ return s.image; });
+      modo = 'cartas';     /* fotos con fondo: van como tarjetas en abanico */
+    }
+
+    if(urls.length < 1) return;
 
     var d = document.createElement('div');
-    d.className = 'vgfn-portada';
+    d.className = 'vgfn-portada ' + modo;
     d.setAttribute('aria-hidden', 'true');
-    d.innerHTML = elegidos.map(function(a, i){
-      return '<img src="'+esc(a.i)+'" alt="" loading="lazy" decoding="async" '+
+    d.innerHTML = urls.map(function(u, i){
+      return '<img src="'+esc(u)+'" alt="" loading="lazy" decoding="async" '+
              'referrerpolicy="no-referrer" style="--i:'+i+'" '+
              'onerror="this.remove()">';
     }).join('');
@@ -36411,10 +36462,22 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
        para no rehacerla en cada píxel del arrastre. */
     var esperaTam = null;
     window.addEventListener('resize', function(){
-      if(!document.body.classList.contains('vgfn-activo')) return;
+      if(!document.querySelector('#marketView .vgfn-portada')) return;
       clearTimeout(esperaTam);
-      esperaTam = setTimeout(portada, 260);
+      esperaTam = setTimeout(function(){
+        portada(typeof activeCategory !== 'undefined' ? activeCategory : 'all');
+      }, 260);
     }, {passive:true});
+
+    /* Si se entra directo a una sección por enlace, showSection ya
+       corrió antes de que este bloque existiera y no dibujó portada. */
+    setTimeout(function(){
+      var mv = document.getElementById('marketView');
+      if(mv && mv.classList.contains('active') &&
+         !document.querySelector('#marketView .vgfn-portada')){
+        portada(typeof activeCategory !== 'undefined' ? activeCategory : 'all');
+      }
+    }, 700);
 
     var pedir = function(){ traerTienda(false); };
     if(typeof requestIdleCallback === 'function') requestIdleCallback(pedir, {timeout:4000});
