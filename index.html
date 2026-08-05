@@ -35478,6 +35478,108 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 @media (hover:none){ .vgfn-mus{display:none} }
 @media (prefers-reduced-motion:reduce){ .vgfn-mus{transition:none} }
 
+/* ── Buscador propio de la sección ────────────────────────── */
+.vgfn-buscar{position:relative;margin-bottom:14px}
+.vgfn-buscar input{
+  width:100%;box-sizing:border-box;height:46px;padding:0 108px 0 16px;
+  border:1px solid rgba(255,255,255,.14);border-radius:10px;
+  background:rgba(255,255,255,.05);color:#fff;
+  font-family:'Barlow Condensed',Inter,sans-serif;font-size:1.05rem;
+  font-weight:700;letter-spacing:.02em;
+}
+.vgfn-buscar input::placeholder{color:#7f8ea6;font-weight:600}
+.vgfn-buscar input:focus{outline:none;border-color:rgba(127,220,255,.55);
+  background:rgba(127,220,255,.06)}
+.vgfn-buscar input::-webkit-search-cancel-button{filter:invert(.7)}
+.vgfn-buscar span{
+  position:absolute;right:14px;top:50%;transform:translateY(-50%);
+  font-family:'Barlow Condensed',Inter,sans-serif;font-size:.86rem;font-weight:800;
+  color:#7f8ea6;text-transform:uppercase;letter-spacing:.08em;pointer-events:none;
+}
+
+/* ── Ventana de detalle ───────────────────────────────────── */
+#vgfnModal{
+  position:fixed;inset:0;z-index:2147483400;display:none;
+  align-items:center;justify-content:center;padding:20px;
+  background:rgba(4,6,12,.88);
+}
+#vgfnModal.ver{display:flex}
+.vgfn-m-caja{
+  position:relative;width:100%;max-width:860px;max-height:92vh;overflow-y:auto;
+  display:grid;grid-template-columns:1fr 1fr;gap:0;
+  background:#0d1220;border:1px solid rgba(255,255,255,.12);border-radius:16px;
+  overflow:hidden;
+}
+@media(max-width:720px){ .vgfn-m-caja{grid-template-columns:1fr;max-height:94vh} }
+.vgfn-m-x{
+  position:absolute;right:10px;top:10px;z-index:5;
+  width:36px;height:36px;border:0;border-radius:9px;cursor:pointer;
+  background:rgba(4,6,12,.7);color:#fff;font-size:1.5rem;line-height:1;
+}
+.vgfn-m-x:hover{background:#fff;color:#0d1220}
+.vgfn-m-art{position:relative;min-height:320px;overflow:hidden}
+@media(max-width:720px){ .vgfn-m-art{min-height:240px} }
+.vgfn-m-luz{position:absolute;left:50%;top:44%;width:120%;aspect-ratio:1;
+  transform:translate(-50%,-50%);border-radius:50%;opacity:.55}
+.vgfn-m-art img{
+  position:absolute;inset:0;width:100%;height:100%;
+  object-fit:contain;padding:16px;
+  filter:drop-shadow(0 8px 20px rgba(0,0,0,.45));
+}
+.vgfn-m-info{padding:22px 22px 24px;display:flex;flex-direction:column}
+.vgfn-m-sec{
+  font-family:'Barlow Condensed',Inter,sans-serif;font-size:.76rem;font-weight:800;
+  letter-spacing:.16em;text-transform:uppercase;color:#7fdcff;margin-bottom:4px;
+}
+.vgfn-m-info h3{
+  margin:0 0 3px;font-family:'Barlow Condensed',Inter,sans-serif;
+  font-size:1.85rem;font-weight:900;line-height:1.02;color:#fff;
+  text-transform:uppercase;letter-spacing:.01em;
+}
+.vgfn-m-tipo{
+  margin:0 0 12px;font-size:.68rem;font-weight:700;color:#8fa0bd;
+  text-transform:uppercase;letter-spacing:.1em;
+}
+.vgfn-m-desc{margin:0 0 14px;font-size:.86rem;color:#a8b4cc;line-height:1.55}
+.vgfn-mus.suelta{
+  position:static;transform:none;opacity:1;padding:0 0 14px;background:none;
+  pointer-events:auto;display:block;
+}
+.vgfn-m-precio{
+  display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;
+  padding:12px 0;border-top:1px solid rgba(255,255,255,.09);
+  border-bottom:1px solid rgba(255,255,255,.09);margin-bottom:14px;
+}
+.vgfn-m-precio b{
+  font-family:'Barlow Condensed',Inter,sans-serif;font-size:2rem;font-weight:900;
+  color:#fff;line-height:1;
+}
+.vgfn-m-precio span{
+  display:flex;align-items:center;gap:5px;
+  font-family:'Barlow Condensed',Inter,sans-serif;font-size:1.05rem;font-weight:800;
+  color:#cfe6ff;
+}
+.vgfn-m-precio s{color:#7c8aa5;font-weight:700}
+.vgfn-m-regalo{
+  padding:12px 14px;margin-bottom:16px;border-radius:10px;
+  background:rgba(127,220,255,.08);border:1px solid rgba(127,220,255,.22);
+  font-size:.79rem;color:#a8bdd6;line-height:1.5;
+}
+.vgfn-m-regalo b{
+  display:block;color:#7fdcff;font-size:.7rem;font-weight:900;
+  letter-spacing:.12em;text-transform:uppercase;margin-bottom:4px;
+}
+.vgfn-m-btns{margin-top:auto;display:grid;gap:8px}
+.vgfn-m-btns button{
+  padding:14px;border:0;border-radius:10px;cursor:pointer;
+  font-family:'Barlow Condensed',Inter,sans-serif;font-size:1.1rem;font-weight:900;
+  text-transform:uppercase;letter-spacing:.05em;
+}
+.vgfn-m-comprar{background:#7fdcff;color:#06203a}
+.vgfn-m-comprar:hover{background:#a5e8ff}
+.vgfn-m-carrito{background:rgba(255,255,255,.08);color:#e6edf9}
+.vgfn-m-carrito:hover{background:rgba(255,255,255,.16)}
+
 .vgfn-estado{
   padding:46px 18px;text-align:center;color:#8593b5;font-size:.88rem;
   border:1px dashed rgba(255,255,255,.14);border-radius:16px;
@@ -35531,9 +35633,19 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   var tienda = null;
   var cargando = false;
   var filtro = 'todo';
+  var busqueda = '';        /* el buscador propio de la sección */
 
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* Compara sin acentos ni mayúsculas: en el teléfono casi nadie los
+     escribe, y "cancion" tiene que encontrar "Canción". El rango va con
+     códigos porque los acentos combinantes son caracteres invisibles y
+     cualquier editor puede comérselos sin avisar. */
+  var ACENTOS = new RegExp('[\\u0300-\\u036f]', 'g');
+  function llano(s){
+    return String(s||'').toLowerCase().normalize('NFD').replace(ACENTOS,'').trim();
+  }
 
   /* Los colores llegan como "586167ff": seis dígitos de color y dos de
      transparencia, que aquí sobran. */
@@ -35604,6 +35716,7 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       c2: hex(col.color2, '#121726'),
       c3: hex(col.color3, '#5b6f9c'),
       b: (e.banner && e.banner.value) || '',
+      d: (br && br.description) || (e.bundle && e.bundle.info) || '',
 
       /* Ficha de la canción, para las 125 pistas que trae la tienda.
          La API no da audio —solo título, artista, año, BPM, duración y
@@ -35773,11 +35886,15 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       return;
     }
 
-    var q = String((document.getElementById('globalSearch')||{}).value || '').trim().toLowerCase();
+    /* Se busca por el buscador propio de la sección y también por el de
+       arriba, para que quien llegue escribiendo desde el catálogo no
+       aterrice aquí sin filtrar. Sin acentos: en el teléfono casi nadie
+       los escribe. */
+    var q = llano(busqueda || (document.getElementById('globalSearch')||{}).value || '');
 
     var lista = tienda.articulos.filter(function(a){
       if(filtro !== 'todo' && !coincideFiltro(a, filtro)) return false;
-      if(q && (a.n + ' ' + a.t + ' ' + a.s).toLowerCase().indexOf(q) < 0) return false;
+      if(q && llano(a.n+' '+a.t+' '+a.s+' '+(a.mu&&a.mu.ar||'')).indexOf(q) < 0) return false;
       return true;
     });
 
@@ -35834,6 +35951,34 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
         agregar(b.closest('[data-fn]').getAttribute('data-fn'), b);
       };
     });
+    /* La pieza entera abre el detalle. El "+" lleva stopPropagation
+       para que agregar al carrito no abra además la ventana. */
+    grid.querySelectorAll('[data-fn]').forEach(function(t){
+      t.onclick = function(){ abrirDetalle(t.getAttribute('data-fn')); };
+    });
+
+    var bi = document.getElementById('vgfnBuscar');
+    if(bi){
+      var espera = null;
+      bi.oninput = function(){
+        busqueda = bi.value;
+        clearTimeout(espera);
+        /* Se espera un momento: repintar 266 piezas en cada tecla
+           hace que el cursor se sienta pegajoso. */
+        espera = setTimeout(function(){
+          var foco = document.activeElement === bi;
+          var pos = bi.selectionStart;
+          pintar();
+          if(foco){
+            var n = document.getElementById('vgfnBuscar');
+            if(n){ n.focus(); try{ n.setSelectionRange(pos,pos); }catch(e){} }
+          }
+        }, 180);
+      };
+    }
+    var cn = document.getElementById('vgfnBuscarN');
+    if(cn) cn.textContent = lista.length + (lista.length===1?' artículo':' artículos');
+
     efectoGiro();
   }
 
@@ -35906,10 +36051,17 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       '<div><h3>Tienda de Fortnite'+(tienda&&tienda.vieja?' · copia guardada':'')+'</h3>'+
       '<p>'+(cargandoAhora ? 'Cargando la tienda de hoy…'
         : 'Cambia sola cuando Fortnite rota la tienda. <b>'+n+' artículos</b>'+
-          (cuando?' · '+cuando:''))+'</p></div>'+
+          (cuando?' · '+cuando:''))+'<br>'+
+        'Todo se entrega <b>vía regalo</b> a tu cuenta: solo hace falta tu nombre de '+
+        'usuario de Epic y que seamos amigos en Fortnite desde hace 48 horas.</p></div>'+
       '<div class="vgfn-tarifa"><b>100 pavos = '+pesos(porCien())+' MXN</b>'+
       '<span>Precios ya convertidos</span></div>'+
     '</div>' +
+    '<div class="vgfn-buscar">'+
+      '<input id="vgfnBuscar" type="search" autocomplete="off" '+
+        'placeholder="Buscar skin, baile, pico, canción…" value="'+esc(busqueda)+'">'+
+      '<span id="vgfnBuscarN"></span>'+
+    '</div>'+
     '<div class="vgfn-filtros" id="vgfnFiltros"></div>';
   }
 
@@ -35947,6 +36099,102 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     }).join('');
     c.querySelectorAll('[data-f]').forEach(function(b){
       b.onclick = function(){ filtro = b.getAttribute('data-f'); pintar(); };
+    });
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     VENTANA DE DETALLE
+
+     Antes las piezas no se podían abrir: solo estaba el "+" del
+     carrito, así que quien le picaba a una skin esperando comprarla no
+     encontraba dónde pagar. Ahora se abre igual que en la tienda del
+     juego, con el artículo grande y los dos caminos: pagar ya o
+     seguir viendo.
+     ═══════════════════════════════════════════════════════════ */
+  function porId(id){
+    if(!tienda || !tienda.articulos) return null;
+    for(var i=0;i<tienda.articulos.length;i++)
+      if(String(tienda.articulos[i].id) === String(id)) return tienda.articulos[i];
+    return null;
+  }
+
+  function cajaDetalle(){
+    var f = document.getElementById('vgfnModal');
+    if(f) return f;
+    f = document.createElement('div');
+    f.id = 'vgfnModal';
+    f.innerHTML = '<div class="vgfn-m-caja" role="dialog" aria-modal="true"></div>';
+    f.addEventListener('click', function(ev){ if(ev.target === f) cerrarDetalle(); });
+    document.body.appendChild(f);
+    document.addEventListener('keydown', function(ev){
+      if(ev.key === 'Escape') cerrarDetalle();
+    });
+    return f;
+  }
+  function cerrarDetalle(){
+    var f = document.getElementById('vgfnModal');
+    if(f) f.classList.remove('ver');
+  }
+
+  function abrirDetalle(id){
+    var a = porId(id); if(!a) return;
+    var f = cajaDetalle(), c = f.querySelector('.vgfn-m-caja');
+    var mxn = aPesos(a.v), rebaja = a.vr > a.v;
+
+    c.innerHTML =
+      '<button class="vgfn-m-x" type="button" aria-label="Cerrar">×</button>'+
+      '<div class="vgfn-m-art" style="background:linear-gradient(155deg,'+a.c1+','+a.c2+')">'+
+        '<span class="vgfn-m-luz" style="background:radial-gradient(circle,'+a.c3+' 0%,transparent 62%)"></span>'+
+        '<img src="'+esc(a.i)+'" alt="'+esc(a.n)+'" referrerpolicy="no-referrer">'+
+      '</div>'+
+      '<div class="vgfn-m-info">'+
+        '<span class="vgfn-m-sec">'+esc(a.s)+'</span>'+
+        '<h3>'+esc(a.n)+'</h3>'+
+        '<p class="vgfn-m-tipo">'+esc(a.t)+(a.r?' · '+esc(a.r):'')+'</p>'+
+        (a.d ? '<p class="vgfn-m-desc">'+esc(a.d)+'</p>' : '')+
+        (a.mu ? fichaMusica(a.mu).replace('vgfn-mus','vgfn-mus suelta') : '')+
+        '<div class="vgfn-m-precio">'+
+          '<b>'+pesos(mxn)+' MXN</b>'+
+          '<span><span class="vgfn-moneda"></span>'+
+          (rebaja?'<s>'+a.vr.toLocaleString('es-MX')+'</s> ':'')+
+          a.v.toLocaleString('es-MX')+' pavos</span>'+
+        '</div>'+
+        '<div class="vgfn-m-regalo">'+
+          '<b>Se entrega vía regalo</b>'+
+          'Necesitamos tu nombre de usuario de Epic. Para que Fortnite permita '+
+          'el regalo tenemos que ser amigos en el juego desde hace 48 horas, así '+
+          'que agréganos en cuanto hagas el pedido.'+
+        '</div>'+
+        '<div class="vgfn-m-btns">'+
+          '<button class="vgfn-m-comprar" type="button">Comprar ahora</button>'+
+          '<button class="vgfn-m-carrito" type="button">Agregar al carrito</button>'+
+        '</div>'+
+      '</div>';
+
+    c.querySelector('.vgfn-m-x').onclick = cerrarDetalle;
+    c.querySelector('.vgfn-m-comprar').onclick = function(){ comprarYa(a); };
+    c.querySelector('.vgfn-m-carrito').onclick = function(ev){
+      agregar(a.id, ev.currentTarget);
+      setTimeout(cerrarDetalle, 700);
+    };
+    f.classList.add('ver');
+  }
+
+  /* Se usa el mismo camino de pago que el resto de la tienda: se arma
+     el pedido y se le pasa a openPaymentModal, que es quien enseña los
+     datos para depositar y recoge el comprobante. */
+  function comprarYa(a){
+    if(typeof openPaymentModal !== 'function'){
+      alert('No se pudo abrir el pago. Intenta agregarlo al carrito.');
+      return;
+    }
+    cerrarDetalle();
+    openPaymentModal({
+      items: [{ title: 'Fortnite · ' + a.n,
+                option: a.v.toLocaleString('es-MX') + ' pavos · ' + a.t + ' · vía regalo',
+                price: aPesos(a.v) }],
+      total: aPesos(a.v),
+      source: 'fortnite'
     });
   }
 
