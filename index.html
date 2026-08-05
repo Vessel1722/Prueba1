@@ -15571,7 +15571,13 @@ window.vgBingSize = function(){
       if(!node.dataset.vgMxn || enPesos){
         const parsed = parseMoney(text);
         if(parsed !== null && !Number.isNaN(parsed)){
-          node.dataset.vgMxn = String(parsed);
+          /* Solo se escribe si de verdad cambió. Escribir un atributo
+             con el mismo valor igual despierta a todos los vigilantes
+             del documento —y hay catorce—, así que un repaso de estos
+             soltaba 440 avisos inútiles y bloqueaba la página casi dos
+             segundos. */
+          const valor = String(parsed);
+          if(node.dataset.vgMxn !== valor) node.dataset.vgMxn = valor;
         }
       }
     });
@@ -15687,8 +15693,21 @@ window.vgBingSize = function(){
     boot();
   }
 
+  /* Repasar los precios después de cada clic.
+     Con dos condiciones que antes no estaban:
+
+       · Solo en dólares. En pesos los precios ya se escriben en pesos,
+         así que el repaso no cambiaba absolutamente nada y aun así
+         recorría los 447 importes de la página. Ese era el motivo de
+         que quitar un artículo del carrito congelara todo un segundo.
+
+       · Uno a la vez. Antes cada clic programaba su propio repaso y
+         tres clics seguidos hacían tres recorridos completos. */
+  let repasoPendiente = null;
   document.addEventListener('click', () => {
-    setTimeout(updatePrices, 80);
+    if(currentCurrency !== 'USD') return;
+    clearTimeout(repasoPendiente);
+    repasoPendiente = setTimeout(updatePrices, 120);
   }, true);
 })();
 </script>
