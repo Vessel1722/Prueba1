@@ -35388,13 +35388,9 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   display:flex;flex-direction:column;align-items:flex-start;gap:4px;
   max-width:88%;
 }
-/* display e interlineado van forzados: alguna de las capas de estilos
-   que ya trae la página les ponía display:flex, y con eso la etiqueta
-   crecía hasta 41px de alto en vez de los 18 que le tocan. */
 .vgfn-cinta{
-  display:inline-block !important;
-  line-height:1.25 !important;
-  min-height:0 !important;
+  display:inline-block;
+  line-height:1.25;
   background:#ffd400;color:#241a05;
   font-family:'Barlow Condensed',Inter,sans-serif;
   font-size:.78rem;font-weight:900;letter-spacing:.05em;text-transform:uppercase;
@@ -35406,15 +35402,17 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
    con una sola línea siempre: la más larga que manda la tienda es
    "Accesorio mochilero reactivo", que partida en dos tapaba media
    pieza. Si no cabe, se corta con puntos suspensivos. */
-/* Alto fijo a propósito. Con alto automático esta etiqueta salía de
-   41px —el doble de la amarilla— y no logré identificar cuál de las
-   capas de estilos de la página se lo estaba imponiendo. Con una
-   medida exacta no hay nada que discutir. */
-.vgfn-cinta.info{
+/* Se llamaba "info" y salía del doble de alto. La causa: hay tres
+   reglas en la página con el selector `.info` a secas que ponen
+   display:flex con !important, escritas para otra cosa. Cualquier
+   elemento del sitio con esa clase se las come.
+
+   No se pelea con !important: se le cambia el nombre a uno que sea
+   solo de aquí. Un nombre genérico en una hoja global es el problema,
+   no el síntoma. */
+.vgfn-cinta.dato{
   background:rgba(127,220,255,.92);color:#06203a;
-  font-size:.64rem;letter-spacing:.06em;
-  height:18px !important;padding:0 9px 0 8px !important;
-  display:flex !important;align-items:center;
+  font-size:.64rem;letter-spacing:.06em;padding:2px 9px 2px 8px;
   max-width:100%;overflow:hidden;text-overflow:ellipsis;
 }
 
@@ -35939,7 +35937,7 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     var etiquetas = '';
     if(rebaja) etiquetas += '<span class="vgfn-cinta">Ahorras '+pesos(aPesos(a.vr)-mxn)+'</span>';
     if(a.b && !/pavos/i.test(a.b))
-      etiquetas += '<span class="vgfn-cinta info">'+esc(a.b)+'</span>';
+      etiquetas += '<span class="vgfn-cinta dato">'+esc(a.b)+'</span>';
     var cinta = etiquetas ? '<div class="vgfn-cintas">'+etiquetas+'</div>' : '';
     return '<article class="vgfn-t'+(a.w>1?' w'+a.w:'')+'" data-fn="'+esc(a.id)+'">'+
       '<span class="vgfn-fondo" style="background:linear-gradient(155deg,'+a.c1+','+a.c2+')"></span>'+
