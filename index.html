@@ -35304,13 +35304,20 @@ html body .nav a.brand > span > small{
   position:absolute;left:50%;top:42%;width:130%;aspect-ratio:1;z-index:1;
   transform:translate(-50%,-50%);border-radius:50%;opacity:.55;
 }
+/* Las imágenes que manda la API son TODAS cuadradas: 2048x2048 los
+   renders y 256x256 los iconos. Con object-fit:cover, meter un cuadrado
+   en una pieza doble recortaba casi la mitad del artículo. Con contain
+   no se corta nada y el hueco lo llena el degradado, que es justo lo
+   que hace el juego. */
 .vgfn-t img{
-  position:absolute;inset:0;z-index:2;width:100%;height:100%;
-  object-fit:cover;object-position:center 22%;
-  transition:transform .3s ease;
+  position:absolute;left:0;right:0;top:0;z-index:2;
+  width:100%;height:calc(100% - 52px);
+  object-fit:contain;object-position:center 46%;
+  padding:8px 8px 0;
+  filter:drop-shadow(0 6px 14px rgba(0,0,0,.42));
+  transition:transform .28s ease;
 }
-.vgfn-t:hover img{transform:scale(1.05)}
-.vgfn-t.w2 img,.vgfn-t.w3 img,.vgfn-t.w4 img{object-position:center 28%}
+.vgfn-t:hover img{transform:scale(1.06)}
 
 /* Franja de abajo con el nombre y el precio */
 .vgfn-pie{
@@ -35371,6 +35378,39 @@ html body .nav a.brand > span > small{
 .vgfn-add:hover{background:#7fdcff;color:#06203a}
 .vgfn-add.puesto{opacity:1;transform:scale(1);background:#4ade80;color:#052e16}
 @media(hover:none){ .vgfn-add{opacity:1;transform:scale(1)} }
+
+/* ── El efecto de la tienda del juego ────────────────────────
+   La pieza se inclina en 3D hacia donde está el cursor y le cruza un
+   brillo por encima, como cuando pasas por un artículo en Fortnite.
+
+   Solo con ratón: en una pantalla táctil no hay "pasar por encima", y
+   forzarlo dejaría las piezas torcidas al tocarlas. Y se apaga si el
+   sistema pide menos movimiento. */
+@media (hover:hover) and (pointer:fine){
+  .vgfn-mosaico{perspective:1150px}
+  .vgfn-t{transform-style:preserve-3d}
+
+  .vgfn-t.gira{
+    transition:transform .07s linear, box-shadow .18s ease;
+    transform:rotateX(var(--rx,0deg)) rotateY(var(--ry,0deg)) translateZ(16px);
+    box-shadow:0 24px 50px rgba(0,0,0,.58);
+  }
+  /* El brillo va detrás del nombre y del botón, sobre la imagen */
+  .vgfn-t:after{
+    content:"";position:absolute;inset:0;z-index:2;pointer-events:none;
+    opacity:0;transition:opacity .2s ease;mix-blend-mode:screen;
+    background:radial-gradient(240px circle at var(--mx,50%) var(--my,50%),
+      rgba(255,255,255,.34),rgba(255,255,255,.07) 40%,transparent 64%);
+  }
+  .vgfn-t.gira:after{opacity:1}
+  .vgfn-t.gira img{transform:scale(1.07) translateZ(26px)}
+  .vgfn-t.gira .vgfn-pie{transform:translateZ(20px)}
+}
+@media (prefers-reduced-motion:reduce){
+  .vgfn-t.gira{transform:none;transition:none}
+  .vgfn-t.gira:after{opacity:0}
+  .vgfn-t.gira img{transform:none}
+}
 
 .vgfn-estado{
   padding:46px 18px;text-align:center;color:#8593b5;font-size:.88rem;
@@ -35476,8 +35516,14 @@ html body .nav a.brand > span > small{
       i: img,
       v: Number(e.finalPrice || 0),
       vr: Number(e.regularPrice || 0),
-      s: (e.layout && e.layout.name) || 'Tienda',
-      o: Number((e.layout && e.layout.index) || 0),
+      /* La sección y su orden salen tal cual del juego: layout.name es
+         el título que ves en la tienda y layout.index el lugar que
+         ocupa. Los 18 artículos que llegan sin sección son reales y no
+         están repetidos, así que se conservan; van al final bajo un
+         título propio, porque inventarles una sección de Fortnite que
+         no existe sería mentir sobre lo que trae la tienda. */
+      s: (e.layout && e.layout.name) || 'Más artículos',
+      o: (e.layout && typeof e.layout.index === 'number') ? e.layout.index : 9999,
       p: Number(e.sortPriority || 0),
       w: ancho,
       c1: hex(col.color1, '#2a3350'),
@@ -35515,12 +35561,18 @@ html body .nav a.brand > span > small{
       var entradas = (j && j.data && j.data.entries) || [];
       if(!entradas.length) throw new Error('La tienda vino vacía.');
 
+      /* Se quitan repetidos por nombre DENTRO de cada sección, no en
+         toda la tienda. Fortnite muestra a propósito el mismo artículo
+         en varias secciones —una skin de Los Simpson sale también en su
+         lote—, y quitarlo en todas menos la primera lo sacaba de la
+         sección donde el cliente lo va a buscar. */
       var arts = [], vistos = {};
       for(var k=0;k<entradas.length;k++){
         var a = normalizar(entradas[k]);
         if(!a || !a.i || !a.v) continue;
-        if(vistos[a.n]) continue;
-        vistos[a.n] = true;
+        var clave = a.s + '|' + a.n;
+        if(vistos[clave]) continue;
+        vistos[clave] = true;
         arts.push(a);
       }
       /* Mismo orden que en el juego: por sección y dentro de ella por
@@ -35633,6 +35685,62 @@ html body .nav a.brand > span > small{
         agregar(b.closest('[data-fn]').getAttribute('data-fn'), b);
       };
     });
+    efectoGiro();
+  }
+
+  /* ── El giro en 3D ────────────────────────────────────────────
+     Un solo oyente para todo el mosaico, no uno por pieza: hay más de
+     260 y ponerle un oyente a cada una se nota al dibujar.
+
+     Lo que llega del ratón se guarda y se aplica una vez por cuadro de
+     animación. Sin eso, un movimiento rápido dispara cientos de
+     escrituras de estilo por segundo y el desplazamiento se arrastra. */
+  var GIRO = 7;   /* grados máximos; el juego es sutil, no un tobogán */
+
+  function efectoGiro(){
+    var grid = document.getElementById('productsGrid');
+    if(!grid || grid.dataset.vgfnGiro) return;
+    if(!window.matchMedia('(hover:hover) and (pointer:fine)').matches) return;
+    if(window.matchMedia('(prefers-reduced-motion:reduce)').matches) return;
+    grid.dataset.vgfnGiro = '1';
+
+    var pendiente = false, dato = null, actual = null;
+
+    function aplicar(){
+      pendiente = false;
+      if(!dato) return;
+      var t = dato.t, r = t.getBoundingClientRect();
+      var px = (dato.x - r.left) / r.width;      /* 0 a 1 */
+      var py = (dato.y - r.top) / r.height;
+      t.style.setProperty('--ry', ((px - .5) *  2 * GIRO).toFixed(2) + 'deg');
+      t.style.setProperty('--rx', ((py - .5) * -2 * GIRO).toFixed(2) + 'deg');
+      t.style.setProperty('--mx', (px * 100).toFixed(1) + '%');
+      t.style.setProperty('--my', (py * 100).toFixed(1) + '%');
+    }
+
+    function soltar(t){
+      if(!t) return;
+      t.classList.remove('gira');
+      t.style.removeProperty('--rx'); t.style.removeProperty('--ry');
+      t.style.removeProperty('--mx'); t.style.removeProperty('--my');
+    }
+
+    grid.addEventListener('pointermove', function(ev){
+      var t = ev.target && ev.target.closest ? ev.target.closest('.vgfn-t') : null;
+      if(t !== actual){ soltar(actual); actual = t; if(t) t.classList.add('gira'); }
+      if(!t) return;
+      dato = {t:t, x:ev.clientX, y:ev.clientY};
+      if(pendiente) return;
+      pendiente = true;
+      requestAnimationFrame(aplicar);
+    }, {passive:true});
+
+    /* Al salir del mosaico entero, y al desplazar la página, se sueltan:
+       si no, una pieza se queda torcida cuando el cursor ya no está. */
+    grid.addEventListener('pointerleave', function(){ soltar(actual); actual = null; }, {passive:true});
+    window.addEventListener('scroll', function(){
+      if(actual){ soltar(actual); actual = null; }
+    }, {passive:true});
   }
 
   function cabecera(cargandoAhora){
