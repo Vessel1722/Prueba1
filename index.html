@@ -35478,6 +35478,40 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 @media (hover:none){ .vgfn-mus{display:none} }
 @media (prefers-reduced-motion:reduce){ .vgfn-mus{transition:none} }
 
+/* ── Portada de la sección, armada con la tienda del día ─────
+   Los renders se abanican a la derecha, detrás del texto. El texto
+   sigue legible porque el degradado que ya trae la portada lo cubre
+   desde la izquierda. */
+.vgfn-portada{
+  position:absolute;inset:0;z-index:0;pointer-events:none;overflow:hidden;
+}
+.vgfn-portada:after{
+  content:"";position:absolute;inset:0;
+  background:linear-gradient(90deg,#070910 22%,rgba(7,9,16,.72) 48%,rgba(7,9,16,.10) 78%,transparent);
+}
+.vgfn-portada img{
+  position:absolute;bottom:-6%;height:118%;width:auto;
+  opacity:0;transform:translateY(14px);
+  filter:drop-shadow(0 10px 26px rgba(0,0,0,.55));
+  animation:vgfnEntra .5s ease forwards;
+  animation-delay:calc(var(--i) * .07s);
+  right:calc(2% + var(--i) * 15%);
+  z-index:calc(5 - var(--i));
+}
+@keyframes vgfnEntra{ to{opacity:1;transform:translateY(0)} }
+/* Cuántas imágenes se ponen lo decide el guion, no esta media query:
+   contar allí evita depender de ganarle en especificidad a las capas
+   de estilos que ya trae la página. Aquí solo se recolocan. */
+@media(max-width:900px){
+  .vgfn-portada img{height:96%;right:calc(-2% + var(--i) * 34%)}
+  .vgfn-portada:after{
+    background:linear-gradient(90deg,#070910 34%,rgba(7,9,16,.80) 62%,rgba(7,9,16,.25));
+  }
+}
+@media(prefers-reduced-motion:reduce){
+  .vgfn-portada img{animation:none;opacity:1;transform:none}
+}
+
 /* ── Buscador propio de la sección ────────────────────────── */
 .vgfn-buscar{position:relative;margin-bottom:14px}
 .vgfn-buscar input{
@@ -36245,8 +36279,9 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     for(var j=0;j<CATEGORIES.length;j++) if(CATEGORIES[j].id === 'gaming'){ iGaming = j; break; }
     CATEGORIES.splice(iGaming >= 0 ? iGaming + 1 : 1, 0, {
       id:'fortnite', label:'Fortnite', icon:icono(),
-      desc:'La tienda de Fortnite del día, con los precios ya en pesos. Skins, lotes, bailes, picos y música.',
-      bg:'linear-gradient(135deg,#1a1140,#0a1c3d)'
+      desc:'La tienda del día, con los precios ya en pesos. Skins, lotes, bailes, picos y música. '+
+           'Todo se entrega vía regalo a tu cuenta de Epic.',
+      bg:'radial-gradient(90% 120% at 78% 20%,#3a1d6e,#131046 45%,#0a1024)'
     });
     if(typeof renderNav === 'function') renderNav();
     return true;
@@ -36262,7 +36297,13 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
           var t = document.getElementById('productsTitle');
           if(t) t.textContent = 'Tienda de Fortnite de hoy';
           pintar();
-          if(!tienda) traerTienda(false).then(pintar);
+          portada();
+          if(!tienda) traerTienda(false).then(function(){ pintar(); portada(); });
+        }else{
+          /* Al salir se quita: si no, los renders de Fortnite se
+             quedarían encima de la portada de Streaming o de Actas. */
+          var p = document.querySelector('#marketView .section-hero .vgfn-portada');
+          if(p) p.remove();
         }
         return r;
       };
@@ -36307,6 +36348,56 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     }
   }
 
+  /* ═══════════════════════════════════════════════════════════
+     LA PORTADA DE LA SECCIÓN
+
+     Las demás secciones tienen una foto fija. Esta no puede tenerla:
+     la tienda cambia todos los días y una foto de hace un mes enseña
+     skins que ya no se venden.
+
+     Así que la portada se arma con los renders de la tienda de hoy —
+     los de las piezas grandes, que son las que Epic promociona— y se
+     renueva sola cada mañana sin que nadie suba nada.
+     ═══════════════════════════════════════════════════════════ */
+  function portada(){
+    var hero = document.querySelector('#marketView .section-hero');
+    if(!hero) return;
+
+    var vieja = hero.querySelector('.vgfn-portada');
+    if(vieja) vieja.remove();
+    if(!tienda || !tienda.articulos || !tienda.articulos.length) return;
+
+    /* Se prefieren las piezas anchas —las que Epic destaca ese día— y
+       se completa con lo primero que haya. Se pide render de verdad y
+       no icono: un icono de 256px estirado a media portada se ve mal. */
+    var candidatos = tienda.articulos.filter(function(a){
+      return a.i && a.i.indexOf('newdisplayassets') > 0;
+    });
+    var grandes = candidatos.filter(function(a){ return a.w >= 2; });
+
+    /* Cuántas caben se decide aquí y no en el CSS. En una portada de
+       355px la cuarta y la quinta se salen por la izquierda y se
+       encaraman al texto, y esconderlas con una media query dependía
+       de ganar una pelea de especificidad contra decenas de capas de
+       estilos que ya trae la página. Contando aquí no hay pelea. */
+    var cuantas = window.innerWidth < 900 ? 2 : 5;
+
+    var elegidos = grandes.concat(candidatos.filter(function(a){
+      return grandes.indexOf(a) < 0;
+    })).slice(0, cuantas);
+    if(elegidos.length < 2) return;
+
+    var d = document.createElement('div');
+    d.className = 'vgfn-portada';
+    d.setAttribute('aria-hidden', 'true');
+    d.innerHTML = elegidos.map(function(a, i){
+      return '<img src="'+esc(a.i)+'" alt="" loading="lazy" decoding="async" '+
+             'referrerpolicy="no-referrer" style="--i:'+i+'" '+
+             'onerror="this.remove()">';
+    }).join('');
+    hero.appendChild(d);
+  }
+
   var intentos = 0;
   function arrancar(){
     if(!meterCategoria()){
@@ -36314,6 +36405,17 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       return;
     }
     envolver();
+
+    /* Si se gira el teléfono o se cambia el tamaño de la ventana, la
+       cuenta de imágenes de la portada cambia. Se rehace, con espera
+       para no rehacerla en cada píxel del arrastre. */
+    var esperaTam = null;
+    window.addEventListener('resize', function(){
+      if(!document.body.classList.contains('vgfn-activo')) return;
+      clearTimeout(esperaTam);
+      esperaTam = setTimeout(portada, 260);
+    }, {passive:true});
+
     var pedir = function(){ traerTienda(false); };
     if(typeof requestIdleCallback === 'function') requestIdleCallback(pedir, {timeout:4000});
     else setTimeout(pedir, 2500);
