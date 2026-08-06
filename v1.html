@@ -37570,5 +37570,222 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   else arrancar();
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 72 · El panel sabe quién eres
+
+     Paso 2 de 5.
+
+       · Un operador ve solo lo suyo: pedidos, soporte, chat. No ve
+         usuarios, ni la conexión, ni los datos del negocio.
+       · Una pantalla de bitácora, solo para ti.
+
+     Se restringe SOLO a quien está marcado como 'operador'. Tú y
+     cualquiera que ya entraba siguen viendo todo, aunque su fila no
+     tenga rol. Un arreglo de permisos que te deja fuera de tu propio
+     panel no es un arreglo.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-roles-panel-v72">
+.vgbit{display:grid;gap:9px}
+.vgbit-cab{display:flex;align-items:baseline;gap:11px;margin-bottom:4px}
+.vgbit-cab h3{margin:0;font-size:1rem;font-weight:900;color:#fff}
+.vgbit-cab span{font-size:.76rem;color:#8593b5}
+.vgbit-fila{
+  display:grid;grid-template-columns:132px 1fr auto;gap:12px;align-items:baseline;
+  padding:10px 13px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);
+}
+@media(max-width:640px){ .vgbit-fila{grid-template-columns:1fr;gap:3px} }
+.vgbit-fila time{font-family:ui-monospace,Consolas,monospace;font-size:.74rem;color:#8593b5}
+.vgbit-fila b{font-size:.84rem;font-weight:800;color:#fff}
+.vgbit-fila b em{font-style:normal;color:#8ff5e3;font-weight:900}
+.vgbit-fila small{display:block;font-size:.74rem;color:#8593b5;margin-top:2px}
+.vgbit-quien{
+  font-size:.72rem;font-weight:900;color:#ffd68a;white-space:nowrap;
+  background:rgba(255,214,138,.12);padding:3px 10px;border-radius:999px;
+}
+.vgbit-nada{padding:34px 14px;text-align:center;color:#8593b5;font-size:.84rem}
+
+.vgrol-aviso{
+  margin:0 0 14px;padding:12px 15px;border-radius:12px;
+  border:1px solid rgba(255,214,138,.28);background:rgba(255,214,138,.08);
+  font-size:.82rem;color:#9aa7c2;line-height:1.5;
+}
+.vgrol-aviso b{color:#ffd68a;font-weight:900}
+</style>
+
+<script id="vg-roles-panel-js-v72">
+(function(){
+  'use strict';
+  if(window.__VG72__) return; window.__VG72__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* Lo que un operador NO ve. Todo lo demás sí.
+     Se nombra por lo que hace cada pestaña, no por su id, porque los
+     ids de este panel han cambiado de nombre varias veces. */
+  var VETADAS = ['usuarios','supabase','exportar','diagnóstico','diagnostico',
+                 'ajustes rápidos','ajustes rapidos','dashboard','analítica','analitica',
+                 'bitácora','bitacora'];
+
+  var rol = undefined;   /* undefined = sin averiguar todavía */
+
+  async function averiguarRol(){
+    if(rol !== undefined) return rol;
+    var c = cli();
+    if(!c){ rol = null; return rol; }
+    try{
+      var s = await c.auth.getUser();
+      var uid = s && s.data && s.data.user && s.data.user.id;
+      if(!uid){ rol = null; return rol; }
+      var r = await c.from('vg_users').select('rol').eq('id', uid).limit(1);
+      rol = (!r.error && r.data && r.data[0]) ? (r.data[0].rol || null) : null;
+    }catch(e){ rol = null; }
+    return rol;
+  }
+
+  /* ── Esconder lo que no le toca ─────────────────────────────── */
+  async function aplicarPermisos(){
+    var modal = document.getElementById('vgAdminModal');
+    if(!modal || !modal.classList.contains('active')) return;
+
+    var r = await averiguarRol();
+    if(r !== 'operador') return;          /* solo se restringe al operador */
+
+    var tabs = modal.querySelectorAll('.vg-admin-tab');
+    Array.prototype.forEach.call(tabs, function(b){
+      var t = (b.textContent||'').toLowerCase();
+      var veta = VETADAS.some(function(v){ return t.indexOf(v) >= 0; });
+      if(veta){
+        b.style.display = 'none';
+        /* Si estaba abierta en esa pestaña, se le manda a Pedidos */
+        if(b.classList.contains('active')){
+          var pedidos = Array.prototype.filter.call(tabs, function(x){
+            return /pedidos|hoy/i.test(x.textContent||'') && x.style.display !== 'none';
+          })[0];
+          if(pedidos) pedidos.click();
+        }
+      }
+    });
+
+    if(!modal.querySelector('.vgrol-aviso')){
+      var cont = modal.querySelector('.vg-admin-content');
+      if(cont){
+        var d = document.createElement('div');
+        d.className = 'vgrol-aviso';
+        d.innerHTML = '<b>Cuenta de operador.</b> Puedes atender pedidos y '+
+          'contestar el chat. Los datos del negocio y la configuración solo '+
+          'los ve el administrador.';
+        cont.insertBefore(d, cont.firstChild);
+      }
+    }
+  }
+
+  /* ── La bitácora ────────────────────────────────────────────── */
+  function cuando(iso){
+    var d = new Date(iso);
+    if(isNaN(d)) return '';
+    var min = Math.round((Date.now() - d) / 60000);
+    if(min < 1) return 'ahora';
+    if(min < 60) return 'hace ' + min + ' min';
+    if(min < 1440) return 'hace ' + Math.floor(min/60) + ' h';
+    return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short'}) + ' ' +
+           d.toLocaleTimeString('es-MX', {hour:'2-digit', minute:'2-digit'});
+  }
+
+  async function montarBitacora(){
+    var modal = document.getElementById('vgAdminModal');
+    if(!modal) return;
+    var tabs = modal.querySelector('.vg-admin-tabs');
+    var cont = modal.querySelector('.vg-admin-content');
+    if(!tabs || !cont) return;
+    if(document.getElementById('vgAdminBitacora')) return;
+
+    var r = await averiguarRol();
+    if(r === 'operador') return;          /* un operador no ve el registro */
+
+    var sec = document.createElement('section');
+    sec.className = 'vg-admin-section';
+    sec.id = 'vgAdminBitacora';
+    sec.innerHTML = '<div class="vgbit"><div class="vgbit-nada">Cargando…</div></div>';
+    cont.appendChild(sec);
+
+    var b = document.createElement('button');
+    b.className = 'vg-admin-tab';
+    b.setAttribute('data-tab', 'bitacora');
+    b.textContent = '📋 Bitácora';
+    tabs.appendChild(b);
+
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-tab'),
+        function(x){ x.classList.toggle('active', x === b); });
+      Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-section'),
+        function(s){ s.classList.toggle('active', s === sec); });
+      cargarBitacora();
+    });
+  }
+
+  async function cargarBitacora(){
+    var raiz = document.querySelector('#vgAdminBitacora .vgbit');
+    if(!raiz) return;
+    var c = cli();
+    if(!c){ raiz.innerHTML = '<div class="vgbit-nada">Sin conexión.</div>'; return; }
+    raiz.innerHTML = '<div class="vgbit-nada">Cargando…</div>';
+
+    var r = await c.from('vg_bitacora')
+      .select('creado_at,quien_nom,accion,sobre,detalle')
+      .order('creado_at', {ascending:false}).limit(120);
+
+    if(r.error){
+      raiz.innerHTML = '<div class="vgbit-nada">'+
+        (/does not exist|schema cache/i.test(r.error.message)
+          ? 'Falta correr supabase_fase71_ROLES_Y_BITACORA.sql en Supabase.'
+          : esc(r.error.message))+'</div>';
+      return;
+    }
+    if(!r.data || !r.data.length){
+      raiz.innerHTML = '<div class="vgbit-nada">Todavía no hay nada apuntado.<br>'+
+        'En cuanto marques un pedido, aparecerá aquí.</div>';
+      return;
+    }
+
+    raiz.innerHTML =
+      '<div class="vgbit-cab"><h3>Quién hizo qué</h3>'+
+      '<span>últimas '+r.data.length+' acciones</span></div>'+
+      r.data.map(function(x){
+        return '<div class="vgbit-fila">'+
+          '<time>'+esc(cuando(x.creado_at))+'</time>'+
+          '<div><b><em>'+esc(x.accion)+'</em>'+(x.sobre?' · '+esc(x.sobre):'')+'</b>'+
+          (x.detalle ? '<small>'+esc(x.detalle)+'</small>' : '')+'</div>'+
+          '<span class="vgbit-quien">'+esc(x.quien_nom||'?')+'</span>'+
+        '</div>';
+      }).join('');
+  }
+
+  var intentos = 0;
+  function arrancar(){
+    var modal = document.getElementById('vgAdminModal');
+    if(modal && !modal.dataset.vg72){
+      modal.dataset.vg72 = '1';
+      var pend = false;
+      new MutationObserver(function(){
+        if(pend) return; pend = true;
+        requestAnimationFrame(function(){
+          pend = false;
+          montarBitacora().catch(function(){});
+          aplicarPermisos().catch(function(){});
+        });
+      }).observe(modal, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    }
+    if(++intentos < 50) setTimeout(arrancar, 1200);
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
 </body>
 </html>
