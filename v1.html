@@ -37640,6 +37640,7 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
                  'bitácora','bitacora'];
 
   var rol = undefined;   /* undefined = sin averiguar todavía */
+  var montando = false;  /* mira el comentario de montarBitacora */
 
   async function averiguarRol(){
     if(rol !== undefined) return rol;
@@ -37710,7 +37711,17 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     var tabs = modal.querySelector('.vg-admin-tabs');
     var cont = modal.querySelector('.vg-admin-content');
     if(!tabs || !cont) return;
-    if(document.getElementById('vgAdminBitacora')) return;
+
+    /* Si alguna vez se colaron varias pestañas, se queda la primera. */
+    var yaHay = tabs.querySelectorAll('.vg-admin-tab[data-tab="bitacora"]');
+    for(var i = 1; i < yaHay.length; i++) yaHay[i].remove();
+    if(yaHay.length || document.getElementById('vgAdminBitacora')) return;
+
+    /* Averiguar el rol tarda, y mientras tanto siguen llegando avisos
+       del observador. Sin esta bandera, la comprobación de arriba mira
+       una sección que todavía no existe y se montan tres. */
+    if(montando) return;
+    montando = true;
 
     var r = await averiguarRol();
     if(r === 'operador') return;          /* un operador no ve el registro */
@@ -37900,11 +37911,46 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
     return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
 
+  /* ── Leer una fila de la tabla ───────────────────────────────
+     Hay dos dibujados distintos de esta tabla en la página. El viejo
+     pone el nombre en la segunda columna y el id en un input; el que
+     se usa hoy pone el nombre en la primera y el id en el botón de
+     borrar. Y las filas de administrador no llevan id en ninguna
+     parte, así que ésas se resuelven por correo al abrirlas. */
+  /* Solo el texto propio de la celda: nada de lo que este bloque le
+     haya metido dentro (el botón, las pastillas). */
+  function nombreDe(cel){
+    var t = '';
+    Array.prototype.forEach.call(cel.childNodes, function(n){
+      if(n.nodeType === 3) t += n.nodeValue;
+    });
+    if(!t.trim()){
+      var b = cel.querySelector('b');
+      if(b) t = b.textContent || '';
+    }
+    return t.replace(/\s+/g,' ').trim() || 'Cliente';
+  }
+
+  function leerFila(tr){
+    var inp  = tr.querySelector('input[data-uid]');
+    var bor  = tr.querySelector('[data-borrar]');
+    var i    = inp ? 1 : 0;                      /* columna del nombre */
+    var cel  = tr.cells && tr.cells[i];
+    if(!cel) return null;
+    return {
+      celda:  cel,
+      uid:    inp ? inp.getAttribute('data-uid')
+                  : (bor ? bor.getAttribute('data-borrar') : null),
+      nombre: nombreDe(cel),
+      mail:   inp ? null : ((tr.cells[1] && tr.cells[1].textContent||'').trim())
+    };
+  }
+
   /* ── Pintar una fila ─────────────────────────────────────────── */
-  function pintar(tr, uid){
-    var celda = tr.cells && tr.cells[1];
+  function pintar(tr, d){
+    var celda = d.celda, uid = d.uid;
     if(!celda) return;
-    var f = FICHAS[uid] || {};
+    var f = (uid && FICHAS[uid]) || {};
     var tags = f.etiquetas || [];
 
     var viejo = celda.querySelector('.vgnt-chips');
@@ -37919,7 +37965,7 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       btn.textContent = '📝';
       btn.addEventListener('click', function(ev){
         ev.stopPropagation();
-        abrir(uid, (tr.cells[1].querySelector('b')||{}).textContent || 'Cliente', tr);
+        abrir(tr, leerFila(tr) || d).catch(function(){});
       });
       var b = celda.querySelector('b');
       (b ? b.parentNode : celda).appendChild(btn);
@@ -37946,11 +37992,10 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 
     var mapa = [], faltan = [];
     Array.prototype.forEach.call(filas, function(tr){
-      var inp = tr.querySelector('input[data-uid]');
-      if(!inp) return;
-      var uid = inp.getAttribute('data-uid');
-      mapa.push([tr, uid]);
-      if(!PEDIDOS[uid]) faltan.push(uid);
+      var d = leerFila(tr);
+      if(!d) return;
+      mapa.push([tr, d]);
+      if(d.uid && !PEDIDOS[d.uid]) faltan.push(d.uid);
     });
     if(!mapa.length) return;
 
@@ -37976,7 +38021,30 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   }
 
   /* ── La ventanita ────────────────────────────────────────────── */
-  function abrir(uid, nombre, tr){
+  async function abrir(tr, d){
+    var uid = d.uid, nombre = d.nombre;
+
+    /* Fila sin id a la vista (las de administrador): se busca por
+       correo, y solo cuando de verdad hace falta. */
+    if(!uid && d.mail && d.mail.indexOf('@') > 0){
+      var c0 = cli();
+      if(c0){
+        var q = await c0.from('vg_users').select('id').eq('email', d.mail).limit(1);
+        if(!q.error && q.data && q.data[0]) uid = String(q.data[0].id);
+      }
+    }
+    if(!uid){ alert('No pude identificar a este cliente.'); return; }
+
+    if(!PEDIDOS[uid]){
+      var c1 = cli();
+      if(c1){
+        var q2 = await c1.rpc('vg_notas_de', {p_ids:[uid]});
+        if(!q2.error && q2.data && q2.data[0])
+          FICHAS[uid] = {notas:q2.data[0].notas, etiquetas:q2.data[0].etiquetas || []};
+        PEDIDOS[uid] = true;
+      }
+    }
+
     var f = FICHAS[uid] || {};
     var sel = (f.etiquetas || []).slice();
 
@@ -38050,7 +38118,10 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       FICHAS[uid] = {notas: area.value.trim() || null, etiquetas: sel};
       PEDIDOS[uid] = true;
       cerrar();
-      if(tr && tr.isConnected) pintar(tr, uid);
+      if(tr && tr.isConnected){
+        var d2 = leerFila(tr);
+        if(d2){ d2.uid = uid; pintar(tr, d2); }
+      }
     });
   }
 
