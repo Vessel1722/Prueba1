@@ -37391,5 +37391,184 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   else arrancar();
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 70 · La cuenta recuerda los datos de juego
+
+     Cada pedido de Fortnite empezaba con el mismo ida y vuelta
+     preguntando el usuario de Epic. Guardándolo una vez, la segunda
+     compra ya no pregunta nada: el dato viaja con el pedido.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-datos-juego-v70">
+.vgdj{margin:0 0 14px;padding:15px 16px;border-radius:14px;
+  border:1px solid rgba(34,245,211,.22);
+  background:linear-gradient(135deg,rgba(34,245,211,.07),rgba(255,255,255,.02))}
+.vgdj > b{display:block;color:#fff;font-size:.92rem;font-weight:900;margin-bottom:3px}
+.vgdj > p{margin:0 0 13px;font-size:.79rem;color:#8593b5;line-height:1.5}
+.vgdj-campos{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:10px}
+.vgdj-campos label{display:block}
+.vgdj-campos span{display:block;font-size:.62rem;font-weight:900;letter-spacing:.11em;
+  text-transform:uppercase;color:#8593b5;margin-bottom:4px}
+.vgdj-campos input{width:100%;box-sizing:border-box;
+  border:1px solid rgba(255,255,255,.13);background:rgba(255,255,255,.05);
+  color:#fff;border-radius:10px;padding:10px 12px;font-family:inherit;font-size:.85rem}
+.vgdj-campos input:focus{outline:none;border-color:rgba(34,245,211,.45)}
+.vgdj-pie{display:flex;align-items:center;gap:12px;margin-top:13px;flex-wrap:wrap}
+.vgdj-pie button{border:0;border-radius:10px;padding:11px 20px;cursor:pointer;
+  background:#22f5d3;color:#04231d;font-family:inherit;font-size:.84rem;font-weight:900}
+.vgdj-pie button:disabled{opacity:.55;cursor:default}
+.vgdj-pie .msg{font-size:.79rem;color:#8ff5e3}
+.vgdj-pie .msg.mal{color:#ff9db0}
+</style>
+
+<script id="vg-datos-juego-js-v70">
+(function(){
+  'use strict';
+  if(window.__VG70__) return; window.__VG70__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* Qué se guarda. La clave es la que viaja a la base; se mantiene
+     corta y en minúsculas porque la función del servidor solo acepta
+     eso. Añadir un juego mañana es agregar una línea aquí. */
+  var CAMPOS = [
+    {k:'epic',      t:'Usuario de Epic',   ej:'para Fortnite'},
+    {k:'xbox',      t:'Gamertag de Xbox',  ej:'para juegos y Game Pass'},
+    {k:'free_fire', t:'ID de Free Fire',   ej:'solo números'},
+    {k:'psn',       t:'Usuario de PSN',    ej:'PlayStation'}
+  ];
+
+  var datos = null;     /* lo guardado, una vez leído */
+
+  async function traer(){
+    if(datos) return datos;
+    var c = cli(); if(!c) return {};
+    try{
+      var r = await c.rpc('vg_mis_datos_juego');
+      datos = (!r.error && r.data && typeof r.data === 'object') ? r.data : {};
+    }catch(e){ datos = {}; }
+    return datos;
+  }
+
+  async function guardar(nuevos, msg, btn){
+    var c = cli(); if(!c) return;
+    btn.disabled = true; msg.className = 'msg'; msg.textContent = 'Guardando…';
+    var r = await c.rpc('vg_guardar_datos_juego', {p_datos: nuevos});
+    btn.disabled = false;
+    if(r.error){
+      msg.className = 'msg mal';
+      msg.textContent = /does not exist|schema cache/i.test(r.error.message)
+        ? 'Falta correr supabase_fase69_DATOS_DE_JUEGO.sql en Supabase.'
+        : r.error.message;
+      return;
+    }
+    datos = (r.data && r.data.guardados) || nuevos;
+    msg.className = 'msg';
+    msg.textContent = '✓ Guardado. No volveremos a preguntártelo.';
+    setTimeout(function(){ msg.textContent = ''; }, 4000);
+  }
+
+  /* ── La tarjeta en el panel del cliente ─────────────────────── */
+  async function montar(){
+    var panel = document.getElementById('vg17Client');
+    if(!panel || !panel.classList.contains('active')) return;
+    var destino = document.querySelector('#vg17Client .vg17-body') ||
+                  document.querySelector('#vg17Client .vg17-panel-body') ||
+                  panel.querySelector('.vg17-tabs') && panel.querySelector('.vg17-tabs').parentElement;
+    if(!destino || destino.querySelector('.vgdj')) return;
+
+    var g = await traer();
+
+    var d = document.createElement('div');
+    d.className = 'vgdj';
+    d.innerHTML =
+      '<b>🎮 Tus datos de juego</b>'+
+      '<p>Guárdalos una vez y no te los volvemos a pedir en cada compra. '+
+      'Solo los usamos para entregarte lo que pediste.</p>'+
+      '<div class="vgdj-campos">'+
+        CAMPOS.map(function(c){
+          return '<label><span>'+esc(c.t)+'</span>'+
+            '<input data-k="'+c.k+'" maxlength="60" autocomplete="off" '+
+            'placeholder="'+esc(c.ej)+'" value="'+esc(g[c.k]||'')+'"></label>';
+        }).join('')+
+      '</div>'+
+      '<div class="vgdj-pie"><button type="button">Guardar</button>'+
+      '<span class="msg"></span></div>';
+
+    destino.insertBefore(d, destino.firstChild);
+
+    var btn = d.querySelector('button'), msg = d.querySelector('.msg');
+    btn.onclick = function(){
+      var nuevos = {};
+      d.querySelectorAll('[data-k]').forEach(function(i){
+        var v = (i.value||'').trim();
+        if(v) nuevos[i.getAttribute('data-k')] = v;
+      });
+      guardar(nuevos, msg, btn);
+    };
+  }
+
+  /* ── Que viajen con el pedido ────────────────────────────────
+     De poco sirve guardarlos si al entregar sigues teniendo que
+     preguntar. Se añaden al pedido en cuanto se crea, en el campo que
+     el panel enseña como "datos que dejó el cliente".
+
+     Solo el que hace falta: al que compra Fortnite no le sirve de nada
+     que le mandes su gamertag de Xbox. */
+  function cualToca(pedido){
+    var txt = JSON.stringify(pedido || {}).toLowerCase();
+    if(txt.indexOf('fortnite') >= 0) return 'epic';
+    if(txt.indexOf('free fire') >= 0 || txt.indexOf('diamantes') >= 0) return 'free_fire';
+    if(txt.indexOf('xbox') >= 0 || txt.indexOf('game pass') >= 0) return 'xbox';
+    if(txt.indexOf('psn') >= 0 || txt.indexOf('playstation') >= 0) return 'psn';
+    return null;
+  }
+
+  function engancharPedido(){
+    if(typeof window.vgCreateSupabaseOrder !== 'function') return false;
+    if(window.vgCreateSupabaseOrder.__vg70) return true;
+    var orig = window.vgCreateSupabaseOrder;
+    var envuelta = async function(){
+      var pedido = await orig.apply(this, arguments);
+      try{
+        var g = await traer();
+        var k = cualToca(window.pendingPaymentOrder);
+        if(pedido && pedido.id && k && g[k]){
+          var etiqueta = (CAMPOS.filter(function(c){ return c.k === k; })[0] || {}).t || k;
+          var c = cli();
+          if(c) await c.from('orders')
+            .update({ delivery_data: etiqueta + ': ' + g[k] })
+            .eq('id', pedido.id);
+        }
+      }catch(e){ /* el pedido ya está guardado; esto es un extra */ }
+      return pedido;
+    };
+    envuelta.__vg70 = true;
+    window.vgCreateSupabaseOrder = envuelta;
+    return true;
+  }
+
+  var intentos = 0;
+  function arrancar(){
+    engancharPedido();
+    var panel = document.getElementById('vg17Client');
+    if(panel && !panel.dataset.vg70){
+      panel.dataset.vg70 = '1';
+      var pend = false;
+      new MutationObserver(function(){
+        if(pend) return; pend = true;
+        requestAnimationFrame(function(){ pend = false; montar().catch(function(){}); });
+      }).observe(panel, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+    }
+    if(++intentos < 50) setTimeout(arrancar, 1200);
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
 </body>
 </html>
