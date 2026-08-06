@@ -38149,5 +38149,252 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 75 · Qué te piden que no vendes
+
+     Paso 4 de 5.
+
+     El buscador ya escribe "Sin coincidencias para X" cuando falla.
+     Este bloque se cuelga de ahí y lo apunta, en vez de meter mano
+     dentro del buscador. Si mañana cambias el buscador, esto no lo
+     rompe: como mucho deja de apuntar.
+
+     Se espera 1,4 segundos desde la última tecla. Quien escribe
+     "fortnite" pasa por "f", "fo", "for"… y ninguna de esas es una
+     búsqueda de verdad.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-busquedas-v75">
+.vgbq{display:grid;gap:8px}
+.vgbq-cab{display:flex;align-items:baseline;gap:11px;flex-wrap:wrap;margin-bottom:4px}
+.vgbq-cab h3{margin:0;font-size:1rem;font-weight:900;color:#fff}
+.vgbq-cab span{font-size:.76rem;color:#8593b5}
+.vgbq-int{
+  margin:0 0 13px;padding:12px 15px;border-radius:12px;
+  border:1px solid rgba(25,230,193,.24);background:rgba(25,230,193,.07);
+  font-size:.82rem;color:#9aa7c2;line-height:1.55;
+}
+.vgbq-int b{color:#8ff5e3;font-weight:900}
+.vgbq-fila{
+  display:grid;grid-template-columns:58px 1fr auto auto;gap:12px;align-items:center;
+  padding:10px 13px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.03);
+}
+.vgbq-fila.ok{opacity:.45}
+@media(max-width:640px){
+  .vgbq-fila{grid-template-columns:52px 1fr auto;gap:8px}
+  .vgbq-fila time{display:none}
+}
+.vgbq-veces{
+  text-align:center;font-size:.95rem;font-weight:900;color:#0a0e18;
+  background:#19e6c1;border-radius:9px;padding:4px 0;line-height:1.25;
+}
+.vgbq-veces small{display:block;font-size:.55rem;font-weight:800;opacity:.72}
+.vgbq-fila.baja .vgbq-veces{background:rgba(255,255,255,.1);color:#c8d0e4}
+.vgbq-fila b{font-size:.9rem;font-weight:800;color:#fff;word-break:break-word}
+.vgbq-fila time{font-size:.72rem;color:#8593b5;white-space:nowrap}
+.vgbq-fila button{
+  border:1px solid rgba(255,255,255,.14);background:transparent;color:#8593b5;
+  font-family:inherit;font-size:.72rem;font-weight:800;cursor:pointer;
+  padding:6px 11px;border-radius:9px;white-space:nowrap;transition:all .14s;
+}
+.vgbq-fila button:hover{border-color:rgba(25,230,193,.5);color:#19e6c1}
+.vgbq-nada{padding:34px 14px;text-align:center;color:#8593b5;font-size:.84rem;line-height:1.6}
+</style>
+
+<script id="vg-busquedas-js-v75">
+(function(){
+  'use strict';
+  if(window.__VG75__) return; window.__VG75__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* ══ 1. Apuntar lo que no se encuentra ═════════════════════════ */
+
+  var yaMandadas = {};   /* en esta visita, una vez por texto */
+  var reloj = null;
+
+  function apuntar(txt){
+    txt = String(txt||'').trim();
+    if(txt.length < 3 || txt.length > 60) return;
+    var k = txt.toLowerCase();
+    if(yaMandadas[k]) return;
+    yaMandadas[k] = true;
+    var c = cli();
+    if(!c) return;
+    /* Sin await ni aviso: si falla, da igual. Es un apunte, no una venta. */
+    try{ c.rpc('vg_apuntar_busqueda', {p_texto: txt}); }catch(e){}
+  }
+
+  function mirarPanel(){
+    var p = document.getElementById('searchResultsPanel');
+    if(!p || !p.classList.contains('active')) return;
+    /* Si hay lista de resultados, encontró algo. */
+    if(p.querySelector('.search-result-list')) return;
+    var m = (p.textContent||'').match(/Sin coincidencias para\s*"([^"]+)"/i);
+    if(m && m[1]) apuntar(m[1]);
+  }
+
+  function vigilarPanel(){
+    var p = document.getElementById('searchResultsPanel');
+    if(!p || p.dataset.vg75) return !!p;
+    p.dataset.vg75 = '1';
+    new MutationObserver(function(){
+      clearTimeout(reloj);
+      reloj = setTimeout(mirarPanel, 1400);
+    }).observe(p, {childList:true, subtree:true, attributes:true,
+                   attributeFilter:['class']});
+    return true;
+  }
+
+  /* ══ 2. La pantalla del panel ══════════════════════════════════ */
+
+  var montando = false;
+
+  function cuando(iso){
+    var d = new Date(iso);
+    if(isNaN(d)) return '';
+    var dias = Math.floor((Date.now() - d) / 86400000);
+    if(dias < 1) return 'hoy';
+    if(dias === 1) return 'ayer';
+    if(dias < 30) return 'hace ' + dias + ' días';
+    return d.toLocaleDateString('es-MX', {day:'2-digit', month:'short'});
+  }
+
+  async function esOperador(){
+    var c = cli();
+    if(!c) return false;
+    try{
+      var s = await c.auth.getUser();
+      var uid = s && s.data && s.data.user && s.data.user.id;
+      if(!uid) return false;
+      var r = await c.from('vg_users').select('rol').eq('id', uid).limit(1);
+      return !r.error && r.data && r.data[0] && r.data[0].rol === 'operador';
+    }catch(e){ return false; }
+  }
+
+  async function montar(){
+    var modal = document.getElementById('vgAdminModal');
+    if(!modal) return;
+    var tabs = modal.querySelector('.vg-admin-tabs');
+    var cont = modal.querySelector('.vg-admin-content');
+    if(!tabs || !cont) return;
+
+    var yaHay = tabs.querySelectorAll('.vg-admin-tab[data-tab="buscado"]');
+    for(var i = 1; i < yaHay.length; i++) yaHay[i].remove();
+    if(yaHay.length || document.getElementById('vgAdminBuscado')) return;
+
+    if(montando) return;      /* la comprobación de rol tarda */
+    montando = true;
+    if(await esOperador()) return;
+
+    var sec = document.createElement('section');
+    sec.className = 'vg-admin-section';
+    sec.id = 'vgAdminBuscado';
+    sec.innerHTML = '<div class="vgbq"><div class="vgbq-nada">Cargando…</div></div>';
+    cont.appendChild(sec);
+
+    var b = document.createElement('button');
+    b.className = 'vg-admin-tab';
+    b.setAttribute('data-tab', 'buscado');
+    b.textContent = '🔎 Lo que buscan';
+    tabs.appendChild(b);
+
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-tab'),
+        function(x){ x.classList.toggle('active', x === b); });
+      Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-section'),
+        function(s){ s.classList.toggle('active', s === sec); });
+      cargar();
+    });
+  }
+
+  async function cargar(){
+    var raiz = document.querySelector('#vgAdminBuscado .vgbq');
+    if(!raiz) return;
+    var c = cli();
+    if(!c){ raiz.innerHTML = '<div class="vgbq-nada">Sin conexión.</div>'; return; }
+    raiz.innerHTML = '<div class="vgbq-nada">Cargando…</div>';
+
+    var r = await c.rpc('vg_busquedas_top', {p_dias: 90});
+
+    if(r.error){
+      raiz.innerHTML = '<div class="vgbq-nada">'+
+        (/does not exist|schema cache/i.test(r.error.message)
+          ? 'Falta correr la fase 75 en Supabase.'
+          : esc(r.error.message))+'</div>';
+      return;
+    }
+    if(!r.data || !r.data.length){
+      raiz.innerHTML = '<div class="vgbq-nada">Nadie ha buscado algo que no tengas.<br>'+
+        'O eso, o todavía no le ha dado tiempo: esto se llena solo.</div>';
+      return;
+    }
+
+    raiz.innerHTML =
+      '<div class="vgbq-int"><b>Esto te lo pidieron y no lo tenías.</b> '+
+      'Cada línea es alguien que vino con intención de comprar y se fue con '+
+      'las manos vacías. Lo de arriba es lo que más se repite.</div>'+
+      '<div class="vgbq-cab"><h3>Búsquedas sin resultado</h3>'+
+      '<span>últimos 90 días</span></div>'+
+      r.data.map(function(x){
+        return '<div class="vgbq-fila'+(x.atendida?' ok':'')+
+                 (x.veces < 3 ? ' baja' : '')+'" data-k="'+esc(x.clave)+'">'+
+          '<div class="vgbq-veces">'+x.veces+'<small>VECES</small></div>'+
+          '<b>'+esc(x.texto)+'</b>'+
+          '<time>'+esc(cuando(x.ultima))+'</time>'+
+          '<button type="button">'+(x.atendida?'Reabrir':'Ya lo tengo')+'</button>'+
+        '</div>';
+      }).join('');
+
+    /* Se engancha una sola vez: cargar() vuelve a escribir el interior
+       de raiz, pero raiz sigue siendo el mismo nodo. */
+    if(raiz.dataset.vg75click) return;
+    raiz.dataset.vg75click = '1';
+    raiz.addEventListener('click', async function(ev){
+      var btn = ev.target.closest && ev.target.closest('.vgbq-fila button');
+      if(!btn) return;
+      var fila = btn.closest('.vgbq-fila');
+      var ok   = !fila.classList.contains('ok');
+      btn.disabled = true;
+      var rr = await c.rpc('vg_busqueda_atendida',
+        {p_clave: fila.getAttribute('data-k'), p_val: ok});
+      btn.disabled = false;
+      if(rr.error) return;
+      fila.classList.toggle('ok', ok);
+      btn.textContent = ok ? 'Reabrir' : 'Ya lo tengo';
+    });
+  }
+
+  /* ══ 3. Arranque ═══════════════════════════════════════════════ */
+  var intentos = 0, pend = false;
+  function arrancar(){
+    vigilarPanel();
+
+    var modal = document.getElementById('vgAdminModal');
+    if(modal && !modal.dataset.vg75){
+      modal.dataset.vg75 = '1';
+      new MutationObserver(function(){
+        if(pend) return; pend = true;
+        requestAnimationFrame(function(){
+          pend = false;
+          montar().catch(function(){});
+        });
+      }).observe(modal, {childList:true, subtree:true, attributes:true,
+                         attributeFilter:['class']});
+    }
+    /* El panel del buscador se crea al primer uso, así que se sigue
+       mirando siempre; es solo un getElementById. */
+    setTimeout(arrancar, ++intentos < 40 ? 1200 : 4000);
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 </body>
 </html>
