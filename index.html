@@ -15792,6 +15792,66 @@ window.vgBingSize = function(){
 </div>
 </div>
 <script id="vg-supabase-admin-v34" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script id="vg-un-solo-cliente-v68">
+/* ═══════════════════════════════════════════════════════════════════
+   VG FASE 68 · Un solo cliente de Supabase
+
+   La consola avisaba de cinco clientes de Supabase compartiendo el
+   mismo almacén de sesión. No es un aviso menor: fue exactamente la
+   causa de la caída en la que la página no cargaba. Varios clientes
+   sobre la misma sesión se disparan avisos entre ellos y se enredan.
+
+   En el archivo hay dieciocho sitios que crean clientes, y cuatro de
+   ellos crean uno NUEVO en cada llamada. Reescribir dieciocho sitios
+   es mucho que romper, así que se arregla en un solo punto: se envuelve
+   la fábrica de clientes para que devuelva siempre el mismo cuando le
+   piden lo mismo.
+
+   Cada quien sigue llamando a createClient como siempre y recibe un
+   cliente que funciona. Solo que ahora es el mismo.
+
+   Se reparten por url + clave + almacén de sesión. Ese último importa:
+   hay un cliente que usa 'vg_sb_auth' a propósito y tiene su propia
+   sesión, así que ese se queda aparte. Juntarlo con los demás sí
+   habría cambiado el comportamiento.
+
+   Va justo después de cargar la librería para llegar antes que
+   cualquiera que quiera crear uno.
+   ═══════════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+  if(!window.supabase || typeof window.supabase.createClient !== 'function') return;
+  if(window.supabase.createClient.__vg68) return;
+
+  var original = window.supabase.createClient;
+  var guardados = {};
+
+  function envuelta(url, clave, opciones){
+    /* Si falta algo, se deja pasar tal cual: no es tarea de esto
+       decidir si una configuración es válida. */
+    if(!url || !clave) return original.apply(this, arguments);
+
+    var almacen = (opciones && opciones.auth && opciones.auth.storageKey) || '(por defecto)';
+    var k = url + '|' + String(clave).slice(0, 24) + '|' + almacen;
+
+    if(!guardados[k]){
+      guardados[k] = original.apply(this, arguments);
+      guardados[k].__vgAlmacen = almacen;
+    }
+    return guardados[k];
+  }
+
+  envuelta.__vg68 = true;
+  window.supabase.createClient = envuelta;
+
+  /* Para poder comprobar cuántos hay de verdad desde la consola */
+  window.vgClientes = function(){
+    return Object.keys(guardados).map(function(k){
+      return k.split('|')[2];
+    });
+  };
+})();
+</script>
 <script id="vg-supabase-admin-app-v34">
 (function(){
 'use strict';
