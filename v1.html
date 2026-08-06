@@ -111,7 +111,8 @@ window.WHATSAPP_NUMBER = "526611078412";
   </script>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;700;900&amp;family=Montserrat:wght@700;900&amp;display=swap" rel="stylesheet"/>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=Montserrat:wght@700;900&amp;family=Barlow+Condensed:wght@600;700;800;900&amp;display=swap" rel="preload" as="style" onload="this.rel='stylesheet'"/>
+<noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=Montserrat:wght@700;900&amp;family=Barlow+Condensed:wght@600;700;800;900&amp;display=swap" rel="stylesheet"/></noscript>
 <style>
 
     :root {
@@ -11165,8 +11166,14 @@ body{margin:0;background:#070912;color:#fff;font-family:system-ui,-apple-system,
    Barlow Condensed display / Inter body, teal+gold palette
    ============================================================ */
 
-/* ─── 0. GOOGLE FONT (display) ───────────────────────────── */
-@import url('https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap');
+/* ─── 0. GOOGLE FONT (display) ─────────────────────────────
+   El @import que había aquí se movió a la cabecera.
+
+   Un @import a media página es lo peor para el tiempo de dibujo: el
+   navegador tiene que leer once mil líneas, descubrir aquí que
+   necesita otra hoja de estilo, pedirla y esperarla, todo en serie y
+   sin pintar nada mientras tanto. En la cabecera se pide desde el
+   primer momento y en paralelo con lo demás. */
 
 /* ─── 1. DESIGN TOKENS ───────────────────────────────────── */
 :root {
