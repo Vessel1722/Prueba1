@@ -39220,5 +39220,29 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 83 · Quitarles el desplazamiento viejo
+
+     Medido en vivo: las fotos se solapaban 38px entre ellas. La causa
+     no era la rejilla, que reparte bien: era que conservaban el
+     desplazamiento de la primera version -right: 2% + i * 6,5%- y al
+     devolverles position:relative en la fase 79 ese "right" volvio a
+     contar y las corre unas sobre otras.
+
+     Aquella regla apunta a .vgfn-portada.cartas img, mas concreta que
+     el .vgfn-portada img donde yo lo anulaba, asi que ganaba. Aqui se
+     anula a su mismo nivel y para las dos variantes.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-portadas-v83">
+#marketView .vgfn-portada.cartas img,
+#marketView .vgfn-portada.recortes img{
+  right:auto !important;
+  left:auto !important;
+  top:auto !important;
+  bottom:auto !important;
+  transform:none !important;
+}
+</style>
 </body>
 </html>
