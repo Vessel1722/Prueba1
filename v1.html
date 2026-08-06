@@ -38983,5 +38983,128 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 80 · Las fotos al lado del texto, y ya cargadas
+
+     Dos cosas.
+
+     UNA. Se acabó el encimarse. Hasta ahora las fotos iban en una capa
+     flotante sobre la portada y todo el apaño consistía en apartarlas
+     del texto con degradados y huecos. Eso es pelearse con el problema
+     en vez de quitarlo. Ahora la portada es de dos columnas: el texto
+     en la suya, las fotos en la suya. No pueden encimarse porque no
+     comparten sitio.
+
+     DOS. Cambiar de sección iba lento porque cada portada pedía sus
+     fotos en ese momento. Ahora se piden solas cuando el navegador no
+     tiene nada que hacer, así que al llegar ya están.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-portadas-v80">
+
+#marketView .section-hero{
+  display:grid;
+  grid-template-columns:minmax(0,1fr) minmax(0,42%);
+  align-items:center;
+  gap:0;
+}
+
+#marketView .section-hero-content{
+  grid-column:1;
+  max-width:none;
+}
+
+/* De capa flotante a columna de verdad. */
+#marketView .vgfn-portada{
+  position:static;
+  grid-column:2;
+  width:auto; height:100%;
+  padding:22px 24px 22px 6px;
+  opacity:1;
+  display:flex; align-items:center; justify-content:flex-end; gap:14px;
+}
+
+/* Sin velo: ya no hace falta tapar nada, no hay texto debajo. */
+#marketView .vgfn-portada:after{ display:none }
+
+#marketView .vgfn-portada img{
+  position:relative; z-index:1;
+  flex:1 1 0; min-width:0;
+}
+
+#marketView .vgfn-portada.cartas img{
+  aspect-ratio:16 / 10;
+  width:auto; height:auto; max-height:72%;
+  object-fit:cover;
+}
+
+#marketView .vgfn-portada.recortes img{
+  height:92%; width:auto; max-width:none;
+  object-fit:contain; object-position:bottom center;
+}
+
+/* ── Teléfono ───────────────────────────────────────────────────
+   Dos columnas en 380px no son dos columnas, son dos rendijas. Aquí
+   la portada se parte en dos filas: el texto arriba y las fotos en
+   una banda debajo, enteras y sin nada encima. */
+@media(max-width:900px){
+  #marketView .section-hero{
+    grid-template-columns:1fr;
+    align-items:stretch;
+  }
+  #marketView .section-hero-content{ grid-column:1; padding-bottom:14px }
+  #marketView .vgfn-portada{
+    grid-column:1;
+    height:auto; padding:0 20px 20px;
+    justify-content:flex-start; gap:10px;
+  }
+  #marketView .vgfn-portada.cartas img{ max-height:none; height:auto }
+  #marketView .vgfn-portada.recortes img{
+    height:auto; aspect-ratio:1 / 1; flex:1 1 0;
+  }
+}
+</style>
+
+<script id="vg-portadas-js-v80">
+(function(){
+  'use strict';
+  if(window.__VG80__) return; window.__VG80__ = true;
+
+  /* Ir de una sección a otra iba lento porque la portada pedía sus
+     fotos justo al llegar. Se piden antes, cuando el navegador está
+     ocioso, y de cuatro en cuatro para no estorbar a nada. */
+  function calentar(){
+    var S = Array.isArray(window.SERVICES) ? window.SERVICES : [];
+    if(!S.length) return;
+
+    var porCat = {}, urls = [];
+    S.forEach(function(s){
+      if(!s || !s.image) return;
+      var c = s.category || 'all';
+      porCat[c] = (porCat[c] || 0) + 1;
+      if(porCat[c] <= 4) urls.push(s.image);   /* las que salen en la portada */
+    });
+
+    var i = 0;
+    function siguiente(){
+      if(i >= urls.length) return;
+      var img = new Image();
+      img.decoding = 'async';
+      img.referrerPolicy = 'no-referrer';
+      img.onload = img.onerror = siguiente;
+      img.src = urls[i++];
+    }
+    for(var h = 0; h < 4; h++) siguiente();
+  }
+
+  function alRato(){
+    if(window.requestIdleCallback) requestIdleCallback(calentar, {timeout:6000});
+    else setTimeout(calentar, 2500);
+  }
+  if(document.readyState === 'complete') alRato();
+  else window.addEventListener('load', alRato, {once:true});
+})();
+</script>
+
 </body>
 </html>
