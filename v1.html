@@ -38424,5 +38424,332 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 76 · Enlaces e imágenes rotas
+
+     Paso 5 de 5. Sin SQL: esto se comprueba entero en el navegador.
+
+     Una foto que no carga es una venta que no se hace, y no te enteras
+     nunca porque el cliente no te escribe para decírtelo: se va. Con
+     68 imágenes en imgur y enlaces que caducan, esto conviene pasarlo
+     antes de cada inauguración.
+
+     Se prueban las imágenes de verdad, cargándolas. No hay forma
+     honesta de comprobar un enlace a otra web desde el navegador -el
+     navegador no deja-, así que esos no se inventan: se listan aparte
+     para que los mires tú.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-enlaces-v76">
+.vgel{display:grid;gap:9px}
+.vgel-int{
+  margin:0 0 4px;padding:12px 15px;border-radius:12px;
+  border:1px solid rgba(255,255,255,.1);background:rgba(255,255,255,.03);
+  font-size:.82rem;color:#9aa7c2;line-height:1.55;
+}
+.vgel-int b{color:#fff;font-weight:900}
+.vgel-btn{
+  border:0;cursor:pointer;font-family:inherit;font-weight:900;font-size:.85rem;
+  padding:11px 20px;border-radius:11px;background:#19e6c1;color:#07121a;
+  transition:filter .14s;
+}
+.vgel-btn:hover{filter:brightness(1.1)}
+.vgel-btn[disabled]{opacity:.5;cursor:default}
+.vgel-btn.gris{background:rgba(255,255,255,.07);color:#c8d0e4}
+.vgel-acc{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-bottom:6px}
+.vgel-barra{
+  height:6px;border-radius:999px;background:rgba(255,255,255,.07);overflow:hidden;
+}
+.vgel-barra i{display:block;height:100%;background:#19e6c1;width:0;transition:width .2s}
+.vgel-res{display:flex;gap:16px;flex-wrap:wrap;font-size:.8rem;color:#8593b5;margin:2px 0 6px}
+.vgel-res b{color:#fff;font-weight:900;font-size:.95rem}
+.vgel-res .mal b{color:#ff7090}
+.vgel-fila{
+  display:grid;grid-template-columns:54px 1fr auto;gap:12px;align-items:center;
+  padding:10px 13px;border-radius:11px;
+  border:1px solid rgba(255,112,144,.26);background:rgba(255,112,144,.06);
+}
+@media(max-width:640px){ .vgel-fila{grid-template-columns:44px 1fr;gap:9px}
+                         .vgel-fila button{grid-column:1/-1} }
+.vgel-fila .vgel-x{
+  width:54px;height:54px;border-radius:9px;display:grid;place-items:center;
+  background:rgba(255,112,144,.14);color:#ff7090;font-size:1.3rem;
+}
+.vgel-fila b{display:block;font-size:.87rem;font-weight:800;color:#fff;word-break:break-word}
+.vgel-fila small{
+  display:block;font-size:.71rem;color:#8593b5;margin-top:3px;word-break:break-all;
+  font-family:ui-monospace,Consolas,monospace;
+}
+.vgel-fila button{
+  border:1px solid rgba(255,255,255,.14);background:transparent;color:#8593b5;
+  font-family:inherit;font-size:.72rem;font-weight:800;cursor:pointer;
+  padding:6px 11px;border-radius:9px;white-space:nowrap;
+}
+.vgel-fila button:hover{border-color:rgba(25,230,193,.5);color:#19e6c1}
+.vgel-nada{
+  padding:30px 14px;text-align:center;font-size:.86rem;line-height:1.6;
+  color:#8ff5e3;border:1px solid rgba(25,230,193,.24);
+  background:rgba(25,230,193,.07);border-radius:12px;
+}
+.vgel-lista{
+  margin-top:6px;padding:12px 15px;border-radius:11px;
+  border:1px solid rgba(255,255,255,.08);background:rgba(255,255,255,.02);
+  font-size:.75rem;color:#8593b5;line-height:1.7;
+  max-height:220px;overflow:auto;font-family:ui-monospace,Consolas,monospace;
+}
+.vgel-lista a{color:#9aa7c2;text-decoration:none}
+.vgel-lista a:hover{color:#19e6c1}
+</style>
+
+<script id="vg-enlaces-js-v76">
+(function(){
+  'use strict';
+  if(window.__VG76__) return; window.__VG76__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* ── Qué comprobar ───────────────────────────────────────────── */
+  function recoger(){
+    var vistos = {}, lista = [];
+    function meter(url, donde){
+      if(!url) return;
+      url = String(url).trim();
+      if(!url || url.indexOf('data:') === 0 || url.indexOf('blob:') === 0) return;
+      if(/^portada\.png$/i.test(url)) return;          /* el respaldo local */
+      if(vistos[url]) return;
+      vistos[url] = 1;
+      lista.push({url:url, donde:donde || 'la página'});
+    }
+
+    /* 1. El catálogo, esté dibujado o no */
+    var S = Array.isArray(window.SERVICES) ? window.SERVICES : [];
+    S.forEach(function(p){
+      meter(p.image, p.title || ('producto ' + p.id));
+      if(Array.isArray(p.gallery)) p.gallery.forEach(function(g){
+        meter(typeof g === 'string' ? g : (g && g.url), p.title || 'galería');
+      });
+    });
+
+    /* 2. Lo que hay puesto en pantalla ahora mismo */
+    Array.prototype.forEach.call(document.images, function(img){
+      var src = img.getAttribute('src');
+      if(!src) return;
+      var alt = (img.getAttribute('alt')||'').trim();
+      meter(src, alt || 'imagen de la página');
+    });
+
+    return lista;
+  }
+
+  /* Enlaces a otras webs. No se pueden probar desde aquí -el navegador
+     no deja leer respuestas de otros dominios- así que no se finge que
+     sí: se listan para revisarlos a mano. */
+  function enlacesFuera(){
+    var vistos = {}, out = [];
+    Array.prototype.forEach.call(document.querySelectorAll('a[href^="http"]'), function(a){
+      var h = a.getAttribute('href');
+      if(!h || h.indexOf(location.origin) === 0) return;
+      if(vistos[h]) return;
+      vistos[h] = 1;
+      out.push({url:h, texto:(a.textContent||'').trim().slice(0,50) || h});
+    });
+    return out;
+  }
+
+  /* ── Probar una imagen ───────────────────────────────────────── */
+  function probar(url){
+    return new Promise(function(ok){
+      var img = new Image();
+      var listo = false;
+      var t = setTimeout(function(){
+        if(listo) return; listo = true; img.src = ''; ok(false);
+      }, 9000);
+      img.referrerPolicy = 'no-referrer';   /* como las carga la página */
+      img.onload  = function(){ if(listo) return; listo = true; clearTimeout(t);
+                                ok(img.naturalWidth > 1); };
+      img.onerror = function(){ if(listo) return; listo = true; clearTimeout(t); ok(false); };
+      img.src = url;
+    });
+  }
+
+  /* De seis en seis: todas a la vez satura la red y da falsos rotos. */
+  async function revisar(lista, avance){
+    var malas = [], i = 0, hechas = 0;
+    async function obrero(){
+      while(i < lista.length){
+        var it = lista[i++];
+        var bien = await probar(it.url);
+        if(!bien) malas.push(it);
+        avance(++hechas, lista.length);
+      }
+    }
+    var hilos = [];
+    for(var h = 0; h < 6; h++) hilos.push(obrero());
+    await Promise.all(hilos);
+    return malas;
+  }
+
+  /* ── La pantalla ─────────────────────────────────────────────── */
+  var montando = false;
+
+  async function esOperador(){
+    var c = cli();
+    if(!c) return false;
+    try{
+      var s = await c.auth.getUser();
+      var uid = s && s.data && s.data.user && s.data.user.id;
+      if(!uid) return false;
+      var r = await c.from('vg_users').select('rol').eq('id', uid).limit(1);
+      return !r.error && r.data && r.data[0] && r.data[0].rol === 'operador';
+    }catch(e){ return false; }
+  }
+
+  function inicio(){
+    var fuera = enlacesFuera();
+    return '<div class="vgel-int"><b>Revisa las fotos antes de cada inauguración.</b> '+
+      'Una imagen que no carga es una venta que no se hace, y no te enteras nunca: '+
+      'el cliente no te escribe, se va.</div>'+
+      '<div class="vgel-acc"><button class="vgel-btn" id="vgelIr">Revisar ahora</button>'+
+      '<span style="font-size:.78rem;color:#8593b5">Tarda un minuto. No cierres esta pestaña.</span></div>'+
+      (fuera.length
+        ? '<div class="vgel-int" style="margin-top:8px">Además hay <b>'+fuera.length+
+          ' enlaces a otras webs</b>. El navegador no me deja comprobarlos desde aquí, '+
+          'así que no te voy a decir que están bien sin haberlo mirado. Ábrelos tú de vez en cuando:'+
+          '<div class="vgel-lista">'+ fuera.map(function(x){
+            return '<a href="'+esc(x.url)+'" target="_blank" rel="noopener">'+esc(x.url)+'</a>';
+          }).join('<br>')+'</div></div>'
+        : '');
+  }
+
+  async function lanzar(raiz){
+    var lista = recoger();
+    if(!lista.length){
+      raiz.innerHTML = '<div class="vgel-nada">No encontré imágenes que comprobar.</div>';
+      return;
+    }
+    raiz.innerHTML =
+      '<div class="vgel-int" id="vgelEstado">Comprobando <b>'+lista.length+'</b> imágenes…</div>'+
+      '<div class="vgel-barra"><i id="vgelBarra"></i></div>';
+
+    var barra = raiz.querySelector('#vgelBarra');
+    var est   = raiz.querySelector('#vgelEstado');
+
+    var malas = await revisar(lista, function(hechas, total){
+      barra.style.width = Math.round(hechas * 100 / total) + '%';
+      est.innerHTML = 'Comprobando… <b>'+hechas+'</b> de '+total;
+    });
+
+    var bien = lista.length - malas.length;
+    var cab =
+      '<div class="vgel-res"><span>Comprobadas <b>'+lista.length+'</b></span>'+
+      '<span>Bien <b>'+bien+'</b></span>'+
+      '<span class="mal">Rotas <b>'+malas.length+'</b></span></div>'+
+      '<div class="vgel-acc"><button class="vgel-btn" id="vgelIr">Volver a revisar</button>'+
+      (malas.length ? '<button class="vgel-btn gris" id="vgelCopiar">Copiar la lista</button>' : '')+
+      '</div>';
+
+    if(!malas.length){
+      raiz.innerHTML = cab + '<div class="vgel-nada">Todas las imágenes cargan bien.<br>'+
+        'Nada que arreglar.</div>';
+      return;
+    }
+
+    raiz.innerHTML = cab + malas.map(function(x){
+      return '<div class="vgel-fila">'+
+        '<div class="vgel-x">✕</div>'+
+        '<div><b>'+esc(x.donde)+'</b><small>'+esc(x.url)+'</small></div>'+
+        '<button type="button" data-ver="'+esc(x.url)+'">Abrirla</button>'+
+      '</div>';
+    }).join('');
+
+    var cp = raiz.querySelector('#vgelCopiar');
+    if(cp) cp.addEventListener('click', function(){
+      var txt = malas.map(function(x){ return x.donde + '  ->  ' + x.url; }).join('\n');
+      try{ navigator.clipboard.writeText(txt); cp.textContent = 'Copiada'; }
+      catch(e){ cp.textContent = 'No pude copiar'; }
+    });
+  }
+
+  function engancharRaiz(raiz){
+    if(raiz.dataset.vg76) return;
+    raiz.dataset.vg76 = '1';
+    raiz.addEventListener('click', function(ev){
+      var t = ev.target;
+      if(t && t.id === 'vgelIr'){ t.disabled = true; lanzar(raiz).catch(function(){}); return; }
+      var ver = t && t.getAttribute && t.getAttribute('data-ver');
+      if(ver) window.open(ver, '_blank', 'noopener');
+    });
+  }
+
+  async function montar(){
+    var modal = document.getElementById('vgAdminModal');
+    if(!modal) return;
+    var tabs = modal.querySelector('.vg-admin-tabs');
+    var cont = modal.querySelector('.vg-admin-content');
+    if(!tabs || !cont) return;
+
+    var yaHay = tabs.querySelectorAll('.vg-admin-tab[data-tab="enlaces"]');
+    for(var i = 1; i < yaHay.length; i++) yaHay[i].remove();
+    if(yaHay.length || document.getElementById('vgAdminEnlaces')) return;
+
+    if(montando) return;
+    montando = true;
+    if(await esOperador()) return;
+
+    var sec = document.createElement('section');
+    sec.className = 'vg-admin-section';
+    sec.id = 'vgAdminEnlaces';
+    sec.innerHTML = '<div class="vgel"></div>';
+    cont.appendChild(sec);
+
+    var b = document.createElement('button');
+    b.className = 'vg-admin-tab';
+    b.setAttribute('data-tab', 'enlaces');
+    b.textContent = '🔗 Fotos rotas';
+    tabs.appendChild(b);
+
+    b.addEventListener('click', function(){
+      Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-tab'),
+        function(x){ x.classList.toggle('active', x === b); });
+      Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-section'),
+        function(s){ s.classList.toggle('active', s === sec); });
+      var raiz = sec.querySelector('.vgel');
+      engancharRaiz(raiz);
+      /* No se revisa solo: son cientos de peticiones y quien abre la
+         pestaña puede venir solo de paso. */
+      if(!raiz.innerHTML.trim()) raiz.innerHTML = inicio();
+    });
+  }
+
+  /* ── Arranque ────────────────────────────────────────────────── */
+  var intentos = 0, pend = false;
+  function arrancar(){
+    var modal = document.getElementById('vgAdminModal');
+    if(modal && !modal.dataset.vg76){
+      modal.dataset.vg76 = '1';
+      new MutationObserver(function(){
+        if(pend) return; pend = true;
+        requestAnimationFrame(function(){
+          pend = false;
+          montar().catch(function(){});
+        });
+      }).observe(modal, {childList:true, subtree:true, attributes:true,
+                         attributeFilter:['class']});
+      return;
+    }
+    if(++intentos < 40) setTimeout(arrancar, 1500);
+  }
+
+  function alRato(){
+    if(window.requestIdleCallback) requestIdleCallback(arrancar, {timeout:3000});
+    else setTimeout(arrancar, 1200);
+  }
+  if(document.readyState === 'complete') alRato();
+  else window.addEventListener('load', alRato, {once:true});
+})();
+</script>
+
 </body>
 </html>
