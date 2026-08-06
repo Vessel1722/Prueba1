@@ -36607,7 +36607,7 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     /* Cinco eran demasiadas: a 113px cada una no caben en la franja y
        desbordaban por la izquierda hasta encimarse al título. Con tres
        cada foto se ve, que es de lo que se trata. */
-    var cuantas = window.innerWidth < 900 ? 2 : (cat === 'fortnite' ? 4 : 3);
+    var cuantas = window.innerWidth < 900 ? 3 : (cat === 'fortnite' ? 4 : 3);
     var urls = [], modo = '';
 
     if(cat === 'fortnite'){
@@ -39105,6 +39105,84 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   else window.addEventListener('load', alRato, {once:true});
 })();
 </script>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 81 · La banda de fotos, de una vez
+
+     Llevo cuatro capas de reglas mías peleándose entre ellas: cada
+     arreglo encima del anterior, y ninguno gana del todo. Por eso las
+     fotos seguían saliéndose por el borde y recortadas.
+
+     Esto sustituye a todas. Una rejilla: tantas columnas como fotos
+     haya, todas iguales, dentro del margen. No hay cuentas que puedan
+     desbordar ni posiciones que ajustar.
+
+     Lleva !important a propósito y no por costumbre: es lo único que
+     zanja la discusión con mis propias reglas de las fases 77 a 80,
+     que están antes en el archivo pero apuntan a lo mismo.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-portadas-v81">
+
+/* Tantas columnas como fotos, repartidas por igual. Sirve para 1, 3 o
+   6 sin tocar nada. */
+#marketView .vgfn-portada{
+  display:grid !important;
+  grid-auto-flow:column;
+  grid-auto-columns:1fr;
+  align-items:center;
+  gap:12px;
+  box-sizing:border-box;
+}
+
+#marketView .vgfn-portada img{
+  display:block !important;
+  position:relative; z-index:1;
+  width:100% !important;
+  height:auto !important;
+  max-width:none !important;
+  max-height:none !important;
+  min-width:0;
+}
+
+/* Fotos con fondo: todas con la misma forma, recortadas al centro. */
+#marketView .vgfn-portada.cartas img{
+  aspect-ratio:16 / 10;
+  object-fit:cover;
+  object-position:center;
+  border-radius:12px;
+}
+
+/* Fortnite: figuras recortadas. Cuadrado y "contain": entran enteras,
+   sin cortarles ni la cabeza ni los pies. */
+#marketView .vgfn-portada.recortes img{
+  aspect-ratio:1 / 1;
+  object-fit:contain;
+  object-position:center bottom;
+  border:0; border-radius:0; box-shadow:none;
+}
+
+/* ── Escritorio: columna derecha, junto al texto ──────────────── */
+@media(min-width:901px){
+  #marketView .vgfn-portada{
+    padding:22px 24px 22px 4px !important;
+    height:100%;
+  }
+  #marketView .vgfn-portada.cartas img{ max-height:70% !important; width:auto !important }
+  #marketView .vgfn-portada.recortes img{ max-height:94% !important; width:auto !important }
+}
+
+/* ── Teléfono: banda debajo del texto, dentro del margen ──────── */
+@media(max-width:900px){
+  #marketView .vgfn-portada{
+    padding:0 18px 18px !important;
+    gap:8px;
+  }
+  /* La de la fase 77 escondía todas menos la primera por debajo de
+     430px. Con rejilla ya caben: se vuelven a ver. */
+  #marketView .vgfn-portada img:nth-of-type(n+2){ display:block !important }
+}
+</style>
 
 </body>
 </html>
