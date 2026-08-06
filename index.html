@@ -15710,8 +15710,6 @@ window.vgBingSize = function(){
 <div class="vg-admin-tabs">
 <button class="vg-admin-tab" data-tab="usuarios">👥 Usuarios</button>
 <button class="vg-admin-tab" data-tab="dashboard">📊 Dashboard</button>
-<button class="vg-admin-tab active" data-tab="orders">Compras</button>
-<button class="vg-admin-tab" data-tab="products">Artículos</button>
 <button class="vg-admin-tab" data-tab="setup">Supabase</button>
 <button class="vg-admin-tab" data-tab="export">Exportar</button><button class="vg-admin-tab" data-tab="debug">Diagnóstico</button><button class="vg-admin-tab" data-tab="settings">Ajustes rápidos</button>
 </div>
@@ -15753,21 +15751,6 @@ window.vgBingSize = function(){
 <button class="vg-dash-btn" onclick="document.querySelector('.vg-admin-tab[data-tab=orders]')&amp;&amp;document.querySelector('.vg-admin-tab[data-tab=orders]').click()">🛒 Ver Compras</button>
 </div>
 </div>
-</section>
-<section class="vg-admin-section active" id="vgAdminOrders">
-<div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;align-items:center">
-<span style="font-size:.74rem;font-weight:800;text-transform:uppercase;letter-spacing:.10em;color:#8b93b0;flex:1">Gestión de compras</span>
-<button class="vg-notif-btn" onclick="vgRequestNotifications()">🔔 Activar alertas</button>
-<button class="vg-csv-btn" onclick="vgExportCSV()">⬇️ Exportar CSV</button>
-</div>
-<div class="vg-admin-note vg-admin-ok"><b>Funcional con Supabase:</b> cuando el cliente abre WhatsApp con comprobante cargado, se crea pedido y se sube el archivo al bucket.</div>
-<div class="vg-admin-stats" id="vgAdminStats"></div>
-<div class="vg-admin-tools"><input class="vg-admin-input" id="vgOrderSearch" oninput="vgAdminRenderOrders()" placeholder="Buscar pedido..."/><select class="vg-admin-select" id="vgOrderFilter" onchange="vgAdminRenderOrders()"><option value="all">Todos</option><option value="pendiente">Pendiente</option><option value="validado">Validado</option><option value="entregado">Entregado</option><option value="cancelado">Cancelado</option></select><button class="vg-admin-btn" onclick="vgAdminLoadOrders()">Actualizar</button><button class="vg-admin-btn primary" onclick="vgAdminCreateTestOrder()">Crear pedido prueba</button></div>
-<div class="vg-order-layout"><div id="vgAdminOrdersList"></div><aside class="vg-order-preview" id="vgOrderPreview"><h3>Vista de comprobante</h3><p>Selecciona un pedido con comprobante para ver la imagen aquí y darle seguimiento a la transferencia.</p></aside></div>
-</section>
-<section class="vg-admin-section" id="vgAdminProducts">
-<div class="vg-admin-tools"><input class="vg-admin-input" id="vgProductSearch" oninput="vgAdminRenderProducts()" placeholder="Buscar artículo..."/><button class="vg-admin-btn primary" onclick="vgAdminSyncProducts()">Subir catálogo a Supabase</button><button class="vg-admin-btn" onclick="vgAdminLoadProducts()">Cargar cambios</button></div>
-<div id="vgAdminProductsList"></div>
 </section>
 <section class="vg-admin-section" id="vgAdminSetup">
 <div class="vg-admin-note"><b>Configura Supabase aquí.</b> Pega tu Project URL y tu anon public key. No pegues la service_role key en una página pública.</div>
