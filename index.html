@@ -37796,5 +37796,287 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   else arrancar();
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 74 · Notas y etiquetas de cliente
+
+     Paso 3 de 5.
+
+     Lo que sabes de un cliente deja de vivir en tu cabeza. Las
+     etiquetas se ven en la tabla sin abrir nada; la nota se abre con
+     el botón de al lado.
+
+     No se toca renderUsersTable: este bloque mira la tabla y le añade
+     lo suyo cuando cambia. Así el filtro de búsqueda sigue funcionando
+     igual y no hay dos sitios que dibujen lo mismo.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-notas-cliente-v74">
+.vgnt-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px}
+.vgnt-chip{
+  font-size:.62rem;font-weight:900;letter-spacing:.02em;
+  padding:2px 7px;border-radius:999px;white-space:nowrap;line-height:1.5;
+}
+.vgnt-c-vip{background:rgba(255,214,138,.16);color:#ffd68a}
+.vgnt-c-frecuente{background:rgba(25,230,193,.14);color:#19e6c1}
+.vgnt-c-cuidado{background:rgba(255,160,80,.16);color:#ffa050}
+.vgnt-c-moroso{background:rgba(255,112,144,.16);color:#ff7090}
+.vgnt-c-revende{background:rgba(150,160,255,.16);color:#a0aaff}
+.vgnt-c-nuevo{background:rgba(255,255,255,.09);color:#9aa7c2}
+
+.vgnt-abrir{
+  border:0;cursor:pointer;background:transparent;padding:1px 4px;
+  font-size:.82rem;line-height:1;opacity:.42;transition:opacity .15s;
+  vertical-align:middle;margin-left:5px;
+}
+.vgnt-abrir:hover{opacity:1}
+.vgnt-abrir.tiene{opacity:1}
+
+.vgnt-fondo{
+  position:fixed;inset:0;z-index:2147483000;display:flex;
+  align-items:center;justify-content:center;padding:18px;
+  background:rgba(6,9,20,.74);backdrop-filter:blur(3px);
+}
+.vgnt-caja{
+  width:min(460px,100%);max-height:88vh;overflow:auto;
+  background:#111726;border:1px solid rgba(255,255,255,.1);
+  border-radius:17px;padding:19px 20px 17px;
+  box-shadow:0 26px 70px rgba(0,0,0,.6);
+}
+.vgnt-caja h3{margin:0 0 2px;font-size:1rem;font-weight:900;color:#fff}
+.vgnt-caja .vgnt-sub{margin:0 0 15px;font-size:.76rem;color:#8593b5}
+.vgnt-caja label{
+  display:block;font-size:.7rem;font-weight:900;letter-spacing:.06em;
+  text-transform:uppercase;color:#8593b5;margin:0 0 7px;
+}
+.vgnt-caja textarea{
+  width:100%;min-height:110px;resize:vertical;box-sizing:border-box;
+  background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);
+  border-radius:11px;padding:11px 13px;color:#fff;
+  font-family:inherit;font-size:.85rem;line-height:1.55;
+}
+.vgnt-caja textarea:focus{outline:0;border-color:rgba(25,230,193,.5)}
+.vgnt-tags{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:16px}
+.vgnt-tag{
+  cursor:pointer;border:1px solid rgba(255,255,255,.12);background:transparent;
+  color:#8593b5;font-size:.73rem;font-weight:800;font-family:inherit;
+  padding:5px 11px;border-radius:999px;transition:all .14s;
+}
+.vgnt-tag:hover{border-color:rgba(255,255,255,.28);color:#c8d0e4}
+.vgnt-tag.on{border-color:transparent;color:#0a0e18;background:#19e6c1}
+.vgnt-pie{display:flex;gap:9px;margin-top:16px}
+.vgnt-pie button{
+  flex:1;border:0;cursor:pointer;font-family:inherit;font-weight:900;
+  font-size:.84rem;padding:11px;border-radius:11px;transition:filter .14s;
+}
+.vgnt-pie button:hover{filter:brightness(1.1)}
+.vgnt-ok{background:#19e6c1;color:#07121a}
+.vgnt-no{background:rgba(255,255,255,.07);color:#c8d0e4}
+.vgnt-pie button[disabled]{opacity:.5;cursor:default}
+.vgnt-err{margin:11px 0 0;font-size:.77rem;color:#ff7090;line-height:1.5}
+</style>
+
+<script id="vg-notas-cliente-js-v74">
+(function(){
+  'use strict';
+  if(window.__VG74__) return; window.__VG74__ = true;
+
+  var TAGS = [
+    {k:'VIP',       c:'vip',       t:'⭐ VIP'},
+    {k:'Frecuente', c:'frecuente', t:'🔁 Frecuente'},
+    {k:'Cuidado',   c:'cuidado',   t:'⚠️ Cuidado'},
+    {k:'Moroso',    c:'moroso',    t:'💸 Moroso'},
+    {k:'Revende',   c:'revende',   t:'🏷️ Revende'},
+    {k:'Nuevo',     c:'nuevo',     t:'🆕 Nuevo'}
+  ];
+  function clase(k){
+    for(var i=0;i<TAGS.length;i++) if(TAGS[i].k===k) return TAGS[i].c;
+    return 'nuevo';
+  }
+
+  var FICHAS = {};      /* uid -> {notas, etiquetas} */
+  var PEDIDOS = {};     /* uid -> true, ya se preguntó (aunque no tenga nada) */
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* ── Pintar una fila ─────────────────────────────────────────── */
+  function pintar(tr, uid){
+    var celda = tr.cells && tr.cells[1];
+    if(!celda) return;
+    var f = FICHAS[uid] || {};
+    var tags = f.etiquetas || [];
+
+    var viejo = celda.querySelector('.vgnt-chips');
+    if(viejo) viejo.remove();
+
+    var btn = celda.querySelector('.vgnt-abrir');
+    if(!btn){
+      btn = document.createElement('button');
+      btn.className = 'vgnt-abrir';
+      btn.type = 'button';
+      btn.title = 'Nota de este cliente';
+      btn.textContent = '📝';
+      btn.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        abrir(uid, (tr.cells[1].querySelector('b')||{}).textContent || 'Cliente', tr);
+      });
+      var b = celda.querySelector('b');
+      (b ? b.parentNode : celda).appendChild(btn);
+    }
+    btn.classList.toggle('tiene', !!(f.notas || tags.length));
+
+    if(tags.length){
+      var d = document.createElement('div');
+      d.className = 'vgnt-chips';
+      d.innerHTML = tags.map(function(k){
+        return '<span class="vgnt-chip vgnt-c-'+clase(k)+'">'+esc(k)+'</span>';
+      }).join('');
+      celda.appendChild(d);
+    }
+  }
+
+  /* ── Recorrer la tabla ───────────────────────────────────────── */
+  var trabajando = false;
+  async function adornar(){
+    var wrap = document.getElementById('vgUsersTableWrap');
+    if(!wrap || trabajando) return;
+    var filas = wrap.querySelectorAll('tbody tr');
+    if(!filas.length) return;
+
+    var mapa = [], faltan = [];
+    Array.prototype.forEach.call(filas, function(tr){
+      var inp = tr.querySelector('input[data-uid]');
+      if(!inp) return;
+      var uid = inp.getAttribute('data-uid');
+      mapa.push([tr, uid]);
+      if(!PEDIDOS[uid]) faltan.push(uid);
+    });
+    if(!mapa.length) return;
+
+    if(faltan.length){
+      trabajando = true;
+      try{
+        var c = cli();
+        if(c){
+          var r = await c.rpc('vg_notas_de', {p_ids: faltan});
+          if(!r.error && r.data)
+            r.data.forEach(function(x){
+              FICHAS[x.id] = {notas:x.notas, etiquetas:x.etiquetas || []};
+            });
+          /* Se marcan como preguntados aunque la consulta falle: si falta
+             el SQL, no tiene sentido volver a preguntar en cada pintado. */
+          faltan.forEach(function(u){ PEDIDOS[u] = true; });
+        }
+      }catch(e){}
+      trabajando = false;
+    }
+
+    mapa.forEach(function(p){ pintar(p[0], p[1]); });
+  }
+
+  /* ── La ventanita ────────────────────────────────────────────── */
+  function abrir(uid, nombre, tr){
+    var f = FICHAS[uid] || {};
+    var sel = (f.etiquetas || []).slice();
+
+    var fondo = document.createElement('div');
+    fondo.className = 'vgnt-fondo';
+    fondo.innerHTML =
+      '<div class="vgnt-caja">'+
+        '<h3>'+esc(nombre)+'</h3>'+
+        '<p class="vgnt-sub">Solo tú ves esto. El cliente no.</p>'+
+        '<label>Etiquetas</label>'+
+        '<div class="vgnt-tags">'+
+          TAGS.map(function(t){
+            return '<button type="button" class="vgnt-tag'+
+              (sel.indexOf(t.k)>=0?' on':'')+'" data-k="'+t.k+'">'+t.t+'</button>';
+          }).join('')+
+        '</div>'+
+        '<label>Nota</label>'+
+        '<textarea placeholder="Paga rápido. Pide siempre por WhatsApp, no por el chat…">'+
+          esc(f.notas||'')+'</textarea>'+
+        '<div class="vgnt-pie">'+
+          '<button type="button" class="vgnt-no">Cancelar</button>'+
+          '<button type="button" class="vgnt-ok">Guardar</button>'+
+        '</div>'+
+      '</div>';
+    document.body.appendChild(fondo);
+
+    var caja = fondo.querySelector('.vgnt-caja');
+    var area = fondo.querySelector('textarea');
+    var ok   = fondo.querySelector('.vgnt-ok');
+    setTimeout(function(){ area.focus(); }, 40);
+
+    function cerrar(){
+      document.removeEventListener('keydown', tecla);
+      fondo.remove();
+    }
+    function tecla(e){ if(e.key === 'Escape') cerrar(); }
+    document.addEventListener('keydown', tecla);
+    fondo.addEventListener('click', function(e){ if(e.target === fondo) cerrar(); });
+    fondo.querySelector('.vgnt-no').addEventListener('click', cerrar);
+
+    caja.addEventListener('click', function(e){
+      var b = e.target.closest && e.target.closest('.vgnt-tag');
+      if(!b) return;
+      var k = b.getAttribute('data-k');
+      var i = sel.indexOf(k);
+      if(i >= 0) sel.splice(i,1); else sel.push(k);
+      b.classList.toggle('on', i < 0);
+    });
+
+    ok.addEventListener('click', async function(){
+      var c = cli();
+      if(!c) return;
+      ok.disabled = true; ok.textContent = 'Guardando…';
+      var vieja = fondo.querySelector('.vgnt-err');
+      if(vieja) vieja.remove();
+
+      var r = await c.rpc('vg_guardar_nota',
+        {p_id: String(uid), p_notas: area.value, p_etiquetas: sel});
+
+      if(r.error){
+        ok.disabled = false; ok.textContent = 'Guardar';
+        var p = document.createElement('p');
+        p.className = 'vgnt-err';
+        p.textContent = /does not exist|schema cache/i.test(r.error.message)
+          ? 'Falta correr la fase 74 en Supabase.'
+          : r.error.message;
+        caja.appendChild(p);
+        return;
+      }
+
+      FICHAS[uid] = {notas: area.value.trim() || null, etiquetas: sel};
+      PEDIDOS[uid] = true;
+      cerrar();
+      if(tr && tr.isConnected) pintar(tr, uid);
+    });
+  }
+
+  /* ── Estar pendiente de la tabla ─────────────────────────────── */
+  var intentos = 0, pend = false;
+  function arrancar(){
+    var wrap = document.getElementById('vgUsersTableWrap');
+    if(wrap && !wrap.dataset.vg74){
+      wrap.dataset.vg74 = '1';
+      new MutationObserver(function(){
+        if(pend) return; pend = true;
+        requestAnimationFrame(function(){
+          pend = false;
+          adornar().catch(function(){});
+        });
+      }).observe(wrap, {childList:true, subtree:true});
+      adornar().catch(function(){});
+    }
+    if(++intentos < 60) setTimeout(arrancar, 1200);
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 </body>
 </html>
