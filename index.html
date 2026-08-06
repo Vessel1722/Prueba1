@@ -38224,8 +38224,16 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     yaMandadas[k] = true;
     var c = cli();
     if(!c) return;
-    /* Sin await ni aviso: si falla, da igual. Es un apunte, no una venta. */
-    try{ c.rpc('vg_apuntar_busqueda', {p_texto: txt}); }catch(e){}
+    /* El .then() no es adorno: en Supabase la consulta no sale del
+       navegador hasta que alguien consume la promesa. Llamarla suelta
+       no manda nada. No se espera el resultado -es un apunte, no una
+       venta- pero sí hay que arrancarla. */
+    try{
+      c.rpc('vg_apuntar_busqueda', {p_texto: txt}).then(
+        function(r){ if(r && r.error) yaMandadas[k] = false; },
+        function(){ yaMandadas[k] = false; }
+      );
+    }catch(e){ yaMandadas[k] = false; }
   }
 
   function mirarPanel(){
