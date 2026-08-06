@@ -38911,5 +38911,77 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 79 · Que se vean las fotos, y sin costura
+
+     Tres fallos míos, encadenados:
+
+       · Al pasar las fotos a una fila les quité el position, y con él
+         perdieron su altura de capa. El degradado -que debe oscurecer
+         el FONDO- pasó a pintarse encima de ellas. De ahí lo lavado.
+
+       · El degradado empezaba en negro sólido en el borde izquierdo de
+         la franja, sobre el morado del fondo: una línea recta a media
+         portada. Ahora la capa ocupa el ancho entero y el degradado
+         cruza toda la portada, así que no hay borde donde cortar.
+
+       · Cuatro recortes al 26% no caben en la franja y lo que sobraba
+         lo recortaba el marco. Ahora también se reparten el hueco.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-portadas-v79">
+
+/* La capa vuelve a ocupar la portada entera; lo que mantiene las fotos
+   a la derecha es el hueco de la izquierda, no el ancho de la caja.
+   Así el degradado cruza de lado a lado y no deja costura. */
+.vgfn-portada{
+  left:0; right:0; width:auto;
+  padding:20px 22px 20px 46%;
+}
+
+.vgfn-portada:after{
+  background:linear-gradient(90deg,
+    #070910 0%, rgba(7,9,16,.94) 30%, rgba(7,9,16,.62) 50%,
+    rgba(7,9,16,.22) 70%, rgba(7,9,16,0) 88%);
+}
+
+/* Lo que faltaba: las fotos por encima del velo. Con position:relative
+   recuperan altura de capa. Siguen por debajo del texto porque toda
+   esta capa va en z-index 0 y eso encierra lo de dentro. */
+.vgfn-portada img{
+  position:relative;
+  z-index:1;
+}
+
+/* Los recortes de Fortnite también se reparten el hueco. Con "contain"
+   ninguno se recorta: la figura se ajusta entera dentro de lo suyo. */
+.vgfn-portada.recortes img{
+  flex:1 1 0;
+  min-width:0;
+  width:auto;
+  max-width:none;
+  height:88%;
+  object-fit:contain;
+  object-position:bottom center;
+}
+
+/* ── Teléfono ───────────────────────────────────────────────────
+   Estaban al 42% y al 34%: casi un fantasma. Se suben, y la
+   legibilidad del texto la pone el degradado, que ahora está donde
+   tiene que estar: debajo. */
+@media(max-width:900px){
+  .vgfn-portada{ padding:14px 14px 14px 34%; opacity:.82 }
+  .vgfn-portada:after{
+    background:linear-gradient(90deg,
+      #070910 0%, rgba(7,9,16,.95) 34%, rgba(7,9,16,.66) 56%,
+      rgba(7,9,16,.34) 78%, rgba(7,9,16,.18) 100%);
+  }
+  .vgfn-portada.recortes img{ height:82% }
+}
+@media(max-width:430px){
+  .vgfn-portada{ opacity:.7; padding-left:30% }
+}
+</style>
+
 </body>
 </html>
