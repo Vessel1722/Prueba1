@@ -36604,7 +36604,10 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
        encaraman al texto, y esconderlas con una media query dependía
        de ganar una pelea de especificidad contra decenas de capas de
        estilos que ya trae la página. Contando aquí no hay pelea. */
-    var cuantas = window.innerWidth < 900 ? 2 : 5;
+    /* Cinco eran demasiadas: a 113px cada una no caben en la franja y
+       desbordaban por la izquierda hasta encimarse al título. Con tres
+       cada foto se ve, que es de lo que se trata. */
+    var cuantas = window.innerWidth < 900 ? 2 : (cat === 'fortnite' ? 4 : 3);
     var urls = [], modo = '';
 
     if(cat === 'fortnite'){
@@ -38844,6 +38847,67 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 @media(max-width:430px){
   .vgfn-portada img:nth-of-type(n+2){ display:none }
   .vgfn-portada{ opacity:.34 }
+}
+</style>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 78 · La proporción correcta
+
+     Medido en la página, no supuesto:
+
+       · Las fotos del catálogo son 1200x750, o sea APAISADAS. Yo las
+         metí en un marco 3/4 vertical, y "cover" se comió tres cuartas
+         partes del ancho: de un banner ancho quedaba una tira estrecha
+         del centro. Eso era lo de "mal recortadas", y lo causé yo
+         eligiendo una proporción que no es la de sus imágenes.
+
+       · Cinco fotos de 113px no caben en los 516px de la franja, así
+         que desbordaban hacia la izquierda hasta la x=587, y el título
+         llega hasta la x=630. Se pisaban 43px.
+
+     La segunda parte no se arregla con más cuentas, sino quitándole la
+     posibilidad de desbordar: las fotos se reparten el ancho que hay.
+     Sean tres o sean seis, caben siempre.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-portadas-v78">
+
+/* Proporción de verdad: 16/10, la de las fotos. Así "cover" recorta un
+   pelo en vez de rebanar la imagen. */
+.vgfn-portada.cartas img{
+  aspect-ratio:16 / 10;
+  flex:1 1 0;          /* se reparten el hueco; no pueden desbordar */
+  min-width:0;         /* sin esto, flex se niega a encoger */
+  width:auto;
+  height:auto;
+  max-height:none;
+}
+
+/* En el teléfono la franja es ancha y baja: si se reparten el ancho,
+   salen altísimas y se salen por arriba. Ahí se manda la altura. */
+@media(max-width:900px){
+  .vgfn-portada{ padding:14px; gap:10px }
+  .vgfn-portada.cartas img{
+    flex:0 0 auto;
+    height:64%;
+    width:auto;
+  }
+}
+@media(max-width:430px){
+  .vgfn-portada.cartas img{ height:58% }
+}
+
+/* Fortnite son PNG recortados, cada uno con su forma. Esos van por
+   altura y enteros: repartirles el ancho los dejaría de tamaños
+   distintos según lo ancha que sea cada figura. */
+.vgfn-portada.recortes img{
+  flex:0 0 auto;
+  width:auto;
+  aspect-ratio:auto;
+  max-width:26%;
+}
+@media(max-width:900px){
+  .vgfn-portada.recortes img{ max-width:44% }
 }
 </style>
 
