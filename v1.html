@@ -36988,5 +36988,358 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   else arrancar();
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 67 · Cuatro mejoras
+
+       · Aviso de pedido duplicado, antes de que pague dos veces.
+       · Los favoritos por fin sirven para algo.
+       · Tiempo de entrega real, sacado de tus pedidos.
+       · Respaldo de todo tu historial, en un archivo.
+
+     Ninguna necesita servidor: todas trabajan con lo que ya hay.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-mejoras-v67">
+/* ── Aviso de duplicado ── */
+#vgDupFondo{position:fixed;inset:0;z-index:2147483500;display:none;
+  align-items:center;justify-content:center;padding:18px;background:rgba(4,6,12,.86)}
+#vgDupFondo.ver{display:flex}
+#vgDupCaja{width:100%;max-width:400px;background:#0d1120;
+  border:1px solid rgba(229,144,77,.35);border-radius:16px;padding:24px 22px;
+  color:#eef0fa;font-family:Inter,system-ui,sans-serif}
+#vgDupCaja h4{margin:0 0 8px;font-size:1.08rem;font-weight:900;color:#e5904d}
+#vgDupCaja p{margin:0 0 8px;font-size:.87rem;color:#9aa7c2;line-height:1.55}
+#vgDupCaja p b{color:#fff}
+#vgDupCaja .ops{display:grid;gap:8px;margin-top:18px}
+#vgDupCaja button{padding:13px;border:0;border-radius:10px;cursor:pointer;
+  font-family:inherit;font-size:.88rem;font-weight:850}
+#vgDupCaja .ver-pedido{background:#22f5d3;color:#04231d}
+#vgDupCaja .igual{background:rgba(255,255,255,.08);color:#c3cde3}
+
+/* ── Avisos de favoritos ── */
+.vgfav-aviso{
+  display:flex;align-items:flex-start;gap:11px;
+  margin:0 0 16px;padding:13px 15px;border-radius:14px;
+  border:1px solid rgba(255,214,138,.28);
+  background:linear-gradient(135deg,rgba(255,214,138,.10),rgba(255,255,255,.02));
+}
+.vgfav-aviso .ico{font-size:1.2rem;line-height:1.2;flex:none}
+.vgfav-aviso div{min-width:0;flex:1}
+.vgfav-aviso b{display:block;color:#ffd68a;font-size:.85rem;font-weight:900;margin-bottom:2px}
+.vgfav-aviso p{margin:0;font-size:.8rem;color:#9aa7c2;line-height:1.5}
+.vgfav-aviso button{
+  flex:none;align-self:center;border:0;border-radius:9px;padding:9px 14px;cursor:pointer;
+  background:#ffd68a;color:#241a05;font-family:inherit;font-size:.79rem;font-weight:900;
+}
+.vgfav-x{background:none !important;color:#7f8ea6 !important;font-size:1.2rem !important;
+  padding:4px 8px !important;line-height:1}
+
+/* ── Tiempo de entrega ── */
+.vgtiempo{
+  display:inline-flex;align-items:center;gap:7px;
+  padding:6px 12px;border-radius:999px;
+  background:rgba(127,184,138,.12);border:1px solid rgba(127,184,138,.30);
+  font-size:.78rem;font-weight:800;color:#9bd1a6;
+}
+.vgtiempo i{width:7px;height:7px;border-radius:50%;background:#7fb88a;
+  box-shadow:0 0 0 3px rgba(127,184,138,.20);flex:none;font-style:normal}
+
+/* ── Respaldo ── */
+.vgresp{margin:0 0 14px;padding:14px 16px;border-radius:14px;
+  border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.035)}
+.vgresp b{display:block;color:#fff;font-size:.9rem;font-weight:900;margin-bottom:3px}
+.vgresp p{margin:0 0 11px;font-size:.79rem;color:#8593b5;line-height:1.5}
+.vgresp button{border:0;border-radius:10px;padding:11px 18px;cursor:pointer;
+  background:#22f5d3;color:#04231d;font-family:inherit;font-size:.83rem;font-weight:900}
+.vgresp button:disabled{opacity:.55;cursor:default}
+.vgresp .aviso{margin-top:9px;font-size:.78rem;color:#9bd1a6}
+</style>
+
+<script id="vg-mejoras-js-v67">
+(function(){
+  'use strict';
+  if(window.__VG67__) return; window.__VG67__ = true;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* ═══════════════════════════════════════════════════════════
+     1 · AVISO DE PEDIDO DUPLICADO
+
+     Cuando alguien crea dos pedidos iguales en pocos minutos, casi
+     siempre es que creyó que el primero no pasó. Hoy nada lo detiene:
+     paga dos veces y a ti te toca devolver el dinero y dar la cara.
+
+     Se avisa, no se bloquea. A veces sí quiere dos.
+     ═══════════════════════════════════════════════════════════ */
+  var MINUTOS_DUP = 30;
+
+  async function buscarDuplicado(total, producto){
+    var c = cli(); if(!c) return null;
+    try{
+      var desde = new Date(Date.now() - MINUTOS_DUP*60000).toISOString();
+      var r = await c.from('orders')
+        .select('id,total,product_name,created_at,status')
+        .gte('created_at', desde)
+        .order('created_at', {ascending:false})
+        .limit(20);
+      if(r.error || !r.data) return null;
+      for(var i=0;i<r.data.length;i++){
+        var o = r.data[i];
+        if(String(o.source||'') === 'recommendation') continue;
+        if(Math.round(Number(o.total||0)) !== Math.round(Number(total||0))) continue;
+        if(producto && o.product_name &&
+           String(o.product_name).trim() !== String(producto).trim()) continue;
+        return o;
+      }
+    }catch(e){}
+    return null;
+  }
+
+  function preguntarDuplicado(previo){
+    return new Promise(function(resolver){
+      var f = document.getElementById('vgDupFondo');
+      if(!f){
+        f = document.createElement('div');
+        f.id = 'vgDupFondo';
+        f.innerHTML = '<div id="vgDupCaja"></div>';
+        document.body.appendChild(f);
+      }
+      var mins = Math.max(1, Math.round((Date.now() - Date.parse(previo.created_at))/60000));
+      f.querySelector('#vgDupCaja').innerHTML =
+        '<h4>Ya tienes un pedido igual</h4>'+
+        '<p>Hace <b>'+mins+' minuto'+(mins===1?'':'s')+'</b> se registró un pedido de '+
+        '<b>'+esc(previo.product_name||'este producto')+'</b> por el mismo monto.</p>'+
+        '<p>Si es el mismo y creíste que no pasó, <b>no vuelvas a pagar</b>: ya está '+
+        'registrado y lo estamos atendiendo.</p>'+
+        '<div class="ops">'+
+          '<button type="button" class="ver-pedido">Ver mi pedido anterior</button>'+
+          '<button type="button" class="igual">Es otro pedido, continuar</button>'+
+        '</div>';
+      f.classList.add('ver');
+      f.querySelector('.ver-pedido').onclick = function(){
+        f.classList.remove('ver');
+        if(typeof window.vgOpenClientPanel === 'function')
+          window.vgOpenClientPanel('purchases', previo.id);
+        resolver(false);
+      };
+      f.querySelector('.igual').onclick = function(){
+        f.classList.remove('ver');
+        resolver(true);
+      };
+    });
+  }
+
+  function engancharDuplicado(){
+    if(typeof window.sendPaymentWhatsApp !== 'function') return false;
+    if(window.sendPaymentWhatsApp.__vg67) return true;
+    var orig = window.sendPaymentWhatsApp;
+    var nueva = async function(){
+      try{
+        var p = window.pendingPaymentOrder || {};
+        var previo = await buscarDuplicado(p.total, p.product_name ||
+          (p.items && p.items[0] && p.items[0].title));
+        if(previo){
+          var seguir = await preguntarDuplicado(previo);
+          if(!seguir) return;
+        }
+      }catch(e){ /* si la comprobación falla, no se estorba la compra */ }
+      return orig.apply(this, arguments);
+    };
+    nueva.__vg67 = true;
+    window.sendPaymentWhatsApp = nueva;
+    return true;
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     2 · LOS FAVORITOS SIRVEN PARA ALGO
+
+     La lista de deseos vive en el navegador del cliente, no en la base,
+     así que no se le puede mandar un aviso cuando algo cambie: desde el
+     servidor no hay forma de saber qué guardó cada quien.
+
+     Lo que sí se puede es avisarle en cuanto vuelve a entrar. Menos
+     potente que un mensaje al teléfono, pero es real y no promete algo
+     que no se puede cumplir.
+     ═══════════════════════════════════════════════════════════ */
+  function leerFavoritos(){
+    try{
+      var f = JSON.parse(localStorage.getItem('vg_fav_v1') || '[]');
+      return Array.isArray(f) ? f : [];
+    }catch(e){ return []; }
+  }
+
+  function avisoFavoritos(){
+    var favs = leerFavoritos();
+    if(!favs.length) return;
+    if(sessionStorage.getItem('vg_fav_avisado')) return;
+
+    var S = Array.isArray(window.SERVICES) ? window.SERVICES : [];
+    var guardados = S.filter(function(s){
+      return favs.indexOf(s.id) >= 0 || favs.indexOf(String(s.id)) >= 0;
+    });
+    if(!guardados.length) return;
+
+    /* De momento el aviso es de recordatorio. Cuando un guardado tenga
+       una fecha de salida —los de Fortnite la tienen— se puede afinar
+       para decir cuánto le queda. */
+    var destino = document.querySelector('#marketView .wrap') ||
+                  document.querySelector('#homeView .wrap');
+    if(!destino) return;
+
+    var d = document.createElement('div');
+    d.className = 'vgfav-aviso';
+    d.innerHTML =
+      '<span class="ico">♥</span>'+
+      '<div><b>Tienes '+guardados.length+' guardado'+(guardados.length===1?'':'s')+'</b>'+
+      '<p>'+esc(guardados.slice(0,2).map(function(s){ return s.title; }).join(', '))+
+      (guardados.length>2 ? ' y '+(guardados.length-2)+' más' : '')+'</p></div>'+
+      '<button type="button" class="ir">Ver mi lista</button>'+
+      '<button type="button" class="vgfav-x" aria-label="Cerrar">×</button>';
+
+    destino.insertBefore(d, destino.firstChild);
+
+    d.querySelector('.ir').onclick = function(){
+      if(typeof window.vgOpenWishlist === 'function') window.vgOpenWishlist();
+      else if(typeof window.openWishlist === 'function') window.openWishlist();
+      else{
+        var b = document.querySelector('[onclick*="ishlist"],[onclick*="avorito"]');
+        if(b) b.click();
+      }
+    };
+    d.querySelector('.vgfav-x').onclick = function(){
+      sessionStorage.setItem('vg_fav_avisado','1');
+      d.remove();
+    };
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     3 · TIEMPO DE ENTREGA REAL
+     ═══════════════════════════════════════════════════════════ */
+  async function tiempoEntrega(){
+    var c = cli(); if(!c) return null;
+    try{
+      var r = await c.rpc('vg_tiempo_entrega', {p_dias:7});
+      if(r.error || !r.data) return null;
+      var d = r.data;
+      /* Con menos de cinco entregas el número no dice nada: un par de
+         pedidos rápidos darían "8 minutos" y sería una promesa que no
+         se sostiene el día que entren veinte. */
+      if(!d.muestras || d.muestras < 5 || !d.mediana) return null;
+      return d;
+    }catch(e){ return null; }
+  }
+
+  function pintarTiempo(d){
+    if(!d) return;
+    var m = Number(d.mediana);
+    var txt = m < 60 ? (m + ' min')
+            : (Math.floor(m/60) + ' h ' + (m%60 ? (m%60)+' min' : ''));
+    var destino = document.querySelector('.hero-actions');
+    if(!destino || document.querySelector('.vgtiempo')) return;
+    var s = document.createElement('span');
+    s.className = 'vgtiempo';
+    s.title = 'Calculado con tus últimas ' + d.muestras + ' entregas';
+    s.innerHTML = '<i></i>Entrega promedio: '+esc(txt);
+    destino.appendChild(s);
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     4 · RESPALDO DE TODO
+
+     Ventas, clientes, chats y canjes en un archivo. Si algo se borra
+     por accidente o Supabase falla, el historial no se pierde.
+
+     Se arma en el navegador con lo que el administrador ya puede leer:
+     no hace falta tocar la base.
+     ═══════════════════════════════════════════════════════════ */
+  var TABLAS = ['orders','vg_users','vg_live_chat_messages','vg_support_tickets',
+                'vg_token_tx','vg_token_wallet','vg_redemptions'];
+
+  async function armarRespaldo(estado){
+    var c = cli(); if(!c) throw new Error('Sin conexión con el servidor.');
+    var datos = { generado: new Date().toISOString(), tablas: {} };
+    for(var i=0;i<TABLAS.length;i++){
+      var t = TABLAS[i];
+      if(estado) estado('Copiando ' + t + '…');
+      try{
+        var r = await c.from(t).select('*').limit(5000);
+        datos.tablas[t] = r.error ? {error:r.error.message} : (r.data || []);
+      }catch(e){ datos.tablas[t] = {error:String(e)}; }
+    }
+    return datos;
+  }
+
+  function descargar(datos){
+    var nombre = 'vessel-respaldo-' + new Date().toISOString().slice(0,10) + '.json';
+    var blob = new Blob([JSON.stringify(datos, null, 1)], {type:'application/json'});
+    var url = URL.createObjectURL(blob);
+    var a = document.createElement('a');
+    a.href = url; a.download = nombre;
+    document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(function(){ URL.revokeObjectURL(url); }, 4000);
+    return nombre;
+  }
+
+  function montarRespaldo(){
+    var cont = document.getElementById('vgAdminHoy');
+    if(!cont || cont.querySelector('.vgresp')) return;
+    var raiz = cont.querySelector('.vghoy');
+    if(!raiz) return;
+
+    var d = document.createElement('div');
+    d.className = 'vgresp';
+    d.innerHTML =
+      '<b>Respaldo de tu historial</b>'+
+      '<p>Ventas, clientes, chats, tickets y tokens en un archivo. '+
+      'Guárdalo donde quieras: si algo se borra, esto lo recupera.</p>'+
+      '<button type="button">Descargar respaldo</button>'+
+      '<div class="aviso" style="display:none"></div>';
+    raiz.insertBefore(d, raiz.firstChild);
+
+    var btn = d.querySelector('button'), av = d.querySelector('.aviso');
+    btn.onclick = async function(){
+      btn.disabled = true;
+      av.style.display = 'block';
+      try{
+        var datos = await armarRespaldo(function(t){ av.textContent = t; });
+        var nombre = descargar(datos);
+        var filas = Object.keys(datos.tablas).reduce(function(s,k){
+          return s + (Array.isArray(datos.tablas[k]) ? datos.tablas[k].length : 0); }, 0);
+        av.textContent = '✓ ' + nombre + ' · ' + filas + ' registros';
+      }catch(e){
+        av.textContent = 'No se pudo: ' + (e.message || e);
+      }finally{ btn.disabled = false; }
+    };
+  }
+
+  /* ═══════════════════════════════════════════════════════════
+     Arranque
+     ═══════════════════════════════════════════════════════════ */
+  var intentos = 0;
+  function arrancar(){
+    engancharDuplicado();
+    try{ avisoFavoritos(); }catch(e){}
+    tiempoEntrega().then(pintarTiempo);
+
+    var modal = document.getElementById('vgAdminModal');
+    if(modal && !modal.dataset.vg67){
+      modal.dataset.vg67 = '1';
+      var pend = false;
+      new MutationObserver(function(){
+        if(pend) return; pend = true;
+        requestAnimationFrame(function(){ pend = false; try{ montarRespaldo(); }catch(e){} });
+      }).observe(modal, {childList:true, subtree:true});
+    }
+
+    if(++intentos < 40) setTimeout(arrancar, 1200);
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
 </body>
 </html>
