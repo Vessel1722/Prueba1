@@ -37798,13 +37798,19 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
           aplicarPermisos().catch(function(){});
         });
       }).observe(modal, {childList:true, subtree:true, attributes:true, attributeFilter:['class']});
+      return;    /* ya está enganchado: no hace falta seguir mirando */
     }
-    if(++intentos < 50) setTimeout(arrancar, 1200);
+    if(++intentos < 40) setTimeout(arrancar, 1500);
   }
 
-  if(document.readyState === 'loading')
-    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
-  else arrancar();
+  /* Esto es cosa del panel de administración: no tiene por qué correr
+     mientras la portada todavía se está cargando. */
+  function alRato(){
+    if(window.requestIdleCallback) requestIdleCallback(arrancar, {timeout:3000});
+    else setTimeout(arrancar, 1200);
+  }
+  if(document.readyState === 'complete') alRato();
+  else window.addEventListener('load', alRato, {once:true});
 })();
 </script>
 
@@ -38139,13 +38145,18 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
         });
       }).observe(wrap, {childList:true, subtree:true});
       adornar().catch(function(){});
+      return;    /* la tabla es fija: enganchada una vez, ya está */
     }
-    if(++intentos < 60) setTimeout(arrancar, 1200);
+    if(++intentos < 40) setTimeout(arrancar, 1500);
   }
 
-  if(document.readyState === 'loading')
-    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
-  else arrancar();
+  /* Solo sirve dentro del panel: que espere a que cargue la portada. */
+  function alRato(){
+    if(window.requestIdleCallback) requestIdleCallback(arrancar, {timeout:3000});
+    else setTimeout(arrancar, 1200);
+  }
+  if(document.readyState === 'complete') alRato();
+  else window.addEventListener('load', alRato, {once:true});
 })();
 </script>
 
@@ -38379,9 +38390,10 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   /* ══ 3. Arranque ═══════════════════════════════════════════════ */
   var intentos = 0, pend = false;
   function arrancar(){
-    vigilarPanel();
+    var listo = vigilarPanel();
 
     var modal = document.getElementById('vgAdminModal');
+    if(modal && modal.dataset.vg75 && listo) return;
     if(modal && !modal.dataset.vg75){
       modal.dataset.vg75 = '1';
       new MutationObserver(function(){
@@ -38393,14 +38405,22 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       }).observe(modal, {childList:true, subtree:true, attributes:true,
                          attributeFilter:['class']});
     }
-    /* El panel del buscador se crea al primer uso, así que se sigue
-       mirando siempre; es solo un getElementById. */
-    setTimeout(arrancar, ++intentos < 40 ? 1200 : 4000);
+    if(++intentos < 40) setTimeout(arrancar, 1500);
   }
 
-  if(document.readyState === 'loading')
-    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
-  else arrancar();
+  /* El panel del buscador no existe hasta que alguien busca por
+     primera vez. Antes lo miraba en bucle para siempre; ahora se
+     engancha en cuanto se escribe en cualquier campo, que es cuando
+     de verdad puede aparecer. */
+  document.addEventListener('input', function(){ vigilarPanel(); }, true);
+
+  /* Nada de esto hace falta mientras la portada carga. */
+  function alRato(){
+    if(window.requestIdleCallback) requestIdleCallback(arrancar, {timeout:3000});
+    else setTimeout(arrancar, 1200);
+  }
+  if(document.readyState === 'complete') alRato();
+  else window.addEventListener('load', alRato, {once:true});
 })();
 </script>
 
