@@ -36899,5 +36899,94 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   window.vgReferencia = function(){ return refActual; };
 })();
 </script>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 65 · El descuento del cupón llega al pedido
+
+     El cupón cambiaba el precio EN PANTALLA pero no en el pedido. Con
+     VESSEL20 el cliente veía $196, pagaba $196, y a ti te llegaba el
+     pedido marcado en $245: parecía que te habían pagado de menos y tus
+     ventas del día salían infladas.
+
+     Aquí se sincroniza lo uno con lo otro. La pantalla manda: lo que ve
+     el cliente es lo que se cobra y lo que se guarda.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script id="vg-cupon-total-js-v65">
+(function(){
+  'use strict';
+  if(window.__VG65__) return; window.__VG65__ = true;
+
+  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX') + ' MXN'; }
+
+  /* Lee lo que de verdad se le está cobrando al cliente. Se toma de la
+     pantalla y no del cupón porque la pantalla es lo único que el
+     cliente ve; si algún día cambia cómo se calcula el descuento, esto
+     sigue estando bien. */
+  function totalEnPantalla(){
+    var el = document.getElementById('payModalTotal');
+    if(!el) return null;
+    var n = Number(String(el.textContent||'').replace(/[^0-9.]/g,''));
+    return isNaN(n) || n <= 0 ? null : n;
+  }
+
+  function sincronizar(){
+    var t = totalEnPantalla();
+    if(t === null) return;
+
+    /* 1. El pedido que se va a guardar */
+    var p = window.pendingPaymentOrder;
+    if(p && Number(p.total) !== t){
+      p.baseTotal = p.baseTotal || Number(p.total) || t;   /* se recuerda el de lista */
+      p.total = t;
+      if(window._activeCoupon && window._activeCoupon.code)
+        p.cupon = window._activeCoupon.code;
+      else delete p.cupon;
+    }
+
+    /* 2. El panel de referencia, que enseñaba el monto sin descuento */
+    var b = document.querySelector('#paymentModal .vgref-fila b.dinero');
+    if(b){
+      b.textContent = pesos(t);
+      var boton = b.parentElement && b.parentElement.parentElement
+        ? b.parentElement.parentElement.querySelector('[data-copiar]') : null;
+      if(boton) boton.setAttribute('data-copiar', String(t));
+    }
+  }
+
+  /* Se engancha después de aplicar el cupón, no en su lugar: el cálculo
+     del descuento sigue siendo el de la página. Aquí solo se copia el
+     resultado a donde hacía falta. */
+  function envolver(){
+    if(typeof window.vgApplyCoupon !== 'function') return false;
+    if(window.vgApplyCoupon.__vg65) return true;
+    var orig = window.vgApplyCoupon;
+    var nueva = function(){
+      var r = orig.apply(this, arguments);
+      setTimeout(sincronizar, 30);   /* la página reescribe el total en el mismo turno */
+      return r;
+    };
+    nueva.__vg65 = true;
+    window.vgApplyCoupon = nueva;
+    return true;
+  }
+
+  var intentos = 0;
+  function arrancar(){
+    if(!envolver()){
+      if(++intentos < 60) setTimeout(arrancar, 500);
+      return;
+    }
+    /* Red de seguridad: si el total cambia por cualquier otro camino
+       —quitar el cupón, cambiar el carrito— también se sincroniza. */
+    var el = document.getElementById('payModalTotal');
+    if(el) new MutationObserver(function(){ sincronizar(); })
+      .observe(el, {childList:true, characterData:true, subtree:true});
+  }
+
+  if(document.readyState === 'loading')
+    document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
 </body>
 </html>
