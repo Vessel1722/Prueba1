@@ -38751,5 +38751,101 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 77 · Las portadas de sección, alineadas
+
+     Las coloqué con desplazamientos en porcentaje: right = 2% + i·6,5%.
+     Eso no es maquetar, es aritmética que cuadra en el ancho en que lo
+     probé y se desbarata en cualquier otro. De ahí que fueran
+     desalineadas y se metieran debajo del título.
+
+     Ahora son una fila de verdad, con la misma proporción para todas y
+     encerrada en la mitad derecha, donde no hay texto. El navegador
+     reparte; yo no cuento porcentajes.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-portadas-v77">
+
+/* La franja de imágenes vive en la derecha y no puede salir de ahí.
+   Antes ocupaba toda la portada y por eso se encimaba al texto. */
+.vgfn-portada{
+  left:auto; right:0; top:0; bottom:0;
+  width:min(52%, 560px);
+  display:flex; align-items:center; justify-content:flex-end;
+  gap:14px; padding:20px 22px;
+}
+
+/* Degradado que funde el borde izquierdo de la franja con el fondo,
+   para que no se vea un corte recto donde empiezan las fotos. */
+.vgfn-portada:after{
+  background:linear-gradient(90deg,
+    #070910 0%, rgba(7,9,16,.72) 26%, rgba(7,9,16,.18) 58%, transparent 80%);
+}
+
+/* Fuera el posicionamiento por cuentas. Ahora son piezas de una fila. */
+.vgfn-portada img{
+  position:static; flex:0 0 auto;
+  right:auto; bottom:auto; left:auto; top:auto;
+}
+
+/* Fotos con fondo: todas con la MISMA proporción y recortadas al
+   centro. Que cada una traiga su forma es lo que las hacía parecer
+   pegadas de cualquier manera. */
+.vgfn-portada.cartas img{
+  height:clamp(104px, 62%, 200px);
+  width:auto; max-width:none;
+  aspect-ratio:3 / 4;
+  object-fit:cover; object-position:center;
+  border-radius:14px;
+  border:1px solid rgba(255,255,255,.14);
+  box-shadow:0 14px 34px rgba(0,0,0,.55);
+  /* Sin el giro en abanico. Tenía sentido cuando iban superpuestas;
+     en una fila ordenada lo único que hace es que parezcan torcidas.
+     Se cambia la animación entera porque una animación gana a una
+     regla normal, y pelearla con !important sería peor. */
+  animation-name:vgfnEntra;
+}
+
+/* Fortnite: PNG sin fondo. Van de pie y enteros, sin recortar ni
+   enmarcar; una figura recortada a la que le falten los pies parece
+   un error, no un diseño. */
+.vgfn-portada.recortes img{
+  height:clamp(120px, 86%, 260px);
+  width:auto; max-width:none;
+  aspect-ratio:auto;
+  object-fit:contain;
+  border:0; border-radius:0; box-shadow:none;
+  filter:drop-shadow(0 10px 26px rgba(0,0,0,.55));
+}
+
+/* El texto se queda en su mitad y no pasa por debajo de las fotos. */
+#marketView .section-hero-content{ max-width:min(700px, 54%); }
+
+
+/* ── Teléfono ────────────────────────────────────────────────────
+   Aquí no hay dos mitades que repartir: el título necesita el ancho
+   entero. Así que las fotos pasan a ser fondo de verdad -atenuadas y
+   bajo un velo- en vez de pelearse con el texto por el mismo sitio. */
+@media(max-width:900px){
+  .vgfn-portada{
+    width:100%; left:0; padding:16px;
+    justify-content:flex-end; gap:10px; opacity:.42;
+  }
+  .vgfn-portada:after{
+    background:linear-gradient(90deg,
+      #070910 0%, rgba(7,9,16,.86) 46%, rgba(7,9,16,.55) 100%);
+  }
+  .vgfn-portada.cartas img{ height:clamp(88px, 46%, 150px); }
+  .vgfn-portada.recortes img{ height:clamp(96px, 62%, 170px) }
+  #marketView .section-hero-content{ max-width:100%; }
+}
+
+/* Muy estrecho: dos fotos ya no caben sin apelotonarse. Queda una. */
+@media(max-width:430px){
+  .vgfn-portada img:nth-of-type(n+2){ display:none }
+  .vgfn-portada{ opacity:.34 }
+}
+</style>
+
 </body>
 </html>
