@@ -33431,7 +33431,16 @@ html body .service-carousel-card .imgbox > img{
     if(guardado === '0'){ mostrar(false); return; }
 
     try{
-      var r = await c.rpc('is_admin');
+      /* Se pregunta por vg_puede_atender y no por is_admin: la primera
+        dice que sí a los administradores Y a los operadores, que es
+        justo quien debe poder abrir el panel. Lo que ve cada uno
+        dentro ya lo decide el bloque de permisos.
+
+        Si esa función todavía no existe -falta correr la fase 71- se
+        vuelve a is_admin, para no dejar al dueño fuera de su panel por
+        un SQL sin correr. */
+     var r = await c.rpc('vg_puede_atender');
+     if(r && r.error) r = await c.rpc('is_admin');
       var ok = !r.error && r.data === true;
       try{ sessionStorage.setItem(LLAVE, ok ? '1' : '0'); }catch(e){}
       mostrar(ok);
