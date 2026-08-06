@@ -39184,5 +39184,41 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 82 · Deshacer el bucle de la fase 81
+
+     Medido en vivo: las fotos salían a 892x611 dentro de una columna
+     de 516, y la portada había crecido a 797px de alto.
+
+     Lo causé yo en la fase 81 con un max-height en porcentaje sobre un
+     contenedor de altura automática: la foto crece, el contenedor
+     crece con ella, el porcentaje da más, la foto vuelve a crecer. Un
+     bucle. Y al ponerles width:auto dejé que usaran su tamaño de
+     origen, 1200px.
+
+     La rejilla ya sabe cuánto mide cada columna. Lo único que hay que
+     decirle a la foto es que ocupe la suya: ancho 100%, alto según su
+     proporción. Ni porcentajes de altura, ni tamaños automáticos.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-portadas-v82">
+
+#marketView .vgfn-portada.cartas img,
+#marketView .vgfn-portada.recortes img{
+  width:100% !important;
+  height:auto !important;
+  max-height:none !important;
+  max-width:100% !important;
+}
+
+/* La portada no debe estirarse por lo que haya dentro. */
+#marketView .section-hero{ align-items:center }
+#marketView .vgfn-portada{ height:auto !important; align-self:center }
+
+@media(min-width:901px){
+  #marketView .vgfn-portada{ padding:22px 24px !important }
+}
+</style>
+
 </body>
 </html>
