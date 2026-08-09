@@ -39602,5 +39602,205 @@ html body > main *{
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 89 · Subir la foto desde el móvil o el PC
+
+     Hasta ahora había que pegar una dirección, lo que obligaba a subir
+     la foto antes a otro sitio. De ahí las 68 imágenes en imgur: una
+     dependencia externa con tus fotos dentro que puede caerse o
+     cambiar las reglas cuando quiera.
+
+     El botón se engancha a CUALQUIER campo de imagen del panel, no a
+     uno concreto. Así vale para productos, para retro y para lo que
+     venga, sin tener que tocarlo cada vez.
+
+     La foto se encoge antes de subirla. Una del móvil son cuatro mega
+     y 4000px de ancho; en la tienda se ve a 400. Subirla tal cual es
+     hacer esperar al cliente por píxeles que nadie mira.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-subir-foto-v89">
+.vgsf{display:flex;gap:8px;align-items:center;margin-top:7px;flex-wrap:wrap}
+.vgsf-btn{
+  border:1px solid rgba(25,230,193,.4);background:rgba(25,230,193,.1);color:#19e6c1;
+  font-family:inherit;font-size:.78rem;font-weight:900;cursor:pointer;
+  padding:9px 14px;border-radius:10px;transition:filter .14s;white-space:nowrap;
+}
+.vgsf-btn:hover{filter:brightness(1.18)}
+.vgsf-btn[disabled]{opacity:.55;cursor:default}
+.vgsf-msg{font-size:.74rem;color:#8593b5;line-height:1.45}
+.vgsf-msg.mal{color:#ff7090}
+.vgsf-msg.bien{color:#19e6c1}
+.vgsf-mini{
+  width:46px;height:46px;border-radius:9px;object-fit:cover;
+  border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.04);
+}
+</style>
+
+<script id="vg-subir-foto-js-v89">
+(function(){
+  'use strict';
+  if(window.__VG89__) return; window.__VG89__ = true;
+
+  var ALMACEN = 'productos';
+  var ANCHO_MAX = 1200;      /* de sobra: en la tienda se ve a 400 */
+  var CALIDAD = 0.82;
+
+  function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
+
+  /* ¿Este campo es de imagen? Se mira por lo que dice, no por su
+     nombre exacto, para que valga en formularios que aún no existen. */
+  function esCampoDeImagen(inp){
+    if(inp.type && ['file','checkbox','number','password'].indexOf(inp.type) >= 0) return false;
+    var pistas = [inp.id, inp.name, inp.placeholder,
+                  inp.getAttribute('data-field') || ''].join(' ').toLowerCase();
+    return /imagen|image|foto|portada|cover|thumb/.test(pistas);
+  }
+
+  /* Encoger sin deformar. Si ya es pequeña se deja como está. */
+  function encoger(file){
+    return new Promise(function(ok, mal){
+      if(!/^image\//.test(file.type)) return mal(new Error('Eso no es una imagen'));
+      var url = URL.createObjectURL(file);
+      var img = new Image();
+      img.onload = function(){
+        URL.revokeObjectURL(url);
+        var w = img.naturalWidth, h = img.naturalHeight;
+        if(w <= ANCHO_MAX && file.size < 400000) return ok(file);
+        var f = Math.min(1, ANCHO_MAX / w);
+        var cv = document.createElement('canvas');
+        cv.width = Math.round(w * f); cv.height = Math.round(h * f);
+        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
+        cv.toBlob(function(b){ ok(b || file); }, 'image/jpeg', CALIDAD);
+      };
+      img.onerror = function(){ URL.revokeObjectURL(url); mal(new Error('No pude leer la imagen')); };
+      img.src = url;
+    });
+  }
+
+  function kb(n){ return Math.round(n/1024) + ' KB'; }
+
+  function montar(inp){
+    if(inp.dataset.vg89) return;
+    inp.dataset.vg89 = '1';
+
+    var caja = document.createElement('div');
+    caja.className = 'vgsf';
+
+    var mini = document.createElement('img');
+    mini.className = 'vgsf-mini';
+    mini.alt = '';
+    mini.src = inp.value || 'portada.png';
+    mini.onerror = function(){ this.src = 'portada.png'; };
+
+    var btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'vgsf-btn';
+    btn.textContent = '📷 Subir foto';
+
+    var msg = document.createElement('span');
+    msg.className = 'vgsf-msg';
+    msg.textContent = 'Desde tu galería o la cámara.';
+
+    var file = document.createElement('input');
+    file.type = 'file';
+    file.accept = 'image/*';
+    file.style.display = 'none';
+
+    caja.appendChild(mini); caja.appendChild(btn);
+    caja.appendChild(msg);  caja.appendChild(file);
+    inp.parentNode.insertBefore(caja, inp.nextSibling);
+
+    btn.addEventListener('click', function(){ file.click(); });
+
+    file.addEventListener('change', async function(){
+      var f = file.files && file.files[0];
+      file.value = '';               /* para poder repetir la misma foto */
+      if(!f) return;
+
+      var c = cli();
+      if(!c){ msg.className = 'vgsf-msg mal'; msg.textContent = 'Sin conexión.'; return; }
+
+      btn.disabled = true;
+      msg.className = 'vgsf-msg';
+      msg.textContent = 'Preparando…';
+
+      try{
+        var chico = await encoger(f);
+        msg.textContent = 'Subiendo… ' + kb(chico.size);
+
+        /* Nombre con fecha para que subir otra no pise a la anterior:
+           si algo sale mal, la de antes sigue ahí. */
+        var ext  = (chico.type === 'image/jpeg') ? 'jpg'
+                 : (f.name.split('.').pop() || 'jpg').toLowerCase().slice(0,4);
+        var nom  = Date.now() + '-' +
+                   (f.name || 'foto').toLowerCase()
+                     .replace(/\.[^.]+$/,'').replace(/[^a-z0-9]+/g,'-').slice(0,40) +
+                   '.' + ext;
+
+        var sub = await c.storage.from(ALMACEN)
+          .upload(nom, chico, {contentType: chico.type || f.type, upsert:false});
+
+        if(sub.error) throw sub.error;
+
+        var pub = c.storage.from(ALMACEN).getPublicUrl(nom);
+        var url = pub && pub.data && pub.data.publicUrl;
+        if(!url) throw new Error('Subió, pero no me dio la dirección');
+
+        inp.value = url;
+        mini.src  = url;
+        /* Se avisa al formulario como si lo hubieras escrito tú, para
+           que lo que ya había siga funcionando igual. */
+        inp.dispatchEvent(new Event('input',  {bubbles:true}));
+        inp.dispatchEvent(new Event('change', {bubbles:true}));
+
+        msg.className = 'vgsf-msg bien';
+        msg.textContent = 'Lista (' + kb(chico.size) + '). Ahora dale a Guardar.';
+
+      }catch(e){
+        msg.className = 'vgsf-msg mal';
+        var t = String(e && e.message || e);
+        msg.textContent = /bucket|not found/i.test(t)
+          ? 'Falta crear el almacén: corre la fase 89 en Supabase.'
+          : (/policy|permission|denied|unauthorized/i.test(t)
+             ? 'Tu cuenta no tiene permiso para subir fotos.'
+             : t);
+      }
+      btn.disabled = false;
+    });
+  }
+
+  function repasar(){
+    var m = document.getElementById('vgAdminModal');
+    if(!m || !m.classList.contains('active')) return;
+    Array.prototype.forEach.call(m.querySelectorAll('input'), function(i){
+      if(esCampoDeImagen(i)) montar(i);
+    });
+  }
+
+  var pend = false;
+  function pedir(){
+    if(pend) return; pend = true;
+    requestAnimationFrame(function(){ pend = false; try{ repasar(); }catch(e){} });
+  }
+
+  var intentos = 0;
+  function arrancar(){
+    var m = document.getElementById('vgAdminModal');
+    if(m && !m.dataset.vg89){
+      m.dataset.vg89 = '1';
+      new MutationObserver(pedir).observe(m, {childList:true, subtree:true,
+        attributes:true, attributeFilter:['class']});
+      pedir();
+      return;
+    }
+    if(++intentos < 40) setTimeout(arrancar, 1500);
+  }
+
+  if(document.readyState === 'complete') arrancar();
+  else window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
 </body>
 </html>
