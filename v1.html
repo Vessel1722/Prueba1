@@ -39535,5 +39535,36 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 87 · Dejar de recortar 200px de la pagina
+
+     Medido en vivo a 1280px de ventana: main medía 1480px. Como html y
+     body llevan el desbordamiento oculto, no salía barra horizontal;
+     lo que pasaba es que 200px de la pagina se quedaban fuera de
+     pantalla, recortados y en silencio.
+
+     La causa es min-width:auto en main. Dentro de una rejilla, un
+     elemento con eso se niega a encogerse por debajo de su contenido,
+     asi que la columna crecia hasta el elemento mas ancho de dentro y
+     arrastraba a todo lo demas.
+
+     minmax(0,1fr) en la rejilla y min-width:0 en main es la pareja que
+     lo arregla: hay que decirselo en los dos sitios, con uno solo no
+     basta.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-ancho-real-v87">
+html body{
+  grid-template-columns:minmax(0,1fr) !important;
+}
+html body > main{
+  min-width:0 !important;
+  max-width:100% !important;
+  width:100% !important;
+}
+html body > main *{
+  max-width:100%;
+}
+</style>
 </body>
 </html>
