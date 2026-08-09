@@ -39887,6 +39887,60 @@ html body > main *{
     }).slice(0, 8);
   }
 
+  /* Se prueban varios nombres de campo a propósito. Cada lista de esta
+     página guarda las cosas a su manera, y perseguir la forma exacta
+     de cada una es lo que hace que un buscador se quede desfasado en
+     cuanto alguien toca algo. Si un día cambia el nombre del campo,
+     esto sigue encontrándolo. */
+  function campo(o, nombres){
+    for(var i=0;i<nombres.length;i++){
+      var v = o[nombres[i]];
+      if(v !== undefined && v !== null && v !== '') return v;
+    }
+    return '';
+  }
+
+  function buscarFortnite(q){
+    var t = limpio(q);
+    if(t.length < 2) return [];
+    var d = null;
+    try{ d = window.vgFortnite && window.vgFortnite.datos && window.vgFortnite.datos(); }catch(e){}
+    var arts = (d && Array.isArray(d.articulos)) ? d.articulos : [];
+    if(!arts.length) return [];
+    return arts.filter(function(a){
+      return limpio(campo(a,['n','nombre','name','title','t'])).indexOf(t) >= 0;
+    }).slice(0, 6).map(function(a){
+      return {
+        nombre: String(campo(a,['n','nombre','name','title','t'])),
+        sub:    'Fortnite · vía regalo',
+        img:    String(campo(a,['i','img','image','icon'])),
+        precio: Number(campo(a,['mxn','precio','price','p'])) || 0,
+        tipo:   'fortnite'
+      };
+    });
+  }
+
+  function abrirFortnite(nombre){
+    try{
+      var p = document.getElementById('searchResultsPanel');
+      if(p) p.classList.remove('active');
+      var inp = document.getElementById('globalSearch');
+      if(inp){ inp.value = ''; inp.blur(); }
+      location.hash = '';
+      var u = new URL(location.href);
+      u.searchParams.set('seccion', 'fortnite');
+      history.replaceState({}, '', u.pathname + u.search);
+      var b = Array.prototype.filter.call(
+        document.querySelectorAll('.cat-btn,[data-cat]'),
+        function(x){ return /fortnite/i.test(x.textContent||x.getAttribute('data-cat')||''); })[0];
+      if(b) b.click();
+      setTimeout(function(){
+        var s = document.querySelector('#vgfnBuscar,.vgfn-buscar input');
+        if(s){ s.value = nombre; s.dispatchEvent(new Event('input',{bubbles:true})); }
+      }, 400);
+    }catch(e){}
+  }
+
   function abrir(nombre){
     try{
       var p = document.getElementById('searchResultsPanel');
@@ -39922,20 +39976,28 @@ html body > main *{
     var viejo = p.querySelector('.vgbr-bloque');
     if(viejo) viejo.remove();
 
-    var res = buscarRetro(q);
+    /* Todo lo que la tienda vende y el buscador principal no mira.
+       Añadir otra lista mañana es añadir una línea aquí. */
+    var retro = buscarRetro(q).map(function(g){
+      return {nombre:String(g.name||''), sub:String(g.platform||'Xbox'),
+              img:String(g.image||''), precio:Number(g.price)||0, tipo:'retro'};
+    });
+    var res = retro.concat(buscarFortnite(q));
+
     p.dataset.vg90 = q;
     if(!res.length) return;
 
     var caja = document.createElement('div');
     caja.className = 'vgbr-bloque';
     caja.innerHTML =
-      '<div class="vgbr-tit">También en Xbox Retro (' + res.length + ')</div>' +
+      '<div class="vgbr-tit">También en la tienda (' + res.length + ')</div>' +
       res.map(function(g){
-        return '<div class="vgbr-item" data-retro="'+esc(g.name)+'">'+
-          '<img src="'+esc(g.image||'portada.png')+'" alt="" loading="lazy" '+
+        return '<div class="vgbr-item" data-tipo="'+esc(g.tipo)+'" '+
+                 'data-nombre="'+esc(g.nombre)+'">'+
+          '<img src="'+esc(g.img||'portada.png')+'" alt="" loading="lazy" '+
             'referrerpolicy="no-referrer" onerror="this.src=\'portada.png\'">'+
-          '<div><b>'+esc(g.name)+'</b><small>'+esc(g.platform||'Xbox')+'</small></div>'+
-          '<span class="vgbr-precio">'+esc(dinero(g.price))+'</span>'+
+          '<div><b>'+esc(g.nombre)+'</b><small>'+esc(g.sub)+'</small></div>'+
+          (g.precio ? '<span class="vgbr-precio">'+esc(dinero(g.precio))+'</span>' : '')+
         '</div>';
       }).join('');
 
@@ -39946,8 +40008,11 @@ html body > main *{
     else p.appendChild(caja);
 
     caja.addEventListener('click', function(ev){
-      var it = ev.target.closest && ev.target.closest('[data-retro]');
-      if(it) abrir(it.getAttribute('data-retro'));
+      var it = ev.target.closest && ev.target.closest('[data-nombre]');
+      if(!it) return;
+      var nom = it.getAttribute('data-nombre');
+      if(it.getAttribute('data-tipo') === 'fortnite') abrirFortnite(nom);
+      else abrir(nom);
     });
   }
 
