@@ -40044,5 +40044,74 @@ html body > main *{
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 91 · Quitar la línea sucia del carrusel
+
+     La causa es un clásico:
+
+       radial-gradient(circle, rgba(139,92,246,.42), transparent 66%)
+
+     "transparent" no significa invisible: significa NEGRO con opacidad
+     cero. Al degradar hacia él, el navegador interpola hacia el negro
+     por el camino y aparece una franja gris sucia con un borde
+     marcado. Sale en todas las tarjetas porque la regla es la misma
+     para todas.
+
+     Se arregla degradando hacia el MISMO color con opacidad cero, que
+     es lo que se quería decir desde el principio.
+
+     Y de paso el resto de mejoras visuales de la sección.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-v91">
+
+/* 1. El resplandor, sin borde sucio. Mismo morado, opacidad a cero. */
+.service-carousel-card:after{
+  background:radial-gradient(circle,
+    rgba(139,92,246,.42) 0%,
+    rgba(139,92,246,.18) 42%,
+    rgba(139,92,246,0) 72%) !important;
+}
+
+/* 2. El velo del texto: de un lado a otro y también desde abajo, que
+      es donde de verdad está el texto. Antes solo venía de la
+      izquierda y el precio quedaba sobre la parte clara de la foto. */
+.service-carousel-card:before{
+  background:
+    linear-gradient(90deg, rgba(8,10,18,.92) 0%, rgba(8,10,18,.55) 46%,
+                           rgba(8,10,18,.10) 78%, rgba(8,10,18,0) 100%),
+    linear-gradient(0deg,  rgba(8,10,18,.80) 0%, rgba(8,10,18,.18) 46%,
+                           rgba(8,10,18,0) 72%) !important;
+}
+
+/* 3. La foto, sin retoques que ensucian. El contraste subido marcaba
+      los bordes de los logos; el saturado los volvía chillones. */
+.service-carousel-card img{
+  filter:saturate(1.04) !important;
+  transform:scale(1.02) !important;
+}
+.service-carousel-card:hover img{ transform:scale(1.07) !important }
+
+/* 4. Un borde interior claro. Da sensación de tarjeta de cristal y
+      tapa el corte duro contra el fondo de la página. */
+.service-carousel-card{
+  box-shadow:0 14px 40px rgba(0,0,0,.34),
+             inset 0 1px 0 rgba(255,255,255,.10) !important;
+}
+
+/* 5. Al pasar por encima, el resplandor responde. Antes la tarjeta se
+      movía pero la luz se quedaba quieta y parecía pegada. */
+.service-carousel-card:after{
+  transition:opacity .3s ease, transform .3s ease;
+  opacity:.85;
+}
+.service-carousel-card:hover:after{ opacity:1; transform:scale(1.12) }
+
+@media(prefers-reduced-motion:reduce){
+  .service-carousel-card:after{transition:none}
+  .service-carousel-card:hover img{transform:scale(1.02) !important}
+}
+</style>
+
 </body>
 </html>
