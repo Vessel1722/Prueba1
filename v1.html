@@ -40493,5 +40493,58 @@ html body .service-carousel-card.retro-carousel-card img{
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 97 · La línea venía dentro de las fotos
+
+     Cuatro rondas buscándola en el CSS y no estaba ahí. Muchas de tus
+     imágenes traen fondo blanco o claro incrustado -logos sobre blanco,
+     capturas con marco-. Ese rectángulo termina y empieza el fondo
+     oscuro de la tarjeta: eso es la línea. No la dibujaba la página, y
+     por eso ningún degradado la quitaba.
+
+     No se puede borrar sin editar las 145 fotos una por una. Lo que sí
+     se puede es que deje de parecer un fallo: si el borde tiene
+     esquinas redondeadas y un filo suave, se lee como un recuadro
+     puesto a propósito en vez de como un corte.
+
+     Es lo que pedías al principio: un cuadro que se acople a la foto.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-v97">
+html body .service-carousel-card img,
+html body .service-carousel-card.retro-carousel-card img{
+  /* Se separa de los bordes para que el recuadro respire y no toque
+     el filo de la tarjeta, que es lo que lo hacía parecer un corte. */
+  top:12px !important; bottom:12px !important; right:12px !important;
+  height:auto !important;
+  width:42% !important;
+  padding:0 !important;
+
+  border-radius:13px !important;
+  border:1px solid rgba(255,255,255,.10) !important;
+  box-shadow:0 6px 18px rgba(0,0,0,.34) !important;
+
+  /* "cover" recorta un poco pero llena el recuadro entero, así que no
+     queda aire muerto entre la foto y su marco. Los bordes redondeados
+     se los come el recuadro, no la foto. */
+  object-fit:cover !important;
+  object-position:center !important;
+  background:#0b0f1c !important;
+}
+
+html body .service-carousel-info{
+  padding-right:47% !important;
+}
+
+@media(max-width:640px){
+  html body .service-carousel-card img,
+  html body .service-carousel-card.retro-carousel-card img{
+    width:37% !important; top:10px !important; bottom:10px !important;
+    right:10px !important; border-radius:11px !important;
+  }
+  html body .service-carousel-info{ padding-right:41% !important }
+}
+</style>
+
 </body>
 </html>
