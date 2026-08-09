@@ -39327,7 +39327,15 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 
   function poner(el, o){
     if(!el) return;
-    for(var k in o) el.style.setProperty(k, o[k], 'important');
+    for(var k in o){
+      /* Solo se escribe si de verdad cambia. Escribir siempre tocaba
+         el atributo style, el observador lo veía como un cambio y
+         volvía a llamar aquí: un bucle que se notaba como tirones al
+         bajar por el panel. */
+      if(el.style.getPropertyValue(k) === o[k] &&
+         el.style.getPropertyPriority(k) === 'important') continue;
+      el.style.setProperty(k, o[k], 'important');
+    }
   }
   function quitar(el, o){
     if(!el) return;
@@ -39428,6 +39436,11 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   'use strict';
   if(window.__VG86__) return; window.__VG86__ = true;
 
+  /* Las fotos ya ajustadas se apuntan aquí y no en el propio elemento:
+     escribir en el elemento cuenta como cambio y despierta al
+     observador otra vez. */
+  var hechas = new WeakSet();
+
   /* Lo mismo que en la fase 85: en este archivo la hoja de estilos
      pierde, así que se pone directo en el elemento y con prioridad.
      Se limita cualquier foto alta que aparezca dentro del panel, no
@@ -39442,13 +39455,24 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 
     Array.prototype.forEach.call(cont.querySelectorAll('img'), function(img){
       if(!movil){
-        if(img.dataset.vg86){ img.style.removeProperty('max-height'); delete img.dataset.vg86; }
+        if(hechas.has(img)){
+          img.style.removeProperty('max-height');
+          img.style.removeProperty('object-fit');
+          hechas.delete(img);
+        }
         return;
       }
-      /* Solo las grandes: los iconos y avatares se quedan como están. */
-      var alto = img.getBoundingClientRect().height;
-      if(alto < 220 && !img.dataset.vg86) return;
-      img.dataset.vg86 = '1';
+      /* Si ya está hecha, ni se mide ni se vuelve a escribir. Antes se
+         medía cada foto en cada aviso del observador, y medir obliga al
+         navegador a recalcular la página entera: eso, en mitad de un
+         gesto para bajar, son los tirones. */
+      if(hechas.has(img)) return;
+
+      /* naturalHeight no obliga a recalcular nada, a diferencia de
+         preguntar por el tamaño en pantalla. */
+      if(!img.naturalHeight || img.naturalHeight < 700) return;
+
+      hechas.add(img);
       img.style.setProperty('max-height', '42dvh', 'important');
       img.style.setProperty('width', 'auto', 'important');
       img.style.setProperty('max-width', '100%', 'important');
@@ -39467,8 +39491,10 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     var m = document.getElementById('vgAdminModal');
     if(m && !m.dataset.vg86){
       m.dataset.vg86 = '1';
+      /* Sin vigilar 'src': cada foto que cargaba disparaba un aviso, y
+         de eso ya se encarga el escuchador de 'load' de abajo. */
       new MutationObserver(pedir).observe(m, {childList:true, subtree:true,
-        attributes:true, attributeFilter:['class','src']});
+        attributes:true, attributeFilter:['class']});
       window.addEventListener('resize', pedir);
       /* Una foto recién cargada cambia de alto sin tocar el DOM. */
       m.addEventListener('load', pedir, true);
