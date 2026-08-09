@@ -39820,5 +39820,164 @@ html body > main *{
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 90 · Que el buscador encuentre también los juegos retro
+
+     El buscador mira window.SERVICES, y los juegos de Xbox Retro viven
+     en otra lista (window.RETRO_GAMES_DATA). Quien buscaba uno por su
+     nombre no encontraba nada y se iba. Costó dos ventas en un día.
+
+     No se meten en SERVICES: esa lista alimenta también las rejillas
+     del catálogo y aparecerían donde no toca. Se añaden al panel de
+     resultados, que es donde hacen falta.
+
+     Al pulsarlos se abre la colección retro con ese nombre ya buscado,
+     que es donde se compran.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-buscar-retro-v90">
+.vgbr-tit{
+  padding:9px 14px 5px;font-size:.68rem;font-weight:900;letter-spacing:.09em;
+  text-transform:uppercase;color:#8593b5;
+}
+.vgbr-item{
+  display:flex;gap:11px;align-items:center;padding:9px 14px;cursor:pointer;
+  border-top:1px solid rgba(255,255,255,.05);
+}
+.vgbr-item:hover{background:rgba(255,255,255,.05)}
+.vgbr-item img{
+  width:44px;height:44px;border-radius:8px;object-fit:cover;flex:0 0 auto;
+  background:rgba(255,255,255,.05);
+}
+.vgbr-item b{display:block;font-size:.86rem;font-weight:800;color:#fff}
+.vgbr-item small{display:block;font-size:.73rem;color:#8593b5;margin-top:2px}
+.vgbr-item .vgbr-precio{margin-left:auto;font-weight:900;color:#19e6c1;font-size:.86rem;white-space:nowrap}
+</style>
+
+<script id="vg-buscar-retro-js-v90">
+(function(){
+  'use strict';
+  if(window.__VG90__) return; window.__VG90__ = true;
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* Sin acentos y en minúsculas, igual que hace el buscador de la
+     página: quien escribe desde el móvil casi nunca pone tildes. */
+  function limpio(s){
+    /* El rango va con códigos y no con los acentos de verdad porque
+       son caracteres invisibles y cualquier editor puede comérselos. */
+    return String(s||'').toLowerCase()
+      .normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  }
+
+  function dinero(n){
+    n = Number(n||0);
+    return '$' + n.toLocaleString('es-MX', {maximumFractionDigits:0}) + ' MXN';
+  }
+
+  function buscarRetro(q){
+    var lista = Array.isArray(window.RETRO_GAMES_DATA) ? window.RETRO_GAMES_DATA : [];
+    if(!lista.length) return [];
+    var t = limpio(q);
+    if(t.length < 2) return [];
+    return lista.filter(function(g){
+      if(!g || String(g.status||'') === 'hidden') return false;
+      return limpio(g.name).indexOf(t) >= 0 || limpio(g.platform).indexOf(t) >= 0;
+    }).slice(0, 8);
+  }
+
+  function abrir(nombre){
+    try{
+      var p = document.getElementById('searchResultsPanel');
+      if(p) p.classList.remove('active');
+      var inp = document.getElementById('globalSearch');
+      if(inp){ inp.value = ''; inp.blur(); }
+      if(typeof window.openRetroModal === 'function') window.openRetroModal();
+      /* Se busca dentro de la colección para que caiga justo en el
+         juego, en vez de soltarle la lista entera. */
+      setTimeout(function(){
+        if(typeof window.setRetroQuickSearch === 'function')
+          window.setRetroQuickSearch(nombre, null);
+        else {
+          var s = document.getElementById('retroSearch');
+          if(s){ s.value = nombre; if(window.renderRetroGrid) window.renderRetroGrid(); }
+        }
+      }, 260);
+    }catch(e){}
+  }
+
+  function pintar(){
+    var p = document.getElementById('searchResultsPanel');
+    if(!p || !p.classList.contains('active')) return;
+
+    var m = (p.textContent||'').match(/(?:coincidencias?|coincidencia\(s\))\s+para\s*"([^"]+)"/i);
+    var q = m && m[1] ? m[1] : '';
+    if(!q){ return; }
+
+    /* Si ya se añadió para esta misma búsqueda, no se toca nada:
+       volver a escribir aquí despertaría al observador otra vez. */
+    if(p.dataset.vg90 === q) return;
+
+    var viejo = p.querySelector('.vgbr-bloque');
+    if(viejo) viejo.remove();
+
+    var res = buscarRetro(q);
+    p.dataset.vg90 = q;
+    if(!res.length) return;
+
+    var caja = document.createElement('div');
+    caja.className = 'vgbr-bloque';
+    caja.innerHTML =
+      '<div class="vgbr-tit">También en Xbox Retro (' + res.length + ')</div>' +
+      res.map(function(g){
+        return '<div class="vgbr-item" data-retro="'+esc(g.name)+'">'+
+          '<img src="'+esc(g.image||'portada.png')+'" alt="" loading="lazy" '+
+            'referrerpolicy="no-referrer" onerror="this.src=\'portada.png\'">'+
+          '<div><b>'+esc(g.name)+'</b><small>'+esc(g.platform||'Xbox')+'</small></div>'+
+          '<span class="vgbr-precio">'+esc(dinero(g.price))+'</span>'+
+        '</div>';
+      }).join('');
+
+    /* Debajo de los resultados normales: primero lo que ya encontraba
+       la página, después lo que aporta este bloque. */
+    var lista = p.querySelector('.search-result-list');
+    if(lista && lista.parentNode) lista.parentNode.insertBefore(caja, lista.nextSibling);
+    else p.appendChild(caja);
+
+    caja.addEventListener('click', function(ev){
+      var it = ev.target.closest && ev.target.closest('[data-retro]');
+      if(it) abrir(it.getAttribute('data-retro'));
+    });
+  }
+
+  var pend = false;
+  function pedir(){
+    if(pend) return; pend = true;
+    requestAnimationFrame(function(){ pend = false; try{ pintar(); }catch(e){} });
+  }
+
+  function enganchar(){
+    var p = document.getElementById('searchResultsPanel');
+    if(!p || p.dataset.vg90obs) return !!p;
+    p.dataset.vg90obs = '1';
+    new MutationObserver(pedir).observe(p, {childList:true, subtree:true,
+      attributes:true, attributeFilter:['class']});
+    return true;
+  }
+
+  /* El panel no existe hasta la primera búsqueda. */
+  document.addEventListener('input', function(){ enganchar(); }, true);
+
+  var intentos = 0;
+  function arrancar(){
+    if(enganchar()) return;
+    if(++intentos < 40) setTimeout(arrancar, 1500);
+  }
+  if(document.readyState === 'complete') arrancar();
+  else window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
 </body>
 </html>
