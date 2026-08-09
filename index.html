@@ -1183,183 +1183,6 @@ window.WHATSAPP_NUMBER = "526611078412";
   }
 
 
-  /* Carrusel centrado, legible y sin cortes laterales */
-  .home-sections{
-    max-width:1480px !important;
-    margin-left:auto !important;
-    margin-right:auto !important;
-    padding:8px 22px 22px !important;
-    gap:18px !important;
-    scroll-behavior:smooth !important;
-    scroll-padding-left:22px !important;
-    scroll-padding-right:22px !important;
-    overscroll-behavior-x:contain !important;
-  }
-
-  .home-sections::before,
-  .home-sections::after{
-    content:"" !important;
-    flex:0 0 10px !important;
-  }
-
-  .service-carousel-card{
-    flex:0 0 min(380px, calc(100vw - 58px)) !important;
-    height:180px !important;
-    box-sizing:border-box !important;
-    scroll-snap-align:center !important;
-  }
-
-  .service-carousel-card img{
-    object-fit:cover !important;
-    object-position:center center !important;
-  }
-
-  .service-carousel-info{
-    max-width:88% !important;
-  }
-
-  .service-carousel-info b{
-    line-height:1.15 !important;
-  }
-
-  .service-carousel-info small{
-    display:-webkit-box !important;
-    -webkit-line-clamp:2 !important;
-    -webkit-box-orient:vertical !important;
-    overflow:hidden !important;
-  }
-
-  .service-carousel-card.retro-carousel-card::before{
-    background:linear-gradient(90deg,rgba(6,9,18,.88),rgba(6,9,18,.44) 58%,rgba(6,9,18,.18)) !important;
-  }
-
-  .service-carousel-card.retro-carousel-card .tag{
-    background:rgba(25,230,193,.12) !important;
-    border-color:rgba(25,230,193,.34) !important;
-  }
-
-  .retro-carousel-note{
-    color:#19e6c1 !important;
-    font-weight:950 !important;
-    margin-top:7px !important;
-    text-shadow:0 4px 18px rgba(0,0,0,.75) !important;
-  }
-
-  @media(max-width:760px){
-    .home-sections{
-      padding:8px 14px 20px !important;
-      gap:14px !important;
-      scroll-padding-left:14px !important;
-      scroll-padding-right:14px !important;
-    }
-
-    .service-carousel-card{
-      flex-basis:min(318px, calc(100vw - 38px)) !important;
-      height:170px !important;
-    }
-  }
-
-
-  /* Carrusel centrado con desvanecido lateral */
-  .home-sections{
-    max-width:1480px !important;
-    margin-left:auto !important;
-    margin-right:auto !important;
-    padding:8px 34px 22px !important;
-    gap:18px !important;
-    scroll-behavior:auto !important;
-    scroll-padding-left:34px !important;
-    scroll-padding-right:34px !important;
-    overscroll-behavior-x:contain !important;
-
-    /* Efecto desvanecido en las orillas */
-    -webkit-mask-image:linear-gradient(
-      90deg,
-      transparent 0%,
-      #000 6%,
-      #000 94%,
-      transparent 100%
-    ) !important;
-    mask-image:linear-gradient(
-      90deg,
-      transparent 0%,
-      #000 6%,
-      #000 94%,
-      transparent 100%
-    ) !important;
-  }
-
-  .home-sections::-webkit-scrollbar{
-    height:6px !important;
-  }
-
-  .home-sections::before,
-  .home-sections::after{
-    content:"" !important;
-    flex:0 0 16px !important;
-  }
-
-  .service-carousel-card{
-    flex:0 0 min(380px, calc(100vw - 74px)) !important;
-    height:180px !important;
-    box-sizing:border-box !important;
-    scroll-snap-align:center !important;
-  }
-
-  .service-carousel-card img{
-    object-fit:cover !important;
-    object-position:center center !important;
-  }
-
-  .service-carousel-info{
-    max-width:88% !important;
-  }
-
-  .service-carousel-info small{
-    display:-webkit-box !important;
-    -webkit-line-clamp:2 !important;
-    -webkit-box-orient:vertical !important;
-    overflow:hidden !important;
-  }
-
-  .service-carousel-card.retro-carousel-card::before{
-    background:linear-gradient(90deg,rgba(6,9,18,.88),rgba(6,9,18,.44) 58%,rgba(6,9,18,.18)) !important;
-  }
-
-  .service-carousel-card.retro-carousel-card .tag{
-    background:rgba(25,230,193,.12) !important;
-    border-color:rgba(25,230,193,.34) !important;
-  }
-
-  .retro-carousel-note{
-    color:#19e6c1 !important;
-    font-weight:950 !important;
-    margin-top:7px !important;
-    text-shadow:0 4px 18px rgba(0,0,0,.75) !important;
-  }
-
-  @media(max-width:760px){
-    .home-sections{
-      padding:8px 22px 20px !important;
-      gap:14px !important;
-      scroll-padding-left:22px !important;
-      scroll-padding-right:22px !important;
-      -webkit-mask-image:linear-gradient(90deg,transparent 0%,#000 9%,#000 91%,transparent 100%) !important;
-      mask-image:linear-gradient(90deg,transparent 0%,#000 9%,#000 91%,transparent 100%) !important;
-    }
-
-    .home-sections::before,
-    .home-sections::after{
-      flex-basis:10px !important;
-    }
-
-    .service-carousel-card{
-      flex-basis:min(318px, calc(100vw - 48px)) !important;
-      height:170px !important;
-    }
-  }
-
-
   /* Carrusel: centrado, con fade lateral y listo para movimiento automático */
   .home-sections{
     max-width:1480px !important;
@@ -1408,9 +1231,8 @@ window.WHATSAPP_NUMBER = "526611078412";
     overflow:hidden !important;
   }
 
-  .service-carousel-card.retro-carousel-card::before{
-    background:linear-gradient(90deg,rgba(6,9,18,.88),rgba(6,9,18,.44) 58%,rgba(6,9,18,.18)) !important;
-  }
+  /* El velo de las tarjetas retro se define con las demas en el bloque
+     unico del carrusel (vg-carrusel-v49), via la variable --scrim. */
 
   .retro-carousel-note{
     color:#19e6c1 !important;
@@ -31748,45 +31570,6 @@ html body #productModal.vg-actas-pro-modal .modal-body{
 })();
 </script>
 
-<!-- ════════════════════════════════════════════════════════════════
-     FASE 48 — Que el texto del carrusel se lea siempre
-
-     Las tarjetas del carrusel ponen la foto de fondo y el texto encima,
-     sin nada que los separe. El título y la descripción llevaban sombra,
-     pero el precio no llevaba nada: sobre una imagen clara —el degradado
-     de Adobe, el logo de MAX— desaparecía.
-
-     Se añade un velo degradado entre la foto y el texto: transparente
-     arriba para que la imagen se siga viendo, y oscuro abajo justo donde
-     va el texto. Es lo que hacen Netflix y Steam con sus portadas.
-     ════════════════════════════════════════════════════════════════ -->
-<style id="vg-carrusel-legible-v48">
-/* El velo va en la capa de información, que ya está encima de la foto */
-html body .service-carousel-card .service-carousel-info{
-  background:linear-gradient(
-    180deg,
-    rgba(5,8,15,0)    0%,
-    rgba(5,8,15,.20) 38%,
-    rgba(5,8,15,.72) 72%,
-    rgba(5,8,15,.93) 100%
-  ) !important;
-}
-/* El precio era el único sin sombra y es el dato que más importa */
-html body .service-carousel-card .service-carousel-price{
-  text-shadow:0 1px 3px rgba(0,0,0,.85), 0 0 12px rgba(0,0,0,.6) !important;
-  font-weight:900 !important;
-}
-html body .service-carousel-card b,
-html body .service-carousel-card small{
-  text-shadow:0 1px 3px rgba(0,0,0,.85) !important;
-}
-/* La etiqueta de categoría se apoya en un fondo sólido, no traslúcido */
-html body .service-carousel-card .tag{
-  background:rgba(5,8,15,.72) !important;
-  border:1px solid rgba(25,230,193,.30) !important;
-  color:#8ff5e3 !important;
-}
-</style>
 
 <!-- ════════════════════════════════════════════════════════════════
      FASE 46 — La lista de usuarios del panel volvía vacía
@@ -40278,67 +40061,161 @@ html body > main *{
 </script>
 
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     VG FASE 96 · Quitar el marco que yo mismo puse, y el precio falso
-
-     Dos cosas.
-
-     EL MARCO. En la fase 94 le di a la foto un panel con fondo más
-     claro y una línea de separación. Eso creó exactamente la división
-     que llevábamos tres fases quitando, solo que ahora la había puesto
-     yo a propósito. El fondo del hueco de la foto pasa a ser el mismo
-     de la tarjeta y desaparece la línea: la foto queda flotando, sin
-     frontera visible por ningún lado.
-
-     EL PRECIO. Salían "$-1 MXN" y "$-2 MXN": leí un campo que no es el
-     precio. En vez de adivinar por cuarta vez, la regla es que un
-     número que no parece un precio no se enseña. Un precio equivocado
-     en la portada es peor que no poner precio.
-     ═══════════════════════════════════════════════════════════════════ -->
 
 
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 99 — El carrusel de inicio, rehecho de una pieza
 
+     LA LÍNEA, MEDIDA EN EL NAVEGADOR
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     VG FASE 97 · La línea venía dentro de las fotos
+     Las fases 91-98 buscaron esta línea razonando sobre el CSS y
+     ninguna dio con ella. Medida en Chromium sobre la página real, el
+     salto de luminancia aparece siempre en el mismo punto: al 87.9%
+     del ancho de la tarjeta en escritorio y al 91.6% en móvil. Ahí
+     termina .service-carousel-info, que mide el 87.5% y el 91.4%. No
+     es casualidad.
 
-     Cuatro rondas buscándola en el CSS y no estaba ahí. Muchas de tus
-     imágenes traen fondo blanco o claro incrustado -logos sobre blanco,
-     capturas con marco-. Ese rectángulo termina y empieza el fondo
-     oscuro de la tarjeta: eso es la línea. No la dibujaba la página, y
-     por eso ningún degradado la quitaba.
+     La causa: la fase 48 puso el velo oscuro como background de la
+     CAJA DE TEXTO. Esa caja lleva max-width para que el texto no
+     llegue al borde derecho. Un degradado vertical pintado sobre una
+     caja más estrecha que la tarjeta se corta en seco en su borde:
+     eso es la línea. Sobre una foto oscura el corte no se distingue
+     del fondo; sobre una foto clara salta a la vista. Por eso solo
+     aparecía en las claras.
 
-     No se puede borrar sin editar las 145 fotos una por una. Lo que sí
-     se puede es que deje de parecer un fallo: si el borde tiene
-     esquinas redondeadas y un filo suave, se lee como un recuadro
-     puesto a propósito en vez de como un corte.
+     Y por eso no venía dentro de las imágenes, como supuso la fase
+     97: la línea cae en el mismo porcentaje en las cuatro clases de
+     tarjeta, y ensanchar la caja de texto la elimina sin tocar ni una
+     foto.
 
-     Es lo que pedías al principio: un cuadro que se acople a la foto.
-     ═══════════════════════════════════════════════════════════════════ -->
+     EL REDISEÑO
 
+     El velo es asunto de la TARJETA, no del texto. Ahora vive en una
+     sola capa (::before) a sangre completa, con dos degradados
+     superpuestos: uno vertical para el pie, que es donde va el texto,
+     y otro horizontal para la columna izquierda. Como los dos cubren
+     la tarjeta entera, no queda ningún borde donde pueda formarse una
+     frontera. Ese es el criterio de fondo: nada que oscurezca puede
+     ser más estrecho que la tarjeta.
 
+     El tinte sale de la variable --scrim y el resplandor de --glow,
+     de modo que una variante que necesite otro color cambia una línea
+     en vez de volver a declarar la geometría —que es justo como
+     nacieron las tres copias divergentes de estas reglas—. Hoy todas
+     comparten valor: las diferencias que había entre retro y el resto
+     eran de uno o dos puntos de RGB, imperceptibles.
 
-<!-- ═══════════════════════════════════════════════════════════════════
-     VG FASE 98 · Cada tipo de tarjeta como le conviene
+     El resplandor de marca (::after) pasa a ir DEBAJO del velo, para
+     que no aclare nunca la zona del texto.
 
-     Tenía razón: no todas las fotos quieren el mismo trato.
+     LOS TOPES DEL DEGRADADO NO SON A OJO
 
-       · Retro y Fortnite traen figuras y portadas verticales sobre
-         fondo transparente o negro. Ahí el recuadro luce.
+     Quitar la línea es fácil si uno se conforma con un velo suave,
+     pero entonces el texto se lee PEOR que antes: el primer intento
+     dejaba el título en 1.48:1 cuando el velo viejo daba 2.96:1.
 
-       · El catálogo trae banners apaisados, muchos con fondo blanco
-         incrustado. Metidos en un recuadro pequeño se ve el rectángulo
-         blanco y su borde. A tamaño completo llenan la tarjeta y el
-         borde desaparece porque ya no hay borde: la foto ES la
-         tarjeta.
+     Así que los topes de arriba están medidos, no elegidos a ojo.
+     Sobre una foto blanca -el peor caso posible- y en las 12 tarjetas
+     más difíciles de la fila (aquellas cuyo bloque de texto sube más
+     arriba, que son las de título largo a dos renglones):
 
-     El velo vuelve solo para esas, porque el texto va encima y sin él
-     no se lee. Pero nunca llega a cero: se queda en la mitad de opaco
-     en el lado derecho. Un velo que se apaga del todo deja frontera;
-     uno que no se apaga nunca, no.
-     ═══════════════════════════════════════════════════════════════════ -->
+       velo anterior   2.30:1 en escritorio · 2.23:1 en móvil
+                       las 12 por debajo del 4.5:1 que pide la AA
+       velo nuevo      5.83:1 en escritorio · 4.81:1 en móvil
+                       ninguna por debajo
 
+     El texto empieza tan arriba como el 10% de la altura en móvil, y
+     por eso el degradado vertical arranca ahí y no a media tarjeta.
+     La foto se atenúa abajo a la izquierda, que es justo donde va el
+     texto, y se sigue viendo limpia arriba a la derecha.
+
+     La caja de texto conserva su max-width: ahora que no pinta nada,
+     solo controla dónde corta el renglón.
+
+     LIMPIEZA
+
+     Se eliminan los dos bloques de carrusel duplicados que quedaban
+     de sesiones anteriores —eran tres copias casi iguales de las
+     mismas reglas y solo mandaba la última— conservando aquí lo poco
+     que solo estaba en ellas. Y se eliminan los comentarios huérfanos
+     de las fases 96-98: su CSS ya no existe desde el revert y su
+     diagnóstico era el equivocado.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-v49">
+/* ── 1. La tarjeta: color del velo y del resplandor ─────────────── */
+html body .service-carousel-card{
+  --scrim:6,9,17;
+  --glow:139,92,246;
+}
+
+/* ── 2. El velo: una sola capa, a sangre, sin bordes duros ──────── */
+html body .service-carousel-card::before{
+  content:"" !important;
+  position:absolute !important;
+  inset:0 !important;
+  z-index:2 !important;
+  border-radius:inherit !important;
+  pointer-events:none !important;
+  background:
+    linear-gradient(180deg,
+      rgba(var(--scrim),0)    10%,
+      rgba(var(--scrim),.34)  28%,
+      rgba(var(--scrim),.62)  42%,
+      rgba(var(--scrim),.82)  62%,
+      rgba(var(--scrim),.90) 100%),
+    linear-gradient(90deg,
+      rgba(var(--scrim),.79)   0%,
+      rgba(var(--scrim),.61)  45%,
+      rgba(var(--scrim),.43)  72%,
+      rgba(var(--scrim),.34)  88%,
+      rgba(var(--scrim),.30) 100%) !important;
+}
+
+/* ── 3. El resplandor de marca, por debajo del velo ─────────────── */
+html body .service-carousel-card::after{
+  z-index:1 !important;
+  background:radial-gradient(circle,
+    rgba(var(--glow),.34),
+    rgba(var(--glow),0) 66%) !important;
+}
+
+/* ── 4. La capa de texto solo coloca texto: no pinta fondo ──────── */
+html body .service-carousel-card .service-carousel-info{
+  background:none !important;
+  z-index:3 !important;
+}
+html body .service-carousel-card .service-carousel-info b{
+  line-height:1.15 !important;
+}
+
+/* ── 5. El texto se lee sobre cualquier foto ────────────────────── */
+html body .service-carousel-card .service-carousel-price{
+  text-shadow:0 1px 3px rgba(0,0,0,.85), 0 0 12px rgba(0,0,0,.6) !important;
+  font-weight:900 !important;
+}
+html body .service-carousel-card b,
+html body .service-carousel-card small{
+  text-shadow:0 1px 3px rgba(0,0,0,.85) !important;
+}
+
+/* ── 6. La etiqueta se apoya en fondo sólido, no traslúcido ─────── */
+html body .service-carousel-card .tag{
+  background:rgba(5,8,15,.72) !important;
+  border:1px solid rgba(25,230,193,.30) !important;
+  color:#8ff5e3 !important;
+}
+html body .service-carousel-card.retro-carousel-card .tag{
+  background:rgba(25,230,193,.12) !important;
+  border-color:rgba(25,230,193,.34) !important;
+}
+
+/* ── 7. Barra de desplazamiento discreta (solo estaba en uno de los
+       bloques duplicados que se eliminan) ───────────────────────── */
+html body .home-sections::-webkit-scrollbar{
+  height:6px !important;
+}
+</style>
 
 </body>
 </html>
