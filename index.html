@@ -39393,5 +39393,95 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 86 · Que el comprobante no tape el resto
+
+     El panel ya baja, pero se queda clavado en el comprobante de pago.
+     No es que deje de desplazarse: es que la foto se pone a tamaño
+     natural -una captura de móvil son dos mil y pico píxeles de alto-
+     y hay que recorrer una pantalla entera de imagen antes de llegar
+     al botón de entregar.
+
+     En el teléfono se limita a media pantalla. Sigue viéndose entera
+     porque se ajusta dentro, no se recorta, y quien necesite mirarla
+     de cerca la abre a pantalla completa con el botón que ya existe.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-comprobante-movil-v86">
+@media(max-width:900px){
+  html body #vgAdminModal .vg-proof-preview-img,
+  html body #vgAdminModal .vg-admin-content img[src*="proof"],
+  html body #vgAdminModal .vg-admin-content img[src*="comprobante"]{
+    max-height:42dvh !important;
+    width:auto !important;
+    max-width:100% !important;
+    object-fit:contain !important;
+    display:block !important;
+    margin:0 auto !important;
+    border-radius:10px;
+  }
+}
+</style>
+
+<script id="vg-comprobante-movil-js-v86">
+(function(){
+  'use strict';
+  if(window.__VG86__) return; window.__VG86__ = true;
+
+  /* Lo mismo que en la fase 85: en este archivo la hoja de estilos
+     pierde, así que se pone directo en el elemento y con prioridad.
+     Se limita cualquier foto alta que aparezca dentro del panel, no
+     solo la del comprobante, porque el problema es el alto y no de
+     quién sea la foto. */
+  function aplicar(){
+    var m = document.getElementById('vgAdminModal');
+    if(!m || !m.classList.contains('active')) return;
+    var cont = m.querySelector('.vg-admin-content');
+    if(!cont) return;
+    var movil = window.innerWidth <= 900;
+
+    Array.prototype.forEach.call(cont.querySelectorAll('img'), function(img){
+      if(!movil){
+        if(img.dataset.vg86){ img.style.removeProperty('max-height'); delete img.dataset.vg86; }
+        return;
+      }
+      /* Solo las grandes: los iconos y avatares se quedan como están. */
+      var alto = img.getBoundingClientRect().height;
+      if(alto < 220 && !img.dataset.vg86) return;
+      img.dataset.vg86 = '1';
+      img.style.setProperty('max-height', '42dvh', 'important');
+      img.style.setProperty('width', 'auto', 'important');
+      img.style.setProperty('max-width', '100%', 'important');
+      img.style.setProperty('object-fit', 'contain', 'important');
+    });
+  }
+
+  var pend = false;
+  function pedir(){
+    if(pend) return; pend = true;
+    requestAnimationFrame(function(){ pend = false; try{ aplicar(); }catch(e){} });
+  }
+
+  var intentos = 0;
+  function arrancar(){
+    var m = document.getElementById('vgAdminModal');
+    if(m && !m.dataset.vg86){
+      m.dataset.vg86 = '1';
+      new MutationObserver(pedir).observe(m, {childList:true, subtree:true,
+        attributes:true, attributeFilter:['class','src']});
+      window.addEventListener('resize', pedir);
+      /* Una foto recién cargada cambia de alto sin tocar el DOM. */
+      m.addEventListener('load', pedir, true);
+      pedir();
+      return;
+    }
+    if(++intentos < 40) setTimeout(arrancar, 1500);
+  }
+
+  if(document.readyState === 'complete') arrancar();
+  else window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
 </body>
 </html>
