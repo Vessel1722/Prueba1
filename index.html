@@ -40546,5 +40546,94 @@ html body .service-carousel-info{
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 98 · Cada tipo de tarjeta como le conviene
+
+     Tenía razón: no todas las fotos quieren el mismo trato.
+
+       · Retro y Fortnite traen figuras y portadas verticales sobre
+         fondo transparente o negro. Ahí el recuadro luce.
+
+       · El catálogo trae banners apaisados, muchos con fondo blanco
+         incrustado. Metidos en un recuadro pequeño se ve el rectángulo
+         blanco y su borde. A tamaño completo llenan la tarjeta y el
+         borde desaparece porque ya no hay borde: la foto ES la
+         tarjeta.
+
+     El velo vuelve solo para esas, porque el texto va encima y sin él
+     no se lee. Pero nunca llega a cero: se queda en la mitad de opaco
+     en el lado derecho. Un velo que se apaga del todo deja frontera;
+     uno que no se apaga nunca, no.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-v98">
+
+/* ── Catálogo: la foto ocupa la tarjeta entera ──────────────── */
+html body .service-carousel-card:not(.retro-carousel-card):not(.vgfn-carousel-card) img{
+  top:0 !important; right:0 !important; bottom:0 !important; left:0 !important;
+  width:100% !important; height:100% !important;
+  object-fit:cover !important;
+  object-position:center !important;
+  border:0 !important;
+  border-radius:0 !important;
+  box-shadow:none !important;
+  background:transparent !important;
+  padding:0 !important;
+  z-index:0 !important;
+}
+
+/* El velo vuelve, pero sin punto donde empiece ni acabe. */
+html body .service-carousel-card:not(.retro-carousel-card):not(.vgfn-carousel-card)::before{
+  display:block !important;
+  content:"" !important;
+  position:absolute !important;
+  top:0 !important; right:0 !important; bottom:0 !important; left:0 !important;
+  z-index:1 !important;
+  background:linear-gradient(96deg,
+    rgba(7,10,20,.97) 0%,
+    rgba(7,10,20,.93) 30%,
+    rgba(7,10,20,.78) 55%,
+    rgba(7,10,20,.60) 80%,
+    rgba(7,10,20,.52) 100%) !important;
+}
+
+html body .service-carousel-card:not(.retro-carousel-card):not(.vgfn-carousel-card) .service-carousel-info{
+  padding-right:16px !important;
+  max-width:74% !important;
+}
+
+/* ── Detalles comunes ───────────────────────────────────────── */
+html body .service-carousel-card{
+  border-color:rgba(255,255,255,.07) !important;
+  transition:transform .26s ease, border-color .26s ease, box-shadow .26s ease !important;
+}
+html body .service-carousel-card:hover{
+  transform:translateY(-4px) !important;
+  border-color:rgba(25,230,193,.34) !important;
+  box-shadow:0 18px 44px rgba(0,0,0,.44) !important;
+}
+
+/* El nombre no debe partirse en tres líneas y comerse el precio. */
+html body .service-carousel-info b{
+  line-height:1.18 !important;
+  display:-webkit-box !important;
+  -webkit-line-clamp:2 !important;
+  -webkit-box-orient:vertical !important;
+  overflow:hidden !important;
+}
+html body .service-carousel-info small{
+  display:-webkit-box !important;
+  -webkit-line-clamp:2 !important;
+  -webkit-box-orient:vertical !important;
+  overflow:hidden !important;
+}
+
+/* El precio es lo que decide la compra: que no se parta nunca. */
+html body .retro-carousel-note{
+  white-space:nowrap !important;
+  margin-top:6px !important;
+}
+</style>
+
 </body>
 </html>
