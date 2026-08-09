@@ -40063,55 +40063,7 @@ html body > main *{
 
      Y de paso el resto de mejoras visuales de la sección.
      ═══════════════════════════════════════════════════════════════════ -->
-<style id="vg-carrusel-v91">
 
-/* 1. El resplandor, sin borde sucio. Mismo morado, opacidad a cero. */
-.service-carousel-card:after{
-  background:radial-gradient(circle,
-    rgba(139,92,246,.42) 0%,
-    rgba(139,92,246,.18) 42%,
-    rgba(139,92,246,0) 72%) !important;
-}
-
-/* 2. El velo del texto: de un lado a otro y también desde abajo, que
-      es donde de verdad está el texto. Antes solo venía de la
-      izquierda y el precio quedaba sobre la parte clara de la foto. */
-.service-carousel-card:before{
-  background:
-    linear-gradient(90deg, rgba(8,10,18,.92) 0%, rgba(8,10,18,.55) 46%,
-                           rgba(8,10,18,.10) 78%, rgba(8,10,18,0) 100%),
-    linear-gradient(0deg,  rgba(8,10,18,.80) 0%, rgba(8,10,18,.18) 46%,
-                           rgba(8,10,18,0) 72%) !important;
-}
-
-/* 3. La foto, sin retoques que ensucian. El contraste subido marcaba
-      los bordes de los logos; el saturado los volvía chillones. */
-.service-carousel-card img{
-  filter:saturate(1.04) !important;
-  transform:scale(1.02) !important;
-}
-.service-carousel-card:hover img{ transform:scale(1.07) !important }
-
-/* 4. Un borde interior claro. Da sensación de tarjeta de cristal y
-      tapa el corte duro contra el fondo de la página. */
-.service-carousel-card{
-  box-shadow:0 14px 40px rgba(0,0,0,.34),
-             inset 0 1px 0 rgba(255,255,255,.10) !important;
-}
-
-/* 5. Al pasar por encima, el resplandor responde. Antes la tarjeta se
-      movía pero la luz se quedaba quieta y parecía pegada. */
-.service-carousel-card:after{
-  transition:opacity .3s ease, transform .3s ease;
-  opacity:.85;
-}
-.service-carousel-card:hover:after{ opacity:1; transform:scale(1.12) }
-
-@media(prefers-reduced-motion:reduce){
-  .service-carousel-card:after{transition:none}
-  .service-carousel-card:hover img{transform:scale(1.02) !important}
-}
-</style>
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -40130,28 +40082,7 @@ html body > main *{
      baja de un mínimo, así que no hay punto donde empiece ni acabe: la
      foto se ve más clara a la derecha, pero sin costura.
      ═══════════════════════════════════════════════════════════════════ -->
-<style id="vg-carrusel-v92">
-.service-carousel-card:before{
-  background:
-    linear-gradient(90deg, rgba(8,10,18,.93) 0%,  rgba(8,10,18,.78) 30%,
-                           rgba(8,10,18,.56) 55%, rgba(8,10,18,.40) 78%,
-                           rgba(8,10,18,.34) 100%),
-    linear-gradient(0deg,  rgba(8,10,18,.55) 0%,  rgba(8,10,18,.22) 55%,
-                           rgba(8,10,18,.16) 100%) !important;
-}
 
-/* El resplandor también terminaba en cero y dejaba su propio filo.
-   Ahora se apaga muy pronto y mucho más suave. */
-.service-carousel-card:after{
-  inset:auto -20% -60% auto !important;
-  width:230px !important; height:230px !important;
-  background:radial-gradient(circle,
-    rgba(139,92,246,.30) 0%,
-    rgba(139,92,246,.10) 50%,
-    rgba(139,92,246,.02) 78%,
-    rgba(139,92,246,0) 100%) !important;
-}
-</style>
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -40173,32 +40104,7 @@ html body > main *{
      Mismo criterio que en las demás: el velo nunca baja de un mínimo,
      así que no hay frontera donde empiece ni acabe.
      ═══════════════════════════════════════════════════════════════════ -->
-<style id="vg-carrusel-retro-v93">
-html body .service-carousel-card.retro-carousel-card::before{
-  background:
-    linear-gradient(90deg, rgba(6,9,18,.93) 0%,  rgba(6,9,18,.78) 30%,
-                           rgba(6,9,18,.58) 55%, rgba(6,9,18,.44) 78%,
-                           rgba(6,9,18,.38) 100%),
-    linear-gradient(0deg,  rgba(6,9,18,.55) 0%,  rgba(6,9,18,.22) 55%,
-                           rgba(6,9,18,.16) 100%) !important;
-}
 
-/* Y su resplandor, igual que el de las demás, para que las dos clases
-   de tarjeta se vean como la misma cosa. */
-html body .service-carousel-card.retro-carousel-card::after{
-  inset:auto -20% -60% auto !important;
-  width:230px !important; height:230px !important;
-  background:radial-gradient(circle,
-    rgba(139,92,246,.30) 0%,
-    rgba(139,92,246,.10) 50%,
-    rgba(139,92,246,.02) 78%,
-    rgba(139,92,246,0) 100%) !important;
-}
-
-html body .service-carousel-card.retro-carousel-card img{
-  filter:saturate(1.04) !important;
-}
-</style>
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -40219,57 +40125,7 @@ html body .service-carousel-card.retro-carousel-card img{
      verse mal. Contain las mete enteras; el fondo del marco rellena lo
      que sobra.
      ═══════════════════════════════════════════════════════════════════ -->
-<style id="vg-carrusel-v94">
 
-/* Fuera los dos velos. Ya no hay texto debajo que proteger, así que
-   ya no hay borde que disimular. */
-html body .service-carousel-card::before,
-html body .service-carousel-card::after,
-html body .service-carousel-card.retro-carousel-card::before,
-html body .service-carousel-card.retro-carousel-card::after{
-  display:none !important;
-}
-
-html body .service-carousel-card{
-  background:linear-gradient(135deg,#131a2c,#0c111e) !important;
-}
-
-/* La foto, en su mitad y a plena luz. */
-html body .service-carousel-card img,
-html body .service-carousel-card.retro-carousel-card img{
-  left:auto !important; right:0 !important;
-  top:0 !important; bottom:0 !important;
-  width:46% !important; height:100% !important;
-  object-fit:contain !important;
-  object-position:center !important;
-  padding:11px !important;
-  background:
-    radial-gradient(circle at 50% 42%, rgba(139,92,246,.16), rgba(0,0,0,0) 68%),
-    linear-gradient(160deg,#182034,#0b0f1c) !important;
-  border-left:1px solid rgba(255,255,255,.07) !important;
-  filter:none !important;
-  transform:none !important;
-  transition:transform .3s ease !important;
-}
-html body .service-carousel-card:hover img{ transform:scale(1.05) !important }
-
-/* El texto, en la suya. Sin invadir el marco. */
-html body .service-carousel-info{
-  position:relative !important;
-  z-index:3 !important;
-  padding-right:49% !important;
-}
-
-/* En pantallas estrechas la tarjeta es más chica: la foto cede sitio
-   para que el nombre no salga partido en cinco líneas. */
-@media(max-width:640px){
-  html body .service-carousel-card img,
-  html body .service-carousel-card.retro-carousel-card img{
-    width:40% !important; padding:8px !important;
-  }
-  html body .service-carousel-info{ padding-right:43% !important }
-}
-</style>
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -40439,59 +40295,9 @@ html body .service-carousel-info{
      número que no parece un precio no se enseña. Un precio equivocado
      en la portada es peor que no poner precio.
      ═══════════════════════════════════════════════════════════════════ -->
-<style id="vg-carrusel-v96">
-html body .service-carousel-card img,
-html body .service-carousel-card.retro-carousel-card img{
-  background:transparent !important;
-  border-left:0 !important;
-  padding:12px 12px 12px 4px !important;
-}
-</style>
 
-<script id="vg-carrusel-js-v96">
-(function(){
-  'use strict';
-  if(window.__VG96__) return; window.__VG96__ = true;
 
-  /* Un precio de verdad es un número positivo y con sentido. Todo lo
-     que no lo sea se calla: negativos, ceros y cosas raras venían de
-     leer un campo que no era el precio. */
-  function malo(t){
-    var m = String(t||'').match(/-?\d[\d.,]*/);
-    if(!m) return true;
-    var n = Number(m[0].replace(/[.,]/g,''));
-    return !isFinite(n) || n <= 0;
-  }
 
-  function limpiar(){
-    Array.prototype.forEach.call(
-      document.querySelectorAll('.vgfn-carousel-card .retro-carousel-note'),
-      function(el){
-        if(el.dataset.vg96) return;
-        el.dataset.vg96 = '1';
-        if(malo(el.textContent)) el.textContent = 'Ver precio en la sección';
-      });
-  }
-
-  var pend = false;
-  function pedir(){
-    if(pend) return; pend = true;
-    requestAnimationFrame(function(){ pend = false; try{ limpiar(); }catch(e){} });
-  }
-
-  function arrancar(){
-    var row = document.getElementById('homeTiles');
-    if(!row){ setTimeout(arrancar, 1500); return; }
-    if(row.dataset.vg96) return;
-    row.dataset.vg96 = '1';
-    new MutationObserver(pedir).observe(row, {childList:true, subtree:true});
-    pedir();
-  }
-
-  if(document.readyState === 'complete') arrancar();
-  else window.addEventListener('load', arrancar, {once:true});
-})();
-</script>
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -40510,41 +40316,7 @@ html body .service-carousel-card.retro-carousel-card img{
 
      Es lo que pedías al principio: un cuadro que se acople a la foto.
      ═══════════════════════════════════════════════════════════════════ -->
-<style id="vg-carrusel-v97">
-html body .service-carousel-card img,
-html body .service-carousel-card.retro-carousel-card img{
-  /* Se separa de los bordes para que el recuadro respire y no toque
-     el filo de la tarjeta, que es lo que lo hacía parecer un corte. */
-  top:12px !important; bottom:12px !important; right:12px !important;
-  height:auto !important;
-  width:42% !important;
-  padding:0 !important;
 
-  border-radius:13px !important;
-  border:1px solid rgba(255,255,255,.10) !important;
-  box-shadow:0 6px 18px rgba(0,0,0,.34) !important;
-
-  /* "cover" recorta un poco pero llena el recuadro entero, así que no
-     queda aire muerto entre la foto y su marco. Los bordes redondeados
-     se los come el recuadro, no la foto. */
-  object-fit:cover !important;
-  object-position:center !important;
-  background:#0b0f1c !important;
-}
-
-html body .service-carousel-info{
-  padding-right:47% !important;
-}
-
-@media(max-width:640px){
-  html body .service-carousel-card img,
-  html body .service-carousel-card.retro-carousel-card img{
-    width:37% !important; top:10px !important; bottom:10px !important;
-    right:10px !important; border-radius:11px !important;
-  }
-  html body .service-carousel-info{ padding-right:41% !important }
-}
-</style>
 
 
 <!-- ═══════════════════════════════════════════════════════════════════
@@ -40566,74 +40338,7 @@ html body .service-carousel-info{
      en el lado derecho. Un velo que se apaga del todo deja frontera;
      uno que no se apaga nunca, no.
      ═══════════════════════════════════════════════════════════════════ -->
-<style id="vg-carrusel-v98">
 
-/* ── Catálogo: la foto ocupa la tarjeta entera ──────────────── */
-html body .service-carousel-card:not(.retro-carousel-card):not(.vgfn-carousel-card) img{
-  top:0 !important; right:0 !important; bottom:0 !important; left:0 !important;
-  width:100% !important; height:100% !important;
-  object-fit:cover !important;
-  object-position:center !important;
-  border:0 !important;
-  border-radius:0 !important;
-  box-shadow:none !important;
-  background:transparent !important;
-  padding:0 !important;
-  z-index:0 !important;
-}
-
-/* El velo vuelve, pero sin punto donde empiece ni acabe. */
-html body .service-carousel-card:not(.retro-carousel-card):not(.vgfn-carousel-card)::before{
-  display:block !important;
-  content:"" !important;
-  position:absolute !important;
-  top:0 !important; right:0 !important; bottom:0 !important; left:0 !important;
-  z-index:1 !important;
-  background:linear-gradient(96deg,
-    rgba(7,10,20,.97) 0%,
-    rgba(7,10,20,.93) 30%,
-    rgba(7,10,20,.78) 55%,
-    rgba(7,10,20,.60) 80%,
-    rgba(7,10,20,.52) 100%) !important;
-}
-
-html body .service-carousel-card:not(.retro-carousel-card):not(.vgfn-carousel-card) .service-carousel-info{
-  padding-right:16px !important;
-  max-width:74% !important;
-}
-
-/* ── Detalles comunes ───────────────────────────────────────── */
-html body .service-carousel-card{
-  border-color:rgba(255,255,255,.07) !important;
-  transition:transform .26s ease, border-color .26s ease, box-shadow .26s ease !important;
-}
-html body .service-carousel-card:hover{
-  transform:translateY(-4px) !important;
-  border-color:rgba(25,230,193,.34) !important;
-  box-shadow:0 18px 44px rgba(0,0,0,.44) !important;
-}
-
-/* El nombre no debe partirse en tres líneas y comerse el precio. */
-html body .service-carousel-info b{
-  line-height:1.18 !important;
-  display:-webkit-box !important;
-  -webkit-line-clamp:2 !important;
-  -webkit-box-orient:vertical !important;
-  overflow:hidden !important;
-}
-html body .service-carousel-info small{
-  display:-webkit-box !important;
-  -webkit-line-clamp:2 !important;
-  -webkit-box-orient:vertical !important;
-  overflow:hidden !important;
-}
-
-/* El precio es lo que decide la compra: que no se parta nunca. */
-html body .retro-carousel-note{
-  white-space:nowrap !important;
-  margin-top:6px !important;
-}
-</style>
 
 </body>
 </html>
