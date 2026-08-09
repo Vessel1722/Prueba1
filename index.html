@@ -40200,5 +40200,76 @@ html body .service-carousel-card.retro-carousel-card img{
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 94 · El carrusel, sin velo y con marco
+
+     Las tres rondas anteriores intentaban suavizar un velo. El velo
+     estaba ahí porque el texto iba ENCIMA de la foto y si no, no se
+     leía. Mientras el texto siga encima, siempre hará falta oscurecer
+     algo, y oscurecer algo siempre deja un borde.
+
+     Así que se quita el problema en vez de suavizarlo: la foto se va a
+     su propia mitad, con su marco, y el texto a la suya. Sin nada
+     encima, la foto se ve tal cual es.
+
+     El marco lleva "contain" y no "cover": cada foto tuya trae una
+     forma distinta -logos cuadrados, capturas apaisadas, portadas
+     verticales- y recortarlas a todas por igual es lo que las hacía
+     verse mal. Contain las mete enteras; el fondo del marco rellena lo
+     que sobra.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-v94">
+
+/* Fuera los dos velos. Ya no hay texto debajo que proteger, así que
+   ya no hay borde que disimular. */
+html body .service-carousel-card::before,
+html body .service-carousel-card::after,
+html body .service-carousel-card.retro-carousel-card::before,
+html body .service-carousel-card.retro-carousel-card::after{
+  display:none !important;
+}
+
+html body .service-carousel-card{
+  background:linear-gradient(135deg,#131a2c,#0c111e) !important;
+}
+
+/* La foto, en su mitad y a plena luz. */
+html body .service-carousel-card img,
+html body .service-carousel-card.retro-carousel-card img{
+  left:auto !important; right:0 !important;
+  top:0 !important; bottom:0 !important;
+  width:46% !important; height:100% !important;
+  object-fit:contain !important;
+  object-position:center !important;
+  padding:11px !important;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(139,92,246,.16), rgba(0,0,0,0) 68%),
+    linear-gradient(160deg,#182034,#0b0f1c) !important;
+  border-left:1px solid rgba(255,255,255,.07) !important;
+  filter:none !important;
+  transform:none !important;
+  transition:transform .3s ease !important;
+}
+html body .service-carousel-card:hover img{ transform:scale(1.05) !important }
+
+/* El texto, en la suya. Sin invadir el marco. */
+html body .service-carousel-info{
+  position:relative !important;
+  z-index:3 !important;
+  padding-right:49% !important;
+}
+
+/* En pantallas estrechas la tarjeta es más chica: la foto cede sitio
+   para que el nombre no salga partido en cinco líneas. */
+@media(max-width:640px){
+  html body .service-carousel-card img,
+  html body .service-carousel-card.retro-carousel-card img{
+    width:40% !important; padding:8px !important;
+  }
+  html body .service-carousel-info{ padding-right:43% !important }
+}
+</style>
+
 </body>
 </html>
