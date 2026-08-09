@@ -39286,5 +39286,112 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 85 · El panel baja de verdad en el teléfono
+
+     Medido en vivo a 375px, con el panel abierto:
+
+       .vg-admin-content   768px de alto, 788px de contenido, oculto
+       .vg-admin-panel     812px de alto, 1039px de contenido, oculto
+
+     Dos cajas atrapando lo de dentro, no una.
+
+     La fase 84 no bastó: la escribí en CSS y perdía la pelea de
+     especificidad, incluso con "html body" delante y !important. En un
+     archivo con 65 capas de estilos, seguir subiendo la especificidad
+     es una carrera que no se gana; siempre hay una regla más concreta.
+
+     Así que se aplica como estilo directo en el elemento y con
+     prioridad, que es lo único que gana siempre. No es elegante, pero
+     es lo que hay hasta que se limpien las capas.
+
+     El min-height:0 no es adorno: sin él, un hijo de flex se niega a
+     encogerse por debajo de su contenido y el desplazamiento no
+     aparece nunca.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script id="vg-panel-movil-js-v85">
+(function(){
+  'use strict';
+  if(window.__VG85__) return; window.__VG85__ = true;
+
+  var PROPS = {
+    panel:   {display:'flex','flex-direction':'column',height:'100dvh',
+              'max-height':'100dvh',overflow:'hidden'},
+    fijo:    {flex:'0 0 auto'},
+    content: {flex:'1 1 auto','min-height':'0',height:'auto','max-height':'none',
+              overflow:'auto','overflow-y':'auto','overscroll-behavior':'contain',
+              '-webkit-overflow-scrolling':'touch','padding-bottom':'40px'},
+    seccion: {'max-height':'none',height:'auto',overflow:'visible'}
+  };
+
+  function poner(el, o){
+    if(!el) return;
+    for(var k in o) el.style.setProperty(k, o[k], 'important');
+  }
+  function quitar(el, o){
+    if(!el) return;
+    for(var k in o) el.style.removeProperty(k);
+  }
+
+  function aplicar(){
+    var m = document.getElementById('vgAdminModal');
+    if(!m || !m.classList.contains('active')) return;
+
+    var panel = m.querySelector('.vg-admin-panel');
+    var head  = m.querySelector('.vg-admin-head');
+    var tabs  = m.querySelector('.vg-admin-tabs');
+    var cont  = m.querySelector('.vg-admin-content');
+    var secs  = m.querySelectorAll('.vg-admin-section');
+    if(!panel || !cont) return;
+
+    var movil = window.innerWidth <= 900;
+
+    if(movil){
+      poner(panel, PROPS.panel);
+      poner(head,  PROPS.fijo);
+      poner(tabs,  PROPS.fijo);
+      poner(cont,  PROPS.content);
+      Array.prototype.forEach.call(secs, function(s){ poner(s, PROPS.seccion); });
+    }else{
+      /* En escritorio se devuelve todo: allí el panel ya funcionaba y
+         no hay que arreglarle nada. */
+      quitar(panel, PROPS.panel);
+      quitar(head,  PROPS.fijo);
+      quitar(tabs,  PROPS.fijo);
+      quitar(cont,  PROPS.content);
+      Array.prototype.forEach.call(secs, function(s){ quitar(s, PROPS.seccion); });
+    }
+  }
+
+  var pend = false;
+  function pedir(){
+    if(pend) return; pend = true;
+    requestAnimationFrame(function(){ pend = false; try{ aplicar(); }catch(e){} });
+  }
+
+  var intentos = 0;
+  function arrancar(){
+    var m = document.getElementById('vgAdminModal');
+    if(m && !m.dataset.vg85){
+      m.dataset.vg85 = '1';
+      /* Se vuelve a aplicar cuando cambia de pestaña o se dibuja algo
+         nuevo dentro: las secciones se crean sobre la marcha. */
+      new MutationObserver(pedir).observe(m, {
+        childList:true, subtree:true, attributes:true, attributeFilter:['class']
+      });
+      window.addEventListener('resize', pedir);
+      window.addEventListener('orientationchange', pedir);
+      pedir();
+      return;
+    }
+    if(++intentos < 40) setTimeout(arrancar, 1500);
+  }
+
+  if(document.readyState === 'complete') arrancar();
+  else window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
 </body>
 </html>
