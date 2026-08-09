@@ -40407,5 +40407,77 @@ html body .service-carousel-info{
 })();
 </script>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 96 · Quitar el marco que yo mismo puse, y el precio falso
+
+     Dos cosas.
+
+     EL MARCO. En la fase 94 le di a la foto un panel con fondo más
+     claro y una línea de separación. Eso creó exactamente la división
+     que llevábamos tres fases quitando, solo que ahora la había puesto
+     yo a propósito. El fondo del hueco de la foto pasa a ser el mismo
+     de la tarjeta y desaparece la línea: la foto queda flotando, sin
+     frontera visible por ningún lado.
+
+     EL PRECIO. Salían "$-1 MXN" y "$-2 MXN": leí un campo que no es el
+     precio. En vez de adivinar por cuarta vez, la regla es que un
+     número que no parece un precio no se enseña. Un precio equivocado
+     en la portada es peor que no poner precio.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-v96">
+html body .service-carousel-card img,
+html body .service-carousel-card.retro-carousel-card img{
+  background:transparent !important;
+  border-left:0 !important;
+  padding:12px 12px 12px 4px !important;
+}
+</style>
+
+<script id="vg-carrusel-js-v96">
+(function(){
+  'use strict';
+  if(window.__VG96__) return; window.__VG96__ = true;
+
+  /* Un precio de verdad es un número positivo y con sentido. Todo lo
+     que no lo sea se calla: negativos, ceros y cosas raras venían de
+     leer un campo que no era el precio. */
+  function malo(t){
+    var m = String(t||'').match(/-?\d[\d.,]*/);
+    if(!m) return true;
+    var n = Number(m[0].replace(/[.,]/g,''));
+    return !isFinite(n) || n <= 0;
+  }
+
+  function limpiar(){
+    Array.prototype.forEach.call(
+      document.querySelectorAll('.vgfn-carousel-card .retro-carousel-note'),
+      function(el){
+        if(el.dataset.vg96) return;
+        el.dataset.vg96 = '1';
+        if(malo(el.textContent)) el.textContent = 'Ver precio en la sección';
+      });
+  }
+
+  var pend = false;
+  function pedir(){
+    if(pend) return; pend = true;
+    requestAnimationFrame(function(){ pend = false; try{ limpiar(); }catch(e){} });
+  }
+
+  function arrancar(){
+    var row = document.getElementById('homeTiles');
+    if(!row){ setTimeout(arrancar, 1500); return; }
+    if(row.dataset.vg96) return;
+    row.dataset.vg96 = '1';
+    new MutationObserver(pedir).observe(row, {childList:true, subtree:true});
+    pedir();
+  }
+
+  if(document.readyState === 'complete') arrancar();
+  else window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
 </body>
 </html>
