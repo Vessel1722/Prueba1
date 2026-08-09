@@ -40320,10 +40320,24 @@ html body .service-carousel-info{
     return '$' + n.toLocaleString('es-MX', {maximumFractionDigits:0}) + ' MXN';
   }
 
+  /* Los pavos están en "v". El campo "p" vale -1 y no es un precio:
+     leerlo era lo que sacaba "$-1 MXN" en la portada. */
+  function pesos(a){
+    var v = Number(campo(a,['v','vr']));
+    if(!isFinite(v) || v <= 0) return '';
+    var tarifa = 10;                       /* $10 por cada 100 pavos */
+    try{
+      var t = Number(window.vgFortnite && window.vgFortnite.tarifa);
+      if(isFinite(t) && t > 0) tarifa = t;
+    }catch(e){}
+    return dinero(Math.round(v / 100 * tarifa));
+  }
+
   function tarjeta(a){
-    var nom = String(campo(a,['n','nombre','name','title','t']));
+    var nom = String(campo(a,['n','nombre','name','title']));
     var img = String(campo(a,['i','img','image','icon']));
-    var pre = dinero(campo(a,['mxn','precio','price','p']));
+    var pre = pesos(a);
+    var tipo = String(campo(a,['t']) || '');
     if(!nom || !img) return '';
     return '<article class="service-carousel-card vgfn-carousel-card" '+
              'data-vgfn="'+esc(nom)+'" title="'+esc(nom)+'">'+
@@ -40332,7 +40346,7 @@ html body .service-carousel-info{
       '<div class="service-carousel-info">'+
         '<span class="tag">FORTNITE</span>'+
         '<b>'+esc(nom)+'</b>'+
-        '<small>Tienda de hoy · se entrega vía regalo.</small>'+
+        '<small>'+esc(tipo ? tipo + ' · vía regalo' : 'Tienda de hoy · vía regalo')+'</small>'+
         (pre ? '<div class="retro-carousel-note">Desde '+esc(pre)+'</div>' : '')+
       '</div>'+
     '</article>';
