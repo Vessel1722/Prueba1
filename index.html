@@ -40153,5 +40153,52 @@ html body > main *{
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 93 · La línea estaba en las tarjetas retro
+
+     Tres rondas mías fallando por el mismo motivo: estaba corrigiendo
+     .service-carousel-card, y las tarjetas con la línea son las de
+     juegos retro, que llevan ADEMÁS la clase .retro-carousel-card.
+
+     Esa combinación es más específica que la mía y lleva !important,
+     así que mis reglas nunca llegaron. Encima está escrita tres veces
+     idéntica en el archivo. Estaba arreglando las tarjetas que ya
+     estaban bien.
+
+     Lo que se veía: el velo de esas tarjetas baja hasta .18 en el
+     borde derecho mientras la foto sigue a plena luz. Ese salto entre
+     una zona velada y otra casi limpia es la línea.
+
+     Mismo criterio que en las demás: el velo nunca baja de un mínimo,
+     así que no hay frontera donde empiece ni acabe.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-retro-v93">
+html body .service-carousel-card.retro-carousel-card::before{
+  background:
+    linear-gradient(90deg, rgba(6,9,18,.93) 0%,  rgba(6,9,18,.78) 30%,
+                           rgba(6,9,18,.58) 55%, rgba(6,9,18,.44) 78%,
+                           rgba(6,9,18,.38) 100%),
+    linear-gradient(0deg,  rgba(6,9,18,.55) 0%,  rgba(6,9,18,.22) 55%,
+                           rgba(6,9,18,.16) 100%) !important;
+}
+
+/* Y su resplandor, igual que el de las demás, para que las dos clases
+   de tarjeta se vean como la misma cosa. */
+html body .service-carousel-card.retro-carousel-card::after{
+  inset:auto -20% -60% auto !important;
+  width:230px !important; height:230px !important;
+  background:radial-gradient(circle,
+    rgba(139,92,246,.30) 0%,
+    rgba(139,92,246,.10) 50%,
+    rgba(139,92,246,.02) 78%,
+    rgba(139,92,246,0) 100%) !important;
+}
+
+html body .service-carousel-card.retro-carousel-card img{
+  filter:saturate(1.04) !important;
+}
+</style>
+
 </body>
 </html>
