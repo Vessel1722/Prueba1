@@ -34959,13 +34959,28 @@ html body .nav a.brand > span > small{
 
     var hoy = new Date(); hoy.setHours(0,0,0,0);
 
-    var res = await Promise.all([
+    /* allSettled y no all: con "all", si una sola consulta se cae por
+       red la promesa entera se rechaza, esta función se corta y la
+       pantalla se queda en "Cargando…" para siempre sin explicar nada.
+       Así cada parte va por su cuenta y lo que sí cargó se enseña. */
+    var crudo = await Promise.allSettled([
       c.from('orders').select('id,status,total,created_at,source,product_name,items,customer_name,client_name')
        .order('created_at',{ascending:false}).limit(400),
       c.rpc('vg_admin_por_vencer', {p_dias:7}),
       c.from('vg_support_tickets').select('id,product_name,problem_description,status,created_at,customer_name')
        .order('created_at',{ascending:false}).limit(100)
     ]);
+
+    var NOMBRES = ['los pedidos', 'los avisos de vencimiento', 'los tickets'];
+    var fallos = [];
+    var res = crudo.map(function(r, i){
+      if(r.status !== 'fulfilled'){
+        fallos.push(NOMBRES[i] + ' (' + String((r.reason && r.reason.message) || r.reason) + ')');
+        return {error:{message:'sin respuesta'}};
+      }
+      if(r.value && r.value.error) fallos.push(NOMBRES[i] + ' (' + r.value.error.message + ')');
+      return r.value;
+    });
 
     var pedidos = (res[0] && !res[0].error && res[0].data) ? res[0].data : [];
     var vencen  = (res[1] && !res[1].error && Array.isArray(res[1].data)) ? res[1].data : [];
@@ -34983,7 +34998,18 @@ html body .nav a.brand > span > small{
       return String(o.product_name || (o.items && o.items[0] && o.items[0].title) || 'Pedido');
     }
 
-    var html = '<div class="vghoy-tit"><h3>Lo que te toca hoy</h3>'+
+    /* Si algo no cargó se dice en pantalla. Un panel que enseña ceros
+       cuando en realidad no pudo preguntar es peor que uno que falla:
+       te hace tomar decisiones sobre datos que no existen. */
+    var aviso = fallos.length
+      ? '<div style="margin:0 0 12px;padding:11px 14px;border-radius:11px;'+
+        'border:1px solid rgba(255,160,80,.3);background:rgba(255,160,80,.08);'+
+        'color:#ffc48a;font-size:.8rem;line-height:1.5">'+
+        '<b>No pude cargar '+esc(fallos.join(' ni '))+'.</b> '+
+        'Lo demás de esta pantalla sí es correcto.</div>'
+      : '';
+
+    var html = aviso + '<div class="vghoy-tit"><h3>Lo que te toca hoy</h3>'+
       '<span>Vendido hoy: <b style="color:#22f5d3">'+dinero(vendHoy)+'</b></span></div>';
 
     /* ── Pedidos pendientes ── */
