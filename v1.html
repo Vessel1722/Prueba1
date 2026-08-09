@@ -40113,5 +40113,45 @@ html body > main *{
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 92 · La línea del carrusel, esta vez la causa de verdad
+
+     Mi diagnóstico anterior era erróneo: cambié el "transparent" del
+     resplandor y la línea siguió igual. Descartado eso, la causa es
+     otra y estaba delante.
+
+     El velo llega a opacidad CERO antes del borde derecho. Ahí la foto
+     queda al descubierto de golpe, y ese salto de cubierto a sin
+     cubrir es la línea. Lo empeoré yo al hacer que el degradado
+     terminara en cero.
+
+     Un velo que se apaga del todo siempre deja frontera. Ahora nunca
+     baja de un mínimo, así que no hay punto donde empiece ni acabe: la
+     foto se ve más clara a la derecha, pero sin costura.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-v92">
+.service-carousel-card:before{
+  background:
+    linear-gradient(90deg, rgba(8,10,18,.93) 0%,  rgba(8,10,18,.78) 30%,
+                           rgba(8,10,18,.56) 55%, rgba(8,10,18,.40) 78%,
+                           rgba(8,10,18,.34) 100%),
+    linear-gradient(0deg,  rgba(8,10,18,.55) 0%,  rgba(8,10,18,.22) 55%,
+                           rgba(8,10,18,.16) 100%) !important;
+}
+
+/* El resplandor también terminaba en cero y dejaba su propio filo.
+   Ahora se apaga muy pronto y mucho más suave. */
+.service-carousel-card:after{
+  inset:auto -20% -60% auto !important;
+  width:230px !important; height:230px !important;
+  background:radial-gradient(circle,
+    rgba(139,92,246,.30) 0%,
+    rgba(139,92,246,.10) 50%,
+    rgba(139,92,246,.02) 78%,
+    rgba(139,92,246,0) 100%) !important;
+}
+</style>
+
 </body>
 </html>
