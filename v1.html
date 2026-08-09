@@ -40271,5 +40271,141 @@ html body .service-carousel-info{
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 95 · Fortnite también en el carrusel de inicio
+
+     Espejo de lo que ya hace addRetroCards con los juegos retro, pero
+     para la tienda de Fortnite, que es otra lista y hasta ahora no
+     salía en la portada.
+
+     Dos cuidados que el de retro no necesita:
+
+     La tienda de Fortnite llega por internet y tarda, así que se
+     espera a que haya datos en vez de dar por hecho que están.
+
+     Y el carrusel clona tarjetas para dar la vuelta sin cortes. Si se
+     insertan entre las copias, se ven repetidas y descolocadas; por
+     eso van siempre antes de la primera copia.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script id="vg-carrusel-fortnite-js-v95">
+(function(){
+  'use strict';
+  if(window.__VG95__) return; window.__VG95__ = true;
+
+  var CUANTAS = 8;
+
+  function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});}
+
+  /* Cada lista de esta página guarda las cosas a su manera. Se prueban
+     varios nombres en vez de perseguir la forma exacta. */
+  function campo(o, nombres){
+    for(var i=0;i<nombres.length;i++){
+      var v = o[nombres[i]];
+      if(v !== undefined && v !== null && v !== '') return v;
+    }
+    return '';
+  }
+
+  function articulos(){
+    var d = null;
+    try{ d = window.vgFortnite && window.vgFortnite.datos && window.vgFortnite.datos(); }catch(e){}
+    return (d && Array.isArray(d.articulos)) ? d.articulos : [];
+  }
+
+  function dinero(n){
+    n = Number(n||0);
+    if(!n) return '';
+    return '$' + n.toLocaleString('es-MX', {maximumFractionDigits:0}) + ' MXN';
+  }
+
+  function tarjeta(a){
+    var nom = String(campo(a,['n','nombre','name','title','t']));
+    var img = String(campo(a,['i','img','image','icon']));
+    var pre = dinero(campo(a,['mxn','precio','price','p']));
+    if(!nom || !img) return '';
+    return '<article class="service-carousel-card vgfn-carousel-card" '+
+             'data-vgfn="'+esc(nom)+'" title="'+esc(nom)+'">'+
+      '<img decoding="async" loading="lazy" src="'+esc(img)+'" alt="'+esc(nom)+'" '+
+        'referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=\'portada.png\'">'+
+      '<div class="service-carousel-info">'+
+        '<span class="tag">FORTNITE</span>'+
+        '<b>'+esc(nom)+'</b>'+
+        '<small>Tienda de hoy · se entrega vía regalo.</small>'+
+        (pre ? '<div class="retro-carousel-note">Desde '+esc(pre)+'</div>' : '')+
+      '</div>'+
+    '</article>';
+  }
+
+  function abrir(nombre){
+    try{
+      var u = new URL(location.href);
+      u.searchParams.set('seccion', 'fortnite');
+      history.replaceState({}, '', u.pathname + u.search);
+      var b = Array.prototype.filter.call(
+        document.querySelectorAll('.cat-btn,[data-cat]'),
+        function(x){ return /fortnite/i.test(x.textContent || x.getAttribute('data-cat') || ''); })[0];
+      if(b) b.click();
+      setTimeout(function(){
+        var s = document.querySelector('#vgfnBuscar,.vgfn-buscar input');
+        if(s){ s.value = nombre; s.dispatchEvent(new Event('input',{bubbles:true})); }
+      }, 420);
+    }catch(e){}
+  }
+
+  function meter(){
+    var row = document.getElementById('homeTiles');
+    if(!row || !row.children.length) return false;
+    if(row.querySelector('.vgfn-carousel-card')) return true;   /* ya están */
+
+    var arts = articulos();
+    if(!arts.length) return false;                              /* aún sin datos */
+
+    /* Se prefieren los que traen render grande: los iconos pequeños
+       estirados en la tarjeta se ven pixelados. */
+    var buenos = arts.filter(function(a){
+      var i = String(campo(a,['i','img','image','icon']));
+      return i && i.indexOf('newdisplayassets') > 0;
+    });
+    var elegidos = (buenos.length ? buenos : arts).slice(0, CUANTAS);
+
+    var temp = document.createElement('div');
+    temp.innerHTML = elegidos.map(tarjeta).join('');
+    var cards = Array.prototype.slice.call(temp.children);
+    if(!cards.length) return true;    /* la lista no trae los campos: no se insiste */
+
+    /* Nunca entre las copias del bucle: ahí se verían repetidas. */
+    var tope = row.querySelector('[data-carousel-clone="1"]');
+    var reales = Array.prototype.filter.call(row.children, function(c){
+      return c.getAttribute('data-carousel-clone') !== '1';
+    }).length;
+
+    cards.forEach(function(card, i){
+      var pos = Math.min(reales, (i + 1) * 3);
+      var ref = tope || row.children[pos] || null;
+      row.insertBefore(card, tope ? tope : ref);
+    });
+
+    row.addEventListener('click', function(ev){
+      var it = ev.target.closest && ev.target.closest('[data-vgfn]');
+      if(it) abrir(it.getAttribute('data-vgfn'));
+    });
+
+    return true;
+  }
+
+  /* La tienda de Fortnite llega por internet: se espera, sin agobiar. */
+  var intentos = 0;
+  function esperar(){
+    try{ if(meter()) return; }catch(e){}
+    if(++intentos < 40) setTimeout(esperar, 1500);
+  }
+
+  if(document.readyState === 'complete') setTimeout(esperar, 1200);
+  else window.addEventListener('load', function(){ setTimeout(esperar, 1200); }, {once:true});
+})();
+</script>
+
 </body>
 </html>
