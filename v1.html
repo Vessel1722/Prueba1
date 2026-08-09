@@ -39566,5 +39566,41 @@ html body > main *{
   max-width:100%;
 }
 </style>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 88 · Dos ajustes de la auditoría en móvil
+
+     Medido a 375px:
+
+       · 204 etiquetas de categoría a 10px. Se leen, pero justo, y en
+         un teléfono al sol dejan de leerse.
+       · 10 botones de favorito de 34px de alto. Lo recomendado para
+         tocar con el dedo son 44; por debajo de 40 se falla a menudo.
+
+     Ninguno de los dos cambia cómo se ve la página: la etiqueta ocupa
+     un pelo más y el corazón crece hacia dentro de su propio hueco.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-legibilidad-movil-v88">
+@media(max-width:900px){
+
+  /* De 10 a 11,5px. Un píxel y medio no parece nada hasta que lees
+     "Xbox One / Series" en la calle con el móvil. */
+  html body main .tag{
+    font-size:11.5px !important;
+    letter-spacing:.01em;
+  }
+
+  /* El corazón de favoritos, a tamaño de dedo. Crece hacia dentro de
+     su propio hueco, así que la tarjeta no se mueve. */
+  html body .vg-fav-btn{
+    min-width:40px !important;
+    min-height:40px !important;
+    display:inline-flex !important;
+    align-items:center !important;
+    justify-content:center !important;
+  }
+}
+</style>
+
 </body>
 </html>
