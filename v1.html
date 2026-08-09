@@ -39650,11 +39650,32 @@ html body > main *{
 
   /* ¿Este campo es de imagen? Se mira por lo que dice, no por su
      nombre exacto, para que valga en formularios que aún no existen. */
+  /* La etiqueta de al lado. En este panel el campo no dice de qué es
+     -pone "Imagen (URL)" encima, no dentro-, así que mirar solo los
+     atributos del campo era quedarse ciego justo donde hacía falta. */
+  function etiquetaDe(inp){
+    var t = '';
+    if(inp.id){
+      var l = document.querySelector('label[for="' + inp.id.replace(/"/g,'\\"') + '"]');
+      if(l) t += ' ' + l.textContent;
+    }
+    var p = inp.previousElementSibling;
+    if(p && /^(LABEL|SPAN|B|SMALL|DIV)$/.test(p.tagName)) t += ' ' + p.textContent;
+    var caja = inp.closest('label,.field,.form-group,div');
+    if(caja && caja !== inp.parentNode) t += ' ' + (caja.textContent||'').slice(0,60);
+    else if(inp.parentNode) t += ' ' + (inp.parentNode.textContent||'').slice(0,60);
+    return t.toLowerCase();
+  }
+
   function esCampoDeImagen(inp){
-    if(inp.type && ['file','checkbox','number','password'].indexOf(inp.type) >= 0) return false;
-    var pistas = [inp.id, inp.name, inp.placeholder,
+    if(inp.type && ['file','checkbox','number','password','date'].indexOf(inp.type) >= 0) return false;
+    var propio = [inp.id, inp.name, inp.placeholder,
                   inp.getAttribute('data-field') || ''].join(' ').toLowerCase();
-    return /imagen|image|foto|portada|cover|thumb/.test(pistas);
+    var todo = propio + ' ' + etiquetaDe(inp);
+    if(/imagen|image|foto|portada|cover|thumb/.test(todo)) return true;
+    /* "img" solo como palabra suelta: si no, "imgur" en un valor
+       pegado haría saltar cualquier campo. */
+    return /\bimg\b|_img|img_|imgurl/.test(propio);
   }
 
   /* Encoger sin deformar. Si ya es pequeña se deja como está. */
@@ -39770,11 +39791,12 @@ html body > main *{
     });
   }
 
+  /* Se busca en toda la página y no solo dentro del modal: el editor
+     de productos es otra pantalla, y buscando solo en el modal el
+     botón no aparecía justo donde más falta hace. */
   function repasar(){
-    var m = document.getElementById('vgAdminModal');
-    if(!m || !m.classList.contains('active')) return;
-    Array.prototype.forEach.call(m.querySelectorAll('input'), function(i){
-      if(esCampoDeImagen(i)) montar(i);
+    Array.prototype.forEach.call(document.querySelectorAll('input'), function(i){
+      if(!i.dataset.vg89 && esCampoDeImagen(i)) montar(i);
     });
   }
 
@@ -39784,17 +39806,13 @@ html body > main *{
     requestAnimationFrame(function(){ pend = false; try{ repasar(); }catch(e){} });
   }
 
-  var intentos = 0;
   function arrancar(){
-    var m = document.getElementById('vgAdminModal');
-    if(m && !m.dataset.vg89){
-      m.dataset.vg89 = '1';
-      new MutationObserver(pedir).observe(m, {childList:true, subtree:true,
-        attributes:true, attributeFilter:['class']});
-      pedir();
-      return;
-    }
-    if(++intentos < 40) setTimeout(arrancar, 1500);
+    if(document.body.dataset.vg89) return;
+    document.body.dataset.vg89 = '1';
+    /* Se vigila el documento entero porque el editor de productos se
+       dibuja cuando le das a Editar, no está desde el principio. */
+    new MutationObserver(pedir).observe(document.body, {childList:true, subtree:true});
+    pedir();
   }
 
   if(document.readyState === 'complete') arrancar();
