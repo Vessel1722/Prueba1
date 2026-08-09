@@ -39244,5 +39244,47 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   transform:none !important;
 }
 </style>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 84 · Que el panel baje en el teléfono
+
+     No era la cuenta del segundo administrador: era su teléfono. El
+     contenido del panel no tenía cómo desplazarse en pantallas
+     estrechas, así que el detalle del pedido y el botón de entregar
+     quedaban fuera de alcance. Desde el PC no se notaba, y por eso
+     parecía un problema de permisos.
+
+     overscroll-behavior evita que al llegar al final arrastre la
+     página de detrás, que en móvil es justo lo que hace que parezca
+     trabado.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-panel-movil-v84">
+@media(max-width:900px){
+  #vgAdminModal .vg-admin-content{
+    overflow-y:auto !important;
+    -webkit-overflow-scrolling:touch;
+    overscroll-behavior:contain;
+    max-height:calc(100dvh - 124px) !important;
+    padding-bottom:34px !important;
+  }
+
+  /* Ninguna sección debe recortar lo suyo: el que desplaza es el
+     contenedor de arriba, no ellas. */
+  #vgAdminModal .vg-admin-section,
+  #vgAdminModal .vg-admin-section.active{
+    max-height:none !important;
+    overflow:visible !important;
+  }
+
+  /* La fila de pestañas se desplaza a lo ancho en vez de apretar el
+     resto del panel. */
+  #vgAdminModal .vg-admin-tabs{
+    overflow-x:auto;
+    -webkit-overflow-scrolling:touch;
+    flex-wrap:nowrap !important;
+  }
+}
+</style>
+
 </body>
 </html>
