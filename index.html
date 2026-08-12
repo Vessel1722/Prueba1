@@ -40243,9 +40243,19 @@ html body #homeTiles .vgfn-carousel-card img{
   left:auto !important;
   right:14px !important;
   top:12px !important;
-  bottom:12px !important;
+
+  /* El hueco se manda por ALTO, no por ancho. Con height:auto la foto
+     está sobre-restringida (top y bottom puestos a la vez): el
+     navegador tira el bottom y le da el alto que salga de su propia
+     proporción. Medido en vivo, tarjeta de 380x180: la portada retro
+     salía de 144x216 en un hueco de 156 y el overflow:hidden de la
+     tarjeta le cortaba 48px por abajo. Y "contain" no llegaba a
+     hacer nada, porque la caja ya tenía la proporción de la foto.
+     Fijando el alto, contain sí trabaja: retro pinta 103x154 y
+     Fortnite 144x144, las dos enteras y dentro. */
+  bottom:auto !important;
   width:38% !important;
-  height:auto !important;
+  height:calc(100% - 24px) !important;
 
   /* Contain y no cover: la foto entra entera en su hueco en vez de
      enseñar una franja del medio. */
@@ -40255,10 +40265,12 @@ html body #homeTiles .vgfn-carousel-card img{
   transform:none !important;
   filter:none !important;
 
-  /* Por encima del velo. Medido en vivo: el velo de estas tarjetas va
-     en capa 1 y la foto en la 0, así que ahora que la foto es un
-     recuadro pequeño el velo la apagaba entera. Sigue oscureciendo el
-     fondo bajo el texto, que es para lo que está. */
+  /* Por encima del velo. Medido en vivo: el velo (::before) va en capa
+     2, el resplandor (::after) en la 1 y el texto en la 3. La foto en
+     la 2 empata con el velo y le gana por orden, así que se ve limpia;
+     el texto sigue por encima de todo. Mientras la foto ocupaba la
+     tarjeta entera esto no se notaba, pero de recuadro pequeño el velo
+     la apagaba. */
   z-index:2 !important;
 }
 
@@ -40272,7 +40284,8 @@ html body #homeTiles .vgfn-carousel-card .service-carousel-info{
   html body #homeTiles .retro-carousel-card img,
   html body #homeTiles .vgfn-carousel-card img{
     width:34% !important; right:11px !important;
-    top:10px !important; bottom:10px !important;
+    top:10px !important; bottom:auto !important;
+    height:calc(100% - 20px) !important;
   }
   html body #homeTiles .retro-carousel-card .service-carousel-info,
   html body #homeTiles .vgfn-carousel-card .service-carousel-info{
