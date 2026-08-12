@@ -40217,5 +40217,63 @@ html body .home-sections::-webkit-scrollbar{
 }
 </style>
 
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 99 · Retro y Fortnite, a su proporción
+
+     Medido en la página publicada, no supuesto:
+
+       tarjeta    389x183   proporción 2,13  (muy apaisada)
+       retro      240x360   proporción 0,67  (vertical)
+       fortnite  2048x2048  proporción 1,00  (cuadrada)
+       catálogo  1200x750   proporción 1,60  (apaisada)
+
+     Con "cover" la foto se estira hasta llenar el ancho y se recorta
+     lo que sobra de alto. En una portada vertical eso deja ver el 31%
+     del centro: una franja. En Fortnite el 47%, o sea sin cabeza ni
+     pies. El catálogo, con 1,60, aguanta bien y por eso NO SE TOCA.
+
+     A las dos que no encajan se les da un hueco a su medida, con
+     "contain": entran enteras. El catálogo se queda exactamente como
+     está.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrusel-proporciones-v99">
+html body #homeTiles .retro-carousel-card img,
+html body #homeTiles .vgfn-carousel-card img{
+  left:auto !important;
+  right:14px !important;
+  top:12px !important;
+  bottom:12px !important;
+  width:38% !important;
+  height:auto !important;
+
+  /* Contain y no cover: la foto entra entera en su hueco en vez de
+     enseñar una franja del medio. */
+  object-fit:contain !important;
+  object-position:center !important;
+
+  transform:none !important;
+  filter:none !important;
+}
+
+/* El texto deja libre ese hueco. */
+html body #homeTiles .retro-carousel-card .service-carousel-info,
+html body #homeTiles .vgfn-carousel-card .service-carousel-info{
+  padding-right:42% !important;
+}
+
+@media(max-width:640px){
+  html body #homeTiles .retro-carousel-card img,
+  html body #homeTiles .vgfn-carousel-card img{
+    width:34% !important; right:11px !important;
+    top:10px !important; bottom:10px !important;
+  }
+  html body #homeTiles .retro-carousel-card .service-carousel-info,
+  html body #homeTiles .vgfn-carousel-card .service-carousel-info{
+    padding-right:38% !important;
+  }
+}
+</style>
+
 </body>
 </html>
