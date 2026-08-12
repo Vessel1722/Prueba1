@@ -35897,11 +35897,22 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       return;
     }
 
-    /* Se busca por el buscador propio de la sección y también por el de
-       arriba, para que quien llegue escribiendo desde el catálogo no
-       aterrice aquí sin filtrar. Sin acentos: en el teléfono casi nadie
-       los escribe. */
-    var q = llano(busqueda || (document.getElementById('globalSearch')||{}).value || '');
+    /* Se filtra SOLO por el buscador propio de la sección, que es el que
+       el cliente ve y puede borrar.
+
+       Antes aquí se leía además el buscador de arriba como respaldo
+       ("busqueda || globalSearch.value"). La intención era buena -quien
+       llega escribiendo desde el catálogo no aterriza aquí sin filtrar-
+       pero el texto de arriba no se veía por ningún lado: la caja de la
+       sección salía vacía y el filtro decía "Todo 328" mientras la
+       tienda enseñaba 12 artículos. Con "pavos" escrito arriba, que es
+       lo que más se teclea, la sección se quedaba en cero y el aviso
+       pedía borrar algo que no estaba a la vista.
+
+       Ahora el texto de arriba se ADOPTA al entrar (ver adoptarGlobal),
+       así que se ve en la caja de la sección y se puede borrar ahí. Sin
+       acentos: en el teléfono casi nadie los escribe. */
+    var q = llano(busqueda);
 
     var lista = tienda.articulos.filter(function(a){
       if(filtro !== 'todo' && !coincideFiltro(a, filtro)) return false;
@@ -36330,6 +36341,18 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     return true;
   }
 
+  /* Trae a la caja de la sección lo que haya en el buscador de arriba.
+     Se llama al entrar y cuando el catálogo repinta por una búsqueda,
+     que son los dos caminos por los que ese texto llega hasta aquí. A
+     partir de ahí manda la caja de la sección: si el cliente la borra,
+     se ve todo, sin que el texto de arriba lo vuelva a filtrar por la
+     espalda. */
+  function adoptarGlobal(){
+    var g = document.getElementById('globalSearch');
+    var t = g && g.value ? String(g.value) : '';
+    if(t && t !== busqueda) busqueda = t;
+  }
+
   function envolver(){
     if(typeof window.showSection === 'function' && !window.showSection.__vg62){
       var orig = window.showSection;
@@ -36344,6 +36367,7 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
         if(cat === 'fortnite'){
           var t = document.getElementById('productsTitle');
           if(t) t.textContent = 'Tienda de Fortnite de hoy';
+          adoptarGlobal();
           pintar();
           if(!tienda) traerTienda(false).then(function(){ pintar(); portada('fortnite'); });
         }
@@ -36380,6 +36404,7 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       var origR = window.renderProducts;
       var nuevaR = function(){
         if(typeof activeCategory !== 'undefined' && activeCategory === 'fortnite'){
+          adoptarGlobal();
           pintar();
           return;
         }
@@ -40239,7 +40264,8 @@ html body .home-sections::-webkit-scrollbar{
      ═══════════════════════════════════════════════════════════════════ -->
 <style id="vg-carrusel-proporciones-v99">
 html body #homeTiles .retro-carousel-card img,
-html body #homeTiles .vgfn-carousel-card img{
+html body #homeTiles .vgfn-carousel-card img,
+html body #homeTiles .vg-carrusel-encaja img{
   left:auto !important;
   right:14px !important;
   top:12px !important;
@@ -40276,23 +40302,91 @@ html body #homeTiles .vgfn-carousel-card img{
 
 /* El texto deja libre ese hueco. */
 html body #homeTiles .retro-carousel-card .service-carousel-info,
-html body #homeTiles .vgfn-carousel-card .service-carousel-info{
+html body #homeTiles .vgfn-carousel-card .service-carousel-info,
+html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
   padding-right:42% !important;
 }
 
 @media(max-width:640px){
   html body #homeTiles .retro-carousel-card img,
-  html body #homeTiles .vgfn-carousel-card img{
+  html body #homeTiles .vgfn-carousel-card img,
+  html body #homeTiles .vg-carrusel-encaja img{
     width:34% !important; right:11px !important;
     top:10px !important; bottom:auto !important;
     height:calc(100% - 20px) !important;
   }
   html body #homeTiles .retro-carousel-card .service-carousel-info,
-  html body #homeTiles .vgfn-carousel-card .service-carousel-info{
+  html body #homeTiles .vgfn-carousel-card .service-carousel-info,
+  html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
     padding-right:38% !important;
   }
 }
 </style>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 100 · Quien no quepa, que se ponga la clase él solo
+
+     Retro y Fortnite tienen su clase porque su bloque las genera. Las
+     demás tarjetas del carrusel salen de los productos, y ahí la foto
+     la pone quien da de alta el producto: hoy "Diamantes Free Fire"
+     trae una de 1080x1080 y en la tarjeta, que es de 2,11, "cover" solo
+     deja ver el 47% -medido en la página-. Mañana puede ser otra.
+
+     Poner la clase a mano en esa tarjeta arregla hoy y se rompe sola la
+     próxima vez, así que la pone el navegador midiendo la foto de
+     verdad cuando carga.
+
+     El corte está en 1,30, entre las dos familias que ya hay medidas:
+     el catálogo es 1,60 y se ve al 75%, que es el recorte que se quiso
+     y NO SE TOCA; lo cuadrado y lo vertical se queda por debajo.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script id="vg-carrusel-encaja-js-v100">
+(function(){
+  'use strict';
+  if(window.__VG100__) return; window.__VG100__ = true;
+
+  var CORTE = 1.30;
+
+  function revisar(img){
+    if(!img.naturalWidth || !img.naturalHeight) return;
+    var t = img.closest ? img.closest('.service-carousel-card') : null;
+    if(!t) return;
+    /* Las que ya traen su propia regla no se tocan. */
+    if(t.classList.contains('retro-carousel-card') ||
+       t.classList.contains('vgfn-carousel-card')) return;
+    var encaja = (img.naturalWidth / img.naturalHeight) < CORTE;
+    t.classList.toggle('vg-carrusel-encaja', encaja);
+  }
+
+  function barrer(){
+    var fila = document.getElementById('homeTiles');
+    if(!fila) return;
+    var fotos = fila.querySelectorAll('.service-carousel-card img');
+    for(var i=0;i<fotos.length;i++){
+      var f = fotos[i];
+      if(f.complete) revisar(f);
+      else f.addEventListener('load', function(){ revisar(this); }, {once:true});
+    }
+  }
+
+  /* El carrusel se rehace al cambiar de categoría y clona tarjetas para
+     dar la vuelta, así que no basta con mirar una vez. */
+  function vigilar(){
+    var fila = document.getElementById('homeTiles');
+    if(!fila) return false;
+    barrer();
+    new MutationObserver(barrer).observe(fila, {childList:true, subtree:true});
+    return true;
+  }
+
+  var intentos = 0;
+  (function esperar(){
+    if(vigilar()) return;
+    if(++intentos < 60) setTimeout(esperar, 500);
+  })();
+})();
+</script>
 
 </body>
 </html>
