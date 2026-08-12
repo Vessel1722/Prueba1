@@ -13939,8 +13939,43 @@ window.vgBingSize = function(){
 <!-- Proof upload -->
 <div class="vg-pay-proof">
 <p>📸 <strong>Después de pagar:</strong> sube el comprobante para validar tu pedido más rápido.</p>
-<label><span>📎 Subir comprobante</span><input accept="image/*" id="proofInput" onchange="document.getElementById('vgProofName').textContent=this.files[0]?this.files[0].name:'Ningún archivo'" type="file"/></label>
+<style id="vg-comprobante-fuente-css">
+/* Botones para elegir de dónde sale el comprobante. Clases propias
+   (vgcfuente-*) para no chocar con el CSS por capas del resto del sitio. */
+#paymentModal .vgcfuente-row{
+  display:flex !important;flex-wrap:wrap !important;gap:10px !important;margin:0 !important;
+}
+#paymentModal .vgcfuente-btn{
+  flex:1 1 160px !important;min-height:44px !important;padding:0 14px !important;
+  display:inline-flex !important;align-items:center !important;justify-content:center !important;gap:8px !important;
+  border:1px solid rgba(25,230,193,.30) !important;background:rgba(25,230,193,.08) !important;
+  border-radius:10px !important;color:#19e6c1 !important;
+  font-size:.82rem !important;font-weight:700 !important;cursor:pointer !important;
+  width:auto !important;height:auto !important;transition:.2s !important;
+}
+#paymentModal .vgcfuente-btn:hover{background:rgba(25,230,193,.16) !important;}
+#paymentModal .vgcfuente-hint{
+  display:block !important;font-size:.72rem !important;color:#8b93b0 !important;margin-top:8px !important;
+}
+</style>
+<div class="vgcfuente-row">
+<button class="vgcfuente-btn" onclick="vgProofPick('archivos')" type="button">📁 Elegir de mis archivos</button>
+<button class="vgcfuente-btn" onclick="vgProofPick('camara')" type="button">📷 Tomar foto ahora</button>
+</div>
+<span class="vgcfuente-hint">Si la captura ya está en tu teléfono, usa "Elegir de mis archivos".</span>
+<input accept="image/*" id="proofInput" onchange="document.getElementById('vgProofName').textContent=this.files[0]?this.files[0].name:'Ningún archivo seleccionado'" type="file"/>
 <div class="vg-pay-proof-name" id="vgProofName">Ningún archivo seleccionado</div>
+<script>
+/* Un solo input. El atributo capture se pone SOLO si el cliente pide cámara;
+   sin capture el celular abre el selector normal (galería / archivos). */
+window.vgProofPick=function(fuente){
+  var inp=document.getElementById('proofInput');
+  if(!inp) return;
+  if(fuente==='camara') inp.setAttribute('capture','environment');
+  else inp.removeAttribute('capture');
+  inp.click();
+};
+</script>
 </div>
 <div class="vg-pay-actions">
 <button class="primary whatsapp" onclick="sendPaymentWhatsApp()">✅ Confirmar y enviar comprobante</button>
@@ -17274,8 +17309,10 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
 
     setText($('h2', modal), 'Métodos de pago');
 
+    /* Nada de forzar 'capture': eso abría la cámara de golpe en el celular.
+       El cliente elige archivos o cámara con los botones del modal. */
     var proof = document.getElementById('proofInput');
-    if(proof && proof.getAttribute('capture') !== 'environment') proof.setAttribute('capture','environment');
+    if(proof && proof.hasAttribute('capture')) proof.removeAttribute('capture');
 
     var proofBox = $('.proof-box', modal);
     if(proofBox && proofBox.getAttribute('data-vg-stable-proof') !== '1'){
