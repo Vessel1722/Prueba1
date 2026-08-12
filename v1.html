@@ -40254,6 +40254,12 @@ html body #homeTiles .vgfn-carousel-card img{
 
   transform:none !important;
   filter:none !important;
+
+  /* Por encima del velo. Medido en vivo: el velo de estas tarjetas va
+     en capa 1 y la foto en la 0, así que ahora que la foto es un
+     recuadro pequeño el velo la apagaba entera. Sigue oscureciendo el
+     fondo bajo el texto, que es para lo que está. */
+  z-index:2 !important;
 }
 
 /* El texto deja libre ese hueco. */
