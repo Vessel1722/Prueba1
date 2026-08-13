@@ -13904,29 +13904,15 @@ window.vgBingSize = function(){
 <button class="x" onclick="closePaymentModal()" style="width:36px;height:36px;border:1px solid rgba(255,255,255,.10);background:rgba(255,255,255,.05);border-radius:50%;color:#eef0fa;cursor:pointer;font-size:1rem;display:grid;place-items:center">×</button>
 </div>
 </div>
-<div class="vg-pay-methods">
-<div class="vg-pay-method">
-<div class="vg-pay-method-icon">🏦</div>
-<h4>Transferencia BBVA</h4>
-<div class="vg-pay-method-row"><span>Banco</span><code>BBVA</code></div>
-<div class="vg-pay-method-row"><span>Tarjeta</span><code>4152 3145 2671 8708</code></div>
-<div class="vg-pay-method-row"><span>Titular</span><code>DAHISE PARRA</code></div>
-<button class="vg-pay-copy-all" onclick="copyPayData('BBVA\nTarjeta: 4152314526718708\nTitular: DAHISE PARRA')">Copiar datos BBVA</button>
-</div>
-<div class="vg-pay-method">
-<div class="vg-pay-method-icon">🏪</div>
-<h4>Depósito OXXO</h4>
-<div class="vg-pay-method-row"><span>Banco</span><code>Spin by OXXO</code></div>
-<div class="vg-pay-method-row"><span>Tarjeta</span><code>4217 4700 2231 6489</code></div>
-<button class="vg-pay-copy-all" onclick="copyPayData('Spin by OXXO\nTarjeta: 4217470022316489')">Copiar datos OXXO</button>
-</div>
-<div class="vg-pay-method">
-<div class="vg-pay-method-icon">🟡</div>
-<h4>Binance USDT</h4>
-<div class="vg-pay-method-row"><span>Pay ID</span><code>787332768</code></div>
-<button class="vg-pay-copy-all" onclick="copyPayData('Binance Pay ID: 787332768')">Copiar ID Binance</button>
-</div>
-</div>
+<!-- Los números de cuenta YA NO se escriben aquí. Antes estaban en el HTML
+     y solo se tapaban con display:none, así que cualquiera los leía con
+     "ver código fuente" sin tener cuenta, y quedaban a merced de los
+     raspadores automáticos. Ahora viven en la tabla vg_datos_pago de
+     Supabase, que solo se puede leer con sesión iniciada, y los trae el
+     bloque vg-datos-pago-js-v103 al abrir este modal.
+     Para cambiar de cuenta ya no hay que tocar el código ni publicar:
+     se edita la fila en Supabase. -->
+<div class="vg-pay-methods" id="vgPayMethods"></div>
 <!-- Coupon -->
 <div style="background:rgba(255,255,255,.03);border:1px solid rgba(255,255,255,.07);border-radius:14px;padding:14px">
 <p style="font-size:.76rem;font-weight:800;text-transform:uppercase;letter-spacing:.08em;color:#8b93b0;margin:0 0 8px">🎟️ ¿Tienes un código de descuento?</p>
@@ -15147,10 +15133,22 @@ window.vgProofPick=function(fuente){
   'use strict';
 
   function getAllServices(){
+    var base = [];
     try{
-      if(typeof SERVICES !== 'undefined' && Array.isArray(SERVICES)) return SERVICES;
+      if(typeof SERVICES !== 'undefined' && Array.isArray(SERVICES)) base = SERVICES;
     }catch(e){}
-    return Array.isArray(window.SERVICES) ? window.SERVICES : [];
+    if(!base.length && Array.isArray(window.SERVICES)) base = window.SERVICES;
+    /* Fortnite y los juegos retro NO viven en SERVICES: cada uno tiene su
+       propio módulo. Por eso el buscador contestaba "sin coincidencias" a
+       "fortnite" y a "pavos" teniendo 300 y pico artículos en pantalla.
+       El índice extra lo arma el bloque vg-buscador-completo-js-v103. */
+    if(typeof window.vgExtraSearchIndex === 'function'){
+      try{
+        var extra = window.vgExtraSearchIndex();
+        if(Array.isArray(extra) && extra.length) return base.concat(extra);
+      }catch(e){}
+    }
+    return base;
   }
 
   function ensurePanel(){
@@ -15611,8 +15609,8 @@ window.vgProofPick=function(fuente){
 </div>
 <div class="vg-dash-actions">
 <button class="vg-dash-btn vg-dash-btn-primary" onclick="window.renderDashboard &amp;&amp; renderDashboard()">🔄 Actualizar</button>
-<button class="vg-dash-btn" onclick="document.querySelector('.vg-admin-tab[data-tab=products]')&amp;&amp;document.querySelector('.vg-admin-tab[data-tab=products]').click()">📦 Ir a Artículos</button>
-<button class="vg-dash-btn" onclick="document.querySelector('.vg-admin-tab[data-tab=orders]')&amp;&amp;document.querySelector('.vg-admin-tab[data-tab=orders]').click()">🛒 Ver Compras</button>
+<button class="vg-dash-btn" onclick="vgAdminIrA('catalogo')">📦 Ir a Artículos</button>
+<button class="vg-dash-btn" onclick="vgAdminIrA('pedidos')">🛒 Ver Compras</button>
 </div>
 </div>
 </section>
@@ -16032,7 +16030,7 @@ function ensureSections(){
   if(!$('#vgAdminSettings')){ const sec=document.createElement('section'); sec.className='vg-admin-section'; sec.id='vgAdminSettings'; sec.innerHTML='<div class="vg-settings-grid"></div>'; content.appendChild(sec); }
   if(!document.querySelector('.vg-admin-tab[data-tab="settings"]')){ const tabs=$('#vgAdminModal .vg-admin-tabs'); if(tabs){ const b=document.createElement('button'); b.className='vg-admin-tab'; b.dataset.tab='settings'; b.textContent='Ajustes rápidos'; tabs.appendChild(b); } }
 }
-function renderSettings(){ ensureSections(); const box=$('#vgAdminSettings .vg-settings-grid'); if(!box)return; const total=services().length, custom=(state.products||[]).length; const hidden=services().filter(s=>s.__hidden).length; const soldout=services().filter(s=>String(s.adminBadge||'').toLowerCase()==='agotado').length; box.innerHTML=`<div class="vg-setting-card"><h4>Resumen rápido</h4><p>Tienes <b>${total}</b> servicios, <b>${custom}</b> modificados, <b>${hidden}</b> ocultos y <b>${soldout}</b> agotados.</p><button class="vg-admin-btn primary" onclick="vgAdminSyncProducts()">Sincronizar catálogo</button><button class="vg-admin-btn" onclick="vgAdminLoadProducts()">Recargar</button></div><div class="vg-setting-card"><h4>Control de servicios</h4><p>En <b>Artículos</b> puedes cambiar precios, opciones, stock, ocultar servicios o marcarlos como agotados.</p><button class="vg-admin-btn" onclick="document.querySelector('.vg-admin-tab[data-tab=\\'products\\']')?.click()">Ir a artículos</button></div>`; }
+function renderSettings(){ ensureSections(); const box=$('#vgAdminSettings .vg-settings-grid'); if(!box)return; const total=services().length, custom=(state.products||[]).length; const hidden=services().filter(s=>s.__hidden).length; const soldout=services().filter(s=>String(s.adminBadge||'').toLowerCase()==='agotado').length; box.innerHTML=`<div class="vg-setting-card"><h4>Resumen rápido</h4><p>Tienes <b>${total}</b> servicios, <b>${custom}</b> modificados, <b>${hidden}</b> ocultos y <b>${soldout}</b> agotados.</p><button class="vg-admin-btn primary" onclick="vgAdminSyncProducts()">Sincronizar catálogo</button><button class="vg-admin-btn" onclick="vgAdminLoadProducts()">Recargar</button></div><div class="vg-setting-card"><h4>Control de servicios</h4><p>En <b>Artículos</b> puedes cambiar precios, opciones, stock, ocultar servicios o marcarlos como agotados.</p><button class="vg-admin-btn" onclick="vgAdminIrA('catalogo')">Ir a artículos</button></div>`; }
 function applyProductsToCatalog(){ const map=Object.fromEntries((state.products||[]).map(p=>[String(p.product_id),p])); services().forEach(p=>{ const ov=map[String(p.id)]||{}; const meta=normalizeMeta(ov.stock||p.adminStock||''); if(ov.price_label) p.priceLabel=ov.price_label; if(ov.badge) p.adminBadge=ov.badge; if(meta.soldout) p.adminBadge='Agotado'; p.adminStock=meta.raw||ov.stock||p.adminStock||''; p.__hidden=meta.hidden; if(Array.isArray(ov.options)&&Array.isArray(p.options)){ ov.options.forEach((x,i)=>{ if(p.options[i]){p.options[i].name=x?.name??p.options[i].name; p.options[i].price=Number(x?.price??p.options[i].price??0);} }); } }); if(typeof window.renderProducts==='function'){ window.renderProducts(); services().filter(s=>s.__hidden).forEach(s=>document.querySelectorAll(`[onclick="openProduct(${s.id})"]`).forEach(el=>el.closest('.card,.service-carousel-card,article')?.remove())); } }
 function productCard(p){ const ov=(state.products||[]).find(x=>String(x.product_id)===String(p.id))||{}; const meta=normalizeMeta(ov.stock||p.adminStock||''); const opts=Array.isArray(ov.options)&&ov.options.length?ov.options:(p.options||[]); return `<div class="vg-product-admin-card" data-pid="${esc(p.id)}"><div class="vg-product-admin-head"><img src="${esc(p.image||'portada.png')}" onerror="this.src='portada.png'"><div><b>${esc(p.title)}</b><small>${esc(p.categoryName||p.category||'Servicio')} · ID ${esc(p.id)}</small><span class="vg-status-chip">Estado: ${meta.hidden?'Oculto':meta.soldout?'Agotado':'Activo'}</span></div><button class="vg-admin-btn primary" onclick="vgAdminSaveProduct('${esc(p.id)}')">Guardar</button></div><div class="vg-product-admin-fields"><input class="vg-admin-input" data-field="price_label" placeholder="Precio visible" value="${esc(ov.price_label||p.priceLabel||'')}"><input class="vg-admin-input" data-field="stock" placeholder="Stock / nota" value="${esc(meta.raw||'')}"><select class="vg-admin-select" data-field="badge">${['','Más vendido','Disponible','Nuevo','Oferta','Bajo pedido','Stock limitado','Agotado'].map(x=>`<option value="${x}" ${String(ov.badge||p.adminBadge||'')===x?'selected':''}>${x||'Sin badge'}</option>`).join('')}</select></div><div class="vg-product-admin-options">${opts.map((op,i)=>`<div class="vg-product-admin-oprow"><input class="vg-admin-input" data-on="${i}" value="${esc(op.name||'')}" placeholder="Nombre de opción"><input class="vg-admin-input" type="number" data-op="${i}" value="${Number(op.price||0)}" placeholder="Precio"></div>`).join('')}</div><div class="vg-product-admin-actions"><button class="vg-admin-btn" onclick="vgAdminMarkSoldOut('${esc(p.id)}')">Marcar agotado</button><button class="vg-admin-btn" onclick="vgAdminHideProduct('${esc(p.id)}')">Ocultar</button><button class="vg-admin-btn" onclick="vgAdminActivateProduct('${esc(p.id)}')">Activar</button><button class="vg-admin-btn danger" onclick="vgAdminResetProduct('${esc(p.id)}')">Restablecer</button></div></div>`; }
 window.vgAdminRenderProducts=function(){ const box=$('#vgAdminProductsList'); if(!box)return; const q=($('#vgProductSearch')?.value||'').toLowerCase(); const list=services().filter(p=>!q||[p.id,p.title,p.description,p.categoryName].join(' ').toLowerCase().includes(q)); box.innerHTML=list.length?list.map(productCard).join(''):'<div class="vg-empty-state">No encontré productos.</div>'; };
@@ -21392,7 +21390,11 @@ window.addEventListener('load', function() {
 <p style="font-size:.74rem;color:#5a6180;margin:4px 0 0">Cada compra completada = 0.5 tokens</p>
 </div>
 <h4 style="font-size:.74rem;letter-spacing:.10em;text-transform:uppercase;color:#d6a84f;margin:0 0 12px">Catalogo de canje</h4>
-<div class="vg-redeem-grid" id="vgRedeemGrid"></div>
+<!-- OJO: este id NO puede volver a ser "vgRedeemGrid". Ya existe uno con ese
+     nombre en la línea 14071 y el navegador siempre entrega el primero, así
+     que las tres funciones que llenan el catálogo de canje pintaban allá y
+     esta caja se quedaba vacía para siempre, sin dar ningún aviso. -->
+<div class="vg-redeem-grid" id="vgRedeemGridWallet"></div>
 <h4 style="font-size:.74rem;letter-spacing:.10em;text-transform:uppercase;color:#8b93b0;margin:20px 0 10px">Historial de tokens</h4>
 <div class="vg-token-log" id="vgTokenLog"><p style="color:#5a6180;font-size:.82rem;text-align:center;padding:12px">Sin movimientos aun.</p></div>
 </div>
@@ -24184,7 +24186,14 @@ function renderAdminList(){var l=qs('#vg10AdminList'); if(!l)return; var q=(qs('
 function openAdminOrder(ref){var o=state.adminOrders.find(function(x){return orderId(x)===String(ref)})||null; state.activeAdminOrder=o; renderAdminList(); renderAdminDetail(o)}
 async function renderAdminDetail(o){var d=qs('#vg10AdminDetail'); if(!d)return; if(!o){d.innerHTML='<div class="vg10-empty" style="margin:26px">Selecciona un pedido.</div>';return} var pf=proofSrc(o); d.innerHTML='<div class="vg10-detail-top"><div><h1 style="margin:0 0 8px">'+esc(orderTitle(o))+'</h1><p style="color:#9fb0ca;margin:0 0 18px">Pedido #'+esc(orderId(o))+' · '+esc(orderStatus(o))+'</p><div class="vg10-info-grid"><div class="vg10-info-box"><span>Cliente</span><b>'+esc(orderName(o))+'</b><div>'+esc(orderPhone(o))+'</div></div><div class="vg10-info-box"><span>Total</span><b style="color:#19e6c1">'+money(orderTotal(o))+'</b></div><div class="vg10-info-box"><span>Fecha</span><b>'+esc(dateMX(o.created_at))+'</b></div></div><div class="vg10-info-box"><span>Productos</span><b style="white-space:pre-line;margin-top:8px">'+esc(orderItemsText(o))+'</b><br><span>Datos de entrega</span><b style="white-space:pre-line;margin-top:8px">'+esc(o.delivery_data||o.delivery||o.notes||'Sin datos extra.')+'</b></div></div><div class="vg10-proof"><h2 style="margin:0 0 14px">Comprobante</h2>'+(pf?((/^data:image|\.(png|jpg|jpeg|webp|gif)(\?|$)/i.test(pf))?'<img src="'+esc(pf)+'" alt="Comprobante">':'<div class="vg10-empty">Comprobante disponible.</div>')+'<a href="'+esc(pf)+'" target="_blank" style="display:inline-block;margin-top:14px;color:#2dd4bf;font-weight:950">Abrir comprobante</a>':'<div class="vg10-empty">Sin comprobante visible.</div>')+'</div></div><div class="vg10-chatbox" style="border-radius:0;border-left:0;border-right:0;border-bottom:0"><div class="vg10-panel-head"><h2 style="margin:0">Chat del pedido</h2><button class="vg10-btn" id="vg10AdminRefresh">Actualizar</button></div><div class="vg10-messages" id="vg10AdminMessages"><div class="vg10-empty">Cargando chat...</div></div><div class="vg10-inputbar"><textarea id="vg10AdminInput" placeholder="Escribe respuesta al cliente..."></textarea><button class="vg10-btn primary" id="vg10AdminSend">Enviar</button></div></div>'; qs('#vg10AdminRefresh').onclick=function(){loadAdminChat(orderId(o))}; qs('#vg10AdminSend').onclick=async function(){var ta=qs('#vg10AdminInput');try{await sendMessage(orderId(o),'admin',ta.value);ta.value='';await loadAdminChat(orderId(o));toast('Mensaje enviado','El cliente verá una notificación.')}catch(e){alert('No se pudo enviar: '+(e.message||e))}}; await loadAdminChat(orderId(o))}
 async function loadAdminChat(ref){var box=qs('#vg10AdminMessages'); if(!box)return; var list=await fetchMessages(ref); box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight}
-function ensurePaymentUI(){qsa('.vg-pay-method').forEach(function(card){var txt=(card.textContent||'').toLowerCase(); if(txt.indexOf('paypal')>-1)card.style.display='none'; if(txt.indexOf('binance')>-1){var code=card.querySelector('code'); if(code)code.textContent='787332768'; var btn=card.querySelector('button'); if(btn){btn.textContent='Copiar ID Binance';btn.onclick=function(){try{navigator.clipboard.writeText('787332768')}catch(e){} toast('ID Binance copiado','787332768')}}}}); var modal=qs('#paymentModal'); if(modal&&!qs('#vg10PaymentContact',modal)){var s=session()||{}; var proof=qs('#proofInput',modal); var wrap=document.createElement('div'); wrap.id='vg10PaymentContact'; wrap.innerHTML='<div class="vg-payment-contact-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0"><label>Nombre<input id="vg10PayName" value="'+esc(s.name||'')+'" placeholder="Tu nombre"></label><label>WhatsApp<input id="vg10PayPhone" value="'+esc(s.phone||'')+'" placeholder="6611078412"></label><label style="grid-column:1/-1">Datos de entrega / ID / correo<textarea id="vg10PayDelivery" rows="2" placeholder="Datos necesarios para entregar"></textarea></label></div>'; if(proof&&proof.closest('.vg-pay-proof'))proof.closest('.vg-pay-proof').before(wrap); else modal.querySelector('.vg-pay-actions')&&modal.querySelector('.vg-pay-actions').before(wrap)}}
+/* FASE 76: aquí venía escrito a mano el Pay ID de Binance y se volvía a
+   inyectar en la tarjeta cada vez que se abría el modal. Era el último
+   número de cobro que seguía viajando dentro del JavaScript público, así
+   que se leía sin cuenta aunque el resto ya estuviera en Supabase.
+   Las tarjetas las pinta ahora vg-datos-pago-js-v103 leyendo la tabla
+   vg_datos_pago, con su propio botón de copiar. Aquí solo queda ocultar
+   PayPal, que es lo único que esta función seguía aportando. */
+function ensurePaymentUI(){qsa('.vg-pay-method').forEach(function(card){var txt=(card.textContent||'').toLowerCase(); if(txt.indexOf('paypal')>-1)card.style.display='none';}); var modal=qs('#paymentModal'); if(modal&&!qs('#vg10PaymentContact',modal)){var s=session()||{}; var proof=qs('#proofInput',modal); var wrap=document.createElement('div'); wrap.id='vg10PaymentContact'; wrap.innerHTML='<div class="vg-payment-contact-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0"><label>Nombre<input id="vg10PayName" value="'+esc(s.name||'')+'" placeholder="Tu nombre"></label><label>WhatsApp<input id="vg10PayPhone" value="'+esc(s.phone||'')+'" placeholder="6611078412"></label><label style="grid-column:1/-1">Datos de entrega / ID / correo<textarea id="vg10PayDelivery" rows="2" placeholder="Datos necesarios para entregar"></textarea></label></div>'; if(proof&&proof.closest('.vg-pay-proof'))proof.closest('.vg-pay-proof').before(wrap); else modal.querySelector('.vg-pay-actions')&&modal.querySelector('.vg-pay-actions').before(wrap)}}
 var oldOpenPay=window.openPaymentModal; window.openPaymentModal=function(order){state.pendingOrder=order||state.pendingOrder; if(typeof oldOpenPay==='function')oldOpenPay.apply(this,arguments); setTimeout(ensurePaymentUI,60)};
 function fileToDataUrl(file){return new Promise(function(res,rej){if(!file)return res(''); if(!/^image\//.test(file.type||'')){var fr=new FileReader();fr.onload=function(){res(fr.result||'')};fr.onerror=rej;fr.readAsDataURL(file);return} var img=new Image(); var url=URL.createObjectURL(file); img.onload=function(){try{var max=1280,w=img.width,h=img.height,scale=Math.min(1,max/Math.max(w,h));var c=document.createElement('canvas');c.width=Math.round(w*scale);c.height=Math.round(h*scale);var ctx=c.getContext('2d');ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',0.78))}catch(e){URL.revokeObjectURL(url);rej(e)}}; img.onerror=function(){URL.revokeObjectURL(url);var fr=new FileReader();fr.onload=function(){res(fr.result||'')};fr.onerror=rej;fr.readAsDataURL(file)}; img.src=url})}
 function itemsFromPending(){var o=state.pendingOrder||window.pendingPaymentOrder||{}; var items=Array.isArray(o.items)?o.items:[]; if(!items.length&&window.cart&&Array.isArray(window.cart))items=window.cart; items=items.map(function(it){return {title:it.title||it.name||'Producto',option:it.option||it.variant||'',price:Number(it.price||it.total||0)||0,category:it.category||''}}); var total=Number(o.total||items.reduce(function(s,it){return s+Number(it.price||0)},0))||0; return {items:items,total:total,source:o.source||'web'}}
@@ -36387,7 +36396,26 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   function adoptarGlobal(){
     var g = document.getElementById('globalSearch');
     var t = g && g.value ? String(g.value) : '';
-    if(t && t !== busqueda) busqueda = t;
+    if(!t || t === busqueda) return;
+
+    /* FASE 76 — solo se adopta si ese texto encuentra algo AQUÍ.
+
+       Adoptarlo siempre tenía un efecto feo: quien buscaba "netflix"
+       arriba y después entraba a Fortnite se encontraba la sección en
+       "Nada con ese filtro". El texto se veía en la caja y se podía
+       borrar, sí, pero la primera impresión era que la tienda de
+       Fortnite estaba vacía, y muy poca gente borra: se va.
+
+       Se mantiene la intención original —quien llega buscando algo que
+       sí está aquí, aterriza ya filtrado— y se quita el caso malo. */
+    if(tienda && Array.isArray(tienda.articulos)){
+      var q = llano(t);
+      var hay = tienda.articulos.some(function(a){
+        return llano(a.n + ' ' + a.t + ' ' + a.s + ' ' + (a.mu && a.mu.ar || '')).indexOf(q) >= 0;
+      });
+      if(!hay) return;
+    }
+    busqueda = t;
   }
 
   function envolver(){
@@ -40422,6 +40450,476 @@ html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
     if(vigilar()) return;
     if(++intentos < 60) setTimeout(esperar, 500);
   })();
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 76 · El buscador de arriba encuentra TODO
+
+     Escribir "fortnite" o "pavos" en la barra de arriba devolvía
+     "Sin coincidencias" y un cartel invitando a probar otra cosa,
+     teniendo la sección más grande de la tienda a un clic. Lo mismo
+     con los juegos retro: tienen su propio buscador dentro del modal,
+     pero desde arriba no aparecían.
+
+     La causa: el buscador recorre SERVICES, que son los ~55 productos
+     del catálogo general. Fortnite vive en window.vgFortnite y los
+     retro en RETRO_GAMES_DATA. Ninguno de los dos entraba al índice.
+
+     Aquí se arma ese índice extra. No se toca SERVICES ni la rejilla
+     del catálogo: estas entradas existen solo para que el buscador
+     las encuentre, y al pulsarlas llevan a su sección o a su modal.
+     ════════════════════════════════════════════════════════════════ -->
+<script id="vg-buscador-completo-js-v103">
+(function(){
+  'use strict';
+  if(window.__VG_BUSCADOR_COMPLETO_V103__) return;
+  window.__VG_BUSCADOR_COMPLETO_V103__ = true;
+
+  /* Identificadores propios, lejos de los del catálogo (1..999), para
+     que no choquen nunca con un producto real. */
+  var BASE_FORTNITE = 9200000;
+  var BASE_RETRO    = 9100000;
+
+  /* Adónde va cada resultado sintético cuando se pulsa */
+  var DESTINOS = {};
+
+  function fmtPavos(v){
+    return Number(v || 0).toLocaleString('es-MX') + ' pavos';
+  }
+
+  /* ── Artículos de la tienda de Fortnite de hoy ──
+     vgFortnite.datos() devuelve null hasta que la tienda se descarga.
+     Mientras tanto se ofrece igual una entrada para la sección, que es
+     lo que la mayoría busca cuando escribe "fortnite" o "pavos". */
+  function deFortnite(){
+    var salida = [];
+
+    salida.push({
+      id: BASE_FORTNITE,
+      title: 'Tienda de Fortnite de hoy',
+      displayTitle: 'Tienda de Fortnite de hoy',
+      description: 'Pavos, skins, lotes, picos, alas y canciones. Se actualiza todos los días.',
+      categoryName: 'Fortnite',
+      category: 'fortnite',
+      image: 'portada.png',
+      alt: 'Tienda de Fortnite',
+      options: [{ name: 'Ver la tienda completa', price: 0 }],
+      _vgBuscador: true
+    });
+    DESTINOS[BASE_FORTNITE] = { tipo: 'seccion', valor: 'fortnite' };
+
+    var tienda = null;
+    try{
+      if(window.vgFortnite && typeof window.vgFortnite.datos === 'function'){
+        tienda = window.vgFortnite.datos();
+      }
+    }catch(e){}
+
+    var arts = (tienda && Array.isArray(tienda.articulos)) ? tienda.articulos : [];
+    for(var i = 0; i < arts.length; i++){
+      var a = arts[i];
+      if(!a || !a.n) continue;
+      var id = BASE_FORTNITE + 1 + i;
+      salida.push({
+        id: id,
+        title: a.n,
+        displayTitle: a.n,
+        description: [a.t, a.r, a.s].filter(Boolean).join(' · ') || 'Artículo de la tienda de Fortnite',
+        categoryName: 'Fortnite',
+        category: 'fortnite',
+        image: a.i || 'portada.png',
+        alt: a.n,
+        options: [{ name: fmtPavos(a.v), price: 0 }],
+        _vgBuscador: true
+      });
+      /* Se guarda el nombre para dejarlo escrito en el buscador propio de
+         la sección: así el cliente aterriza en la pieza que pulsó y no en
+         los 333 artículos del día. */
+      DESTINOS[id] = { tipo: 'seccion', valor: 'fortnite', filtro: a.n };
+    }
+    return salida;
+  }
+
+  /* ── Juegos retro de Xbox ──
+     Son ~340 títulos. Todos entran al índice; el buscador ya se queda
+     con los 8 mejores, así que no satura el desplegable. */
+  function deRetro(){
+    var salida = [];
+
+    salida.push({
+      id: BASE_RETRO,
+      title: 'Juegos Retro (Xbox)',
+      displayTitle: 'Juegos Retro (Xbox)',
+      description: 'Catálogo de Xbox 360 y clásicos. Llevando 3 o más, 10% de descuento.',
+      categoryName: 'Xbox Retro',
+      category: 'gaming',
+      image: 'portada.png',
+      alt: 'Juegos retro de Xbox',
+      options: [{ name: 'Ver el catálogo completo', price: 0 }],
+      _vgBuscador: true
+    });
+    DESTINOS[BASE_RETRO] = { tipo: 'retro', valor: '' };
+
+    var juegos = [];
+    try{
+      if(Array.isArray(window.RETRO_GAMES_DATA)) juegos = window.RETRO_GAMES_DATA;
+    }catch(e){}
+
+    for(var i = 0; i < juegos.length; i++){
+      var g = juegos[i];
+      if(!g || !g.name) continue;
+      if(g.status === 'hidden') continue;
+      var id = BASE_RETRO + 1 + i;
+      salida.push({
+        id: id,
+        title: g.name,
+        displayTitle: g.name,
+        description: 'Juego retro para ' + (g.platform || 'Xbox 360') +
+                     (g.status === 'soldout' ? ' · agotado por ahora' : ''),
+        categoryName: 'Xbox Retro',
+        category: 'gaming',
+        image: g.image || 'portada.png',
+        alt: g.name,
+        options: [{ name: g.platform || 'Xbox 360', price: Number(g.price || 0) }],
+        _vgBuscador: true
+      });
+      /* Se abre el modal retro con el nombre ya escrito en su buscador,
+         que deja el juego a la vista sin que el cliente lo busque otra vez. */
+      DESTINOS[id] = { tipo: 'retro', valor: g.name };
+    }
+    return salida;
+  }
+
+  /* El buscador llama a esto en cada tecla. Se rehace cada vez a
+     propósito: la tienda de Fortnite se descarga sola unos segundos
+     después de abrir la página, y así entra en cuanto llega. */
+  window.vgExtraSearchIndex = function(){
+    DESTINOS = {};
+    return deFortnite().concat(deRetro());
+  };
+
+  /* ── Al pulsar un resultado ──
+     openProduct() solo entiende productos del catálogo. Estas entradas
+     van a su sección o a su modal. */
+  var abrirOriginal = window.openSearchResultProduct;
+  window.openSearchResultProduct = function(id){
+    var destino = DESTINOS[id];
+    if(!destino){
+      if(typeof abrirOriginal === 'function') return abrirOriginal(id);
+      if(typeof window.openProduct === 'function') return window.openProduct(id);
+      return;
+    }
+
+    if(destino.tipo === 'seccion'){
+      /* La caja de arriba se vacía ANTES de cambiar de sección. Si no, la
+         sección de Fortnite adopta ese texto como filtro propio y el
+         cliente que buscó "pavos" aterriza en "Nada con ese filtro",
+         porque ningún artículo se llama así. Es lo mismo que hace
+         irAFortnite() en el bloque vg-buscar-retro-js-v90. */
+      var caja = document.getElementById('globalSearch');
+      if(caja){ caja.value = ''; caja.blur(); }
+      if(typeof window.showSection === 'function') window.showSection(destino.valor);
+
+      /* Si se pulsó una pieza concreta, se deja su nombre en el buscador
+         de la sección, que sí es visible y se puede borrar. */
+      if(destino.filtro){
+        setTimeout(function(){
+          var propio = document.querySelector('#vgfnBuscar,.vgfn-buscar input');
+          if(!propio) return;
+          propio.value = destino.filtro;
+          propio.dispatchEvent(new Event('input', { bubbles: true }));
+        }, 400);
+      }
+      return;
+    }
+
+    if(destino.tipo === 'retro'){
+      var cajaR = document.getElementById('globalSearch');
+      if(cajaR){ cajaR.value = ''; cajaR.blur(); }
+      if(typeof window.openRetroModal === 'function') window.openRetroModal();
+      if(destino.valor){
+        /* El modal tarda un poco en pintarse la primera vez */
+        setTimeout(function(){
+          var caja = document.getElementById('retroSearch');
+          if(!caja) return;
+          caja.value = destino.valor;
+          caja.dispatchEvent(new Event('input', { bubbles: true }));
+          if(typeof window.renderRetroGrid === 'function') window.renderRetroGrid();
+        }, 220);
+      }
+      return;
+    }
+  };
+
+  /* ── Sinónimos ──
+     Nadie escribe "V-Bucks" en México: escribe "pavos". Y quien busca
+     "360" quiere el catálogo retro. Se respeta lo que ya hubiera. */
+  var EXTRA = {
+    'pavo':     'fortnite pavos vbucks',
+    'pavos':    'fortnite pavos vbucks',
+    'vbucks':   'fortnite pavos vbucks',
+    'vbuck':    'fortnite pavos vbucks',
+    'fornite':  'fortnite pavos',
+    'skin':     'fortnite skin lote',
+    'skins':    'fortnite skin lote',
+    'battle':   'fortnite pase',
+    '360':      'xbox retro 360',
+    'retro':    'xbox retro 360 clasico',
+    'clasico':  'xbox retro clasico'
+  };
+
+  /* Con códigos y no con los acentos de verdad: son caracteres
+     invisibles y cualquier editor puede comérselos. */
+  var ACENTOS = new RegExp('[\\u0300-\\u036f]', 'g');
+
+  var expandirOriginal = window.__vesselExpandedQuery;
+  window.__vesselExpandedQuery = function(consulta){
+    var texto = String(consulta || '').toLowerCase();
+    if(typeof expandirOriginal === 'function'){
+      try{ texto = String(expandirOriginal(consulta) || texto).toLowerCase(); }catch(e){}
+    }
+    var palabras = texto.split(/\s+/).filter(Boolean);
+    var sumar = [];
+    for(var i = 0; i < palabras.length; i++){
+      var limpia = palabras[i].normalize('NFD').replace(ACENTOS, '');
+      if(EXTRA[limpia]) sumar.push(EXTRA[limpia]);
+    }
+    return sumar.length ? (texto + ' ' + sumar.join(' ')) : texto;
+  };
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 76 · Los atajos del panel admin vuelven a llevar a algún lado
+
+     Tres botones ("📦 Ir a Artículos", "🛒 Ver Compras" e "Ir a
+     artículos") buscaban las pestañas data-tab=products y
+     data-tab=orders. Esas pestañas se renombraron al español hace
+     tiempo y los botones se quedaron con el nombre viejo: al pulsarlos
+     no pasaba nada, y como querySelector devuelve null en silencio,
+     tampoco salía error en consola. Por eso llevaban tanto rotos.
+
+     Ahora los tres llaman a vgAdminIrA(), que sabe dónde está cada
+     cosa hoy y avisa si algo cambia de sitio otra vez.
+     ════════════════════════════════════════════════════════════════ -->
+<script id="vg-atajos-admin-js-v103">
+(function(){
+  'use strict';
+  if(window.__VG_ATAJOS_ADMIN_V103__) return;
+  window.__VG_ATAJOS_ADMIN_V103__ = true;
+
+  function pestana(nombre){
+    return document.querySelector('.vg-admin-tab[data-tab="' + nombre + '"]');
+  }
+
+  window.vgAdminIrA = function(destino){
+    /* El catálogo no es una pestaña del panel clásico: es un modal aparte
+       que se abre con la pestaña "📦 Catálogo" que inyecta el bloque
+       vg-catalog-v102. Lleva la clase vg-admin-tab-x (con equis) para que
+       bindTabs() no le reescriba el onclick, así que no la encuentra el
+       selector normal de pestañas. */
+    if(destino === 'catalogo'){
+      var tabCat = document.getElementById('vgCatAdminTab');
+      if(tabCat){ tabCat.click(); return; }
+      if(typeof window.openCatAdmin === 'function'){ window.openCatAdmin(); return; }
+      var modal = document.getElementById('vgCatAdmin');
+      if(modal){ modal.classList.add('active'); return; }
+      alert('No encontré el catálogo. Ábrelo desde la pestaña 📦 Catálogo.');
+      return;
+    }
+
+    var t = pestana(destino);
+    if(t){ t.click(); return; }
+
+    /* Si alguien vuelve a renombrar una pestaña, que se note en vez de
+       quedarse otro año con un botón que no hace nada. */
+    var existentes = Array.prototype.map.call(
+      document.querySelectorAll('.vg-admin-tab'),
+      function(b){ return b.getAttribute('data-tab'); }
+    ).filter(Boolean);
+    console.warn('[Vessel] La pestaña "' + destino + '" ya no existe. Hay: ' + existentes.join(', '));
+    alert('No encontré esa sección del panel.');
+  };
+})();
+</script>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 76 · Los filtros de precio se pueden tocar con el dedo
+
+     Los chips de "Hasta $100 / $300 / $500…" medían 30 px de alto en el
+     teléfono. Se pueden pulsar, pero quedan por debajo de los 44 px que
+     recomiendan Apple y Google, y con cinco pegados en una fila es fácil
+     darle al de al lado. Solo se sube el alto en móvil; en escritorio se
+     quedan como estaban, que ahí se usan con ratón.
+
+     Selector propio (.vg-filter-chip dentro de .vg-filter-bar) para no
+     tocar ningún otro chip del sitio.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-chips-tactiles-css-v103">
+@media (max-width: 820px){
+  .vg-filter-bar .vg-filter-chip{
+    min-height: 40px !important;
+    padding-top: 0 !important;
+    padding-bottom: 0 !important;
+    display: inline-flex !important;
+    align-items: center !important;
+  }
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 76 · Los datos de pago dejan de vivir en el HTML
+
+     El modal decía "Datos de pago protegidos — entra a tu cuenta para
+     ver dónde depositar", pero no estaban protegidos: los números de
+     tarjeta estaban escritos en el index.html y solo se tapaban con
+     display:none. Se leían con "ver código fuente", sin cuenta, y
+     quedaban expuestos a cualquier raspador automático.
+
+     Ahora viven en la tabla vg_datos_pago de Supabase, que solo deja
+     leer con sesión iniciada (fase 76 del SQL). Se piden al abrir el
+     modal y se pintan aquí. El candado de vg-pago-privado-js-v40 sigue
+     tapando el hueco mientras no haya sesión.
+
+     De paso: para cambiar de cuenta ya no hay que tocar el código ni
+     volver a publicar el sitio. Se edita la fila en Supabase.
+     ════════════════════════════════════════════════════════════════ -->
+<script id="vg-datos-pago-js-v103">
+(function(){
+  'use strict';
+  if(window.__VG_DATOS_PAGO_V103__) return;
+  window.__VG_DATOS_PAGO_V103__ = true;
+
+  function esc(v){
+    return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function cli(){ return (typeof window.vgGetSB === 'function') ? window.vgGetSB() : null; }
+  function caja(){ return document.getElementById('vgPayMethods'); }
+
+  var ICONOS = { bbva:'🏦', oxxo:'🏪', binance:'🟡', paypal:'🅿️', spei:'🏦' };
+  var guardados = null;   /* null = todavía no se pidieron */
+  var pidiendo  = false;
+
+  function tarjeta(d){
+    var filas = '';
+    if(d.banco)   filas += '<div class="vg-pay-method-row"><span>Banco</span><code>' + esc(d.banco) + '</code></div>';
+    if(d.numero)  filas += '<div class="vg-pay-method-row"><span>' + esc(d.nota || 'Número') + '</span><code>' + esc(d.numero) + '</code></div>';
+    if(d.titular) filas += '<div class="vg-pay-method-row"><span>Titular</span><code>' + esc(d.titular) + '</code></div>';
+
+    /* El texto que se copia va sin espacios en el número: es lo que se
+       pega directo en la app del banco. */
+    var copiar = [
+      d.banco || d.etiqueta || '',
+      d.numero ? ((d.nota || 'Número') + ': ' + String(d.numero).replace(/\s+/g, '')) : '',
+      d.titular ? ('Titular: ' + d.titular) : ''
+    ].filter(Boolean).join('\n');
+
+    return '<div class="vg-pay-method">' +
+      '<div class="vg-pay-method-icon">' + esc(ICONOS[d.clave] || '💳') + '</div>' +
+      '<h4>' + esc(d.etiqueta || d.banco || 'Pago') + '</h4>' +
+      filas +
+      '<button class="vg-pay-copy-all" type="button" data-copiar="' + esc(copiar) + '">Copiar datos ' + esc(d.banco || d.etiqueta || '') + '</button>' +
+      '</div>';
+  }
+
+  /* Si la tabla todavía no existe (falta correr el SQL de la fase 76) o
+     el servidor no contesta, el cliente NO puede quedarse mirando un
+     hueco: está a un paso de pagar. Se le da una salida por WhatsApp. */
+  function respaldo(motivo){
+    var c = caja();
+    if(!c) return;
+    var num = window.WHATSAPP_NUMBER || '';
+    var enlace = num
+      ? '<a href="https://wa.me/' + esc(num) + '?text=' + encodeURIComponent('Hola, quiero pagar mi pedido. ¿Me pasas los datos?') +
+        '" target="_blank" rel="noopener" class="vg-pay-copy-all" style="display:block;text-align:center;text-decoration:none">Pedir los datos por WhatsApp</a>'
+      : '';
+    c.innerHTML = '<div class="vg-pay-method">' +
+      '<div class="vg-pay-method-icon">💬</div>' +
+      '<h4>Te pasamos los datos ahora</h4>' +
+      '<div class="vg-pay-method-row"><span>Escríbenos y te decimos dónde depositar</span></div>' +
+      enlace + '</div>';
+    if(motivo) console.warn('[Vessel] Datos de pago: ' + motivo);
+  }
+
+  function pintar(){
+    var c = caja();
+    if(!c || !guardados) return;
+    if(!guardados.length){ respaldo('la tabla vg_datos_pago está vacía'); return; }
+    c.innerHTML = guardados.map(tarjeta).join('');
+
+    /* El onclick va enlazado aquí y no escrito en el HTML: así el número
+       de cuenta nunca se mete dentro de un atributo, que es justo de
+       donde lo sacaban antes. */
+    Array.prototype.forEach.call(c.querySelectorAll('[data-copiar]'), function(b){
+      b.onclick = function(){
+        var texto = b.getAttribute('data-copiar') || '';
+        if(typeof window.copyPayData === 'function') window.copyPayData(texto);
+        else if(navigator.clipboard) navigator.clipboard.writeText(texto);
+      };
+    });
+  }
+
+  async function traer(){
+    if(pidiendo) return;
+    var c = cli();
+    if(!c) return;
+    try{
+      var s = await c.auth.getSession();
+      if(!s || !s.data || !s.data.session){
+        /* Sin sesión no se pide nada. El candado tapa el hueco. */
+        guardados = null;
+        var b = caja(); if(b) b.innerHTML = '';
+        return;
+      }
+      pidiendo = true;
+      var r = await c.from('vg_datos_pago')
+                     .select('clave,etiqueta,banco,numero,titular,nota')
+                     .eq('activo', true)
+                     .order('orden', { ascending: true });
+      pidiendo = false;
+      if(r.error){
+        respaldo('no pude leer vg_datos_pago (' + r.error.message + ')');
+        return;
+      }
+      guardados = r.data || [];
+      pintar();
+    }catch(e){
+      pidiendo = false;
+      respaldo(String(e && e.message || e));
+    }
+  }
+
+  /* Se engancha igual que el candado: al abrir el modal y al cambiar de
+     sesión, para que el cliente vea los datos sin reiniciar el pedido. */
+  function envolver(){
+    if(typeof window.openPaymentModal !== 'function' || window.openPaymentModal.__vgDatosPago) return false;
+    var anterior = window.openPaymentModal;
+    var envuelto = function(){
+      var r = anterior.apply(this, arguments);
+      traer();
+      return r;
+    };
+    envuelto.__vgDatosPago = true;
+    window.openPaymentModal = envuelto;
+    return true;
+  }
+
+  function arrancar(){
+    if(!envolver()){
+      var n = 0;
+      var t = setInterval(function(){ if(envolver() || ++n > 60) clearInterval(t); }, 250);
+    }
+    var c = cli();
+    if(c && c.auth && typeof c.auth.onAuthStateChange === 'function'){
+      try{ c.auth.onAuthStateChange(function(){ guardados = null; traer(); }); }catch(e){}
+    }
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
+  else arrancar();
 })();
 </script>
 
