@@ -16325,7 +16325,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
       <div class="offers-head">
         <div>
           <span class="badge ff-offer-badge-animated">OFERTAS</span>
-          <h2 class="ff-week-title">OFERTAS ESPECIALES DE LA SEMANA</h2>
+          <h2 class="ff-week-title">Ofertas especiales de la semana</h2>
         </div>
         <div class="offer-chip">PROMOS DESTACADAS Y VISIBLES</div>
       </div>
@@ -16341,7 +16341,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
           <div class="ff-only-body">
             <div class="ff-only-title-row">
               <div>
-                <h3>OFERTA DE DIAMANTES FREE FIRE</h3>
+                <h3>Oferta de diamantes Free Fire</h3>
                 <p>Recargas <b>vía ID directos de Garena</b>. Elige el paquete que quieras y recíbelo de forma directa. También manejamos <b>cantidades mayores por privado</b>.</p>
               </div>
               <div class="ff-only-callout">VÍA ID DIRECTOS DE GARENA</div>
@@ -41002,6 +41002,14 @@ html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
   .vg-pro-login-wrap h3,
   .vg-faq-section h2,
   p, .lead, .desc{
+    text-transform:none !important;
+  }
+  /* Estos dos se escapaban de la regla de arriba porque sus bloques
+     los fijan con selectores mas especificos y !important. Se igualan
+     aqui para no dejar dos titulares en mayusculas sueltos. */
+  .ff-week-title,
+  .vg-reviews-top h2,
+  .reviews-section h2{
     text-transform:none !important;
   }
   /* Al dejar de ser mayúsculas, el tracking negativo cerrado que
