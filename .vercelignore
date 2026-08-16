@@ -3,3 +3,8 @@
 v1.html
 v1.backup-*.html
 promo-whatsapp.html
+.claude
+.vercel
+.env*
+.gitignore
+.vercelignore
