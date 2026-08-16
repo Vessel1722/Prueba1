@@ -70,6 +70,22 @@
 window.VG_ADMIN_EMAIL = "";
 window.VG_ADMIN_PASSWORD = "";
 window.WHATSAPP_NUMBER = "526611078412";
+
+/* Filtro para enlaces cuya dirección viene de la base de datos
+   (comprobantes de pago y adjuntos del chat).
+
+   Escapar el texto NO basta: esc() convierte < > " ' pero deja pasar
+   "javascript:alert(1)" tal cual, y al pulsar el enlace se ejecuta.
+   Aquí solo se dejan pasar http, https, mailto y las data: de imagen;
+   cualquier otra cosa se convierte en un enlace muerto. */
+window.vgUrlSegura = function(u){
+  var s = String(u == null ? '' : u).trim();
+  if (!s) return '';
+  if (/^(https?:|mailto:)/i.test(s)) return s;
+  if (/^data:image\//i.test(s)) return s;
+  if (/^\/(?!\/)/.test(s)) return s;          // rutas propias del sitio
+  return 'about:blank';
+};
 </script>
 <!-- Google Analytics GA4 -->
 <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-JQBDC2D04T"></script>
@@ -14192,7 +14208,12 @@ window.vgProofPick=function(fuente){
 <span class="vg-ref-link" id="vgRefUserLink">Inicia sesion para ver tu link</span>
 <button class="secondary" onclick="vgCopyRefLink()" style="width:100%;height:38px;font-size:0.75rem">Copiar link</button>
 </div>
-<button class="primary" onclick="openLoginModal()" style="width:100%;margin-top:14px;height:46px">Crear cuenta gratis</button>
+<!-- Llamaba a openLoginModal(), que vive dentro de una IIFE y por tanto
+     NO es global: un onclick en línea se resuelve contra el ámbito
+     global, así que el botón lanzaba "openLoginModal is not defined" y
+     no hacía nada. Además #vgLoginModal ya no existe en el DOM. El
+     acceso actual se abre con vgOpenAuth() sobre #vgAuthModal. -->
+<button class="primary" onclick="window.vgOpenAuth&&window.vgOpenAuth()" style="width:100%;margin-top:14px;height:46px">Crear cuenta gratis</button>
 </div>
 </div>
 </div>
@@ -15646,7 +15667,23 @@ window.vgProofPick=function(fuente){
 </div>
 </div>
 </div>
-<script id="vg-supabase-admin-v34" src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<!-- Estaba como "@2", que sirve la última 2.x que haya ese día, y sin
+     integrity. Ese script corre con todos los permisos de la página y
+     tiene la sesión de Supabase delante: si alguna vez se publicara una
+     2.x maliciosa, o si el CDN sirviera algo alterado, entraría solo.
+
+     Ahora va fijado a 2.112.3 (byte a byte idéntico a lo que servía
+     "@2" el 16/08/2026, comprobado) y con integrity: si el archivo no
+     coincide con el hash, el navegador NO lo ejecuta.
+
+     Al actualizar la versión hay que recalcular el hash:
+       curl -sL https://cdn.jsdelivr.net/npm/@supabase/supabase-js@X.Y.Z \
+         | openssl dgst -sha384 -binary | openssl base64 -A          -->
+<script id="vg-supabase-admin-v34"
+        src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.112.3"
+        integrity="sha384-l8ah+VgaWtk1mvOe9VC+OirC6qHFF4yH7l7mKRidV9MSti3E9F463bMp6ZVN4kuC"
+        crossorigin="anonymous"
+        referrerpolicy="no-referrer"></script>
 <script id="vg-un-solo-cliente-v68">
 /* ═══════════════════════════════════════════════════════════════════
    VG FASE 68 · Un solo cliente de Supabase
@@ -15756,7 +15793,7 @@ window.vgAdminTestSupabase=async function(){let client=needSB(); if(!client){ale
 window.vgAdminLoadAll=async function(){await vgAdminLoadOrders();await vgAdminLoadProducts()};
 window.vgAdminLoadOrders=async function(){let client=needSB(); if(!client){vgAdminRenderOrders('Configura Supabase primero.');return} let {data,error}=await client.from('orders').select('*').order('created_at',{ascending:false}).limit(500); if(error){vgAdminRenderOrders(error.message);return} adminOrders=data||[];vgAdminRenderStats();vgAdminRenderOrders()};
 window.vgAdminRenderStats=function(){let total=adminOrders.reduce((s,o)=>s+Number(o.total||0),0),pend=adminOrders.filter(o=>o.status==='pendiente').length,proof=adminOrders.filter(o=>o.proof&&o.proof.url).length;let b=$('#vgAdminStats');if(b)b.innerHTML=`<div class="vg-admin-stat"><b>${adminOrders.length}</b><span>Compras</span></div><div class="vg-admin-stat"><b>${money(total)}</b><span>Total</span></div><div class="vg-admin-stat"><b>${pend}</b><span>Pendientes</span></div><div class="vg-admin-stat"><b>${proof}</b><span>Comprobantes</span></div>`};
-window.vgAdminRenderOrders=function(msg){let b=$('#vgAdminOrdersList');if(!b)return;if(msg){b.innerHTML=`<div class="vg-admin-note">${msg}</div>`;return}let q=($('#vgOrderSearch')?.value||'').toLowerCase(),f=$('#vgOrderFilter')?.value||'all';let a=adminOrders.filter(o=>(f==='all'||o.status===f)&&(!q||JSON.stringify(o).toLowerCase().includes(q))); if(!a.length){b.innerHTML='<div class="vg-admin-note">Sin compras registradas.</div>';return}b.innerHTML=`<table class="vg-admin-table"><thead><tr><th>Pedido</th><th>Artículos</th><th>Total</th><th>Comprobante</th><th>Estado</th></tr></thead><tbody>${a.map(o=>`<tr><td><b>${o.id}</b><br><small>${new Date(o.created_at).toLocaleString('es-MX')}</small><br>${o.source||''}</td><td>${(o.items||[]).map(i=>`${i.title}<br><small>${i.option||''}</small>`).join('<hr>')}</td><td><b>${money(o.total)}</b></td><td>${o.proof?.url?`<a href="${o.proof.url}" target="_blank">Ver comprobante</a><br><small>${o.proof.filename||''}</small>`:'No'}</td><td><select class="vg-admin-select" onchange="vgAdminUpdateOrder('${o.id}',this.value)">${['pendiente','validado','entregado','cancelado'].map(s=>`<option ${o.status===s?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>`};
+window.vgAdminRenderOrders=function(msg){let b=$('#vgAdminOrdersList');if(!b)return;if(msg){b.innerHTML=`<div class="vg-admin-note">${msg}</div>`;return}let q=($('#vgOrderSearch')?.value||'').toLowerCase(),f=$('#vgOrderFilter')?.value||'all';let a=adminOrders.filter(o=>(f==='all'||o.status===f)&&(!q||JSON.stringify(o).toLowerCase().includes(q))); if(!a.length){b.innerHTML='<div class="vg-admin-note">Sin compras registradas.</div>';return}b.innerHTML=`<table class="vg-admin-table"><thead><tr><th>Pedido</th><th>Artículos</th><th>Total</th><th>Comprobante</th><th>Estado</th></tr></thead><tbody>${a.map(o=>`<tr><td><b>${o.id}</b><br><small>${new Date(o.created_at).toLocaleString('es-MX')}</small><br>${o.source||''}</td><td>${(o.items||[]).map(i=>`${i.title}<br><small>${i.option||''}</small>`).join('<hr>')}</td><td><b>${money(o.total)}</b></td><td>${o.proof?.url?`<a href="${window.vgUrlSegura(o.proof.url)}" target="_blank" rel="noopener noreferrer">Ver comprobante</a><br><small>${o.proof.filename||''}</small>`:'No'}</td><td><select class="vg-admin-select" onchange="vgAdminUpdateOrder('${o.id}',this.value)">${['pendiente','validado','entregado','cancelado'].map(s=>`<option ${o.status===s?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>`};
 window.vgAdminUpdateOrder=async function(id,status){let client=needSB(); if(!client)return; let {error}=await client.from('orders').update({status}).eq('id',id); if(error)alert(error.message); await vgAdminLoadOrders()};
 window.vgAdminLoadProducts=async function(){let client=needSB(); if(!client){vgAdminRenderProducts();return} let {data,error}=await client.from('products_admin').select('*'); if(error){adminProducts=[]}else{adminProducts=data||[]} applyAdminProducts(); vgAdminRenderProducts()};
 function applyAdminProducts(){let map=Object.fromEntries(adminProducts.map(p=>[String(p.product_id),p]));services().forEach(p=>{let ov=map[String(p.id)];if(!ov)return;if(ov.price_label)p.priceLabel=ov.price_label;if(ov.stock)p.adminStock=ov.stock;if(ov.badge)p.adminBadge=ov.badge;if(Array.isArray(ov.options)&&Array.isArray(p.options)){ov.options.forEach((x,i)=>{if(p.options[i]){p.options[i].name=x.name;p.options[i].price=Number(x.price||0)}})}}); if(typeof window.renderProducts==='function')window.renderProducts()}
@@ -16017,7 +16054,7 @@ setInterval(()=>{ if($('#retroModal.active')) updateRetroDOMTotals(); },800);
 
 /* Admin orders */
 function orderCard(o){ const active=String(o.id)===String(state.selectedOrderId); const img=proofUrl(o); return `<div class="vg-order-card ${active?'active':''}" data-order-id="${esc(o.id)}"><div class="vg-order-col"><h5>Pedido</h5><div class="vg-order-id-badge">Pedido #${esc(o.id)}</div><div class="vg-order-sub">${esc(new Date(o.created_at).toLocaleString('es-MX'))}</div><div class="vg-order-sub">${esc(cleanSource(o.source))}</div></div><div class="vg-order-col"><h5>Artículo</h5><div class="vg-order-main-title">${esc(orderTitle(o))}</div><div class="vg-order-sub">${orderOptionText(o)||'<span style="opacity:.65">Sin detalle extra</span>'}</div></div><div class="vg-order-col"><h5>Total</h5><div class="vg-order-main-title">${money(deriveTotal(o))}</div></div><div class="vg-order-col"><h5>Comprobante</h5>${img?`<button class="vg-order-proof-btn" onclick="vgAdminSelectOrder('${esc(o.id)}')">Ver imagen</button><div class="vg-order-sub" style="margin-top:8px">${esc(proofName(o))}</div>`:'<div class="vg-order-sub">Sin comprobante</div>'}</div><div class="vg-order-col"><h5>Estado</h5><select class="vg-admin-select vg-order-status" onchange="vgAdminUpdateOrder('${esc(o.id)}',this.value)">${['pendiente','validado','entregado','cancelado'].map(s=>`<option value="${s}" ${String(o.status||'')===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="vg-order-col"><h5>Acciones</h5><div class="vg-order-actions"><button class="vg-order-action-btn" onclick="vgAdminSelectOrder('${esc(o.id)}')">Detalle</button><button class="vg-order-action-btn" onclick="navigator.clipboard.writeText('Pedido #${esc(o.id)}')">Copiar ID</button></div></div></div>`; }
-function renderOrderPreview(){ const box=$('#vgOrderPreview'); if(!box) return; const o=state.orders.find(x=>String(x.id)===String(state.selectedOrderId)); if(!o){box.innerHTML='<div class="vg-empty-state">Selecciona un pedido para ver el comprobante.</div>';return;} const img=proofUrl(o); box.innerHTML=`<h3>Pedido #${esc(o.id)}</h3><div class="vg-preview-grid"><div class="vg-preview-pill"><b>Total</b>${money(deriveTotal(o))}</div><div class="vg-preview-pill"><b>Estado</b>${esc(o.status||'pendiente')}</div><div class="vg-preview-pill"><b>Fuente</b>${esc(cleanSource(o.source))}</div><div class="vg-preview-pill"><b>Fecha</b>${esc(new Date(o.created_at).toLocaleString('es-MX'))}</div></div><p><b>Artículo:</b><br>${esc(orderTitle(o))}</p>${orderOptionText(o)?`<p><b>Opciones:</b><br>${orderOptionText(o)}</p>`:''}${img?`<a class="vg-order-proof-btn" href="${img}" target="_blank">Abrir comprobante completo</a><img class="vg-proof-preview-img" src="${img}" alt="Comprobante" onerror="this.style.display='none'">`:'<div class="vg-empty-state">Este pedido todavía no tiene comprobante.</div>'}`; }
+function renderOrderPreview(){ const box=$('#vgOrderPreview'); if(!box) return; const o=state.orders.find(x=>String(x.id)===String(state.selectedOrderId)); if(!o){box.innerHTML='<div class="vg-empty-state">Selecciona un pedido para ver el comprobante.</div>';return;} const img=proofUrl(o); box.innerHTML=`<h3>Pedido #${esc(o.id)}</h3><div class="vg-preview-grid"><div class="vg-preview-pill"><b>Total</b>${money(deriveTotal(o))}</div><div class="vg-preview-pill"><b>Estado</b>${esc(o.status||'pendiente')}</div><div class="vg-preview-pill"><b>Fuente</b>${esc(cleanSource(o.source))}</div><div class="vg-preview-pill"><b>Fecha</b>${esc(new Date(o.created_at).toLocaleString('es-MX'))}</div></div><p><b>Artículo:</b><br>${esc(orderTitle(o))}</p>${orderOptionText(o)?`<p><b>Opciones:</b><br>${orderOptionText(o)}</p>`:''}${img?`<a class="vg-order-proof-btn" href="${window.vgUrlSegura(img)}" target="_blank" rel="noopener noreferrer">Abrir comprobante completo</a><img class="vg-proof-preview-img" src="${img}" alt="Comprobante" onerror="this.style.display='none'">`:'<div class="vg-empty-state">Este pedido todavía no tiene comprobante.</div>'}`; }
 function dedupeOrders(list){ const map=new Map(); for(const o of list||[]){ const sec=(new Date(o.created_at||0)).toISOString().slice(0,19); const sig=[sec,orderTitle(o),deriveTotal(o),proofName(o)].join('|'); if(!map.has(sig)) map.set(sig,o); } return [...map.values()].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)||Number(b.id||0)-Number(a.id||0)); }
 window.vgAdminSelectOrder=function(id){state.selectedOrderId=String(id); window.vgAdminRenderOrders(); renderOrderPreview();};
 window.vgAdminRenderOrders=function(msg){ const box=$('#vgAdminOrdersList'); if(!box) return; if(msg){box.innerHTML=`<div class="vg-empty-state">${esc(msg)}</div>`;return;} const q=($('#vgOrderSearch')?.value||'').toLowerCase(); const f=$('#vgOrderFilter')?.value||'all'; let arr=state.orders.filter(o=>(f==='all'||o.status===f)&&(!q||[o.id,o.source,o.status,orderTitle(o),proofName(o),JSON.stringify(orderItems(o))].join(' ').toLowerCase().includes(q))); if(!arr.length){box.innerHTML='<div class="vg-empty-state">No encontré pedidos.</div>';renderOrderPreview();return;} if(!arr.some(o=>String(o.id)===String(state.selectedOrderId))) state.selectedOrderId=String(arr[0].id); box.innerHTML=arr.map(orderCard).join(''); renderOrderPreview(); };
@@ -24173,7 +24210,7 @@ function showPush(order,msg){var box=qs('#vg10Push'),t=qs('#vg10PushTitle'),x=qs
 async function loadOrders(all){var c=sb(); if(!c)return []; var r=await c.from('orders').select('*').order('created_at',{ascending:false}).limit(600); if(r.error)throw r.error; var arr=r.data||[]; if(all)return arr; var s=session(); if(!s)return []; var p=s.phone; return arr.filter(function(o){return (p&&orderPhone(o)===p)||(s.id&&String(o.user_id||'')===String(s.id))})}
 async function fetchMessages(ref){var c=sb(); if(!c||!ref)return []; try{var d=await rpc('vg_live_chat_fetch_v10fixed',{p_thread_type:'order',p_thread_ref:String(ref)}); if(Array.isArray(d)&&d.length)return d}catch(e){} var r=await c.from('vg_live_chat_messages').select('*').eq('thread_type','order').eq('thread_ref',String(ref)).order('created_at',{ascending:true}).limit(500); if(!r.error&&Array.isArray(r.data))return r.data; try{var r2=await c.from('order_messages').select('*').eq('order_id',String(ref)).order('created_at',{ascending:true}).limit(500); if(!r2.error)return (r2.data||[]).map(function(m){m.thread_ref=ref;return m})}catch(e){} return []}
 async function sendMessage(ref,role,text){text=String(text||'').trim(); if(!ref||!text)throw new Error('Escribe un mensaje.'); var s=session()||{}; try{return await rpc('vg_live_chat_send_v10fixed',{p_thread_type:'order',p_thread_ref:String(ref),p_sender_role:role,p_sender_name:role==='admin'?'Vessel Games':(s.name||'Cliente'),p_sender_phone:role==='client'?(s.phone||''):null,p_message:text,p_attachment_url:null})}catch(e){var c=sb(); if(!c)throw e; var r=await c.from('vg_live_chat_messages').insert({thread_type:'order',thread_ref:String(ref),order_id:String(ref),sender_role:role,sender_name:role==='admin'?'Vessel Games':(s.name||'Cliente'),sender_phone:role==='client'?(s.phone||''):null,message:text,read_by_client:role==='client',read_by_admin:role==='admin'}).select().single(); if(r.error)throw r.error; return r.data}}
-function renderMsgs(list){if(!list||!list.length)return '<div class="vg10-empty">Sin mensajes todavía.</div>'; return list.map(function(m){var role=String(m.sender_role||m.role||'client').toLowerCase(); if(role.indexOf('admin')>-1||role.indexOf('support')>-1||role.indexOf('soporte')>-1)role='admin'; else if(role.indexOf('system')>-1||role.indexOf('sistema')>-1)role='system'; else role='client'; return '<div class="vg10-msg '+role+'"><small>'+esc(role==='admin'?'Vessel Games':role==='system'?'Sistema':'Cliente')+' · '+esc(dateMX(m.created_at))+'</small><div>'+esc(m.message||m.body||m.text||'').replace(/\n/g,'<br>')+'</div>'+(m.attachment_url?'<a href="'+esc(m.attachment_url)+'" target="_blank" style="color:#67e8f9;font-weight:900">Ver adjunto</a>':'')+'</div>'}).join('')}
+function renderMsgs(list){if(!list||!list.length)return '<div class="vg10-empty">Sin mensajes todavía.</div>'; return list.map(function(m){var role=String(m.sender_role||m.role||'client').toLowerCase(); if(role.indexOf('admin')>-1||role.indexOf('support')>-1||role.indexOf('soporte')>-1)role='admin'; else if(role.indexOf('system')>-1||role.indexOf('sistema')>-1)role='system'; else role='client'; return '<div class="vg10-msg '+role+'"><small>'+esc(role==='admin'?'Vessel Games':role==='system'?'Sistema':'Cliente')+' · '+esc(dateMX(m.created_at))+'</small><div>'+esc(m.message||m.body||m.text||'').replace(/\n/g,'<br>')+'</div>'+(m.attachment_url?'<a href="'+esc(window.vgUrlSegura(m.attachment_url))+'" target="_blank" rel="noopener noreferrer" style="color:#67e8f9;font-weight:900">Ver adjunto</a>':'')+'</div>'}).join('')}
 function clientShell(){var s=session()||{name:'Cliente',phone:''}; return '<div class="vg10-app"><aside class="vg10-sidebar"><div class="vg10-brand"><div class="vg10-logo">VG</div><div><b>Vessel Games</b><span>Panel de comprador</span></div></div><div class="vg10-nav"><button data-view="dashboard">Dashboard</button><button data-view="purchases">Mis compras</button><button data-view="messages">Mensajes <span class="vg10-red-dot"></span></button><button data-view="tickets">Tickets de soporte</button></div><div class="vg10-sidefoot"><button class="vg10-btn" onclick="document.getElementById(\'vg10ClientPanel\').classList.remove(\'active\')">Ir al inicio</button><button class="vg10-btn danger" id="vg10ClientLogout">Cerrar sesión</button></div></aside><main class="vg10-main"><div class="vg10-top"><b>Panel de Comprador</b><div style="display:flex;align-items:center;gap:14px"><div class="vg10-user"><div class="avatar">'+esc((s.name||'V')[0]).toUpperCase()+'</div><div><b>'+esc(s.name||'Cliente')+'</b><span>'+esc(s.phone||'')+'</span></div></div><button class="vg10-close" onclick="document.getElementById(\'vg10ClientPanel\').classList.remove(\'active\')">×</button></div></div><div class="vg10-content" id="vg10ClientContent"></div></main></div>'}
 function openClientPanel(view,ref){var s=session(); if(!s){openAuth();return} var root=qs('#vg10ClientPanel'); root.innerHTML=clientShell(); root.classList.add('active'); state.clientView=view||state.clientView||'dashboard'; bindClientNav(); loadClientView(state.clientView,ref); startClientPolling();}
 function bindClientNav(){qsa('#vg10ClientPanel [data-view]').forEach(function(b){b.classList.toggle('active',b.dataset.view===state.clientView);b.onclick=function(){state.clientView=b.dataset.view;setNotifCount(0);loadClientView(state.clientView)}}); var out=qs('#vg10ClientLogout'); if(out)out.onclick=function(){clearSession();qs('#vg10ClientPanel').classList.remove('active')}}
@@ -24193,7 +24230,7 @@ function openAdminPanel(){var root=qs('#vg10AdminPanel'); var logged=sessionStor
 async function loadAdminOrders(){try{state.adminOrders=await loadOrders(true);renderAdminList(); if(!state.activeAdminOrder&&state.adminOrders[0])openAdminOrder(orderId(state.adminOrders[0])); else if(state.activeAdminOrder)renderAdminDetail(state.activeAdminOrder)}catch(e){var l=qs('#vg10AdminList'); if(l)l.innerHTML='<div class="vg10-empty">Error cargando pedidos: '+esc(e.message||e)+'</div>'}}
 function renderAdminList(){var l=qs('#vg10AdminList'); if(!l)return; var q=(qs('#vg10AdminSearch')&&qs('#vg10AdminSearch').value||'').toLowerCase(); var arr=state.adminOrders.filter(function(o){return !q||JSON.stringify(o).toLowerCase().indexOf(q)>-1}); l.innerHTML=arr.map(function(o){return '<div class="vg10-order-card '+(state.activeAdminOrder&&orderId(state.activeAdminOrder)===orderId(o)?'active':'')+'" data-admin-order="'+esc(orderId(o))+'"><div><h4>'+esc(orderTitle(o))+'</h4><p>Pedido #'+esc(orderId(o))+'</p><p>'+esc(orderName(o))+' · '+esc(orderPhone(o))+'</p>'+statusChip(orderStatus(o))+'</div><div class="vg10-price">'+money(orderTotal(o))+'</div></div>'}).join('')||'<div class="vg10-empty">Sin pedidos.</div>'; qsa('[data-admin-order]',l).forEach(function(card){card.onclick=function(){openAdminOrder(card.getAttribute('data-admin-order'))}})}
 function openAdminOrder(ref){var o=state.adminOrders.find(function(x){return orderId(x)===String(ref)})||null; state.activeAdminOrder=o; renderAdminList(); renderAdminDetail(o)}
-async function renderAdminDetail(o){var d=qs('#vg10AdminDetail'); if(!d)return; if(!o){d.innerHTML='<div class="vg10-empty" style="margin:26px">Selecciona un pedido.</div>';return} var pf=proofSrc(o); d.innerHTML='<div class="vg10-detail-top"><div><h1 style="margin:0 0 8px">'+esc(orderTitle(o))+'</h1><p style="color:#9fb0ca;margin:0 0 18px">Pedido #'+esc(orderId(o))+' · '+esc(orderStatus(o))+'</p><div class="vg10-info-grid"><div class="vg10-info-box"><span>Cliente</span><b>'+esc(orderName(o))+'</b><div>'+esc(orderPhone(o))+'</div></div><div class="vg10-info-box"><span>Total</span><b style="color:#19e6c1">'+money(orderTotal(o))+'</b></div><div class="vg10-info-box"><span>Fecha</span><b>'+esc(dateMX(o.created_at))+'</b></div></div><div class="vg10-info-box"><span>Productos</span><b style="white-space:pre-line;margin-top:8px">'+esc(orderItemsText(o))+'</b><br><span>Datos de entrega</span><b style="white-space:pre-line;margin-top:8px">'+esc(o.delivery_data||o.delivery||o.notes||'Sin datos extra.')+'</b></div></div><div class="vg10-proof"><h2 style="margin:0 0 14px">Comprobante</h2>'+(pf?((/^data:image|\.(png|jpg|jpeg|webp|gif)(\?|$)/i.test(pf))?'<img src="'+esc(pf)+'" alt="Comprobante">':'<div class="vg10-empty">Comprobante disponible.</div>')+'<a href="'+esc(pf)+'" target="_blank" style="display:inline-block;margin-top:14px;color:#2dd4bf;font-weight:900">Abrir comprobante</a>':'<div class="vg10-empty">Sin comprobante visible.</div>')+'</div></div><div class="vg10-chatbox" style="border-radius:0;border-left:0;border-right:0;border-bottom:0"><div class="vg10-panel-head"><h2 style="margin:0">Chat del pedido</h2><button class="vg10-btn" id="vg10AdminRefresh">Actualizar</button></div><div class="vg10-messages" id="vg10AdminMessages"><div class="vg10-empty">Cargando chat...</div></div><div class="vg10-inputbar"><textarea id="vg10AdminInput" placeholder="Escribe respuesta al cliente..."></textarea><button class="vg10-btn primary" id="vg10AdminSend">Enviar</button></div></div>'; qs('#vg10AdminRefresh').onclick=function(){loadAdminChat(orderId(o))}; qs('#vg10AdminSend').onclick=async function(){var ta=qs('#vg10AdminInput');try{await sendMessage(orderId(o),'admin',ta.value);ta.value='';await loadAdminChat(orderId(o));toast('Mensaje enviado','El cliente verá una notificación.')}catch(e){alert('No se pudo enviar: '+(e.message||e))}}; await loadAdminChat(orderId(o))}
+async function renderAdminDetail(o){var d=qs('#vg10AdminDetail'); if(!d)return; if(!o){d.innerHTML='<div class="vg10-empty" style="margin:26px">Selecciona un pedido.</div>';return} var pf=proofSrc(o); d.innerHTML='<div class="vg10-detail-top"><div><h1 style="margin:0 0 8px">'+esc(orderTitle(o))+'</h1><p style="color:#9fb0ca;margin:0 0 18px">Pedido #'+esc(orderId(o))+' · '+esc(orderStatus(o))+'</p><div class="vg10-info-grid"><div class="vg10-info-box"><span>Cliente</span><b>'+esc(orderName(o))+'</b><div>'+esc(orderPhone(o))+'</div></div><div class="vg10-info-box"><span>Total</span><b style="color:#19e6c1">'+money(orderTotal(o))+'</b></div><div class="vg10-info-box"><span>Fecha</span><b>'+esc(dateMX(o.created_at))+'</b></div></div><div class="vg10-info-box"><span>Productos</span><b style="white-space:pre-line;margin-top:8px">'+esc(orderItemsText(o))+'</b><br><span>Datos de entrega</span><b style="white-space:pre-line;margin-top:8px">'+esc(o.delivery_data||o.delivery||o.notes||'Sin datos extra.')+'</b></div></div><div class="vg10-proof"><h2 style="margin:0 0 14px">Comprobante</h2>'+(pf?((/^data:image|\.(png|jpg|jpeg|webp|gif)(\?|$)/i.test(pf))?'<img src="'+esc(pf)+'" alt="Comprobante">':'<div class="vg10-empty">Comprobante disponible.</div>')+'<a href="'+esc(window.vgUrlSegura(pf))+'" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:14px;color:#2dd4bf;font-weight:900">Abrir comprobante</a>':'<div class="vg10-empty">Sin comprobante visible.</div>')+'</div></div><div class="vg10-chatbox" style="border-radius:0;border-left:0;border-right:0;border-bottom:0"><div class="vg10-panel-head"><h2 style="margin:0">Chat del pedido</h2><button class="vg10-btn" id="vg10AdminRefresh">Actualizar</button></div><div class="vg10-messages" id="vg10AdminMessages"><div class="vg10-empty">Cargando chat...</div></div><div class="vg10-inputbar"><textarea id="vg10AdminInput" placeholder="Escribe respuesta al cliente..."></textarea><button class="vg10-btn primary" id="vg10AdminSend">Enviar</button></div></div>'; qs('#vg10AdminRefresh').onclick=function(){loadAdminChat(orderId(o))}; qs('#vg10AdminSend').onclick=async function(){var ta=qs('#vg10AdminInput');try{await sendMessage(orderId(o),'admin',ta.value);ta.value='';await loadAdminChat(orderId(o));toast('Mensaje enviado','El cliente verá una notificación.')}catch(e){alert('No se pudo enviar: '+(e.message||e))}}; await loadAdminChat(orderId(o))}
 async function loadAdminChat(ref){var box=qs('#vg10AdminMessages'); if(!box)return; var list=await fetchMessages(ref); box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight}
 /* FASE 76: aquí venía escrito a mano el Pay ID de Binance y se volvía a
    inyectar en la tarjeta cada vez que se abría el modal. Era el último
@@ -27930,7 +27967,7 @@ async function renderAdminDetail(o){
     (o.delivery_data?'<div class="vg17-box"><span>Datos que dejó el cliente</span><b>'+esc(o.delivery_data)+'</b></div>':'')+
     '<div class="vg17-box vg17-proof"><span>Comprobante de pago</span>'+
       (proof
-        ? '<img src="'+esc(proof)+'" alt="Comprobante"><a href="'+esc(proof)+'" target="_blank" style="display:inline-block;margin-top:10px;color:#2dd4bf;font-weight:900;font-size:0.75rem">Abrir en grande</a>'
+        ? '<img src="'+esc(proof)+'" alt="Comprobante"><a href="'+esc(window.vgUrlSegura(proof))+'" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:10px;color:#2dd4bf;font-weight:900;font-size:0.75rem">Abrir en grande</a>'
         : '<div class="vg17-empty">Sin comprobante.</div>')+
     '</div>'+
     '<div class="vg17-box"><span>Estado del pedido</span>'+
@@ -41044,6 +41081,32 @@ html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
   /* La portada del hero ocupa el ancho completo: se le reserva la
      proporción para que el texto no brinque al cargar. */
   .hero-bg{ aspect-ratio:16/9; }
+
+  /* ── 4b. LA ETIQUETA DE CATEGORÍA DE LA TARJETA ─────────────────
+     La franja (GAMING, CUENTAS, STREAMING...) se veía cortada por la
+     derecha. La causa: .meta lleva "margin:-14px -14px 12px" para
+     salirse del relleno de .info y cruzar la tarjeta de lado a lado,
+     pero otra regla le pone "width:100% !important". Con width fijo,
+     los márgenes negativos solo la corren a la izquierda sin
+     ensancharla, así que sobresalía 14px por la izquierda y se
+     quedaba 14px corta por la derecha. Medido en una tarjeta de
+     233px: la franja iba de x=1 a x=204, mientras el título y el
+     precio van de x=15 a x=218.
+
+     Se alinea con el contenido, que es lo pedido: mismos bordes que
+     el título y el precio. Al dejar de ser una franja de lado a lado,
+     se le quita el borde inferior (separaba la franja del resto) y se
+     le da el radio de chip, o un rectángulo suelto con esquinas
+     rectas parecería otra vez un corte. */
+  .card .info .meta{
+    margin-left:0 !important;
+    margin-right:0 !important;
+    margin-top:0 !important;
+  }
+  .card .meta .tag{
+    border-bottom:0 !important;
+    border-radius:var(--r-chip) !important;
+  }
 
   /* ── 5. ÁREA TÁCTIL EN MÓVIL ────────────────────────────────────
      24 controles medían menos de 44px de alto en 375px de ancho.
