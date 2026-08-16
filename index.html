@@ -16500,7 +16500,6 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
           <span class="badge ff-offer-badge-animated">OFERTAS</span>
           <h2 class="ff-week-title">Ofertas especiales de la semana</h2>
         </div>
-        <div class="offer-chip">PROMOS DESTACADAS Y VISIBLES</div>
       </div>
       <article class="offer-card">
         <div class="ff-only-wrapper">
@@ -25638,8 +25637,8 @@ async function renderStorefrontOffer(){
     root.innerHTML =
     '<div class="offers-head"><div>' +
       '<span class="badge ff-offer-badge-animated">'+esc(o.badge_text||'OFERTAS')+'</span>' +
-      '<h2 class="ff-week-title">'+esc(o.title||'OFERTA ESPECIAL')+'</h2>' +
-    '</div><div class="offer-chip">PROMOS DESTACADAS Y VISIBLES</div></div>' +
+      '<h2 class="ff-week-title">'+esc(o.title||'Oferta especial')+'</h2>' +
+    '</div></div>' +
     '<article class="offer-card"><div class="ff-only-wrapper">' +
       '<div class="ff-only-media"><img src="'+esc(o.image||'portada.png')+'" alt="'+esc(o.title||'Oferta')+'" referrerpolicy="no-referrer" onerror="this.src=\'portada.png\'">' +
       '</div>' +
@@ -41637,6 +41636,99 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
   background: #0b1424;
 }
 :where(.cart-thumb img){ aspect-ratio: 1 / 1; }
+</style>
+
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 105 — AIRE EN ESCRITORIO
+
+     Medido a 1440px con las transiciones terminadas: 150 pares de
+     elementos con texto separados por menos de 8px, y 76 de ellos
+     literalmente pegados (0px). No habia solapamientos reales; el
+     problema era falta de aire, que a simple vista se lee como
+     "encimado".
+
+     Cada regla apunta a un contenedor concreto, sin clases genericas.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-espaciado-pc-v105">
+
+  /* ── 1. CARRUSEL SUPERIOR ───────────────────────────────────────
+     El peor caso: 76 tarjetas con el titulo y la descripcion a 0px.
+     El <b> y el <small> venian sin margen ninguno, asi que el texto
+     de abajo arrancaba pegado a la linea base del de arriba. */
+  .service-carousel-info > b{
+    display:block !important;
+    margin-bottom:5px !important;
+    line-height:1.25 !important;
+  }
+  .service-carousel-info > small{
+    display:block !important;
+    line-height:1.5 !important;
+  }
+  .service-carousel-info > .service-carousel-price{
+    margin-top:10px !important;
+  }
+
+  /* ── 2. LINEA DE PRECIO DE LAS TARJETAS ─────────────────────────
+     "Desde", el precio y "N opcion(es)" estaban a 7px unos de
+     otros: los tres a la misma distancia, o sea sin agrupacion. El
+     ojo no sabia que iba con que.
+
+     Ahora "Desde" y el precio van juntos (6px, son una unidad) y
+     el numero de opciones se va al extremo derecho. Separacion
+     desigual = jerarquia legible. */
+  .card .price-line > div{
+    display:flex !important;
+    align-items:baseline !important;
+    justify-content:flex-start !important;
+    gap:6px !important;
+    width:100% !important;
+  }
+  .card .price-line .option-count{
+    margin-left:auto !important;
+    padding-left:12px !important;
+    opacity:.72 !important;
+    white-space:nowrap !important;
+  }
+
+  /* ── 3. BLOQUES DE TEXTO APILADO ────────────────────────────────
+     Premios, reglas de tokens, "por que elegirnos" y las tarjetas
+     compactas tenian entre 2px y 6px entre linea y linea. Se suben a
+     un minimo comodo sin cambiar su diseno. */
+  .vgtk-premio > * + *,
+  .vgtk-regla  > * + *{
+    margin-top:6px !important;
+  }
+  .vgpq-item b{
+    margin-bottom:5px !important;
+  }
+  .home-compact-card > * + *{
+    margin-top:8px !important;
+  }
+
+  /* ── 4. TARJETA AGOTADA: TRES ETIQUETAS ENCIMADAS ───────────────
+     Este si era un encimado de verdad, no falta de aire.
+
+     La tarjeta ya trae su etiqueta real (.card-badge, "Agotado", en
+     la esquina superior izquierda, z-index 4) igual que el resto de
+     tarjetas trae "Premium" o "Disponible". Encima de eso, dos
+     bloques de CSS distintos habian anadido cada uno su propia
+     etiqueta como pseudo-elemento, las dos con z-index 8:
+
+       ::before  -> arriba a la IZQUIERDA, tapando la etiqueta real
+       ::after   -> arriba a la DERECHA, tapando el corazon de
+                    favoritos (que esta en x=220 con z-index 5)
+
+     Resultado: tres veces la palabra "Agotado" y el corazon
+     inaccesible. Se quitan los dos pseudo-elementos y se queda la
+     etiqueta real, que ademas ya va en la posicion que el usuario
+     espera por coherencia con las demas tarjetas. */
+  .vg-soldout-card::before,
+  .vg-soldout-card::after{
+    content:none !important;
+    display:none !important;
+  }
+
 </style>
 
 </body>
