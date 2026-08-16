@@ -16509,7 +16509,9 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
           <div class="ff-only-body">
             <div class="ff-only-title-row">
               <div>
-                <h3>Oferta de diamantes Free Fire</h3>
+                <!-- El titulo iba aqui repetido: ya sale arriba en el
+                     h2 .ff-week-title, que es el que lleva el degradado
+                     animado. Se queda solo la descripcion. -->
                 <p>Recargas <b>vía ID directos de Garena</b>. Elige el paquete que quieras y recíbelo de forma directa. También manejamos <b>cantidades mayores por privado</b>.</p>
               </div>
               <div class="ff-only-callout">VÍA ID DIRECTOS DE GARENA</div>
@@ -25643,7 +25645,10 @@ async function renderStorefrontOffer(){
       '<div class="ff-only-media"><img src="'+esc(o.image||'portada.png')+'" alt="'+esc(o.title||'Oferta')+'" referrerpolicy="no-referrer" onerror="this.src=\'portada.png\'">' +
       '</div>' +
       '<div class="ff-only-body">' +
-        '<div class="ff-only-title-row"><div><h3>'+esc(o.title||'')+'</h3><p>'+esc(o.subtitle||'')+'</p></div></div>' +
+        /* Sin <h3>: el titulo ya sale arriba en el h2 .ff-week-title,
+           que es el que lleva el degradado animado. Repetirlo aqui lo
+           mostraba dos veces en la misma pantalla. */
+        '<div class="ff-only-title-row"><div><p>'+esc(o.subtitle||'')+'</p></div></div>' +
         '<div class="ff-only-packages" id="vgOfferPackages">'+pkgHTML()+'</div>' +
         '<div class="ff-purchase-box"><div class="ff-purchase-meta">' +
           '<div><span>Paquete</span><b id="vgOfferSelectedName">'+esc(packages[0].name)+'</b></div>' +
@@ -41704,6 +41709,15 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
   }
   .home-compact-card > * + *{
     margin-top:8px !important;
+  }
+
+  /* ── 3b. DESCRIPCIÓN DE LA OFERTA ───────────────────────────────
+     El párrafo llevaba "margin:8px 0 0" para separarlo del título que
+     tenía encima. Ese título se quitó (estaba duplicado: ya sale
+     arriba con el degradado animado), así que ese margen ahora solo
+     descuadra el arranque del bloque. */
+  .ff-only-title-row p{
+    margin-top:0 !important;
   }
 
   /* ── 4. TARJETA AGOTADA: TRES ETIQUETAS ENCIMADAS ───────────────
