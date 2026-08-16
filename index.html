@@ -19739,6 +19739,14 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   function calc(){var subtotal=selected.reduce(function(s,g){return s+Number(g.price||0)},0);var discount=selected.length>=3?Math.round(subtotal*.10):0;return {subtotal:subtotal,discount:discount,total:subtotal-discount}}
   function updateTotals(){var t=calc();var c=qs('#retroCount'),s=qs('#retroSubtotal'),d=qs('#retroDiscount'),tt=qs('#retroTotal'),b=qs('#retroModal .retro-footer .modal-actions .primary.whatsapp'); if(c)c.textContent=selected.length;if(s)s.textContent=disp(t.subtotal);if(d)d.textContent='-'+disp(t.discount);if(tt)tt.textContent=disp(t.total);if(b)b.textContent=selected.length?'Comprar '+selected.length+' juego'+(selected.length===1?'':'s')+' · '+disp(t.total):'Selecciona juegos para comprar'}
   window.RETRO_GAMES_DATA = baseGames();
+  /* FASE 112 · La sección Xbox Retro del catálogo necesita los MISMOS
+     juegos que la ventana de la colección: los de aquí ya traen encima
+     lo que el dueño editó en el panel (precio, foto, agotado, oculto).
+     Sin esto la sección tendría que releer los overrides por su cuenta
+     y acabaría enseñando precios viejos en cuanto se editara uno. */
+  window.vgRetroJuegos = mergedGames;
+  window.vgRetroImagen = imgFor;
+  window.vgRetroCargarOverrides = loadOverridesAsync;
   window.vgRetroFallbackCoverV101=fallbackCover;
   window.renderRetroGrid = function(){var box=qs('#retroGridContainer'); if(!box)return; var list=filteredGames(); if(!list.length){box.innerHTML='<div class="vg-retro-empty">No encontré juegos con esa búsqueda. Borra el texto o selecciona “Todas las plataformas”.</div>';updateTotals();return} box.innerHTML=list.map(function(g){var active=selected.some(function(x){return String(x.id)===String(g.id)});var img=imgFor(g);var disabled=g.status==='soldout';return `<article class="vg-retro-game ${active?'active':''} ${disabled?'vg-retro-soldout':''}" data-retro-id="${attr(g.id)}"><div class="vg-retro-cover"><div class="vg-retro-cover-bg" style="background-image:url('${attr(img)}')"></div><img class="vg-retro-cover-img" src="${attr(img)}" alt="${attr(g.name)}" loading="lazy" decoding="async" referrerpolicy="no-referrer"></div><div class="vg-retro-info"><h4>${esc(g.name)}</h4><div class="vg-retro-meta"><span class="vg-retro-platform">${esc(g.platform)}</span><span class="vg-retro-price" data-vg-mxn="${Number(g.price||0)}">${disabled?'Agotado':disp(g.price)}</span></div></div></article>`}).join(''); qsa('#retroGridContainer .vg-retro-game').forEach(function(card){card.onclick=function(){window.vgRetroSelectV101(card.getAttribute('data-retro-id'))}; var img=qs('img',card); if(img){img.onerror=function(){this.onerror=null;this.src=fallbackCover(this.alt||'Xbox Retro', qs('.vg-retro-platform',card)?.textContent||'Xbox'); var bg=qs('.vg-retro-cover-bg',card); if(bg)bg.style.backgroundImage='none'}}}); updateTotals()};
   window.vgRetroSelectV101=function(id){var g=mergedGames().find(function(x){return String(x.id)===String(id)});if(!g)return;if(g.status==='soldout'){alert('Este juego está agotado temporalmente.');return}var i=selected.findIndex(function(x){return String(x.id)===String(id)});if(i>=0)selected.splice(i,1);else selected.push(g);window.renderRetroGrid()}; window.toggleRetroGame=window.vgRetroSelectV101;
@@ -41744,6 +41752,804 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
   }
 
 </style>
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 112 · Xbox Retro deja de ser una ventana y pasa a ser una
+     sección del catálogo.
+
+     Los 300 y pico juegos vivían dentro de #retroModal, una pantalla
+     completa aparte con su propia rejilla, sus propias tarjetas y su
+     propio buscador. Desde fuera no se parecía en nada al resto de la
+     tienda: quien entraba desde "Juegos Retro" salía del catálogo sin
+     querer y tenía que cerrar para volver.
+
+     Ahora los juegos se pintan en #productsGrid con LA MISMA tarjeta
+     que los servicios (.card, .imgbox, .info, .premium-actions), así
+     que heredan el diseño del catálogo entero sin duplicar estilos: lo
+     único propio es el fondo desenfocado detrás de la portada, porque
+     las carátulas son verticales y la caja de foto del catálogo es
+     apaisada.
+
+     Lo que se conserva de la ventana vieja:
+       · Los datos salen de mergedGames() de la fase 101 (window.
+         vgRetroJuegos), o sea con lo editado en el panel encima.
+       · El 10% por llevar 3 o más sigue existiendo: la barra de arriba
+         de la sección abre la ventana de siempre para armar el combo.
+         Ese descuento no se puede repartir por artículo en el carrito
+         (el servidor recalcula y descarta los precios en negativo), así
+         que se queda donde ya funcionaba.
+
+     openRetroModal() ahora lleva a la sección: es lo que llaman la
+     tarjeta "Juegos Retro", el carrusel de la portada y el buscador, y
+     los tres deben acabar en el mismo sitio.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-retro-seccion-css-v112">
+
+  /* Barra de arriba de la sección: filtros por plataforma + el combo.
+     Va DENTRO de la rejilla ocupando toda la fila, que es la única
+     forma de meterla ahí sin pelearse con el grid del catálogo. */
+  .vgxr-barra{
+    grid-column:1/-1 !important;
+    display:flex !important;
+    flex-wrap:wrap;
+    gap:14px;
+    align-items:center;
+    justify-content:space-between;
+    padding:14px 16px;
+    margin-bottom:2px;
+    border:1px solid rgba(25,230,193,.20);
+    border-radius:20px;
+    background:linear-gradient(135deg,rgba(16,185,129,.12),rgba(124,77,255,.10));
+  }
+  .vgxr-chips{display:flex;flex-wrap:wrap;gap:8px}
+  .vgxr-chip{
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.05);
+    color:#dce4f8;
+    border-radius:999px;
+    padding:9px 14px;
+    font-size:0.8125rem;
+    font-weight:800;
+    cursor:pointer;
+    transition:.16s;
+  }
+  .vgxr-chip:hover{border-color:rgba(25,230,193,.45)}
+  .vgxr-chip.vgxr-on{
+    border-color:rgba(25,230,193,.65);
+    background:rgba(25,230,193,.14);
+    color:#bffff5;
+  }
+  .vgxr-combo{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+  .vgxr-combo-txt{color:#c7cdea;font-size:0.8125rem;line-height:1.35;max-width:340px}
+  .vgxr-combo-txt b{color:#fff;display:block;font-size:0.9375rem}
+  .vgxr-combo-btn{
+    border:0;
+    border-radius:14px;
+    padding:12px 18px;
+    font-weight:900;
+    font-size:0.875rem;
+    cursor:pointer;
+    color:#04140f;
+    background:linear-gradient(135deg,#19e6c1,#12b98f);
+    white-space:nowrap;
+  }
+  .vgxr-vacio{
+    grid-column:1/-1 !important;
+    border:1px dashed rgba(255,255,255,.18);
+    border-radius:20px;
+    padding:36px;
+    text-align:center;
+    color:#c8d0e8;
+  }
+
+  /* La tarjeta es la del catálogo. Lo único que cambia es la foto:
+     una carátula vertical dentro de una caja apaisada deja dos franjas
+     negras a los lados, así que se rellenan con la misma imagen
+     desenfocada, como en la ventana vieja. */
+  /* El prefijo "html body .card.vgxr-card" no es adorno: la regla que
+     manda hoy sobre las fotos del catálogo es
+       html body .card .imgbox > img { object-fit:cover !important }
+     y con dos clases sueltas no se le gana. Aquí hay una clase más
+     sobre el mismo elemento, que es lo que decide el empate. */
+  html body .card.vgxr-card .imgbox{
+    position:relative !important;
+    overflow:hidden !important;
+    background:#070b15 !important;
+  }
+  html body .card.vgxr-card .vgxr-fondo{
+    position:absolute !important;
+    inset:0 !important;
+    background-size:cover !important;
+    background-position:center center !important;
+    filter:blur(18px) brightness(.42) saturate(1.05);
+    transform:scale(1.2);
+    z-index:0 !important;
+  }
+  html body .card.vgxr-card .imgbox img{
+    position:relative !important;
+    z-index:1 !important;
+    object-fit:contain !important;
+    padding:8px !important;
+    width:100% !important;
+    height:100% !important;
+    max-width:100% !important;
+    max-height:100% !important;
+  }
+  html body .card.vgxr-card .card-badge{z-index:3 !important}
+  .vgxr-card .desc{color:#9aa3c0}
+  html body .card.vgxr-card.vgxr-fuera .imgbox img{opacity:.42 !important;filter:grayscale(.6)}
+  .vgxr-card.vgxr-fuera .quick-add-btn{opacity:.45}
+
+  /* Ficha del juego. Es propia y no el modal de productos: ese lo
+     rellenan media docena de bloques (galería, existencias, reseñas)
+     mirando SERVICES, y un juego retro no vive ahí. Reusarlo dejaba
+     dentro los datos del último producto abierto. */
+  .vgxr-ficha{
+    position:fixed;
+    inset:0;
+    z-index:10000;
+    display:none;
+    align-items:center;
+    justify-content:center;
+    padding:20px;
+    background:rgba(4,7,14,.82);
+    backdrop-filter:blur(6px);
+  }
+  .vgxr-ficha.vgxr-ver{display:flex}
+  .vgxr-ficha-caja{
+    width:min(760px,100%);
+    max-height:92vh;
+    overflow:auto;
+    display:grid;
+    grid-template-columns:280px 1fr;
+    background:#0e1220;
+    border:1px solid rgba(255,255,255,.10);
+    border-radius:26px;
+    box-shadow:0 30px 80px rgba(0,0,0,.55);
+    position:relative;
+  }
+  .vgxr-ficha-x{
+    position:absolute;
+    top:12px;
+    right:12px;
+    width:38px;
+    height:38px;
+    border-radius:999px;
+    border:1px solid rgba(255,255,255,.14);
+    background:rgba(0,0,0,.55);
+    color:#fff;
+    font-size:1.25rem;
+    cursor:pointer;
+    z-index:4;
+  }
+  .vgxr-ficha-foto{
+    position:relative;
+    min-height:340px;
+    overflow:hidden;
+    background:#070b15;
+    border-right:1px solid rgba(255,255,255,.08);
+  }
+  .vgxr-ficha-fondo{
+    position:absolute;
+    inset:0;
+    background-size:cover;
+    background-position:center;
+    filter:blur(20px) brightness(.4);
+    transform:scale(1.2);
+  }
+  .vgxr-ficha-foto img{
+    position:relative;
+    z-index:1;
+    width:100%;
+    height:100%;
+    object-fit:contain;
+    padding:16px;
+    display:block;
+  }
+  .vgxr-ficha-cuerpo{padding:26px 26px 24px;display:flex;flex-direction:column;gap:12px}
+  .vgxr-ficha-tag{
+    align-self:flex-start;
+    border:1px solid rgba(25,230,193,.35);
+    background:rgba(25,230,193,.10);
+    color:#bffff5;
+    border-radius:999px;
+    padding:6px 12px;
+    font-size:0.75rem;
+    font-weight:900;
+    letter-spacing:.06em;
+    text-transform:uppercase;
+  }
+  .vgxr-ficha-cuerpo h3{margin:0;color:#fff;font-size:1.5rem;line-height:1.15}
+  .vgxr-ficha-desc{margin:0;color:#a9b2cf;font-size:0.9375rem;line-height:1.5}
+  .vgxr-ficha-precio{color:#fff;font-size:1.75rem;font-weight:900}
+  .vgxr-ficha-btns{display:flex;gap:10px;flex-wrap:wrap;margin-top:2px}
+  .vgxr-ficha-btns button{
+    flex:1 1 160px;
+    border:0;
+    border-radius:14px;
+    padding:14px 16px;
+    font-weight:900;
+    font-size:0.9375rem;
+    cursor:pointer;
+  }
+  .vgxr-ficha-comprar{color:#04140f;background:linear-gradient(135deg,#19e6c1,#12b98f)}
+  .vgxr-ficha-carrito{
+    color:#e8ecff;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.14) !important;
+  }
+  .vgxr-ficha-nota{color:#8b93b0;font-size:0.8125rem;line-height:1.45}
+  .vgxr-ficha-nota button{
+    border:0;
+    background:none;
+    color:#19e6c1;
+    font-weight:900;
+    font-size:0.8125rem;
+    cursor:pointer;
+    padding:0;
+    text-decoration:underline;
+  }
+  body.vgxr-abierto{overflow:hidden !important}
+
+  @media(max-width:760px){
+    /* En el celular la barra se comía media pantalla antes del primer
+       juego: el texto del combo en dos líneas más un botón a lo ancho.
+       Se pone todo en una fila y el aviso corrido. */
+    .vgxr-barra{padding:10px 12px;gap:8px;border-radius:16px}
+    .vgxr-chip{padding:7px 11px;font-size:0.75rem}
+    .vgxr-combo{width:100%;gap:8px;flex-wrap:nowrap}
+    .vgxr-combo-txt{max-width:none;flex:1 1 auto;font-size:0.75rem}
+    .vgxr-combo-txt b{display:inline;font-size:0.75rem}
+    .vgxr-combo-btn{width:auto;padding:10px 13px;font-size:0.8125rem}
+    .vgxr-ficha{padding:0}
+    .vgxr-ficha-caja{
+      grid-template-columns:1fr;
+      width:100%;
+      max-height:100vh;
+      height:100%;
+      border-radius:0;
+      align-content:start;
+    }
+    .vgxr-ficha-foto{min-height:230px;border-right:0;border-bottom:1px solid rgba(255,255,255,.08)}
+    .vgxr-ficha-cuerpo{padding:18px 16px 26px}
+  }
+</style>
+
+<script id="vg-retro-seccion-js-v112">
+(function(){
+  'use strict';
+  if(window.__VG112__) return; window.__VG112__ = true;
+
+  var CAT = 'retro';
+  var plataforma = 'all';   /* filtro de los chips de la sección */
+  var busqueda = '';        /* lo que se haya adoptado del buscador de arriba */
+  var abierto = null;       /* juego que está viendo la ficha */
+
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+  }
+  /* Sin acentos ni mayúsculas, igual que el buscador de la página. El
+     rango va con códigos porque los acentos combinantes son invisibles
+     y cualquier editor se los puede comer. */
+  var ACENTOS = new RegExp('[\\u0300-\\u036f]', 'g');
+  function llano(s){
+    return String(s||'').toLowerCase().normalize('NFD').replace(ACENTOS,'').trim();
+  }
+
+  /* ── Los datos ──────────────────────────────────────────────────
+     Siempre a través de la fase 101: ahí es donde se mezclan los
+     juegos base con lo que el dueño editó en el panel. */
+  function todos(){
+    try{
+      if(typeof window.vgRetroJuegos === 'function') return window.vgRetroJuegos() || [];
+    }catch(e){}
+    return Array.isArray(window.RETRO_GAMES_DATA) ? window.RETRO_GAMES_DATA : [];
+  }
+  function visibles(){
+    return todos().filter(function(g){ return g && String(g.status||'') !== 'hidden'; });
+  }
+  function porId(id){
+    var l = todos();
+    for(var i=0;i<l.length;i++) if(String(l[i].id) === String(id)) return l[i];
+    return null;
+  }
+  function imagen(g){
+    try{
+      if(typeof window.vgRetroImagen === 'function') return window.vgRetroImagen(g);
+    }catch(e){}
+    if(typeof window.getRetroGameImage === 'function') return window.getRetroGameImage(g);
+    return g.image || 'portada.png';
+  }
+  function respaldo(g){
+    if(typeof window.vgRetroFallbackCoverV101 === 'function')
+      return window.vgRetroFallbackCoverV101(g.name, g.platform);
+    if(typeof window.makeRetroCover === 'function')
+      return window.makeRetroCover(g.name, g.platform);
+    return 'portada.png';
+  }
+
+  /* Los textos del pedido van en pesos; lo que se PINTA va en la moneda
+     que eligió el cliente, como en el resto de la tienda. */
+  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX') + ' MXN'; }
+  function verPrecio(n){
+    return (typeof window.vgFormatPrecio === 'function')
+      ? window.vgFormatPrecio(Number(n||0))
+      : pesos(n);
+  }
+
+  /* Si la portada de un juego no carga, se pone la carátula generada
+     con su nombre en vez de dejar el hueco negro. */
+  window.vgxrFalloFoto = function(img){
+    if(!img || img.dataset.vgxrFallo === '1') return;
+    img.dataset.vgxrFallo = '1';
+    var g = porId(img.getAttribute('data-vgxr-id'));
+    if(g) img.src = respaldo(g);
+  };
+
+  /* ── El filtro de la sección ────────────────────────────────────
+     Se adopta el texto del buscador de arriba solo si aquí encuentra
+     algo. Adoptarlo siempre dejaba la sección en "sin resultados" a
+     quien venía de buscar "netflix", y eso parece una sección rota. */
+  function adoptarGlobal(){
+    var g = document.getElementById('globalSearch');
+    var t = g && g.value ? String(g.value) : '';
+    if(!t || t === busqueda) return;
+    var q = llano(t);
+    var hay = visibles().some(function(x){
+      return llano(x.name + ' ' + x.platform).indexOf(q) >= 0;
+    });
+    if(!hay) return;
+    busqueda = t;
+  }
+
+  function lista(){
+    var q = llano(busqueda);
+    var out = visibles().filter(function(g){
+      var p = llano(g.platform);
+      if(plataforma === '360' && p.indexOf('360') < 0) return false;
+      if(plataforma === 'clasico' && p.indexOf('clasico') < 0) return false;
+      if(q && llano(g.name).indexOf(q) < 0) return false;
+      return true;
+    });
+    var s = document.getElementById('sortSelect');
+    var orden = (s && s.value) || 'default';
+    if(orden === 'priceAsc')  out.sort(function(a,b){ return Number(a.price||0) - Number(b.price||0); });
+    if(orden === 'priceDesc') out.sort(function(a,b){ return Number(b.price||0) - Number(a.price||0); });
+    if(orden === 'name')      out.sort(function(a,b){ return String(a.name).localeCompare(String(b.name)); });
+    return out;
+  }
+
+  function cuenta(cual){
+    return visibles().filter(function(g){
+      var p = llano(g.platform);
+      if(cual === '360') return p.indexOf('360') >= 0;
+      if(cual === 'clasico') return p.indexOf('clasico') >= 0;
+      return true;
+    }).length;
+  }
+
+  /* ── Pintar ─────────────────────────────────────────────────────
+     Se usa el mismo HTML de tarjeta que cardHTML() del catálogo para
+     que un juego y un servicio se vean exactamente igual. Lo que no se
+     copia son el corazón de favoritos y la vista rápida: los dos
+     buscan el producto por id dentro de SERVICES y un juego retro no
+     está ahí, así que saldrían botones que no hacen nada. */
+  function carrito(){
+    if(typeof window.cartIconSvg === 'function') return window.cartIconSvg();
+    return '+';
+  }
+
+  function tarjeta(g){
+    var img = imagen(g);
+    var p360 = llano(g.platform).indexOf('360') >= 0;
+    var fuera = String(g.status||'') === 'soldout';
+    var etiqueta = fuera
+      ? '<span class="card-badge premium">Agotado</span>'
+      : '<span class="card-badge ' + (p360 ? 'ready' : 'hot') + '">' + esc(g.platform) + '</span>';
+    return '<article class="card vgxr-card' + (fuera ? ' vgxr-fuera' : '') + '">' +
+      '<div class="imgbox">' +
+        etiqueta +
+        '<span class="vgxr-fondo" style="background-image:url(&quot;' + esc(img) + '&quot;)"></span>' +
+        '<img decoding="async" loading="lazy" width="640" height="360" src="' + esc(img) + '" ' +
+          'alt="' + esc(g.name) + '" referrerpolicy="no-referrer" ' +
+          'data-vgxr-id="' + esc(g.id) + '" onerror="window.vgxrFalloFoto(this)">' +
+      '</div>' +
+      '<div class="info">' +
+        '<div class="meta"><span class="tag">Xbox Retro</span></div>' +
+        '<h3>' + esc(g.name) + '</h3>' +
+        '<p class="desc">' + esc(g.platform) + ' · se entrega en una cuenta nueva y completa, solo tuya.</p>' +
+        '<div class="price-line"><div>' +
+          '<div class="from">Precio</div>' +
+          '<div class="price">' + esc(verPrecio(g.price)) + '</div>' +
+          '<small class="option-count">' + (fuera ? 'No disponible' : '1 juego') + '</small>' +
+        '</div></div>' +
+        '<div class="premium-actions">' +
+          '<button class="detail-btn" onclick="window.vgxrVer(\'' + esc(g.id) + '\')">Ver juego</button>' +
+          '<button class="quick-add-btn" title="Agregar al carrito" ' +
+            'aria-label="Agregar ' + esc(g.name) + ' al carrito" ' +
+            'onclick="window.vgxrAgregar(\'' + esc(g.id) + '\')">' + carrito() + '</button>' +
+        '</div>' +
+      '</div>' +
+    '</article>';
+  }
+
+  function barra(){
+    var chip = function(id, txt, n){
+      return '<button type="button" class="vgxr-chip' + (plataforma === id ? ' vgxr-on' : '') + '" ' +
+        'onclick="window.vgxrFiltrar(\'' + id + '\')">' + txt +
+        ' <span style="opacity:.6">' + n + '</span></button>';
+    };
+    return '<div class="vgxr-barra">' +
+      '<div class="vgxr-chips">' +
+        chip('all', 'Todos', cuenta('all')) +
+        chip('360', 'Xbox 360', cuenta('360')) +
+        chip('clasico', 'Xbox Clásico', cuenta('clasico')) +
+      '</div>' +
+      '<div class="vgxr-combo">' +
+        '<div class="vgxr-combo-txt"><b>¿Vas a llevar 3 o más?</b>' +
+          'Ármalos juntos en una sola cuenta y te descontamos el 10%.</div>' +
+        '<button type="button" class="vgxr-combo-btn" onclick="window.vgxrCombo()">Armar combo</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function pintar(){
+    var grid = document.getElementById('productsGrid');
+    if(!grid) return;
+    var l = lista();
+    var vacio = document.getElementById('emptyState');
+    if(vacio) vacio.style.display = 'none';   /* el aviso propio va dentro de la rejilla */
+
+    grid.innerHTML = barra() + (l.length
+      ? l.map(tarjeta).join('')
+      : '<div class="vgxr-vacio"><b>No encontré juegos con ese filtro.</b>' +
+        '<p style="margin:6px 0 0">Borra la búsqueda de arriba o toca "Todos".</p></div>');
+
+    /* La cuenta de juegos va en los chips de la barra y no en
+       #productsSubtitle: ese párrafo está oculto en toda la página. */
+    portada();
+  }
+
+  /* La franja de fotos de la portada de sección la arma el bloque de
+     Fortnite con productos del catálogo. Los juegos retro no están en
+     SERVICES, así que esta sección se quedaba sin franja: se pone aquí
+     con tres carátulas, reusando sus mismas clases. */
+  function portada(){
+    var hero = document.querySelector('#marketView .section-hero');
+    if(!hero) return;
+    var vieja = hero.querySelector('.vgfn-portada');
+    if(vieja) vieja.remove();
+    var l = visibles().slice(0, 3);
+    if(!l.length) return;
+    var d = document.createElement('div');
+    d.className = 'vgfn-portada cartas';
+    d.setAttribute('aria-hidden', 'true');
+    d.innerHTML = l.map(function(g, i){
+      return '<img src="' + esc(imagen(g)) + '" alt="" loading="lazy" decoding="async" ' +
+             'referrerpolicy="no-referrer" style="--i:' + i + '" onerror="this.remove()">';
+    }).join('');
+    hero.appendChild(d);
+  }
+
+  window.vgxrFiltrar = function(id){
+    plataforma = id;
+    /* El chip filtra por plataforma: si además queda el texto de una
+       búsqueda anterior, parece que el chip no hizo nada. */
+    busqueda = '';
+    var g = document.getElementById('globalSearch');
+    if(g) g.value = '';
+    pintar();
+  };
+
+  /* ── Comprar ────────────────────────────────────────────────────
+     Al mismo carrito que el resto de la tienda: es una variable de
+     nivel superior y se alcanza por nombre. Por window.cart se crearía
+     un carrito paralelo que nadie mira. */
+  function alCarrito(g){
+    try{
+      cart.push({
+        title: 'Xbox Retro · ' + g.name,
+        option: g.platform + ' · cuenta nueva completa',
+        price: Number(g.price||0),
+        image: imagen(g)
+      });
+      if(typeof updateCartCount === 'function') updateCartCount();
+    }catch(e){
+      alert('No se pudo agregar al carrito: ' + (e.message||e));
+      return false;
+    }
+    if(typeof window.showToast === 'function')
+      window.showToast('Agregado al carrito', g.name + ' · ' + pesos(g.price));
+    return true;
+  }
+
+  window.vgxrAgregar = function(id){
+    var g = porId(id);
+    if(!g) return;
+    if(String(g.status||'') === 'soldout'){
+      alert('Este juego está agotado temporalmente.');
+      return;
+    }
+    alCarrito(g);
+  };
+
+  window.vgxrComprar = function(id){
+    var g = porId(id);
+    if(!g) return;
+    if(String(g.status||'') === 'soldout'){
+      alert('Este juego está agotado temporalmente.');
+      return;
+    }
+    cerrarFicha();
+    if(typeof window.openPaymentModal !== 'function'){
+      alert('No se pudo abrir el pago. Intenta agregarlo al carrito.');
+      return;
+    }
+    window.openPaymentModal({
+      items: [{ title: 'Xbox Retro · ' + g.name,
+                option: g.platform + ' · cuenta nueva completa',
+                price: Number(g.price||0) }],
+      total: Number(g.price||0),
+      source: 'retro'
+    });
+  };
+
+  /* El combo con el 10% sigue siendo la ventana de siempre: es la que
+     sabe sumar varios juegos y aplicar el descuento. */
+  var abrirVentanaVieja = null;
+  window.vgxrCombo = function(){
+    if(typeof abrirVentanaVieja === 'function') abrirVentanaVieja();
+  };
+
+  /* ── Ficha del juego ────────────────────────────────────────────*/
+  function ficha(){
+    var f = document.getElementById('vgxrFicha');
+    if(f) return f;
+    f = document.createElement('div');
+    f.id = 'vgxrFicha';
+    f.className = 'vgxr-ficha';
+    f.innerHTML =
+      '<div class="vgxr-ficha-caja" role="dialog" aria-modal="true" aria-labelledby="vgxrNombre">' +
+        '<button class="vgxr-ficha-x" type="button" aria-label="Cerrar">×</button>' +
+        '<div class="vgxr-ficha-foto"><span class="vgxr-ficha-fondo"></span><img alt=""></div>' +
+        '<div class="vgxr-ficha-cuerpo">' +
+          '<span class="vgxr-ficha-tag"></span>' +
+          '<h3 id="vgxrNombre"></h3>' +
+          '<p class="vgxr-ficha-desc">Los juegos que elijas se agregan a una cuenta nueva y ' +
+            'completa. La cuenta será solo tuya: podrás cambiar la contraseña y agregar tu correo ' +
+            'o número de recuperación.</p>' +
+          '<div class="vgxr-ficha-precio"></div>' +
+          '<div class="vgxr-ficha-btns">' +
+            '<button class="vgxr-ficha-comprar" type="button">Comprar ahora</button>' +
+            '<button class="vgxr-ficha-carrito" type="button">Agregar al carrito</button>' +
+          '</div>' +
+          '<div class="vgxr-ficha-nota">¿Llevas 3 o más juegos? Te descontamos el 10%: ' +
+            '<button type="button">arma tu combo</button>.</div>' +
+        '</div>' +
+      '</div>';
+    document.body.appendChild(f);
+
+    f.querySelector('.vgxr-ficha-x').onclick = cerrarFicha;
+    f.addEventListener('click', function(e){ if(e.target === f) cerrarFicha(); });
+    f.querySelector('.vgxr-ficha-comprar').onclick = function(){
+      if(abierto) window.vgxrComprar(abierto.id);
+    };
+    f.querySelector('.vgxr-ficha-carrito').onclick = function(){
+      if(!abierto) return;
+      window.vgxrAgregar(abierto.id);
+      cerrarFicha();
+    };
+    f.querySelector('.vgxr-ficha-nota button').onclick = function(){
+      cerrarFicha();
+      window.vgxrCombo();
+    };
+    return f;
+  }
+
+  function cerrarFicha(){
+    var f = document.getElementById('vgxrFicha');
+    if(f) f.classList.remove('vgxr-ver');
+    document.body.classList.remove('vgxr-abierto');
+    abierto = null;
+  }
+
+  window.vgxrVer = function(id){
+    var g = porId(id);
+    if(!g) return;
+    abierto = g;
+    var f = ficha();
+    var img = imagen(g);
+    var foto = f.querySelector('.vgxr-ficha-foto img');
+    foto.setAttribute('data-vgxr-id', String(g.id));
+    foto.dataset.vgxrFallo = '';
+    foto.onerror = function(){ window.vgxrFalloFoto(foto); };
+    foto.src = img;
+    foto.alt = g.name;
+    f.querySelector('.vgxr-ficha-fondo').style.backgroundImage = 'url("' + img + '")';
+    f.querySelector('.vgxr-ficha-tag').textContent = g.platform;
+    f.querySelector('#vgxrNombre').textContent = g.name;
+    f.querySelector('.vgxr-ficha-precio').textContent = verPrecio(g.price);
+    var fuera = String(g.status||'') === 'soldout';
+    f.querySelector('.vgxr-ficha-comprar').style.display = fuera ? 'none' : '';
+    f.querySelector('.vgxr-ficha-carrito').textContent = fuera ? 'Agotado por ahora' : 'Agregar al carrito';
+    f.querySelector('.vgxr-ficha-carrito').disabled = fuera;
+    f.classList.add('vgxr-ver');
+    document.body.classList.add('vgxr-abierto');
+  };
+
+  window.addEventListener('keydown', function(e){
+    if(e.key === 'Escape' && document.getElementById('vgxrFicha') &&
+       document.getElementById('vgxrFicha').classList.contains('vgxr-ver')) cerrarFicha();
+  });
+
+  /* ── Enganche con el catálogo ───────────────────────────────────*/
+  function icono(){
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" ' +
+      'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px">' +
+      '<line x1="6" y1="12" x2="10" y2="12"/><line x1="8" y1="10" x2="8" y2="14"/>' +
+      '<circle cx="15" cy="13" r="1"/><circle cx="18" cy="11" r="1"/>' +
+      '<rect x="2" y="6" width="20" height="12" rx="4"/></svg>';
+  }
+
+  function meterCategoria(){
+    if(typeof CATEGORIES === 'undefined' || !Array.isArray(CATEGORIES)) return false;
+    for(var i=0;i<CATEGORIES.length;i++) if(CATEGORIES[i].id === CAT) return true;
+    /* Detrás de Fortnite si está, y si no detrás de Gaming: las tres
+       son secciones de videojuegos y van juntas. */
+    var pos = -1;
+    for(var j=0;j<CATEGORIES.length;j++)
+      if(CATEGORIES[j].id === 'fortnite' || CATEGORIES[j].id === 'gaming') pos = j;
+    CATEGORIES.splice(pos >= 0 ? pos + 1 : 1, 0, {
+      id: CAT, label: 'Xbox Retro', icon: icono(),
+      desc: 'Más de 300 juegos de Xbox 360 y Xbox clásico. Los que elijas se agregan a una ' +
+            'cuenta nueva y completa, solo tuya, con contraseña y correo de recuperación a tu nombre.',
+      bg: 'radial-gradient(90% 120% at 78% 20%,#12563a,#0c2a1e 45%,#080f0d)'
+    });
+    if(typeof window.renderNav === 'function') window.renderNav();
+    return true;
+  }
+
+  /* Se envuelve UNA sola vez. Envolver de nuevo más tarde parece
+     inofensivo, pero los bloques de abajo ya habían envuelto lo mío:
+     la segunda vuelta se guardaba como "ventana vieja" una función que
+     acababa llamando a la sección, y el botón de combo se quedaba sin
+     abrir nada. Quedar por dentro de la cadena no estorba: todos los
+     envoltorios de esta página llaman al de abajo. */
+  var envuelto = false;
+
+  function envolver(){
+    if(envuelto) return;
+    envuelto = true;
+
+    if(typeof window.showSection === 'function' && !window.showSection.__vg112){
+      var orig = window.showSection;
+      var nueva = function(cat){
+        if(cat !== CAT){ busqueda = ''; }
+        var r = orig.apply(this, arguments);
+        document.body.classList.toggle('vgxr-activo', cat === CAT);
+        if(cat === CAT){
+          var t = document.getElementById('productsTitle');
+          if(t) t.textContent = 'Juegos Xbox Retro';
+          adoptarGlobal();
+          pintar();
+          /* Los precios y las fotos que editó el dueño viven en
+             Supabase: se piden al entrar y se repinta si cambió algo. */
+          if(typeof window.vgRetroCargarOverrides === 'function'){
+            try{
+              window.vgRetroCargarOverrides().then(function(){
+                if(typeof activeCategory !== 'undefined' && activeCategory === CAT) pintar();
+              });
+            }catch(e){}
+          }
+        }
+        return r;
+      };
+      nueva.__vg112 = true;
+      window.showSection = nueva;
+    }
+
+    /* En la barra lateral, al lado de cada sección va cuántos productos
+       tiene. Los juegos retro no están en SERVICES: salía un 0. */
+    if(typeof window.renderNav === 'function' && !window.renderNav.__vg112){
+      var origN = window.renderNav;
+      var nuevaN = function(){
+        var r = origN.apply(this, arguments);
+        try{
+          var n = visibles().length;
+          Array.prototype.forEach.call(document.querySelectorAll('.side-item'), function(b){
+            if(!/xbox retro/i.test(b.textContent||'')) return;
+            var s = b.querySelector('span');
+            if(s) s.textContent = n || '·';
+          });
+        }catch(e){}
+        return r;
+      };
+      nuevaN.__vg112 = true;
+      window.renderNav = nuevaN;
+    }
+
+    /* El buscador de arriba y el ordenador llaman a renderProducts, que
+       borraría la rejilla de juegos. Se vuelve a pintar si la sección
+       activa es esta. */
+    if(typeof window.renderProducts === 'function' && !window.renderProducts.__vg112){
+      var origR = window.renderProducts;
+      var nuevaR = function(){
+        if(typeof activeCategory !== 'undefined' && activeCategory === CAT){
+          adoptarGlobal();
+          /* Si el cliente borró el texto de arriba, aquí también. */
+          var g = document.getElementById('globalSearch');
+          if(g && !g.value) busqueda = '';
+          pintar();
+          return;
+        }
+        return origR.apply(this, arguments);
+      };
+      nuevaR.__vg112 = true;
+      window.renderProducts = nuevaR;
+    }
+
+    /* Todo lo que abría la ventana —la tarjeta "Juegos Retro", el
+       carrusel de la portada, el buscador— ahora trae a la sección.
+       La ventana se guarda para el combo con descuento. */
+    if(typeof window.openRetroModal === 'function' && !window.openRetroModal.__vg112){
+      abrirVentanaVieja = window.openRetroModal;
+      var nuevaO = function(){
+        if(typeof window.showSection === 'function') window.showSection(CAT);
+      };
+      nuevaO.__vg112 = true;
+      window.openRetroModal = nuevaO;
+    }
+
+    /* El carrusel de la portada escribía el nombre del juego en la caja
+       de la ventana. Esa caja ya no se ve: quien tocaba un juego ahí
+       aterrizaba en la sección con los 309, no en el suyo. */
+    if(typeof window.openRetroGameFromCarousel === 'function' && !window.openRetroGameFromCarousel.__vg112){
+      var nuevaC = function(nombre){
+        if(typeof window.showSection === 'function') window.showSection(CAT);
+        var g = document.getElementById('globalSearch');
+        if(g) g.value = nombre || '';
+        busqueda = nombre || '';
+        pintar();
+      };
+      nuevaC.__vg112 = true;
+      window.openRetroGameFromCarousel = nuevaC;
+    }
+
+    /* El buscador dejaba el nombre del juego en la caja de la ventana.
+       Ahora lo deja en el buscador de arriba, que es el que filtra la
+       sección. */
+    if(typeof window.setRetroQuickSearch === 'function' && !window.setRetroQuickSearch.__vg112){
+      var origS = window.setRetroQuickSearch;
+      var nuevaS = function(valor, btn){
+        if(typeof activeCategory !== 'undefined' && activeCategory === CAT){
+          var g = document.getElementById('globalSearch');
+          if(g) g.value = valor || '';
+          busqueda = valor || '';
+          pintar();
+          return;
+        }
+        return origS.apply(this, arguments);
+      };
+      nuevaS.__vg112 = true;
+      window.setRetroQuickSearch = nuevaS;
+    }
+  }
+
+  var intentos = 0;
+  function arrancar(){
+    if(!meterCategoria()){
+      if(++intentos < 60) setTimeout(arrancar, 500);
+      return;
+    }
+    envolver();
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
+  else arrancar();
+})();
+</script>
+
 
 </body>
 </html>
