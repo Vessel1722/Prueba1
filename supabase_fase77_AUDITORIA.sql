@@ -962,6 +962,14 @@ alter table public.orders   validate constraint orders_status_ok;
 -- ═══════════════════════════════════════════════════════════════════
 -- RESULTADO — las nueve filas tienen que decir OK
 -- ═══════════════════════════════════════════════════════════════════
+-- ⚠️ CORREGIDO EN LA FASE 78.
+--    Esta comprobación daba OK con la tabla abierta de par en par.
+--    Preguntaba si EXISTÍA la política buena, y existía — pero al lado
+--    seguía viva una permisiva que había dejado el panel de Supabase,
+--    y las reglas de fila se suman: basta que UNA deje pasar.
+--    Lo que hay que preguntar es si queda alguna MALA. Así se hace
+--    ahora, y así está también en supabase_fase78_ANALITICA_DE_VERDAD.sql,
+--    que además las borra todas y las vuelve a poner.
 select 'S1 analítica cerrada' as que,
   (select count(*)::text from pg_policies
     where schemaname='public' and tablename='vg_analytics_events') || ' políticas' as detalle,
@@ -969,7 +977,8 @@ select 'S1 analítica cerrada' as que,
               where n.nspname='public' and c.relname='vg_analytics_events')
        and (select count(*) from pg_policies
              where schemaname='public' and tablename='vg_analytics_events'
-               and cmd='SELECT' and qual like '%is_admin%') = 1
+               and cmd in ('SELECT','ALL','UPDATE','DELETE')
+               and roles::text like '%anon%') = 0
        then 'OK' else 'REVISAR' end as resultado
 union all
 select 'S1 xbox con candado',
