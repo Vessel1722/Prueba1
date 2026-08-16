@@ -21,6 +21,57 @@
 <meta content="630" property="og:image:height"/>
 <meta content="summary_large_image" name="twitter:card"/>
 <meta content="https://www.vesselgames.xyz/og-vessel-games.png" name="twitter:image"/>
+<!-- FASE 77 · Faltaban estas cuatro. Al compartir en Twitter/X salía
+     la imagen sin texto propio, porque twitter:* no hereda de og:*
+     cuando la tarjeta es summary_large_image. Y og:locale es lo que
+     le dice a Facebook y WhatsApp que la ficha está en español de
+     México, que es donde está la clientela. -->
+<meta content="Vessel Games | Marketplace Digital Premium" name="twitter:title"/>
+<meta content="Recargas, cuentas, streaming y software con entrega de 20 minutos a 2 horas y seguimiento por chat." name="twitter:description"/>
+<meta content="Vessel Games" property="og:site_name"/>
+<meta content="es_MX" property="og:locale"/>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 77 · Datos estructurados, en el HTML de entrada
+
+     El único ld+json del sitio se inyectaba con JavaScript al abrir
+     un producto. El robot de Google lee primero la respuesta cruda:
+     ahí no había ni un dato de negocio. Esto va en el HTML tal cual
+     sale del servidor, así que se lee siempre.
+
+     Solo lleva datos comprobables del propio proyecto. Si algún día
+     hay dirección física u horario fijo, se añaden aquí — inventarlos
+     para rellenar campos es peor que no ponerlos.
+     ════════════════════════════════════════════════════════════════ -->
+<script type="application/ld+json">
+{
+  "@context": "https://schema.org",
+  "@type": "OnlineStore",
+  "@id": "https://www.vesselgames.xyz/#tienda",
+  "name": "Vessel Games",
+  "url": "https://www.vesselgames.xyz/",
+  "logo": "https://www.vesselgames.xyz/logo.png",
+  "image": "https://www.vesselgames.xyz/og-vessel-games.png",
+  "description": "Recargas de juegos, streaming, cuentas, software y trámites. Entrega de 20 minutos a 2 horas con seguimiento por chat.",
+  "inLanguage": "es-MX",
+  "currenciesAccepted": "MXN",
+  "areaServed": { "@type": "Country", "name": "México" },
+  "contactPoint": {
+    "@type": "ContactPoint",
+    "contactType": "customer support",
+    "telephone": "+52-661-107-8412",
+    "availableLanguage": ["es"]
+  },
+  "potentialAction": {
+    "@type": "SearchAction",
+    "target": {
+      "@type": "EntryPoint",
+      "urlTemplate": "https://www.vesselgames.xyz/?buscar={search_term_string}"
+    },
+    "query-input": "required name=search_term_string"
+  }
+}
+</script>
 <link href="https://i.imgur.com" rel="preconnect"/>
 <!-- Se quitó el <link rel="preload" as="video" fetchpriority="high"> del vídeo
      del hero: forzaba la descarga de 7.7 MB con prioridad alta, compitiendo
@@ -86,6 +137,54 @@ window.vgUrlSegura = function(u){
   return 'about:blank';
 };
 </script>
+
+<script id="vg-nucleo-v77">
+/* ═══════════════════════════════════════════════════════════════════
+   VESSEL GAMES · FASE 77 — Las utilidades, en un solo sitio
+
+   La auditoría contó 32 copias de esc(), 26 de arrancar(), 22 de qs()
+   y 11 de money() repartidas por el archivo. No es solo repetición:
+   son versiones que fueron divergiendo. La plantilla de pedidos del
+   panel no usaba NINGUNA, y ahí estaba el agujero de XSS.
+
+   Este bloque va deliberadamente ARRIBA del todo, antes de cualquier
+   otro script, para que window.VG exista cuando los 111 bloques de
+   abajo se ejecuten. Los bloques viejos siguen con sus copias — no se
+   tocan, funcionan — pero todo lo nuevo tira de aquí, y lo que se
+   arregla se arregla una vez.
+   ═══════════════════════════════════════════════════════════════════ */
+window.VG = window.VG || {};
+
+/* Escapa texto que va a parar dentro de HTML.
+   Cubre también los dos tipos de comilla: media página interpola datos
+   de la base dentro de value="..." y title="...", y ahí una comilla
+   sin escapar rompe el atributo y abre la puerta a un onerror. */
+window.VG.esc = function(v){
+  return String(v == null ? '' : v).replace(/[&<>"']/g, function(c){
+    return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+  });
+};
+
+/* Enlaces de la base de datos. Alias del filtro de arriba, para que
+   quien use VG.esc tenga al lado el de las direcciones y no se le
+   olvide que escapar el texto NO desactiva un javascript:. */
+window.VG.url = window.vgUrlSegura;
+
+window.VG.qs  = function(s, r){ return (r || document).querySelector(s); };
+window.VG.qsa = function(s, r){ return Array.prototype.slice.call((r || document).querySelectorAll(s)); };
+
+/* El cliente de Supabase, siempre el mismo (ver vg-un-solo-cliente-v68).
+   Devuelve null si todavía no está listo: quien llame debe comprobarlo. */
+window.VG.sb = function(){
+  return (typeof window.vgGetSB === 'function') ? window.vgGetSB() : null;
+};
+
+/* Compatibilidad: mucho código viejo llama a escapeHtml() a secas y
+   comprueba antes si existe en window. Se publica aquí para que esa
+   comprobación acierte siempre, incluso en los bloques que corren
+   antes de que se defina la copia de más abajo. */
+if (typeof window.escapeHtml !== 'function') window.escapeHtml = window.VG.esc;
+</script>
 <!-- Google Analytics GA4 -->
 <script async="" src="https://www.googletagmanager.com/gtag/js?id=G-JQBDC2D04T"></script>
 <script>
@@ -126,6 +225,11 @@ window.vgUrlSegura = function(u){
   </script>
 <link href="https://fonts.googleapis.com" rel="preconnect"/>
 <link crossorigin="" href="https://fonts.gstatic.com" rel="preconnect"/>
+<!-- FASE 77 · De aquí salen el catálogo, los precios y las reseñas:
+     media docena de peticiones en cuanto arranca la página. Abrir la
+     conexión (DNS + TLS) mientras todavía se interpreta el HTML ahorra
+     ese ida y vuelta cuando llega la primera consulta de verdad. -->
+<link crossorigin="" href="https://qlczzaajxvvkyuqqdjmu.supabase.co" rel="preconnect"/>
 <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=Barlow+Condensed:wght@700;900&amp;display=swap" rel="preload" as="style" onload="this.rel='stylesheet'"/>
 <noscript><link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;900&amp;family=Barlow+Condensed:wght@700;900&amp;display=swap" rel="stylesheet"/></noscript>
 <style>
@@ -13760,7 +13864,7 @@ window.vgBingSize = function(){
 <header class="topbar">
 <div class="nav">
 <a class="brand" href="javascript:void(0)" onclick="showHome()"><div class="vg-brand-ring"><img alt="Vessel Games logo" decoding="async" id="brandLogo" onerror="this.onerror=null;this.src='data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Cdefs%3E%3ClinearGradient id='g' x1='0' x2='1' y1='0' y2='1'%3E%3Cstop stop-color='%2319e6c1'/%3E%3Cstop offset='.55' stop-color='%238b5cf6'/%3E%3Cstop offset='1' stop-color='%23ff5da8'/%3E%3C/linearGradient%3E%3C/defs%3E%3Crect width='64' height='64' rx='16' fill='%23080a12'/%3E%3Cpath d='M14 18h10l8 24 8-24h10L38 50H26L14 18z' fill='url(%23g)'/%3E%3Ccircle cx='48' cy='16' r='5' fill='%2319e6c1'/%3E%3C/svg%3E'"/></div><span>Vessel <i class="vg-wm">Games</i><small>Catálogo digital premium</small></span></a>
-<label class="searchbar">🔎 <input id="globalSearch" oninput="renderProducts()" placeholder="Buscar juegos, cuentas, software, monedas..."/></label>
+<label class="searchbar"><span aria-hidden="true">🔎</span> <input id="globalSearch" type="search" aria-label="Buscar en el catálogo" oninput="renderProducts()" placeholder="Buscar juegos, cuentas, software, monedas..."/></label>
 <div class="nav-actions"><button class="pill" onclick="vgOpenCotizar()">Cotizar</button><button class="pill" onclick="showSection('all')">Catálogo</button>
 <div aria-label="Cambiar moneda" class="vg-currency-toggle" id="vgCurrencyToggle">
 <button class="vg-currency-option active" data-currency="MXN" type="button">MXN</button>
@@ -14263,7 +14367,7 @@ window.vgProofPick=function(fuente){
     }
     function renderHome(){
       const randomServices=shuffleServices(SERVICES);
-      homeTiles.innerHTML=randomServices.map(p=>`<article class="service-carousel-card" onclick="openProduct(${p.id})" title="${escapeHtml(p.title)}"><img decoding="async" loading="lazy" src="${p.image}" alt="${escapeHtml(p.alt||p.title)}" referrerpolicy="no-referrer" onerror="this.src='portada.png'"><div class="service-carousel-info"><span class="tag">${escapeHtml(p.categoryName||'Servicio')}</span><b>${escapeHtml(p.title)}</b><small>${escapeHtml(p.description||'Servicio digital disponible')}</small><div class="service-carousel-price">Desde ${p.priceLabel||fmt(minPrice(p))}</div></div></article>`).join('');
+      homeTiles.innerHTML=randomServices.map(p=>`<article class="service-carousel-card" role="button" tabindex="0" onclick="openProduct(${p.id})" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();openProduct(${p.id})}" aria-label="Ver ${VG.esc(p.title)}" title="${VG.esc(p.title)}"><img decoding="async" loading="lazy" width="640" height="360" src="${VG.esc(VG.url(p.image))}" alt="${VG.esc(p.alt||p.title)}" referrerpolicy="no-referrer" onerror="this.src='portada.png'"><div class="service-carousel-info"><span class="tag">${VG.esc(p.categoryName||'Servicio')}</span><b>${VG.esc(p.title)}</b><small>${VG.esc(p.description||'Servicio digital disponible')}</small><div class="service-carousel-price">Desde ${VG.esc(p.priceLabel||fmt(minPrice(p)))}</div></div></article>`).join('');
       featuredGrid.innerHTML=randomServices.slice(0,10).map(cardHTML).join('');
       startHomeCarousel();
     }
@@ -14323,21 +14427,24 @@ window.vgProofPick=function(fuente){
       if(!product) return;
       if(product.title.includes('Juegos Retro')){ openRetroModal(); return; }
       const option=(product.options&&product.options[0]) || {name:'Cotización personalizada', price:0};
-      cart.push({title:product.title, option:option.name, price:Number(option.price||0), image:product.image});
+      /* FASE 77 · product_id y option_index viajan con el artículo para
+         que vg_create_order_v17 pueda mirar el precio de verdad en la
+         base en vez de creerse el que manda el navegador. */
+      cart.push({title:product.title, option:option.name, price:Number(option.price||0), image:product.image, product_id:product.id, option_index:(product.options||[]).indexOf(option)});
       updateCartCount();
       showToast('Producto agregado', `${product.title} se agregó al carrito.`);
     }
 
-    function cardHTML(p){ const badge=getCardBadge(p); const optionCount=(p.options||[]).length; const isFav=(typeof window.vgIsFavorite==='function')&&window.vgIsFavorite(p.id); return `<article class="card"><div class="imgbox"><span class="card-badge ${badge.cls}">${badge.label}</span><img decoding="async" loading="lazy" src="${p.image}" alt="${escapeHtml(p.alt||p.title)}" referrerpolicy="no-referrer" onerror="this.src='portada.png'"><button class="vg-fav-btn${isFav?' active':''}" type="button" title="${isFav?'Quitar de favoritos':'Guardar en favoritos'}" onclick="event.stopPropagation();window.vgToggleFavorite&&window.vgToggleFavorite(${p.id})"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M12 21s-7.5-4.7-10.2-9.3C.2 8.6 1.6 5 5.1 4.2c2-.5 3.9.3 5.1 1.9l1.8 2.4 1.8-2.4c1.2-1.6 3.1-2.4 5.1-1.9 3.5.8 4.9 4.4 3.3 7.5C19.5 16.3 12 21 12 21z"/></svg></button><button class="vg-quickview-btn" type="button" onclick="event.stopPropagation();window.vgQuickView&&window.vgQuickView(${p.id})">Vista rápida</button></div><div class="info"><div class="meta"><span class="tag">${escapeHtml(p.categoryName||'Servicio')}</span></div><h3>${escapeHtml(p.title)}</h3><p class="desc">${escapeHtml(p.description||'Servicio digital disponible.')}</p><div class="price-line"><div><div class="from">Desde</div><div class="price">${p.priceLabel||fmt(minPrice(p))}</div><small class="option-count">${optionCount} opción(es)</small></div></div><div class="premium-actions"><button class="detail-btn" onclick="openProduct(${p.id})">${getCardAction(p)}</button><button class="quick-add-btn" title="Agregar al carrito" onclick="quickAddFirstOption(${p.id})">${cartIconSvg()}</button></div></div></article>`; }
+    function cardHTML(p){ const badge=getCardBadge(p); const optionCount=(p.options||[]).length; const isFav=(typeof window.vgIsFavorite==='function')&&window.vgIsFavorite(p.id); return `<article class="card"><div class="imgbox"><span class="card-badge ${badge.cls}">${badge.label}</span><img decoding="async" loading="lazy" width="640" height="360" src="${VG.esc(VG.url(p.image))}" alt="${VG.esc(p.alt||p.title)}" referrerpolicy="no-referrer" onerror="this.src='portada.png'"><button class="vg-fav-btn${isFav?' active':''}" type="button" aria-label="${isFav?'Quitar de favoritos':'Guardar en favoritos'}" title="${isFav?'Quitar de favoritos':'Guardar en favoritos'}" onclick="event.stopPropagation();window.vgToggleFavorite&&window.vgToggleFavorite(${p.id})"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 21s-7.5-4.7-10.2-9.3C.2 8.6 1.6 5 5.1 4.2c2-.5 3.9.3 5.1 1.9l1.8 2.4 1.8-2.4c1.2-1.6 3.1-2.4 5.1-1.9 3.5.8 4.9 4.4 3.3 7.5C19.5 16.3 12 21 12 21z"/></svg></button><button class="vg-quickview-btn" type="button" onclick="event.stopPropagation();window.vgQuickView&&window.vgQuickView(${p.id})">Vista rápida</button></div><div class="info"><div class="meta"><span class="tag">${VG.esc(p.categoryName||'Servicio')}</span></div><h3>${VG.esc(p.title)}</h3><p class="desc">${VG.esc(p.description||'Servicio digital disponible.')}</p><div class="price-line"><div><div class="from">Desde</div><div class="price">${VG.esc(p.priceLabel||fmt(minPrice(p)))}</div><small class="option-count">${optionCount} opción(es)</small></div></div><div class="premium-actions"><button class="detail-btn" onclick="openProduct(${p.id})">${getCardAction(p)}</button><button class="quick-add-btn" aria-label="Agregar ${VG.esc(p.title)} al carrito" title="Agregar al carrito" onclick="quickAddFirstOption(${p.id})">${cartIconSvg()}</button></div></div></article>`; }
     function openProduct(id){ currentProduct=SERVICES.find(s=>s.id===id); selectedOptionIndex=0; if(!currentProduct)return; if(currentProduct.title.includes('Juegos Retro')){ openRetroModal(); return; } modalImage.src=currentProduct.image; modalImageBox.style.backgroundImage=`url('${currentProduct.image}')`; modalTitle.textContent=currentProduct.title; modalCat.textContent=currentProduct.categoryName; modalDesc.textContent=currentProduct.description||'Selecciona una opción para comprar o agregar al carrito.'; renderOptions(); productModal.classList.add('active'); }
     function renderOptions(){ modalOptions.innerHTML=(currentProduct.options||[]).map((o,i)=>`<div class="option ${i===selectedOptionIndex?'active':''}" onclick="selectedOptionIndex=${i};renderOptions()"><b>${escapeHtml(o.name)}</b><strong>${fmt(o.price)}</strong></div>`).join('') || '<div class="empty">Cotización personalizada</div>'; }
     function closeModal(){productModal.classList.remove('active')}
     function selectedOption(){ return (currentProduct.options&&currentProduct.options[selectedOptionIndex]) || {name:'Cotización personalizada', price:0}; }
-    function addSelectedToCart(){ const o=selectedOption(); cart.push({title:currentProduct.title, option:o.name, price:Number(o.price||0), image:currentProduct.image}); updateCartCount(); closeModal(); showToast('Producto agregado', `${currentProduct.title} se agregó al carrito.`); }
-    function buySelectedNow(){ const o=selectedOption(); pendingPaymentOrder={items:[{title:currentProduct.title, option:o.name, price:Number(o.price||0)}], total:Number(o.price||0), source:'producto'}; closeModal(); openPaymentModal(pendingPaymentOrder); }
+    function addSelectedToCart(){ const o=selectedOption(); cart.push({title:currentProduct.title, option:o.name, price:Number(o.price||0), image:currentProduct.image, product_id:currentProduct.id, option_index:selectedOptionIndex}); updateCartCount(); closeModal(); showToast('Producto agregado', `${currentProduct.title} se agregó al carrito.`); }
+    function buySelectedNow(){ const o=selectedOption(); pendingPaymentOrder={items:[{title:currentProduct.title, option:o.name, price:Number(o.price||0), product_id:currentProduct.id, option_index:selectedOptionIndex}], total:Number(o.price||0), source:'producto'}; closeModal(); openPaymentModal(pendingPaymentOrder); }
     function updateCartCount(){ cartCount.textContent=cart.length; }
     function openCart(){ renderCart(); cartModal.classList.add('active'); } function closeCart(){ cartModal.classList.remove('active'); }
-    function renderCart(){ if(!cart.length){ cartItems.innerHTML='<div class="empty">Tu carrito está vacío.</div>'; cartTotal.textContent='$0 MXN'; return; } cartItems.innerHTML=`<div class="cart-items-list">${cart.map((it,i)=>`<div class="cart-item"><div class="cart-thumb"><img decoding="async" src="${it.image||'portada.png'}" alt="${escapeHtml(it.title)}" onerror="this.src='portada.png'"></div><div><span class="cart-title">${escapeHtml(it.title)}</span><span class="cart-option">${escapeHtml(it.option)}</span></div><div class="cart-price-box"><strong>${fmt(it.price)}</strong><button class="cart-remove-btn" onclick="cart.splice(${i},1);updateCartCount();renderCart()">Quitar</button></div></div>`).join('')}</div>`; cartTotal.textContent=fmt(cart.reduce((s,x)=>s+Number(x.price||0),0)); }
+    function renderCart(){ if(!cart.length){ cartItems.innerHTML='<div class="empty">Tu carrito está vacío.</div>'; cartTotal.textContent='$0 MXN'; return; } cartItems.innerHTML=`<div class="cart-items-list">${cart.map((it,i)=>`<div class="cart-item"><div class="cart-thumb"><img decoding="async" width="120" height="120" src="${VG.esc(VG.url(it.image||'portada.png'))}" alt="${VG.esc(it.title)}" onerror="this.src='portada.png'"></div><div><span class="cart-title">${VG.esc(it.title)}</span><span class="cart-option">${VG.esc(it.option)}</span></div><div class="cart-price-box"><strong>${fmt(it.price)}</strong><button class="cart-remove-btn" aria-label="Quitar ${VG.esc(it.title)} del carrito" onclick="cart.splice(${i},1);updateCartCount();renderCart()">Quitar</button></div></div>`).join('')}</div>`; cartTotal.textContent=fmt(cart.reduce((s,x)=>s+Number(x.price||0),0)); }
     function clearCart(){ cart=[]; updateCartCount(); renderCart(); }
     function openPaymentForCart(){ if(!cart.length)return; pendingPaymentOrder={items:[...cart], total:cart.reduce((s,x)=>s+Number(x.price||0),0), source:'carrito'}; closeCart(); openPaymentModal(pendingPaymentOrder); }
     function sendCartWhatsApp(){ openPaymentForCart(); }
@@ -14693,7 +14800,7 @@ window.vgProofPick=function(fuente){
     function renderRetroGrid(){
       const q=(retroSearch?.value||'').trim().toLowerCase(); const plat=retroPlatform?.value||'all'; const fallback=retroFallbackImage();
       let list=RETRO_GAMES.filter(g=>(plat==='all'||g.platform===plat) && (!q||g.name.toLowerCase().includes(q)));
-      retroGridContainer.innerHTML=list.map(g=>{ const active=selectedRetroGames.some(x=>x.id===g.id); const img=g.image||fallback; const slotText=g.image?'Foto del juego':'Espacio para foto del juego'; return `<article class="retro-game ${active?'active':''}" onclick="toggleRetroGame('${g.id}')"><div class="retro-cover"><img decoding="async" src="${img}" loading="lazy" referrerpolicy="no-referrer" onerror="this.src='${fallback}'"><div class="photo-slot">${slotText}</div></div><div class="retro-info"><h4>${escapeHtml(g.name)}</h4><div class="retro-meta"><span class="retro-platform">${g.platform}</span><span class="retro-price">${fmt(g.price)}</span></div></div></article>`; }).join('') || '<div class="retro-empty">No encontré juegos con esa búsqueda. Borra el texto o elige “Todas las plataformas”.</div>';
+      retroGridContainer.innerHTML=list.map(g=>{ const active=selectedRetroGames.some(x=>x.id===g.id); const img=g.image||fallback; const slotText=g.image?'Foto del juego':'Espacio para foto del juego'; return `<article class="retro-game ${active?'active':''}" role="button" tabindex="0" aria-pressed="${active?'true':'false'}" aria-label="${active?'Quitar':'Agregar'} ${VG.esc(g.name)}" onclick="toggleRetroGame('${VG.esc(g.id)}')" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleRetroGame('${VG.esc(g.id)}')}"><div class="retro-cover"><img decoding="async" width="400" height="560" src="${VG.esc(VG.url(img))}" loading="lazy" alt="${VG.esc(g.name)}" referrerpolicy="no-referrer" onerror="this.src='${VG.esc(fallback)}'"><div class="photo-slot">${VG.esc(slotText)}</div></div><div class="retro-info"><h4>${VG.esc(g.name)}</h4><div class="retro-meta"><span class="retro-platform">${VG.esc(g.platform)}</span><span class="retro-price">${fmt(g.price)}</span></div></div></article>`; }).join('') || '<div class="retro-empty">No encontré juegos con esa búsqueda. Borra el texto o elige “Todas las plataformas”.</div>';
     }
     function toggleRetroGame(id){ const g=RETRO_GAMES.find(x=>x.id===id); if(!g)return; const i=selectedRetroGames.findIndex(x=>x.id===id); if(i>=0) selectedRetroGames.splice(i,1); else selectedRetroGames.push(g); renderRetroGrid(); updateRetroTotals(); }
     function retroTotals(){ const subtotal=selectedRetroGames.reduce((s,g)=>s+g.price,0); const discount=selectedRetroGames.length>=3 ? Math.round(subtotal*0.10) : 0; return {subtotal,discount,total:subtotal-discount}; }
@@ -15809,11 +15916,11 @@ window.vgAdminTestSupabase=async function(){let client=needSB(); if(!client){ale
 window.vgAdminLoadAll=async function(){await vgAdminLoadOrders();await vgAdminLoadProducts()};
 window.vgAdminLoadOrders=async function(){let client=needSB(); if(!client){vgAdminRenderOrders('Configura Supabase primero.');return} let {data,error}=await client.from('orders').select('*').order('created_at',{ascending:false}).limit(500); if(error){vgAdminRenderOrders(error.message);return} adminOrders=data||[];vgAdminRenderStats();vgAdminRenderOrders()};
 window.vgAdminRenderStats=function(){let total=adminOrders.reduce((s,o)=>s+Number(o.total||0),0),pend=adminOrders.filter(o=>o.status==='pendiente').length,proof=adminOrders.filter(o=>o.proof&&o.proof.url).length;let b=$('#vgAdminStats');if(b)b.innerHTML=`<div class="vg-admin-stat"><b>${adminOrders.length}</b><span>Compras</span></div><div class="vg-admin-stat"><b>${money(total)}</b><span>Total</span></div><div class="vg-admin-stat"><b>${pend}</b><span>Pendientes</span></div><div class="vg-admin-stat"><b>${proof}</b><span>Comprobantes</span></div>`};
-window.vgAdminRenderOrders=function(msg){let b=$('#vgAdminOrdersList');if(!b)return;if(msg){b.innerHTML=`<div class="vg-admin-note">${msg}</div>`;return}let q=($('#vgOrderSearch')?.value||'').toLowerCase(),f=$('#vgOrderFilter')?.value||'all';let a=adminOrders.filter(o=>(f==='all'||o.status===f)&&(!q||JSON.stringify(o).toLowerCase().includes(q))); if(!a.length){b.innerHTML='<div class="vg-admin-note">Sin compras registradas.</div>';return}b.innerHTML=`<table class="vg-admin-table"><thead><tr><th>Pedido</th><th>Artículos</th><th>Total</th><th>Comprobante</th><th>Estado</th></tr></thead><tbody>${a.map(o=>`<tr><td><b>${o.id}</b><br><small>${new Date(o.created_at).toLocaleString('es-MX')}</small><br>${o.source||''}</td><td>${(o.items||[]).map(i=>`${i.title}<br><small>${i.option||''}</small>`).join('<hr>')}</td><td><b>${money(o.total)}</b></td><td>${o.proof?.url?`<a href="${window.vgUrlSegura(o.proof.url)}" target="_blank" rel="noopener noreferrer">Ver comprobante</a><br><small>${o.proof.filename||''}</small>`:'No'}</td><td><select class="vg-admin-select" onchange="vgAdminUpdateOrder('${o.id}',this.value)">${['pendiente','validado','entregado','cancelado'].map(s=>`<option ${o.status===s?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>`};
+window.vgAdminRenderOrders=function(msg){let b=$('#vgAdminOrdersList');if(!b)return;if(msg){b.innerHTML=`<div class="vg-admin-note">${msg}</div>`;return}let q=($('#vgOrderSearch')?.value||'').toLowerCase(),f=$('#vgOrderFilter')?.value||'all';let a=adminOrders.filter(o=>(f==='all'||o.status===f)&&(!q||JSON.stringify(o).toLowerCase().includes(q))); if(!a.length){b.innerHTML='<div class="vg-admin-note">Sin compras registradas.</div>';return}b.innerHTML=`<table class="vg-admin-table"><thead><tr><th>Pedido</th><th>Artículos</th><th>Total</th><th>Comprobante</th><th>Estado</th></tr></thead><tbody>${a.map(o=>`<tr><td><b>${VG.esc(o.id)}</b><br><small>${VG.esc(new Date(o.created_at).toLocaleString('es-MX'))}</small><br>${VG.esc(o.source||'')}</td><td>${(o.items||[]).map(i=>`${VG.esc(i.title)}<br><small>${VG.esc(i.option||'')}</small>`).join('<hr>')}</td><td><b>${money(o.total)}</b></td><td>${o.proof?.url?`<a href="${VG.esc(VG.url(o.proof.url))}" target="_blank" rel="noopener noreferrer">Ver comprobante</a><br><small>${VG.esc(o.proof.filename||'')}</small>`:'No'}</td><td><select class="vg-admin-select" onchange="vgAdminUpdateOrder('${VG.esc(o.id)}',this.value)">${['pendiente','validado','entregado','cancelado'].map(s=>`<option ${o.status===s?'selected':''}>${s}</option>`).join('')}</select></td></tr>`).join('')}</tbody></table>`};
 window.vgAdminUpdateOrder=async function(id,status){let client=needSB(); if(!client)return; let {error}=await client.from('orders').update({status}).eq('id',id); if(error)alert(error.message); await vgAdminLoadOrders()};
 window.vgAdminLoadProducts=async function(){let client=needSB(); if(!client){vgAdminRenderProducts();return} let {data,error}=await client.from('products_admin').select('*'); if(error){adminProducts=[]}else{adminProducts=data||[]} applyAdminProducts(); vgAdminRenderProducts()};
 function applyAdminProducts(){let map=Object.fromEntries(adminProducts.map(p=>[String(p.product_id),p]));services().forEach(p=>{let ov=map[String(p.id)];if(!ov)return;if(ov.price_label)p.priceLabel=ov.price_label;if(ov.stock)p.adminStock=ov.stock;if(ov.badge)p.adminBadge=ov.badge;if(Array.isArray(ov.options)&&Array.isArray(p.options)){ov.options.forEach((x,i)=>{if(p.options[i]){p.options[i].name=x.name;p.options[i].price=Number(x.price||0)}})}}); if(typeof window.renderProducts==='function')window.renderProducts()}
-window.vgAdminRenderProducts=function(){let q=($('#vgProductSearch')?.value||'').toLowerCase(),map=Object.fromEntries(adminProducts.map(p=>[String(p.product_id),p]));let list=services().filter(p=>!q||[p.title,p.description,p.categoryName].join(' ').toLowerCase().includes(q));let b=$('#vgAdminProductsList');if(!b)return;b.innerHTML=list.map(p=>{let ov=map[String(p.id)]||{},ops=ov.options||p.options||[];return`<div class="vg-admin-card" data-pid="${p.id}"><div class="vg-admin-cardtop"><img src="${p.image||'portada.png'}" onerror="this.src='portada.png'"><div><b>${p.title}</b><small>${p.categoryName||''} · ID ${p.id}</small></div><button class="vg-admin-btn" onclick="vgAdminSaveProduct('${p.id}')">Guardar</button></div><div class="vg-admin-tools" style="margin-top:12px"><input class="vg-admin-input" data-field="price_label" placeholder="Precio visible" value="${ov.price_label||p.priceLabel||''}"><input class="vg-admin-input" data-field="stock" placeholder="Stock" value="${ov.stock||p.adminStock||''}"><select class="vg-admin-select" data-field="badge">${['','Más vendido','Disponible','Nuevo','Oferta','Bajo pedido','Stock limitado'].map(x=>`<option value="${x}" ${(ov.badge||p.adminBadge||'')===x?'selected':''}>${x||'Sin badge'}</option>`).join('')}</select></div><div class="vg-admin-options">${ops.map((op,i)=>`<div class="vg-admin-oprow"><input class="vg-admin-input" data-on="${i}" value="${op.name||''}"><input class="vg-admin-input" type="number" data-op="${i}" value="${Number(op.price||0)}"></div>`).join('')}</div></div>`}).join('')};
+window.vgAdminRenderProducts=function(){let q=($('#vgProductSearch')?.value||'').toLowerCase(),map=Object.fromEntries(adminProducts.map(p=>[String(p.product_id),p]));let list=services().filter(p=>!q||[p.title,p.description,p.categoryName].join(' ').toLowerCase().includes(q));let b=$('#vgAdminProductsList');if(!b)return;b.innerHTML=list.map(p=>{let ov=map[String(p.id)]||{},ops=ov.options||p.options||[];return`<div class="vg-admin-card" data-pid="${VG.esc(p.id)}"><div class="vg-admin-cardtop"><img src="${VG.esc(VG.url(p.image||'portada.png'))}" onerror="this.src='portada.png'"><div><b>${VG.esc(p.title)}</b><small>${VG.esc(p.categoryName||'')} · ID ${VG.esc(p.id)}</small></div><button class="vg-admin-btn" onclick="vgAdminSaveProduct('${VG.esc(p.id)}')">Guardar</button></div><div class="vg-admin-tools" style="margin-top:12px"><input class="vg-admin-input" data-field="price_label" placeholder="Precio visible" value="${VG.esc(ov.price_label||p.priceLabel||'')}"><input class="vg-admin-input" data-field="stock" placeholder="Stock" value="${VG.esc(ov.stock||p.adminStock||'')}"><select class="vg-admin-select" data-field="badge">${['','Más vendido','Disponible','Nuevo','Oferta','Bajo pedido','Stock limitado'].map(x=>`<option value="${VG.esc(x)}" ${(ov.badge||p.adminBadge||'')===x?'selected':''}>${VG.esc(x||'Sin badge')}</option>`).join('')}</select></div><div class="vg-admin-options">${ops.map((op,i)=>`<div class="vg-admin-oprow"><input class="vg-admin-input" data-on="${i}" value="${VG.esc(op.name||'')}"><input class="vg-admin-input" type="number" data-op="${i}" value="${Number(op.price||0)}"></div>`).join('')}</div></div>`}).join('')};
 window.vgAdminSaveProduct=async function(id){let client=needSB(); if(!client){alert('Configura Supabase');return}let card=document.querySelector(`[data-pid="${id}"]`),p=services().find(x=>String(x.id)===String(id)); if(!card||!p)return;let payload={product_id:String(id),title:p.title,category:p.categoryName||p.category||'',image:p.image||'',price_label:card.querySelector('[data-field="price_label"]')?.value||'',stock:card.querySelector('[data-field="stock"]')?.value||'',badge:card.querySelector('[data-field="badge"]')?.value||'',options:(p.options||[]).map((op,i)=>({name:card.querySelector(`[data-on="${i}"]`)?.value||op.name,price:Number(card.querySelector(`[data-op="${i}"]`)?.value||op.price||0)}))};let {error}=await client.from('products_admin').upsert(payload,{onConflict:'product_id'}); if(error)alert(error.message); else alert('Guardado en Supabase'); await vgAdminLoadProducts()};
 window.vgAdminSyncProducts=async function(){let client=needSB(); if(!client){alert('Configura Supabase');return}for(const p of services()){await client.from('products_admin').upsert({product_id:String(p.id),title:p.title,category:p.categoryName||p.category||'',image:p.image||'',price_label:p.priceLabel||'',stock:p.adminStock||'',badge:p.adminBadge||'',options:p.options||[]},{onConflict:'product_id'})}alert('Catálogo sincronizado');await vgAdminLoadProducts()};
 window.vgAdminExportOrders=()=>$('#vgAdminExportBox').value=JSON.stringify(adminOrders,null,2);
@@ -16089,7 +16196,7 @@ setInterval(()=>{ if($('#retroModal.active')) updateRetroDOMTotals(); },800);
 
 /* Admin orders */
 function orderCard(o){ const active=String(o.id)===String(state.selectedOrderId); const img=proofUrl(o); return `<div class="vg-order-card ${active?'active':''}" data-order-id="${esc(o.id)}"><div class="vg-order-col"><h5>Pedido</h5><div class="vg-order-id-badge">Pedido #${esc(o.id)}</div><div class="vg-order-sub">${esc(new Date(o.created_at).toLocaleString('es-MX'))}</div><div class="vg-order-sub">${esc(cleanSource(o.source))}</div></div><div class="vg-order-col"><h5>Artículo</h5><div class="vg-order-main-title">${esc(orderTitle(o))}</div><div class="vg-order-sub">${orderOptionText(o)||'<span style="opacity:.65">Sin detalle extra</span>'}</div></div><div class="vg-order-col"><h5>Total</h5><div class="vg-order-main-title">${money(deriveTotal(o))}</div></div><div class="vg-order-col"><h5>Comprobante</h5>${img?`<button class="vg-order-proof-btn" onclick="vgAdminSelectOrder('${esc(o.id)}')">Ver imagen</button><div class="vg-order-sub" style="margin-top:8px">${esc(proofName(o))}</div>`:'<div class="vg-order-sub">Sin comprobante</div>'}</div><div class="vg-order-col"><h5>Estado</h5><select class="vg-admin-select vg-order-status" onchange="vgAdminUpdateOrder('${esc(o.id)}',this.value)">${['pendiente','validado','entregado','cancelado'].map(s=>`<option value="${s}" ${String(o.status||'')===s?'selected':''}>${s}</option>`).join('')}</select></div><div class="vg-order-col"><h5>Acciones</h5><div class="vg-order-actions"><button class="vg-order-action-btn" onclick="vgAdminSelectOrder('${esc(o.id)}')">Detalle</button><button class="vg-order-action-btn" onclick="navigator.clipboard.writeText('Pedido #${esc(o.id)}')">Copiar ID</button></div></div></div>`; }
-function renderOrderPreview(){ const box=$('#vgOrderPreview'); if(!box) return; const o=state.orders.find(x=>String(x.id)===String(state.selectedOrderId)); if(!o){box.innerHTML='<div class="vg-empty-state">Selecciona un pedido para ver el comprobante.</div>';return;} const img=proofUrl(o); box.innerHTML=`<h3>Pedido #${esc(o.id)}</h3><div class="vg-preview-grid"><div class="vg-preview-pill"><b>Total</b>${money(deriveTotal(o))}</div><div class="vg-preview-pill"><b>Estado</b>${esc(o.status||'pendiente')}</div><div class="vg-preview-pill"><b>Fuente</b>${esc(cleanSource(o.source))}</div><div class="vg-preview-pill"><b>Fecha</b>${esc(new Date(o.created_at).toLocaleString('es-MX'))}</div></div><p><b>Artículo:</b><br>${esc(orderTitle(o))}</p>${orderOptionText(o)?`<p><b>Opciones:</b><br>${orderOptionText(o)}</p>`:''}${img?`<a class="vg-order-proof-btn" href="${window.vgUrlSegura(img)}" target="_blank" rel="noopener noreferrer">Abrir comprobante completo</a><img class="vg-proof-preview-img" src="${img}" alt="Comprobante" onerror="this.style.display='none'">`:'<div class="vg-empty-state">Este pedido todavía no tiene comprobante.</div>'}`; }
+function renderOrderPreview(){ const box=$('#vgOrderPreview'); if(!box) return; const o=state.orders.find(x=>String(x.id)===String(state.selectedOrderId)); if(!o){box.innerHTML='<div class="vg-empty-state">Selecciona un pedido para ver el comprobante.</div>';return;} const img=proofUrl(o); box.innerHTML=`<h3>Pedido #${esc(o.id)}</h3><div class="vg-preview-grid"><div class="vg-preview-pill"><b>Total</b>${money(deriveTotal(o))}</div><div class="vg-preview-pill"><b>Estado</b>${esc(o.status||'pendiente')}</div><div class="vg-preview-pill"><b>Fuente</b>${esc(cleanSource(o.source))}</div><div class="vg-preview-pill"><b>Fecha</b>${esc(new Date(o.created_at).toLocaleString('es-MX'))}</div></div><p><b>Artículo:</b><br>${esc(orderTitle(o))}</p>${orderOptionText(o)?`<p><b>Opciones:</b><br>${orderOptionText(o)}</p>`:''}${img?`<a class="vg-order-proof-btn" href="${VG.esc(VG.url(img))}" target="_blank" rel="noopener noreferrer">Abrir comprobante completo</a><img class="vg-proof-preview-img" src="${VG.esc(VG.url(img))}" alt="Comprobante" onerror="this.style.display='none'">`:'<div class="vg-empty-state">Este pedido todavía no tiene comprobante.</div>'}`; }
 function dedupeOrders(list){ const map=new Map(); for(const o of list||[]){ const sec=(new Date(o.created_at||0)).toISOString().slice(0,19); const sig=[sec,orderTitle(o),deriveTotal(o),proofName(o)].join('|'); if(!map.has(sig)) map.set(sig,o); } return [...map.values()].sort((a,b)=>new Date(b.created_at)-new Date(a.created_at)||Number(b.id||0)-Number(a.id||0)); }
 window.vgAdminSelectOrder=function(id){state.selectedOrderId=String(id); window.vgAdminRenderOrders(); renderOrderPreview();};
 window.vgAdminRenderOrders=function(msg){ const box=$('#vgAdminOrdersList'); if(!box) return; if(msg){box.innerHTML=`<div class="vg-empty-state">${esc(msg)}</div>`;return;} const q=($('#vgOrderSearch')?.value||'').toLowerCase(); const f=$('#vgOrderFilter')?.value||'all'; let arr=state.orders.filter(o=>(f==='all'||o.status===f)&&(!q||[o.id,o.source,o.status,orderTitle(o),proofName(o),JSON.stringify(orderItems(o))].join(' ').toLowerCase().includes(q))); if(!arr.length){box.innerHTML='<div class="vg-empty-state">No encontré pedidos.</div>';renderOrderPreview();return;} if(!arr.some(o=>String(o.id)===String(state.selectedOrderId))) state.selectedOrderId=String(arr[0].id); box.innerHTML=arr.map(orderCard).join(''); renderOrderPreview(); };
@@ -16511,12 +16618,22 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   }
   function normalizeOrder(order){
     order = order || window.pendingPaymentOrder || {};
-    const items = Array.isArray(order.items) ? order.items.map(it => ({
-      title: String(it.title || it.name || 'Pedido'),
-      option: String(it.option || it.variant || 'Opción seleccionada'),
-      price: Number(parseMoney(it.price)),
-      image: it.image || ''
-    })) : [];
+    /* FASE 77 · product_id y option_index sobreviven a la normalización.
+       Esta función rehacía cada artículo con cuatro campos fijos, así
+       que el identificador que pone el carrito se perdía justo antes
+       de mandar el pedido — y sin él el servidor no puede comprobar
+       el precio contra el catálogo. */
+    const items = Array.isArray(order.items) ? order.items.map(it => {
+      const x = {
+        title: String(it.title || it.name || 'Pedido'),
+        option: String(it.option || it.variant || 'Opción seleccionada'),
+        price: Number(parseMoney(it.price)),
+        image: it.image || ''
+      };
+      if(it.product_id != null)   x.product_id = it.product_id;
+      if(it.option_index != null) x.option_index = it.option_index;
+      return x;
+    }) : [];
     const total = Number(parseMoney(order.total)) || items.reduce((s,it)=>s+Number(it.price||0),0);
     return {
       source: order.source || 'whatsapp-checkout',
@@ -19155,19 +19272,37 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   function readCity(){try{return JSON.parse(localStorage.getItem(CITY_KEY)||'{}')}catch(e){return {}}}
   function saveCity(c){try{localStorage.setItem(CITY_KEY,JSON.stringify(c||{}))}catch(e){}}
   function loadCity(){var cached=readCity(); if(cached && cached._ts && Date.now()-cached._ts<86400000)return Promise.resolve(cached); return Promise.race([fetch('https://ipapi.co/json/').then(function(r){return r.json()}).then(function(d){var c={city:d.city||'',region:d.region||'',country:d.country_name||d.country||'',_ts:Date.now()};saveCity(c);return c}).catch(function(){return cached||{}}), new Promise(function(res){setTimeout(function(){res(cached||{})},1600)})]);}
-  async function track(eventType, data){
-    data=data||{};
-    var geo=readCity();
-    var row={session_id:getSession(),event_type:eventType,product_id:data.product_id||null,product_name:data.product_name||null,section:data.section||null,scroll_depth:data.scroll_depth||null,city:geo.city||'',region:geo.region||'',country:geo.country||'',metadata:data.metadata||{}};
-    var client=getSB();
-    if(!client)return;
-    try{await client.from(ANALYTICS_TABLE).insert(row)}catch(e){}
-  }
+  /* ─────────────────────────────────────────────────────────────
+     FASE 77 · Este rastreador deja de escribir por su cuenta
+
+     En el sitio había DOS sistemas de analítica apuntando a la misma
+     tabla: éste y el bloque vg-analytics-panel-fix-v104 de más abajo.
+     Cada visita generaba los eventos por duplicado y pedía la ciudad
+     DOS veces a ipapi.co, un servicio de terceros que además corta a
+     las 1.000 peticiones diarias en el plan gratuito.
+
+     No se borra el bloque entero porque no solo hace analítica:
+     también envuelve openProduct para abrir el modal de Xbox, y eso
+     tiene que seguir funcionando. Lo que se corta es solo el envío.
+
+     Esta función pasa a no hacer nada. No se reenvía a v104 a
+     propósito: v104 ya instala sus propios enganches de page_view,
+     scroll_depth y product_view, así que reenviar habría cambiado un
+     duplicado por otro. El que apunta es v104 y punto.
+
+     Los wrappers de más abajo siguen llamando a track() y no pasa
+     nada: llaman a esto, que devuelve y ya. Lo que hacen aparte
+     —abrir el modal de Xbox, el de retro— sigue igual. */
+  function track(){ return Promise.resolve(); }
   window.vgTrackEvent = track;
 
   function installAnalytics(){
-    loadCity();
-    track('page_view',{section:'inicio',metadata:{path:location.pathname,search:location.search,referrer:document.referrer||''}});
+    /* FASE 77 · Fuera las dos fuentes de duplicado de este bloque:
+       · loadCity() era la SEGUNDA petición a ipapi.co de cada visita.
+       · track('page_view') era la segunda visita apuntada en la tabla.
+       De las dos se encarga ya vg-analytics-panel-fix-v104. Lo que
+       sigue debajo (los wrappers de secciones, retro y Xbox) se
+       queda: eso sí es trabajo de este bloque. */
     var milestones=[25,50,75,90], sent={};
     window.addEventListener('scroll',function(){
       var h=Math.max(document.body.scrollHeight,document.documentElement.scrollHeight)-innerHeight; if(h<=0)return; var pct=Math.round(Math.min(100,Math.max(0,(scrollY/h)*100)));
@@ -19305,13 +19440,18 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
       try{ order = window.cartData(); }catch(e){}
     }
     order = order || window.pendingPaymentOrder || {};
+    /* FASE 77 · Segunda copia de normalizeOrder, mismo arreglo: el
+       identificador del producto tiene que llegar hasta el servidor. */
     var items = Array.isArray(order.items) ? order.items.map(function(it){
-      return {
+      var x = {
         title:String(it.title || it.name || 'Pedido'),
         option:String(it.option || it.variant || 'Opción seleccionada'),
         price:parseMoney(it.price),
         image:it.image || ''
       };
+      if(it.product_id != null)   x.product_id = it.product_id;
+      if(it.option_index != null) x.option_index = it.option_index;
+      return x;
     }) : [];
     var total = parseMoney(order.total);
     if(!total) total = items.reduce(function(sum, it){ return sum + parseMoney(it.price); }, 0);
@@ -19755,7 +19895,19 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   function readJSON(k,d){try{return JSON.parse(localStorage.getItem(k)||'')}catch(e){return d}}
   function writeJSON(k,v){try{localStorage.setItem(k,JSON.stringify(v))}catch(e){}}
   function readCfg(){var c=readJSON(CFG,{});return {url:(c&&c.url)||window.VG_SUPABASE_URL||'',anon:(c&&c.anon)||window.VG_SUPABASE_ANON_KEY||''}}
-  function getSB(){var c=readCfg(); if(!window.supabase||!c.url||!c.anon)return null; window.__vgAnalyticsSB104=window.__vgAnalyticsSB104||{sig:'',client:null}; var sig=c.url+'|'+String(c.anon).slice(0,18); if(!window.__vgAnalyticsSB104.client||window.__vgAnalyticsSB104.sig!==sig){window.__vgAnalyticsSB104.client=window.supabase.createClient(c.url,c.anon); window.__vgAnalyticsSB104.sig=sig;} return window.__vgAnalyticsSB104.client;}
+  /* FASE 77 · Un solo cliente de Supabase, el de siempre.
+
+     Este bloque se fabricaba el suyo con createClient(), que es
+     exactamente lo que la fase 68 documentó como causa de una caída:
+     varios clientes sobre el mismo almacén de sesión se disparan
+     avisos entre ellos y se enredan. Ahora pide el compartido.
+
+     El respaldo con createClient se queda por si la analítica corre
+     antes de que vgGetSB esté listo, pero deja de ser el camino
+     normal. */
+  function getSB(){
+    if(typeof window.vgGetSB === 'function'){ var s = window.vgGetSB(); if(s) return s; }
+    var c=readCfg(); if(!window.supabase||!c.url||!c.anon)return null; window.__vgAnalyticsSB104=window.__vgAnalyticsSB104||{sig:'',client:null}; var sig=c.url+'|'+String(c.anon).slice(0,18); if(!window.__vgAnalyticsSB104.client||window.__vgAnalyticsSB104.sig!==sig){window.__vgAnalyticsSB104.client=window.supabase.createClient(c.url,c.anon); window.__vgAnalyticsSB104.sig=sig;} return window.__vgAnalyticsSB104.client;}
   function session(){var s=localStorage.getItem(SESSION); if(!s){s='vg_'+Date.now()+'_'+Math.random().toString(16).slice(2);localStorage.setItem(SESSION,s)} return s;}
   function cityCache(){return readJSON(CITY,{})||{}}
   function saveCity(c){if(!c)return; c._ts=Date.now(); writeJSON(CITY,c)}
@@ -19767,7 +19919,24 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     for(var i=0;i<fetchers.length;i++){try{var out=await Promise.race([fetchers[i](),timeout(1200)]); if(out&&(out.city||out.region||out.country)){saveCity(out);return out}}catch(e){}}
     return c||{};
   }
-  var cityPromise=loadCityFast();
+  /* FASE 77 · La ciudad se pide DESPUÉS de que la página cargue.
+
+     Antes esta línea salía disparada al interpretar el script, o sea
+     compitiendo con el catálogo: en la medición, la petición a
+     ipapi.co arrancaba a los 448 ms y se llevaba 525 ms de la ventana
+     en la que el cliente todavía no ve precios. Es un dato de
+     analítica; puede esperar a que la tienda esté en pantalla.
+
+     Si algún evento llega antes, cityPromise sigue existiendo y
+     resuelve a la caché o a {} — se apunta sin ciudad y ya. */
+  var cityPromise = Promise.resolve(cityCache());
+  function pedirCiudadCuandoHayaCalma(){
+    var lanzar = function(){ cityPromise = loadCityFast(); };
+    if(typeof requestIdleCallback === 'function') requestIdleCallback(lanzar, {timeout:4000});
+    else setTimeout(lanzar, 2000);
+  }
+  if(document.readyState === 'complete') pedirCiudadCuandoHayaCalma();
+  else window.addEventListener('load', pedirCiudadCuandoHayaCalma, {once:true});
 
   async function insertRows(rows){var client=getSB(); if(!client||!rows.length)return false; try{var res=await client.from(TABLE).insert(rows); if(res&&res.error)throw res.error; return true}catch(e){return false}}
   async function flushQueue(){var q=readJSON(QUEUE,[])||[]; if(!q.length)return; var ok=await insertRows(q.slice(0,40)); if(ok){q.splice(0,40); writeJSON(QUEUE,q)}}
@@ -24215,7 +24384,7 @@ function cfg(){var c=parse(localStorage.getItem('vg_supabase_cfg_v1')||'{}',{});
 function sb(){var c=cfg(); if(!window.supabase||!c.url||!c.anon)return null; var sig=c.url+'|'+String(c.anon).slice(0,18); if(!window.__vg10SB||window.__vg10SBSig!==sig){window.__vg10SB=window.supabase.createClient(c.url,c.anon);window.__vg10SBSig=sig} return window.__vg10SB}
 function toast(a,b){try{if(window.showToast)return window.showToast(a,b||'')}catch(e){} if(b) console.log(a,b); else console.log(a)}
 function session(){for(var i=0;i<SESSION_KEYS.length;i++){var o=parse(localStorage.getItem(SESSION_KEYS[i])||sessionStorage.getItem(SESSION_KEYS[i])||'null',null); if(!o)continue; if(o.user)o=o.user; var p=phone(o.phone||o.customer_phone||o.client_phone); var n=String(o.name||o.customer_name||o.client_name||'').trim(); if(p||n||o.id)return {id:o.id||o.user_id||o.uuid||null,name:n||'Cliente',phone:p,tokens:Number(o.tokens||o.balance||0),referral_code:o.referral_code||o.ref||p,total_purchases:Number(o.total_purchases||0)}} return null}
-function saveSession(s){if(!s)return null; var o={id:s.id||s.user_id||null,name:s.name||s.customer_name||'Cliente',phone:phone(s.phone||s.customer_phone),tokens:Number(s.tokens||0),referral_code:s.referral_code||s.ref||phone(s.phone||s.customer_phone),total_purchases:Number(s.total_purchases||0),ts:Date.now()}; SESSION_KEYS.forEach(function(k){try{localStorage.setItem(k,JSON.stringify(o));sessionStorage.setItem(k,JSON.stringify(o))}catch(e){}}); updateAccountBadge(); return o}
+function saveSession(s){if(!s)return null; var o={id:s.id||s.user_id||null,name:s.name||s.customer_name||'Cliente',phone:phone(s.phone||s.customer_phone),tokens:Number(s.tokens||0),referral_code:s.referral_code||s.ref||phone(s.phone||s.customer_phone),total_purchases:Number(s.total_purchases||0),ts:Date.now()}; /* FASE 77: solo localStorage. Las copias de sessionStorage no las leía nadie. */ SESSION_KEYS.forEach(function(k){try{localStorage.setItem(k,JSON.stringify(o))}catch(e){} try{sessionStorage.removeItem(k)}catch(e){}}); updateAccountBadge(); return o}
 function clearSession(){SESSION_KEYS.forEach(function(k){try{localStorage.removeItem(k);sessionStorage.removeItem(k)}catch(e){}}); updateAccountBadge()}
 function orderId(o){return String(o&&(o.id||o.order_id||o.order_ref||''))}
 function orderTitle(o){if(!o)return 'Pedido'; if(o.product_title||o.product_name||o.title||o.service_name)return String(o.product_title||o.product_name||o.title||o.service_name); try{var it=Array.isArray(o.items)?o.items[0]:(typeof o.items==='string'?parse(o.items,[])[0]:null); if(it)return String(it.title||it.name||it.product||'Pedido')}catch(e){} return 'Pedido'}
@@ -24240,22 +24409,49 @@ function clientShell(){var s=session()||{name:'Cliente',phone:''}; return '<div 
 function openClientPanel(view,ref){var s=session(); if(!s){openAuth();return} var root=qs('#vg10ClientPanel'); root.innerHTML=clientShell(); root.classList.add('active'); state.clientView=view||state.clientView||'dashboard'; bindClientNav(); loadClientView(state.clientView,ref); startClientPolling();}
 function bindClientNav(){qsa('#vg10ClientPanel [data-view]').forEach(function(b){b.classList.toggle('active',b.dataset.view===state.clientView);b.onclick=function(){state.clientView=b.dataset.view;setNotifCount(0);loadClientView(state.clientView)}}); var out=qs('#vg10ClientLogout'); if(out)out.onclick=function(){clearSession();qs('#vg10ClientPanel').classList.remove('active')}}
 async function loadClientView(view,ref){var cont=qs('#vg10ClientContent'); if(!cont)return; cont.innerHTML='<div class="vg10-empty">Cargando...</div>'; try{state.clientOrders=await loadOrders(false)}catch(e){cont.innerHTML='<div class="vg10-empty">No se pudieron cargar tus compras: '+esc(e.message||e)+'</div>';return} bindClientNav(); if(view==='purchases')return renderPurchases(cont); if(view==='messages')return renderClientMessages(cont,ref); if(view==='tickets')return renderTickets(cont); return renderDashboard(cont)}
-function renderDashboard(cont){var orders=state.clientOrders, active=orders.filter(function(o){return orderStatus(o)!=='entregado'&&orderStatus(o)!=='cancelado'}); var total=orders.reduce(function(s,o){return s+orderTotal(o)},0); cont.innerHTML='<h1 class="vg10-title">Dashboard</h1><p class="vg10-sub">Resumen de tu actividad.</p><div class="vg10-cards"><div class="vg10-stat"><span>Total compras</span><b>'+orders.length+'</b></div><div class="vg10-stat"><span>Monto total</span><b>'+money(total)+'</b></div><div class="vg10-stat"><span>Pedidos activos</span><b>'+active.length+'</b></div><div class="vg10-stat"><span>Mensajes</span><b>'+state.notifCount+'</b></div></div><div class="vg10-panel"><div class="vg10-panel-head"><h2 style="margin:0">Pedidos recientes</h2><button class="vg10-btn primary" data-view="purchases">Ver todos</button></div><div style="padding:18px" class="vg10-order-list">'+(orders.slice(0,6).map(orderCard).join('')||'<div class="vg10-empty">Aún no tienes compras.</div>')+'</div></div>'; qsa('[data-view="purchases"]',cont).forEach(function(b){b.onclick=function(){state.clientView='purchases';loadClientView('purchases')}}); bindOrderButtons(cont)}
+function renderDashboard(cont){var orders=state.clientOrders, active=orders.filter(function(o){return orderStatus(o)!=='entregado'&&orderStatus(o)!=='cancelado'}); var total=orders.reduce(function(s,o){return s+orderTotal(o)},0); cont.innerHTML='<h2 class="vg10-title">Dashboard</h2><p class="vg10-sub">Resumen de tu actividad.</p><div class="vg10-cards"><div class="vg10-stat"><span>Total compras</span><b>'+orders.length+'</b></div><div class="vg10-stat"><span>Monto total</span><b>'+money(total)+'</b></div><div class="vg10-stat"><span>Pedidos activos</span><b>'+active.length+'</b></div><div class="vg10-stat"><span>Mensajes</span><b>'+state.notifCount+'</b></div></div><div class="vg10-panel"><div class="vg10-panel-head"><h2 style="margin:0">Pedidos recientes</h2><button class="vg10-btn primary" data-view="purchases">Ver todos</button></div><div style="padding:18px" class="vg10-order-list">'+(orders.slice(0,6).map(orderCard).join('')||'<div class="vg10-empty">Aún no tienes compras.</div>')+'</div></div>'; qsa('[data-view="purchases"]',cont).forEach(function(b){b.onclick=function(){state.clientView='purchases';loadClientView('purchases')}}); bindOrderButtons(cont)}
 function orderCard(o){return '<div class="vg10-order-card" data-order-ref="'+esc(orderId(o))+'"><div><h4>'+esc(orderTitle(o))+'</h4><p>Pedido #'+esc(orderId(o))+' · '+esc(dateMX(o.created_at))+'</p>'+statusChip(orderStatus(o))+'</div><div style="text-align:right"><div class="vg10-price">'+money(orderTotal(o))+'</div><button class="vg10-btn primary" data-chat="'+esc(orderId(o))+'" style="margin-top:8px">Chat</button></div></div>'}
 function bindOrderButtons(root){qsa('[data-chat]',root).forEach(function(b){b.onclick=function(ev){ev.stopPropagation(); state.clientView='messages'; loadClientView('messages',b.getAttribute('data-chat'))}}); qsa('[data-order-ref]',root).forEach(function(card){card.onclick=function(){state.clientView='messages'; loadClientView('messages',card.getAttribute('data-order-ref'))}})}
-function renderPurchases(cont){var orders=state.clientOrders; cont.innerHTML='<h1 class="vg10-title">Mis compras</h1><p class="vg10-sub">Historial completo de tus pedidos.</p><div class="vg10-order-list">'+(orders.map(orderCard).join('')||'<div class="vg10-empty">No hay compras registradas para esta cuenta.</div>')+'</div>'; bindOrderButtons(cont)}
-async function renderClientMessages(cont,ref){var orders=state.clientOrders; var selected=orders.find(function(o){return orderId(o)===String(ref||'')})||orders[0]; state.activeClientOrder=selected||null; cont.innerHTML='<h1 class="vg10-title">Mensajes</h1><p class="vg10-sub">Chat directo de entregas. Se desbloquea con una compra o pedido activo.</p><div class="vg10-chat-layout"><div class="vg10-panel" style="overflow:auto;padding:14px"><h3 style="margin:8px 10px 14px">Chats de entrega</h3><div class="vg10-order-list">'+(orders.map(function(o){return '<div class="vg10-order-card '+(selected&&orderId(o)===orderId(selected)?'active':'')+'" data-chat-select="'+esc(orderId(o))+'"><div><h4>'+esc(orderTitle(o))+'</h4><p>Pedido #'+esc(orderId(o))+'</p>'+statusChip(orderStatus(o))+'</div><div class="vg10-price">'+money(orderTotal(o))+'</div></div>'}).join('')||'<div class="vg10-empty">Compra primero para desbloquear el chat.</div>')+'</div></div><div class="vg10-chatbox"><div class="vg10-panel-head"><div><h2 style="margin:0">'+esc(selected?orderTitle(selected):'Sin chat')+'</h2><p style="margin:4px 0 0;color:#9fb0ca">'+(selected?'Pedido #'+esc(orderId(selected))+' · '+esc(orderStatus(selected)):'')+'</p></div><span class="vg10-chip ok">Soporte activo</span></div><div class="vg10-messages" id="vg10ClientMessages"><div class="vg10-empty">Cargando historial...</div></div><div class="vg10-inputbar"><textarea id="vg10ClientInput" placeholder="Escribe tu mensaje..." '+(!selected?'disabled':'')+'></textarea><button class="vg10-btn primary" id="vg10ClientSend" '+(!selected?'disabled':'')+'>Enviar</button></div></div></div>'; qsa('[data-chat-select]',cont).forEach(function(x){x.onclick=function(){renderClientMessages(cont,x.getAttribute('data-chat-select'))}}); if(selected){await loadClientChat(orderId(selected)); var send=qs('#vg10ClientSend'); if(send)send.onclick=async function(){var ta=qs('#vg10ClientInput');try{await sendMessage(orderId(selected),'client',ta.value);ta.value='';await loadClientChat(orderId(selected))}catch(e){alert('No se pudo enviar: '+(e.message||e))}}}}
+function renderPurchases(cont){var orders=state.clientOrders; cont.innerHTML='<h2 class="vg10-title">Mis compras</h2><p class="vg10-sub">Historial completo de tus pedidos.</p><div class="vg10-order-list">'+(orders.map(orderCard).join('')||'<div class="vg10-empty">No hay compras registradas para esta cuenta.</div>')+'</div>'; bindOrderButtons(cont)}
+async function renderClientMessages(cont,ref){var orders=state.clientOrders; var selected=orders.find(function(o){return orderId(o)===String(ref||'')})||orders[0]; state.activeClientOrder=selected||null; cont.innerHTML='<h2 class="vg10-title">Mensajes</h2><p class="vg10-sub">Chat directo de entregas. Se desbloquea con una compra o pedido activo.</p><div class="vg10-chat-layout"><div class="vg10-panel" style="overflow:auto;padding:14px"><h3 style="margin:8px 10px 14px">Chats de entrega</h3><div class="vg10-order-list">'+(orders.map(function(o){return '<div class="vg10-order-card '+(selected&&orderId(o)===orderId(selected)?'active':'')+'" data-chat-select="'+esc(orderId(o))+'"><div><h4>'+esc(orderTitle(o))+'</h4><p>Pedido #'+esc(orderId(o))+'</p>'+statusChip(orderStatus(o))+'</div><div class="vg10-price">'+money(orderTotal(o))+'</div></div>'}).join('')||'<div class="vg10-empty">Compra primero para desbloquear el chat.</div>')+'</div></div><div class="vg10-chatbox"><div class="vg10-panel-head"><div><h2 style="margin:0">'+esc(selected?orderTitle(selected):'Sin chat')+'</h2><p style="margin:4px 0 0;color:#9fb0ca">'+(selected?'Pedido #'+esc(orderId(selected))+' · '+esc(orderStatus(selected)):'')+'</p></div><span class="vg10-chip ok">Soporte activo</span></div><div class="vg10-messages" id="vg10ClientMessages"><div class="vg10-empty">Cargando historial...</div></div><div class="vg10-inputbar"><textarea id="vg10ClientInput" placeholder="Escribe tu mensaje..." '+(!selected?'disabled':'')+'></textarea><button class="vg10-btn primary" id="vg10ClientSend" '+(!selected?'disabled':'')+'>Enviar</button></div></div></div>'; qsa('[data-chat-select]',cont).forEach(function(x){x.onclick=function(){renderClientMessages(cont,x.getAttribute('data-chat-select'))}}); if(selected){await loadClientChat(orderId(selected)); var send=qs('#vg10ClientSend'); if(send)send.onclick=async function(){var ta=qs('#vg10ClientInput');try{await sendMessage(orderId(selected),'client',ta.value);ta.value='';await loadClientChat(orderId(selected))}catch(e){(typeof toast==='function'?toast('No se envió tu mensaje','Revisa la conexión y vuelve a darle a Enviar. Tu texto sigue escrito.'):alert('No se envió tu mensaje. Revisa la conexión e inténtalo otra vez.'))}}}}
 async function loadClientChat(ref){var box=qs('#vg10ClientMessages'); if(!box)return; var list=await fetchMessages(ref); box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight}
-function renderTickets(cont){cont.innerHTML='<h1 class="vg10-title">Tickets de soporte</h1><p class="vg10-sub">Para fallas, dudas o reportes que no dependen de una entrega.</p><div class="vg10-panel" style="padding:18px"><div class="vg10-empty">Sistema de tickets listo. Usa Mensajes para pedidos activos.</div></div>'}
-function startClientPolling(){clearInterval(state.poll); var s=session(); if(!s)return; state.lastAdminMsgAt=Number(localStorage.getItem('vg10_last_admin_msg_at')||Date.now()); state.poll=setInterval(checkClientNotifs,8000); checkClientNotifs(true)}
+function renderTickets(cont){cont.innerHTML='<h2 class="vg10-title">Tickets de soporte</h2><p class="vg10-sub">Para fallas, dudas o reportes que no dependen de una entrega.</p><div class="vg10-panel" style="padding:18px"><div class="vg10-empty">Sistema de tickets listo. Usa Mensajes para pedidos activos.</div></div>'}
+/* FASE 77 · El sondeo se duerme con la pestaña.
+   Preguntaba por mensajes nuevos cada 8 segundos aunque la pestaña
+   estuviera de fondo desde hacía horas. Ahora se para al esconderla
+   y se reanuda al volver, comprobando de inmediato para que el
+   cliente no pierda el aviso de que el pedido ya se entregó. */
+function startClientPolling(){clearInterval(state.poll); var s=session(); if(!s)return; state.lastAdminMsgAt=Number(localStorage.getItem('vg10_last_admin_msg_at')||Date.now()); if(document.hidden) return; state.poll=setInterval(checkClientNotifs,8000); checkClientNotifs(true)}
+if(!window.__VG_POLL_VISIBILIDAD__){
+  window.__VG_POLL_VISIBILIDAD__ = true;
+  document.addEventListener('visibilitychange', function(){
+    if(document.hidden){ try{ clearInterval(state.poll); state.poll=null; }catch(e){} }
+    else { try{ startClientPolling(); }catch(e){} }
+  });
+}
 async function checkClientNotifs(silent){var s=session(); if(!s)return; try{var orders=state.clientOrders.length?state.clientOrders:await loadOrders(false); var refs=orders.map(orderId); if(!refs.length)return; var c=sb(); if(!c)return; var r=await c.from('vg_live_chat_messages').select('*').eq('thread_type','order').in('thread_ref',refs).eq('sender_role','admin').order('created_at',{ascending:false}).limit(8); if(r.error||!r.data)return; var latest=r.data[0]; if(!latest)return; var ts=new Date(latest.created_at).getTime(); if(!state.lastAdminMsgAt||silent){state.lastAdminMsgAt=ts;localStorage.setItem('vg10_last_admin_msg_at',String(ts));return} if(ts>state.lastAdminMsgAt){state.lastAdminMsgAt=ts;localStorage.setItem('vg10_last_admin_msg_at',String(ts));setNotifCount(state.notifCount+1); var o=orders.find(function(x){return orderId(x)===String(latest.thread_ref)}); showPush(o||{id:latest.thread_ref},latest.message); if(state.clientView==='messages'&&state.activeClientOrder&&orderId(state.activeClientOrder)===String(latest.thread_ref))loadClientChat(latest.thread_ref)}}catch(e){console.warn('notif',e)}}
-function adminShell(){return '<div class="vg10-admin-app"><div class="vg10-admin-head"><div><h1 style="margin:0;font-size:28px">Panel administrador</h1><p style="margin:6px 0 0;color:#9fb0ca">Bandeja estable de pedidos, comprobantes y chat.</p></div><button class="vg10-close" onclick="document.getElementById(\'vg10AdminPanel\').classList.remove(\'active\')">×</button></div><div class="vg10-admin-tabs"><button class="vg10-btn primary" data-admin-tab="inbox">Bandeja</button><button class="vg10-btn" data-admin-tab="orders">Compras</button><button class="vg10-btn" data-admin-tab="support">Soporte</button><button class="vg10-btn danger" id="vg10AdminLogout">Cerrar sesión</button></div><div class="vg10-admin-body"><div class="vg10-admin-list"><input id="vg10AdminSearch" placeholder="Buscar pedido, cliente o producto..." style="width:100%;height:52px;border:1px solid rgba(148,163,184,.20);background:#111827;color:#fff;border-radius:16px;padding:0 14px;margin-bottom:14px"><div id="vg10AdminList" class="vg10-order-list"><div class="vg10-empty">Cargando...</div></div></div><div class="vg10-admin-detail" id="vg10AdminDetail"><div class="vg10-empty" style="margin:26px">Selecciona un pedido.</div></div></div></div>'}
+function adminShell(){return '<div class="vg10-admin-app"><div class="vg10-admin-head"><div><h2 style="margin:0;font-size:28px">Panel administrador</h2><p style="margin:6px 0 0;color:#9fb0ca">Bandeja estable de pedidos, comprobantes y chat.</p></div><button class="vg10-close" onclick="document.getElementById(\'vg10AdminPanel\').classList.remove(\'active\')">×</button></div><div class="vg10-admin-tabs"><button class="vg10-btn primary" data-admin-tab="inbox">Bandeja</button><button class="vg10-btn" data-admin-tab="orders">Compras</button><button class="vg10-btn" data-admin-tab="support">Soporte</button><button class="vg10-btn danger" id="vg10AdminLogout">Cerrar sesión</button></div><div class="vg10-admin-body"><div class="vg10-admin-list"><input id="vg10AdminSearch" placeholder="Buscar pedido, cliente o producto..." style="width:100%;height:52px;border:1px solid rgba(148,163,184,.20);background:#111827;color:#fff;border-radius:16px;padding:0 14px;margin-bottom:14px"><div id="vg10AdminList" class="vg10-order-list"><div class="vg10-empty">Cargando...</div></div></div><div class="vg10-admin-detail" id="vg10AdminDetail"><div class="vg10-empty" style="margin:26px">Selecciona un pedido.</div></div></div></div>'}
 function adminLoginShell(){return '<div class="vg10-auth-card"><h2 style="margin:0 0 6px">Panel administrador</h2><p style="color:#9fb0ca;margin:0 0 18px">Acceso privado. Entra con tu cuenta de administrador: el permiso lo confirma el servidor.</p><div id="vg10AdminLoginMsg" style="min-height:22px;color:#fb7185;font-weight:700;margin:8px 0"></div><button class="vg10-btn primary" id="vg10AdminLoginBtn">Entrar</button></div>'}
-function openAdminPanel(){var root=qs('#vg10AdminPanel'); var logged=sessionStorage.getItem('vg10_admin_ok')==='1'||sessionStorage.getItem('vg_admin_email_session_v52')==='1'; root.classList.add('active'); if(!logged){root.innerHTML=adminLoginShell(); qs('#vg10AdminLoginBtn').onclick=function(){ /* Esta era la cuarta copia del acceso con la contraseña escrita en el archivo. Ahora no valida nada aquí: manda al acceso de Supabase, que es quien confirma el rol. */ if(typeof window.vgOpenAuth==='function') window.vgOpenAuth('admin'); else qs('#vg10AdminLoginMsg').textContent='No se encontró el formulario de acceso.'; }; return} root.innerHTML=adminShell(); qs('#vg10AdminLogout').onclick=function(){sessionStorage.removeItem('vg10_admin_ok');sessionStorage.removeItem('vg_admin_email_session_v52');openAdminPanel()}; qs('#vg10AdminSearch').oninput=renderAdminList; loadAdminOrders(); clearInterval(state.adminPoll); state.adminPoll=setInterval(loadAdminOrders,12000)}
+/* FASE 77 · Quien dice si eres administrador es el servidor.
+   Antes bastaba con escribirse sessionStorage.vg10_admin_ok='1' en la
+   consola para que esta función pintara el panel completo. Los datos
+   los seguía parando el RLS, pero la interfaz se abría igual y eso es
+   media puerta abierta. Ahora se pregunta a Supabase cada vez que se
+   abre: es una llamada, y solo cuando el usuario pulsa. */
+async function adminAutorizado(){
+  try{
+    var c=sb(); if(!c) return false;
+    var s=await c.auth.getSession();
+    if(!s||!s.data||!s.data.session) return false;
+    var r=await c.rpc('is_admin');
+    return !r.error && r.data===true;
+  }catch(e){ return false; }
+}
+async function openAdminPanel(){var root=qs('#vg10AdminPanel'); root.classList.add('active'); var logged=await adminAutorizado(); if(!logged){try{sessionStorage.removeItem('vg10_admin_ok');sessionStorage.removeItem('vg_admin_email_session_v52');sessionStorage.removeItem('vg_admin_ok');}catch(e){} clearInterval(state.adminPoll); root.innerHTML=adminLoginShell(); qs('#vg10AdminLoginBtn').onclick=function(){ /* Esta era la cuarta copia del acceso con la contraseña escrita en el archivo. Ahora no valida nada aquí: manda al acceso de Supabase, que es quien confirma el rol. */ if(typeof window.vgOpenAuth==='function') window.vgOpenAuth('admin'); else qs('#vg10AdminLoginMsg').textContent='No se encontró el formulario de acceso.'; }; return} root.innerHTML=adminShell(); qs('#vg10AdminLogout').onclick=function(){sessionStorage.removeItem('vg10_admin_ok');sessionStorage.removeItem('vg_admin_email_session_v52');clearInterval(state.adminPoll);openAdminPanel()}; qs('#vg10AdminSearch').oninput=renderAdminList; loadAdminOrders(); clearInterval(state.adminPoll); state.adminPoll=setInterval(loadAdminOrders,12000)}
 async function loadAdminOrders(){try{state.adminOrders=await loadOrders(true);renderAdminList(); if(!state.activeAdminOrder&&state.adminOrders[0])openAdminOrder(orderId(state.adminOrders[0])); else if(state.activeAdminOrder)renderAdminDetail(state.activeAdminOrder)}catch(e){var l=qs('#vg10AdminList'); if(l)l.innerHTML='<div class="vg10-empty">Error cargando pedidos: '+esc(e.message||e)+'</div>'}}
 function renderAdminList(){var l=qs('#vg10AdminList'); if(!l)return; var q=(qs('#vg10AdminSearch')&&qs('#vg10AdminSearch').value||'').toLowerCase(); var arr=state.adminOrders.filter(function(o){return !q||JSON.stringify(o).toLowerCase().indexOf(q)>-1}); l.innerHTML=arr.map(function(o){return '<div class="vg10-order-card '+(state.activeAdminOrder&&orderId(state.activeAdminOrder)===orderId(o)?'active':'')+'" data-admin-order="'+esc(orderId(o))+'"><div><h4>'+esc(orderTitle(o))+'</h4><p>Pedido #'+esc(orderId(o))+'</p><p>'+esc(orderName(o))+' · '+esc(orderPhone(o))+'</p>'+statusChip(orderStatus(o))+'</div><div class="vg10-price">'+money(orderTotal(o))+'</div></div>'}).join('')||'<div class="vg10-empty">Sin pedidos.</div>'; qsa('[data-admin-order]',l).forEach(function(card){card.onclick=function(){openAdminOrder(card.getAttribute('data-admin-order'))}})}
 function openAdminOrder(ref){var o=state.adminOrders.find(function(x){return orderId(x)===String(ref)})||null; state.activeAdminOrder=o; renderAdminList(); renderAdminDetail(o)}
-async function renderAdminDetail(o){var d=qs('#vg10AdminDetail'); if(!d)return; if(!o){d.innerHTML='<div class="vg10-empty" style="margin:26px">Selecciona un pedido.</div>';return} var pf=proofSrc(o); d.innerHTML='<div class="vg10-detail-top"><div><h1 style="margin:0 0 8px">'+esc(orderTitle(o))+'</h1><p style="color:#9fb0ca;margin:0 0 18px">Pedido #'+esc(orderId(o))+' · '+esc(orderStatus(o))+'</p><div class="vg10-info-grid"><div class="vg10-info-box"><span>Cliente</span><b>'+esc(orderName(o))+'</b><div>'+esc(orderPhone(o))+'</div></div><div class="vg10-info-box"><span>Total</span><b style="color:#19e6c1">'+money(orderTotal(o))+'</b></div><div class="vg10-info-box"><span>Fecha</span><b>'+esc(dateMX(o.created_at))+'</b></div></div><div class="vg10-info-box"><span>Productos</span><b style="white-space:pre-line;margin-top:8px">'+esc(orderItemsText(o))+'</b><br><span>Datos de entrega</span><b style="white-space:pre-line;margin-top:8px">'+esc(o.delivery_data||o.delivery||o.notes||'Sin datos extra.')+'</b></div></div><div class="vg10-proof"><h2 style="margin:0 0 14px">Comprobante</h2>'+(pf?((/^data:image|\.(png|jpg|jpeg|webp|gif)(\?|$)/i.test(pf))?'<img src="'+esc(pf)+'" alt="Comprobante">':'<div class="vg10-empty">Comprobante disponible.</div>')+'<a href="'+esc(window.vgUrlSegura(pf))+'" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:14px;color:#2dd4bf;font-weight:900">Abrir comprobante</a>':'<div class="vg10-empty">Sin comprobante visible.</div>')+'</div></div><div class="vg10-chatbox" style="border-radius:0;border-left:0;border-right:0;border-bottom:0"><div class="vg10-panel-head"><h2 style="margin:0">Chat del pedido</h2><button class="vg10-btn" id="vg10AdminRefresh">Actualizar</button></div><div class="vg10-messages" id="vg10AdminMessages"><div class="vg10-empty">Cargando chat...</div></div><div class="vg10-inputbar"><textarea id="vg10AdminInput" placeholder="Escribe respuesta al cliente..."></textarea><button class="vg10-btn primary" id="vg10AdminSend">Enviar</button></div></div>'; qs('#vg10AdminRefresh').onclick=function(){loadAdminChat(orderId(o))}; qs('#vg10AdminSend').onclick=async function(){var ta=qs('#vg10AdminInput');try{await sendMessage(orderId(o),'admin',ta.value);ta.value='';await loadAdminChat(orderId(o));toast('Mensaje enviado','El cliente verá una notificación.')}catch(e){alert('No se pudo enviar: '+(e.message||e))}}; await loadAdminChat(orderId(o))}
+async function renderAdminDetail(o){var d=qs('#vg10AdminDetail'); if(!d)return; if(!o){d.innerHTML='<div class="vg10-empty" style="margin:26px">Selecciona un pedido.</div>';return} var pf=proofSrc(o); d.innerHTML='<div class="vg10-detail-top"><div><h2 style="margin:0 0 8px">'+esc(orderTitle(o))+'</h2><p style="color:#9fb0ca;margin:0 0 18px">Pedido #'+esc(orderId(o))+' · '+esc(orderStatus(o))+'</p><div class="vg10-info-grid"><div class="vg10-info-box"><span>Cliente</span><b>'+esc(orderName(o))+'</b><div>'+esc(orderPhone(o))+'</div></div><div class="vg10-info-box"><span>Total</span><b style="color:#19e6c1">'+money(orderTotal(o))+'</b></div><div class="vg10-info-box"><span>Fecha</span><b>'+esc(dateMX(o.created_at))+'</b></div></div><div class="vg10-info-box"><span>Productos</span><b style="white-space:pre-line;margin-top:8px">'+esc(orderItemsText(o))+'</b><br><span>Datos de entrega</span><b style="white-space:pre-line;margin-top:8px">'+esc(o.delivery_data||o.delivery||o.notes||'Sin datos extra.')+'</b></div></div><div class="vg10-proof"><h2 style="margin:0 0 14px">Comprobante</h2>'+(pf?((/^data:image|\.(png|jpg|jpeg|webp|gif)(\?|$)/i.test(pf))?'<img src="'+esc(pf)+'" alt="Comprobante">':'<div class="vg10-empty">Comprobante disponible.</div>')+'<a href="'+esc(window.vgUrlSegura(pf))+'" target="_blank" rel="noopener noreferrer" style="display:inline-block;margin-top:14px;color:#2dd4bf;font-weight:900">Abrir comprobante</a>':'<div class="vg10-empty">Sin comprobante visible.</div>')+'</div></div><div class="vg10-chatbox" style="border-radius:0;border-left:0;border-right:0;border-bottom:0"><div class="vg10-panel-head"><h2 style="margin:0">Chat del pedido</h2><button class="vg10-btn" id="vg10AdminRefresh">Actualizar</button></div><div class="vg10-messages" id="vg10AdminMessages"><div class="vg10-empty">Cargando chat...</div></div><div class="vg10-inputbar"><textarea id="vg10AdminInput" placeholder="Escribe respuesta al cliente..."></textarea><button class="vg10-btn primary" id="vg10AdminSend">Enviar</button></div></div>'; qs('#vg10AdminRefresh').onclick=function(){loadAdminChat(orderId(o))}; qs('#vg10AdminSend').onclick=async function(){var ta=qs('#vg10AdminInput');try{await sendMessage(orderId(o),'admin',ta.value);ta.value='';await loadAdminChat(orderId(o));toast('Mensaje enviado','El cliente verá una notificación.')}catch(e){(typeof toast==='function'?toast('No se envió tu mensaje','Revisa la conexión y vuelve a darle a Enviar. Tu texto sigue escrito.'):alert('No se envió tu mensaje. Revisa la conexión e inténtalo otra vez.'))}}; await loadAdminChat(orderId(o))}
 async function loadAdminChat(ref){var box=qs('#vg10AdminMessages'); if(!box)return; var list=await fetchMessages(ref); box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight}
 /* FASE 76: aquí venía escrito a mano el Pay ID de Binance y se volvía a
    inyectar en la tarjeta cada vez que se abría el modal. Era el último
@@ -24266,8 +24462,30 @@ async function loadAdminChat(ref){var box=qs('#vg10AdminMessages'); if(!box)retu
    PayPal, que es lo único que esta función seguía aportando. */
 function ensurePaymentUI(){qsa('.vg-pay-method').forEach(function(card){var txt=(card.textContent||'').toLowerCase(); if(txt.indexOf('paypal')>-1)card.style.display='none';}); var modal=qs('#paymentModal'); if(modal&&!qs('#vg10PaymentContact',modal)){var s=session()||{}; var proof=qs('#proofInput',modal); var wrap=document.createElement('div'); wrap.id='vg10PaymentContact'; wrap.innerHTML='<div class="vg-payment-contact-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:12px;margin:14px 0"><label>Nombre<input id="vg10PayName" value="'+esc(s.name||'')+'" placeholder="Tu nombre"></label><label>WhatsApp<input id="vg10PayPhone" value="'+esc(s.phone||'')+'" placeholder="6611078412"></label><label style="grid-column:1/-1">Datos de entrega / ID / correo<textarea id="vg10PayDelivery" rows="2" placeholder="Datos necesarios para entregar"></textarea></label></div>'; if(proof&&proof.closest('.vg-pay-proof'))proof.closest('.vg-pay-proof').before(wrap); else modal.querySelector('.vg-pay-actions')&&modal.querySelector('.vg-pay-actions').before(wrap)}}
 var oldOpenPay=window.openPaymentModal; window.openPaymentModal=function(order){state.pendingOrder=order||state.pendingOrder; if(typeof oldOpenPay==='function')oldOpenPay.apply(this,arguments); setTimeout(ensurePaymentUI,60)};
-function fileToDataUrl(file){return new Promise(function(res,rej){if(!file)return res(''); if(!/^image\//.test(file.type||'')){var fr=new FileReader();fr.onload=function(){res(fr.result||'')};fr.onerror=rej;fr.readAsDataURL(file);return} var img=new Image(); var url=URL.createObjectURL(file); img.onload=function(){try{var max=1280,w=img.width,h=img.height,scale=Math.min(1,max/Math.max(w,h));var c=document.createElement('canvas');c.width=Math.round(w*scale);c.height=Math.round(h*scale);var ctx=c.getContext('2d');ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',0.78))}catch(e){URL.revokeObjectURL(url);rej(e)}}; img.onerror=function(){URL.revokeObjectURL(url);var fr=new FileReader();fr.onload=function(){res(fr.result||'')};fr.onerror=rej;fr.readAsDataURL(file)}; img.src=url})}
-function itemsFromPending(){var o=state.pendingOrder||window.pendingPaymentOrder||{}; var items=Array.isArray(o.items)?o.items:[]; if(!items.length&&window.cart&&Array.isArray(window.cart))items=window.cart; items=items.map(function(it){return {title:it.title||it.name||'Producto',option:it.option||it.variant||'',price:Number(it.price||it.total||0)||0,category:it.category||''}}); var total=Number(o.total||items.reduce(function(s,it){return s+Number(it.price||0)},0))||0; return {items:items,total:total,source:o.source||'web'}}
+/* FASE 77 · El comprobante tiene que ser una imagen, y de un tamaño
+
+   Antes, si el archivo no decía ser una imagen, esta función lo leía
+   ENTERO tal cual y lo mandaba a la base como texto base64. Sin mirar
+   el tamaño. El accept="image/*" del formulario no es una barrera: se
+   salta arrastrando el archivo o desde la consola. Un ZIP de 80 MB
+   entraba en una fila de orders convertido en 107 MB de texto.
+
+   Ahora se rechaza lo que no sea imagen y lo que pase de 10 MB (antes
+   de recomprimir; después del canvas quedan muy por debajo). El mismo
+   límite está puesto en vg_create_order_v17, del lado del servidor,
+   que es donde de verdad cuenta. */
+var VG_IMG_TIPOS = /^image\/(png|jpe?g|webp|gif)$/i;
+var VG_IMG_MAX   = 10 * 1024 * 1024;
+
+function fileToDataUrl(file){return new Promise(function(res,rej){if(!file)return res('');
+  if(!VG_IMG_TIPOS.test(file.type||'')){
+    return rej(new Error('El comprobante tiene que ser una imagen (PNG, JPG, WEBP o GIF).'));
+  }
+  if(file.size > VG_IMG_MAX){
+    return rej(new Error('La imagen pesa demasiado. Manda una de menos de 10 MB.'));
+  }
+  var img=new Image(); var url=URL.createObjectURL(file); img.onload=function(){try{var max=1280,w=img.width,h=img.height,scale=Math.min(1,max/Math.max(w,h));var c=document.createElement('canvas');c.width=Math.round(w*scale);c.height=Math.round(h*scale);var ctx=c.getContext('2d');ctx.drawImage(img,0,0,c.width,c.height);URL.revokeObjectURL(url);res(c.toDataURL('image/jpeg',0.78))}catch(e){URL.revokeObjectURL(url);rej(e)}}; img.onerror=function(){URL.revokeObjectURL(url);rej(new Error('No se pudo leer la imagen. Prueba con otra.'))}; img.src=url})}
+function itemsFromPending(){var o=state.pendingOrder||window.pendingPaymentOrder||{}; var items=Array.isArray(o.items)?o.items:[]; if(!items.length&&window.cart&&Array.isArray(window.cart))items=window.cart; items=items.map(function(it){var x={title:it.title||it.name||'Producto',option:it.option||it.variant||'',price:Number(it.price||it.total||0)||0,category:it.category||''}; /* FASE 77: el identificador viaja para que el servidor verifique el precio */ if(it.product_id!=null)x.product_id=it.product_id; if(it.option_index!=null)x.option_index=it.option_index; return x}); var total=Number(o.total||items.reduce(function(s,it){return s+Number(it.price||0)},0))||0; return {items:items,total:total,source:o.source||'web'}}
 async function createOrder(){var c=sb(); if(!c)throw new Error('Supabase no configurado'); var data=itemsFromPending(); if(!data.items.length)throw new Error('No hay pedido activo. Selecciona un producto antes.'); var f=(qs('#proofInput')&&qs('#proofInput').files&&qs('#proofInput').files[0])||null; if(!f)throw new Error('Sube el comprobante para confirmar el pedido.'); var s=session(); if(!s){openAuth(); throw new Error('Inicia sesión para registrar tu pedido.')} var dataUrl=await fileToDataUrl(f); var name=(qs('#vg10PayName')&&qs('#vg10PayName').value.trim())||s.name; var ph=phone((qs('#vg10PayPhone')&&qs('#vg10PayPhone').value)||s.phone); var delivery=(qs('#vg10PayDelivery')&&qs('#vg10PayDelivery').value.trim())||''; var args={p_customer_name:name,p_customer_phone:ph,p_customer_email:s.email||'',p_items:data.items,p_total:data.total,p_delivery_data:delivery,p_proof_data_url:dataUrl,p_proof_file_name:f.name||'comprobante.jpg',p_proof_mime:f.type||'image/jpeg',p_source:data.source}; try{return await rpc('vg_create_order_v10fixed',args)}catch(e){var payload={status:'pendiente',source:data.source,total:data.total,currency:'MXN',items:data.items,customer_name:name,customer_phone:ph,client_name:name,client_phone:ph,customer_email:s.email||'',delivery_data:delivery,product_title:data.items[0].title,product_option:data.items[0].option,proof_data_url:dataUrl,proof_file_name:f.name,proof_mime:f.type,unread_admin:true,unread_client:false}; var r=await c.from('orders').insert(payload).select().single(); if(r.error)throw r.error; return r.data}}
 window.sendPaymentWhatsApp=async function(){var btn=document.activeElement;if(btn)btn.classList.add('vg10-loading'); try{var o=await createOrder(); await sendMessage(orderId(o),'system','Pedido recibido.\n'+orderItemsText(o)+'\nTotal: '+money(orderTotal(o))); qs('#paymentModal')&&qs('#paymentModal').classList.remove('active'); showOrderSuccess(o); if(window.cart&&Array.isArray(window.cart)){window.cart.length=0;try{window.updateCartCount&&window.updateCartCount()}catch(e){}}}catch(e){console.error(e);alert('No se pudo crear el pedido: '+(e.message||e))}finally{if(btn)btn.classList.remove('vg10-loading')}};
 function showOrderSuccess(o){var box=qs('#vg10OrderSuccess'); qs('#vg10OrderSuccessText').textContent='Pedido #'+orderId(o)+' registrado. Te avisaremos cuando soporte responda.'; qs('#vg10GoPurchases').onclick=function(){box.classList.remove('active');openClientPanel('purchases')}; qs('#vg10KeepBrowsing').onclick=function(){box.classList.remove('active')}; box.classList.add('active')}
@@ -24279,7 +24497,36 @@ function patchButtons(){qsa('button').forEach(function(b){var t=(b.textContent||
 if(typeof window.vgAdminOpen === 'function') window.__vgClassicAdminOpen = window.vgAdminOpen;
 window.vgAdminOpen=openAdminPanel; window.openDashboard=function(){openClientPanel('dashboard')}; window.vgProOpen=function(){openClientPanel('dashboard')}; window.vgOpenClientPanel=openClientPanel;
 document.addEventListener('click',function(ev){var a=ev.target.closest&&ev.target.closest('#vg-account-btn,.vg-account-btn,[data-vg-account]'); if(a){ev.preventDefault();ev.stopImmediatePropagation(); if(session())openClientPanel('dashboard'); else openAuth()}},true);
-document.addEventListener('DOMContentLoaded',function(){qs('#vg10LoginBtn').onclick=function(){auth('login')};qs('#vg10RegBtn').onclick=function(){auth('register')}; patchButtons(); updateAccountBadge(); setInterval(patchButtons,2000); startClientPolling()});
+/* FASE 77 · Se deja de barrer el DOM cada dos segundos de por vida.
+
+   patchButtons() recorría la página entera cada 2 s mientras la
+   pestaña estuviera abierta, tuviera o no algo que hacer. En un
+   teléfono con la tienda abierta media tarde, eso es batería a cambio
+   de nada.
+
+   Ahora se ejecuta cuando el DOM cambia de verdad, que es cuando
+   pueden aparecer botones nuevos, y se para en cuanto la pestaña
+   pasa a segundo plano. El observador se apaga y se vuelve a
+   enganchar al volver, así que no se pierde nada. */
+document.addEventListener('DOMContentLoaded',function(){
+  qs('#vg10LoginBtn').onclick=function(){auth('login')};
+  qs('#vg10RegBtn').onclick=function(){auth('register')};
+  patchButtons(); updateAccountBadge();
+
+  var pendiente=false;
+  var obs=new MutationObserver(function(){
+    if(pendiente) return; pendiente=true;
+    requestAnimationFrame(function(){ pendiente=false; try{ patchButtons(); }catch(e){} });
+  });
+  function mirar(){ try{ obs.observe(document.body,{childList:true,subtree:true}); }catch(e){} }
+  mirar();
+  document.addEventListener('visibilitychange',function(){
+    if(document.hidden){ try{ obs.disconnect(); }catch(e){} }
+    else { patchButtons(); mirar(); }
+  });
+
+  startClientPolling();
+});
 })();
 </script>
 
@@ -24324,8 +24571,19 @@ function writeSession(s){
     total_purchases: Number(s.total_purchases || 0),
     ts: Date.now()
   };
+  /* FASE 77 · La mitad de las copias sobraban.
+     Esto guardaba el perfil del cliente —nombre, WhatsApp, correo,
+     saldo— en cuatro claves de localStorage Y en las cuatro mismas de
+     sessionStorage: ocho copias del mismo dato. Se comprobó una por
+     una: NADIE lee las de sessionStorage, solo se escribían. Cada
+     copia de más es una copia más que se lleva un XSS, así que fuera.
+
+     Las cuatro de localStorage se quedan porque bloques viejos leen
+     de cada una por su nombre; unificarlas es faena aparte. Al cerrar
+     sesión se siguen borrando las ocho, por si quedan restos de antes. */
   SESSION_KEYS.forEach(function(k){
-    try{ localStorage.setItem(k, JSON.stringify(o)); sessionStorage.setItem(k, JSON.stringify(o)); }catch(e){}
+    try{ localStorage.setItem(k, JSON.stringify(o)); }catch(e){}
+    try{ sessionStorage.removeItem(k); }catch(e){}
   });
   refreshBadge();
   return o;
@@ -24398,16 +24656,22 @@ function buildAuthModal(){
      '</div>' +
      '<div id="vgAuthMsg" style="min-height:20px;font-weight:700;margin:2px 0 6px;font-size:12px"></div>' +
      /* LOGIN */
+     /* FASE 77 · aria-label en cada campo. El placeholder desaparece
+        en cuanto el cliente escribe y los lectores de pantalla no lo
+        anuncian como nombre del campo: sin esto, quien entra con
+        lector oye "campo de texto" tres veces seguidas. Se usa
+        aria-label y no <label> visible para no tocar el diseño del
+        modal, que ya está apretado. */
      '<div id="vgAuthLogin">' +
-       '<input id="vgAuthLEmail" type="email" placeholder="Correo electrónico" autocomplete="email">' +
-       '<input id="vgAuthLPass" type="password" placeholder="Contraseña" autocomplete="current-password">' +
+       '<input id="vgAuthLEmail" type="email" aria-label="Correo electrónico" placeholder="Correo electrónico" autocomplete="email" required>' +
+       '<input id="vgAuthLPass" type="password" aria-label="Contraseña" placeholder="Contraseña" autocomplete="current-password" required>' +
        '<button class="vg10-btn primary" type="button" id="vg10LoginBtn" style="width:100%;margin-top:6px">Entrar a mi cuenta</button>' +
        '<button type="button" id="vgAuthOlvide" style="width:100%;margin-top:10px;background:none;border:0;color:#19e6c1;font-weight:700;font-size:12px;cursor:pointer;font-family:inherit;text-decoration:underline">Olvidé mi contraseña</button>' +
      '</div>' +
      /* REGISTRO */
      '<div id="vgAuthReg" style="display:none">' +
-       '<input id="vgAuthRName" placeholder="Tu nombre" autocomplete="name">' +
-       '<input id="vgAuthREmail" type="email" placeholder="Correo electrónico" autocomplete="email">' +
+       '<input id="vgAuthRName" aria-label="Tu nombre" placeholder="Tu nombre" autocomplete="name" maxlength="60" required>' +
+       '<input id="vgAuthREmail" type="email" aria-label="Correo electrónico" placeholder="Correo electrónico" autocomplete="email" required>' +
        /* Lada aparte del número: así el teléfono queda bien guardado
           para clientes de cualquier país, no solo de México. */
        /* align-items:flex-start + el mismo margen abajo en los dos:
@@ -24417,10 +24681,10 @@ function buildAuthModal(){
           margin-top a los <input> que el <select> no hereda, y eso los
           dejaba desalineados 8px en vertical. */
        '<div style="display:flex;gap:8px;align-items:stretch">' +
-         '<select id="vgAuthRCC" style="width:118px;flex:none;margin:8px 0;height:48px">' + LADAS_HTML + '</select>' +
-         '<input id="vgAuthRPhone" type="tel" placeholder="Tu WhatsApp" autocomplete="tel" style="flex:1;min-width:0;margin:8px 0;height:48px">' +
+         '<select id="vgAuthRCC" aria-label="Clave del país" style="width:118px;flex:none;margin:8px 0;height:48px">' + LADAS_HTML + '</select>' +
+         '<input id="vgAuthRPhone" type="tel" aria-label="Tu WhatsApp" placeholder="Tu WhatsApp" autocomplete="tel" inputmode="numeric" maxlength="15" required style="flex:1;min-width:0;margin:8px 0;height:48px">' +
        '</div>' +
-       '<input id="vgAuthRPass" type="password" placeholder="Contraseña (mínimo 6)" autocomplete="new-password">' +
+       '<input id="vgAuthRPass" type="password" aria-label="Contraseña" placeholder="Contraseña (mínimo 10)" autocomplete="new-password" minlength="10" required>' +
        '<button class="vg10-btn primary" type="button" id="vg10RegBtn" style="width:100%;margin-top:6px">Crear cuenta gratis</button>' +
        '<p style="font-size:12px;color:#6b7590;text-align:center;margin:10px 0 0">Tu WhatsApp se usa solo para tus pedidos y entregas.</p>' +
      '</div>' +
@@ -24567,7 +24831,13 @@ async function doRegister(){
   if(!name.trim()){ msg('Escribe tu nombre.'); return; }
   if(!/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){ msg('Correo inválido.'); return; }
   if(phone.length < 8){ msg('WhatsApp inválido (mínimo 8 dígitos).'); return; }
-  if(pass.length < 6){ msg('La contraseña debe tener al menos 6 caracteres.'); return; }
+  /* FASE 77 · Seis caracteres se prueban por fuerza bruta en un rato,
+     y estas cuentas guardan teléfono, correo, historial de compras y
+     saldo de tokens. Diez es el mínimo razonable. Súbelo también en
+     Supabase → Authentication → Policies (Minimum password length),
+     que es donde de verdad se aplica: esto de aquí solo evita que el
+     cliente escriba una y se lleve el error del servidor. */
+  if(pass.length < 10){ msg('La contraseña necesita al menos 10 caracteres.'); return; }
   var c = SB(); if(!c){ msg('No hay conexión con el servidor. Intenta más tarde.'); return; }
   if(btn){ btn.disabled = true; btn.textContent = 'Creando cuenta...'; }
   try{
@@ -24808,6 +25078,34 @@ adminGate.__vgSecure = true;
    y sus efectos extra siguen corriendo. Por eso NO re-capturamos _openPanel:
    evita bucles infinitos de wrappers que llaman de vuelta al gate. */
 window.vgAdminOpen = adminGate;
+
+/* ─────────────────────────────────────────────────────────────
+   FASE 77 · La puerta de atrás también se cierra
+
+   Poner el candado en vgAdminOpen no servía de nada mientras el
+   panel de verdad siguiera colgado de window: en la auditoría se
+   abrió entero, con sus trece pestañas y sin sesión, escribiendo
+   window.__vgClassicAdminOpen() en la consola.
+
+   La referencia buena se queda aquí dentro, en _openPanel, donde
+   no se llega desde fuera. Lo que queda publicado con ese nombre
+   es esta envoltura, que pregunta al servidor antes de abrir.
+
+   No se borra la variable: el bloque de pedidos en vivo (fase 17)
+   la llama por nombre y dejaría de funcionar. Se sustituye, que
+   cierra el agujero sin romper a quien la usa bien.
+
+   Esto NO sustituye al RLS —la base sigue siendo quien decide qué
+   datos salen— pero deja de ser lo único que nos protege.
+   ───────────────────────────────────────────────────────────── */
+window.__vgClassicAdminOpen = function(){
+  return isAdmin().then(function(st){
+    if(st.admin){ if(typeof _openPanel === 'function') _openPanel(); return true; }
+    if(!st.logged && typeof window.vgOpenAuth === 'function') window.vgOpenAuth('admin');
+    else alert('Esta cuenta no tiene permisos de administrador.');
+    return false;
+  });
+};
 })();
 </script>
 
@@ -26261,30 +26559,43 @@ else init();
 if(window.__VG_ADMIN_SECRET_V114__) return; window.__VG_ADMIN_SECRET_V114__ = true;
 
 /* ─────────────────────────────────────────────────────────────
-   TU CÓDIGO SECRETO — escríbelo en el buscador para abrir el panel.
-   Para cambiarlo, edita SOLO esta línea (se compara en minúsculas).
-   ───────────────────────────────────────────────────────────── */
-var CODIGO = 'vg1722';
+   FASE 77 · La entrada al panel deja de ser un código en el HTML
 
-function abrirPanel(input){
-  /* Limpia el buscador para no dejar el código a la vista ni el
-     catálogo filtrado en "sin resultados". */
-  input.value = '';
-  try{ if(typeof window.renderProducts === 'function') window.renderProducts(); }catch(e){}
-  try{ input.blur(); }catch(e){}
-  /* Se llama al vgAdminOpen definitivo (el de vg-admin-secure-v101),
-     así que la validación de Supabase Auth + rol is_admin se mantiene:
-     el código solo revela la entrada, no da permisos por sí solo. */
+   Antes: escribir "vg1722" en el buscador de la tienda abría el
+   panel. El código estaba en claro en el fuente, así que cualquiera
+   que mirara el HTML sabía que hay panel y cómo llamarlo. Y el
+   buscador de la tienda reaccionaba a una palabra mágica que ningún
+   cliente entiende si la teclea por casualidad.
+
+   Ahora la puerta es la dirección: basta con añadir ?panel=1
+     https://www.vesselgames.xyz/?panel=1
+   Guárdalo como marcador y listo. No se anuncia en ningún sitio y
+   no interfiere con la tienda.
+
+   Ojo: esto NUNCA fue lo que daba permiso, ni antes ni ahora. El
+   permiso lo sigue dando Supabase con is_admin(); esto solo enseña
+   dónde está la puerta. Lo que se gana es dejar de publicarla.
+   ───────────────────────────────────────────────────────────── */
+function abrirPanel(){
   if(typeof window.vgAdminOpen === 'function') window.vgAdminOpen();
   else alert('No se encontró el panel de administración.');
 }
 
 function init(){
-  var input = document.getElementById('globalSearch');
-  if(!input) return;
-  input.addEventListener('input', function(){
-    if((input.value || '').trim().toLowerCase() === CODIGO) abrirPanel(input);
-  });
+  var pide;
+  try{ pide = new URLSearchParams(location.search).get('panel'); }catch(e){ pide = null; }
+  if(pide !== '1') return;
+
+  /* Se limpia la dirección para que el marcador no quede a la vista
+     de quien mire la pantalla por encima del hombro, y para que no
+     se comparta por accidente al copiar la URL. */
+  try{
+    var u = new URL(location.href);
+    u.searchParams.delete('panel');
+    history.replaceState({}, '', u.pathname + (u.search || '') + (u.hash || ''));
+  }catch(e){}
+
+  abrirPanel();
 }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
 else init();
@@ -26315,7 +26626,7 @@ else init();
 }
 .vg17-wrap{max-width:1240px;margin:0 auto;padding:18px 16px 60px}
 .vg17-top{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:14px 0 18px;position:sticky;top:0;background:#070810;z-index:5;border-bottom:1px solid rgba(255,255,255,.08)}
-.vg17-top h1{margin:0 !important;font-size:1.25rem !important;color:#fff}
+.vg17-top :is(h1,h2){margin:0 !important;font-size:1.25rem !important;color:#fff}
 .vg17-top p{margin:3px 0 0;color:#93a0bd;font-size:0.875rem}
 .vg17-x{width:42px;height:42px;border-radius:50%;border:1px solid rgba(255,255,255,.14);background:rgba(255,255,255,.05);color:#fff;font-size:1.25rem;cursor:pointer;flex:none}
 .vg17-tabs{display:flex;gap:8px;overflow-x:auto;padding:14px 0;scrollbar-width:none}
@@ -26571,7 +26882,7 @@ else init();
 .vg17-panel ::-webkit-scrollbar-thumb{background:rgba(255,255,255,.13);border-radius:12px}
 .vg17-panel ::-webkit-scrollbar-track{background:transparent}
 @media(max-width:900px){
-  .vg17-top h1{font-size:1.125rem !important}
+  .vg17-top :is(h1,h2){font-size:1.125rem !important}
   .vg17-avatar{width:38px;height:38px;border-radius:12px;font-size:0.875rem}
   .vg17-cards{grid-template-columns:1fr 1fr}
 }
@@ -26842,7 +27153,7 @@ function wireCompose(p){
         prev.innerHTML='<div class="vg17-prevbox"><img src="'+esc(pendiente[p])+'" alt="Adjunto">'+
                        '<button type="button" class="vg17-prevx" title="Quitar">×</button></div>';
         qs('.vg17-prevx',prev).onclick=function(){ pendiente[p]=null; prev.innerHTML=''; file.value=''; };
-      }catch(e){ prev.innerHTML=''; alert('No se pudo procesar la imagen.'); }
+      }catch(e){ prev.innerHTML=''; alert(e&&e.message?e.message:'No se pudo procesar la imagen.'); }
     };
   }
 }
@@ -26922,7 +27233,7 @@ function clientShell(){
     '<div class="vg17-top">'+
       '<div class="vg17-head-l">'+
         '<div class="vg17-avatar">'+esc(inicial)+'</div>'+
-        '<div style="min-width:0"><h1>'+esc(nombre)+'</h1>'+
+        '<div style="min-width:0"><h2>'+esc(nombre)+'</h2>'+
         '<p>'+esc(p.email||p.phone||'Pedidos, entregas y soporte')+'</p></div>'+
       '</div>'+
     '<div class="vg17-head-r">'+
@@ -27185,7 +27496,7 @@ async function renderTicketForm(body){
       prev.innerHTML='<div class="vg17-prevbox"><img src="'+esc(ticketImg)+'" alt="Adjunto">'+
                      '<button type="button" class="vg17-prevx" title="Quitar">×</button></div>';
       qs('.vg17-prevx',prev).onclick=function(){ ticketImg=null; prev.innerHTML=''; qs('#t_file').value=''; };
-    }catch(e){ prev.innerHTML=''; alert('No se pudo procesar la imagen.'); }
+    }catch(e){ prev.innerHTML=''; alert(e&&e.message?e.message:'No se pudo procesar la imagen.'); }
   };
 
   /* Al elegir el pedido, autocompleta la fecha de compra */
@@ -28327,11 +28638,17 @@ function startAdminRealtime(){
 /* ═══════════════════════════════════════════════════════════════
    CREACIÓN DEL PEDIDO — entrega interna, ya sin WhatsApp
    ═══════════════════════════════════════════════════════════════ */
+/* FASE 77 · Segunda copia de la misma función, mismo candado.
+   (Ver la nota larga en la primera, arriba: si no es imagen o pesa
+   más de 10 MB, no entra.) */
 function fileToDataUrl(file){
   return new Promise(function(res,rej){
     if(!file) return res('');
-    if(!/^image\//.test(file.type||'')){
-      var fr=new FileReader(); fr.onload=function(){res(fr.result||'');}; fr.onerror=rej; fr.readAsDataURL(file); return;
+    if(!/^image\/(png|jpe?g|webp|gif)$/i.test(file.type||'')){
+      return rej(new Error('El comprobante tiene que ser una imagen (PNG, JPG, WEBP o GIF).'));
+    }
+    if(file.size > 10*1024*1024){
+      return rej(new Error('La imagen pesa demasiado. Manda una de menos de 10 MB.'));
     }
     var img=new Image(), url=URL.createObjectURL(file);
     img.onload=function(){
@@ -28342,7 +28659,7 @@ function fileToDataUrl(file){
         URL.revokeObjectURL(url); res(cv.toDataURL('image/jpeg',0.78));
       }catch(e){ URL.revokeObjectURL(url); rej(e); }
     };
-    img.onerror=function(){ URL.revokeObjectURL(url); var fr=new FileReader(); fr.onload=function(){res(fr.result||'');}; fr.onerror=rej; fr.readAsDataURL(file); };
+    img.onerror=function(){ URL.revokeObjectURL(url); rej(new Error('No se pudo leer la imagen. Prueba con otra.')); };
     img.src=url;
   });
 }
@@ -28373,7 +28690,12 @@ window.sendPaymentWhatsApp = async function(){
   var items = Array.isArray(pend.items)&&pend.items.length ? pend.items
             : (Array.isArray(window.cart)&&window.cart.length ? window.cart : []);
   items = items.map(function(it){
-    return {title:it.title||it.name||'Producto', option:it.option||it.variant||'', price:Number(it.price||0)||0};
+    var o = {title:it.title||it.name||'Producto', option:it.option||it.variant||'', price:Number(it.price||0)||0};
+    /* FASE 77 · No se pierden por el camino: son los que permiten al
+       servidor comprobar el precio real contra el catálogo. */
+    if(it.product_id != null)   o.product_id = it.product_id;
+    if(it.option_index != null) o.option_index = it.option_index;
+    return o;
   });
   if(!items.length){ alert('No hay pedido activo. Selecciona un producto antes.'); return; }
   var total = Number(pend.total|| items.reduce(function(a,b){return a+Number(b.price||0);},0))||0;
@@ -29177,7 +29499,7 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
   backdrop-filter:blur(12px);
   padding:16px 0 16px !important;
 }
-#vg17Client .vg17-top h1{ font-size:1.5rem !important; }
+#vg17Client .vg17-top :is(h1,h2){ font-size:1.5rem !important; }
 #vg17Client .vg17-avatar{
   width:50px;height:50px;border-radius:16px;font-size:1.25rem;
   box-shadow:0 8px 24px rgba(139,92,246,.42), inset 0 1px 0 rgba(255,255,255,.35);
@@ -29365,7 +29687,7 @@ html body #vgAdminModal.active.active.active .vg-admin-content{
 /* ════════════════ MÓVIL ════════════════ */
 @media(max-width:900px){
   #vg17Client .vg17-top{ padding:12px 0 12px !important; }
-  #vg17Client .vg17-top h1{ font-size:1rem !important; }
+  #vg17Client .vg17-top :is(h1,h2){ font-size:1rem !important; }
   #vg17Client .vg17-top p{ font-size:0.75rem !important; }
   #vg17Client .vg17-avatar{ width:40px;height:40px;border-radius:12px;font-size:1rem; }
   #vg17Client .vg17-x{ width:38px !important;height:38px !important; }
@@ -30384,7 +30706,7 @@ else init();
   margin:0 0 4px !important;
   padding:14px 16px !important;
 }
-#vg17Client .vg17-top h1{
+#vg17Client .vg17-top :is(h1,h2){
   font-family:ui-monospace,'Cascadia Mono',Consolas,monospace !important;
   text-transform:uppercase !important;
   letter-spacing:.06em !important;
@@ -36655,9 +36977,20 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
       }
     }, 700);
 
+    /* FASE 77 · La tienda de Fortnite espera al load, no al DOM.
+       requestIdleCallback ya la apartaba del camino, pero saltaba en
+       cuanto el hilo respiraba tras DOMContentLoaded — con las fotos
+       del catálogo todavía llegando. En la medición salía a los 787 ms
+       y se llevaba 916 ms. Es una llamada a una API de fuera para
+       pintar una sección que está más abajo: puede esperar a que la
+       tienda propia esté entera en pantalla. */
     var pedir = function(){ traerTienda(false); };
-    if(typeof requestIdleCallback === 'function') requestIdleCallback(pedir, {timeout:4000});
-    else setTimeout(pedir, 2500);
+    var alRato = function(){
+      if(typeof requestIdleCallback === 'function') requestIdleCallback(pedir, {timeout:4000});
+      else setTimeout(pedir, 2500);
+    };
+    if(document.readyState === 'complete') alRato();
+    else window.addEventListener('load', alRato, {once:true});
   }
 
   if(document.readyState === 'loading')
@@ -37283,19 +37616,51 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
      Se arma en el navegador con lo que el administrador ya puede leer:
      no hace falta tocar la base.
      ═══════════════════════════════════════════════════════════ */
+  /* FASE 77 · Tres cosas que hacían que el respaldo mintiera
+
+     1) 'vg_redemptions' no existe. La tabla real de canjes se llama
+        vg_token_redemptions (fase 25). La consulta fallaba, el error
+        se guardaba DENTRO del archivo y la descarga seguía como si
+        nada: el dueño creía tener copia de los canjes y no la tenía.
+
+     2) El .limit(5000) cortaba en seco. El día que el chat pase de
+        5.000 mensajes, el respaldo se lleva los primeros y calla.
+        Ahora se pagina de mil en mil hasta agotar la tabla.
+
+     3) Un respaldo a medias no puede parecer un respaldo completo.
+        Si alguna tabla falla, se lanza el error y NO se descarga
+        nada. Vale más quedarse sin copia sabiéndolo que tener un
+        archivo con un agujero que se descubre el día que se usa. */
   var TABLAS = ['orders','vg_users','vg_live_chat_messages','vg_support_tickets',
-                'vg_token_tx','vg_token_wallet','vg_redemptions'];
+                'vg_token_tx','vg_token_wallet','vg_token_redemptions'];
 
   async function armarRespaldo(estado){
     var c = cli(); if(!c) throw new Error('Sin conexión con el servidor.');
     var datos = { generado: new Date().toISOString(), tablas: {} };
+    var fallos = [];
+
     for(var i=0;i<TABLAS.length;i++){
       var t = TABLAS[i];
-      if(estado) estado('Copiando ' + t + '…');
+      var filas = [], desde = 0, corte = false;
       try{
-        var r = await c.from(t).select('*').limit(5000);
-        datos.tablas[t] = r.error ? {error:r.error.message} : (r.data || []);
-      }catch(e){ datos.tablas[t] = {error:String(e)}; }
+        while(!corte){
+          if(estado) estado('Copiando ' + t + (desde ? ' (' + filas.length + ')' : '') + '…');
+          var r = await c.from(t).select('*').range(desde, desde + 999);
+          if(r.error){ fallos.push(t + ': ' + r.error.message); break; }
+          var lote = r.data || [];
+          filas = filas.concat(lote);
+          if(lote.length < 1000) corte = true; else desde += 1000;
+          /* Tope de cortesía: 200.000 filas por tabla. Si se alcanza,
+             es que hace falta un respaldo del lado del servidor, no
+             del navegador. Se avisa en vez de recortar en silencio. */
+          if(filas.length >= 200000){ fallos.push(t + ': demasiadas filas para respaldar desde el navegador'); break; }
+        }
+        datos.tablas[t] = filas;
+      }catch(e){ fallos.push(t + ': ' + String(e)); }
+    }
+
+    if(fallos.length){
+      throw new Error('Respaldo incompleto, no se descargó nada — ' + fallos.join(' · '));
     }
     return datos;
   }
@@ -37346,23 +37711,43 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
   /* ═══════════════════════════════════════════════════════════
      Arranque
      ═══════════════════════════════════════════════════════════ */
-  var intentos = 0;
+  /* FASE 77 · El arranque deja de machacar la base de datos
+
+     Esto se repetía 40 veces cada 1,2 segundos —48 segundos seguidos—
+     y en CADA vuelta llamaba a la RPC vg_tiempo_entrega. Cuarenta
+     peticiones a Supabase por visita, para pintar un dato que no
+     cambia mientras la página está abierta. Con cien visitantes a la
+     vez son ochenta peticiones por segundo de puro reintento, y en el
+     teléfono es la radio encendida casi un minuto.
+
+     Dos cambios: el tiempo de entrega se pide UNA vez, y el bucle
+     para en cuanto ha montado lo que tenía que montar en lugar de
+     agotar siempre los 40 intentos. El reintento sigue existiendo
+     porque el modal del panel lo crea otro bloque más tarde y hay
+     que esperarlo; lo que se quita es esperarlo cobrando peaje. */
+  var intentos = 0, tiempoPedido = false;
   function arrancar(){
     engancharDuplicado();
     try{ avisoFavoritos(); }catch(e){}
-    tiempoEntrega().then(pintarTiempo);
+
+    if(!tiempoPedido){
+      tiempoPedido = true;
+      tiempoEntrega().then(pintarTiempo);
+    }
 
     var modal = document.getElementById('vgAdminModal');
-    if(modal && !modal.dataset.vg67){
+    var listo = !!(modal && modal.dataset.vg67);
+    if(modal && !listo){
       modal.dataset.vg67 = '1';
       var pend = false;
       new MutationObserver(function(){
         if(pend) return; pend = true;
         requestAnimationFrame(function(){ pend = false; try{ montarRespaldo(); }catch(e){} });
       }).observe(modal, {childList:true, subtree:true});
+      listo = true;
     }
 
-    if(++intentos < 40) setTimeout(arrancar, 1200);
+    if(!listo && ++intentos < 40) setTimeout(arrancar, 1200);
   }
 
   if(document.readyState === 'loading')
@@ -41177,6 +41562,81 @@ html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
        document.getAnimations().forEach(a => a.finish())
      antes de leer getBoundingClientRect. */
 
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 77 · Que se vea por dónde vas con el teclado
+
+     El archivo tiene 39 declaraciones outline:none contra 15 reglas
+     :focus-visible. En los tramos que no cubren esas 15, quien navega
+     con Tab —o con lector de pantalla— pierde de vista dónde está.
+     Es el criterio 2.4.7 de las WCAG, y en un checkout importa.
+
+     Dos detalles de por qué esta regla funciona donde otras no:
+
+     · :where() tiene especificidad CERO. No entra en la guerra de los
+       8.669 !important del archivo: no gana por fuerza, gana porque
+       nadie está peleando por el estado :focus-visible en concreto.
+       Y al no subir especificidad, cualquier bloque futuro que quiera
+       otro foco para un botón suyo lo sobrescribe sin esfuerzo.
+
+     · :focus-visible NO se activa al hacer clic con el ratón, que era
+       justo lo que se quería evitar poniendo outline:none. Al ratón no
+       le sale el recuadro; al teclado sí.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-foco-teclado-v77">
+:where(a[href], button, input, select, textarea, summary, [tabindex]):focus-visible{
+  outline: 2px solid #22f5d3;
+  outline-offset: 2px;
+  border-radius: 4px;
+}
+/* Sobre fondo claro el turquesa pierde contraste; ahí se usa el
+   morado de la marca, que sí lo tiene. */
+body.vg-light :where(a[href], button, input, select, textarea, summary, [tabindex]):focus-visible{
+  outline-color: #6d28d9;
+}
+/* Las tarjetas que se volvieron pulsables con teclado (catálogo,
+   carrusel y retro) enseñan el foco por fuera, que si no lo recorta
+   el overflow del carrusel. */
+:where(.card, .service-carousel-card, .retro-game):focus-visible{
+  outline: 2px solid #22f5d3;
+  outline-offset: 3px;
+}
+</style>
+
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 77 · Reserva del hueco de las fotos (CLS)
+
+     De las 153 imágenes de la página, 152 no declaraban ni tamaño ni
+     proporción. El navegador les daba altura cero y luego, cuando
+     llegaba cada foto, empujaba todo hacia abajo. Con 67 imágenes de
+     imgur llegando en desorden, el catálogo saltaba mientras se leía
+     y en móvil se acababa pulsando el producto de al lado.
+
+     A las plantillas nuevas se les puso width/height. Esto cubre las
+     que se pintan desde bloques viejos: con aspect-ratio el hueco
+     queda reservado desde el primer momento aunque no haya atributos.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-reserva-fotos-v77">
+:where(.card .imgbox img,
+       .service-carousel-card img,
+       .vgcat-card img,
+       .vg-admin-cardtop img,
+       .cart-thumb img){
+  aspect-ratio: 16 / 9;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  background: #0b1424;
+}
+:where(.retro-cover img){
+  aspect-ratio: 5 / 7;
+  width: 100%;
+  height: auto;
+  object-fit: cover;
+  background: #0b1424;
+}
+:where(.cart-thumb img){ aspect-ratio: 1 / 1; }
 </style>
 
 </body>

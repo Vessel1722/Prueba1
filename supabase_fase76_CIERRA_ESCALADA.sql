@@ -133,12 +133,24 @@ create policy datos_pago_admin on public.vg_datos_pago
   for all to authenticated
   using (public.is_admin()) with check (public.is_admin());
 
--- Los datos que hoy están en el HTML. Cámbialos aquí cuando cambien
--- de cuenta: ya no hay que tocar el código ni volver a publicar.
+-- ⚠️ FASE 77 — LOS NÚMEROS DE VERDAD NO VAN AQUÍ
+--
+--    Este archivo está en git y sube a GitHub. Al sacar los datos de
+--    pago del index.html se escribieron aquí, que es cambiar una
+--    vitrina por otra: quien clone el repositorio los ve igual.
+--
+--    Se dejan los métodos creados con el número en blanco. Los reales
+--    se escriben UNA vez, a mano, donde solo tú entras:
+--
+--      Supabase → Table editor → vg_datos_pago → columna "numero"
+--
+--    Si estos números llegaron a estar en un repositorio público, hay
+--    que darlos por vistos y cambiar la cuenta con el banco: borrarlos
+--    del código no los borra del historial de git.
 insert into public.vg_datos_pago (clave, etiqueta, banco, numero, titular, nota, orden) values
-  ('bbva',    'Transferencia BBVA', 'BBVA',          '4152 3145 2671 8708', 'DAHISE PARRA', 'Tarjeta', 1),
-  ('oxxo',    'Depósito OXXO',      'Spin by OXXO',  '4217 4700 2231 6489', '',             'Tarjeta', 2),
-  ('binance', 'Binance USDT',       'Binance',       '787332768',           '',             'Pay ID',  3)
+  ('bbva',    'Transferencia BBVA', 'BBVA',          '', '', 'Tarjeta', 1),
+  ('oxxo',    'Depósito OXXO',      'Spin by OXXO',  '', '', 'Tarjeta', 2),
+  ('binance', 'Binance USDT',       'Binance',       '', '', 'Pay ID',  3)
 on conflict (clave) do nothing;
 
 

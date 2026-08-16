@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+  Vessel Games · mapa del sitio
+  Fase 77 — no existía ninguno.
+
+  Lleva la portada y las seis secciones del catálogo, que son las
+  direcciones que la propia tienda genera (?seccion=...) desde la
+  fase 35 y que se pueden compartir tal cual.
+
+  LO QUE FALTA, y es lo que de verdad traería visitas: una entrada por
+  producto. Hoy no se puede poner: los productos se pintan con
+  JavaScript desde Supabase, así que el robot entra en
+  ?producto=54&slug=... y encuentra la página vacía. Indexar una URL
+  sin contenido es peor que no indexarla.
+
+  Para hacerlo bien hace falta una función en Vercel que lea la tabla
+  products y devuelva el HTML ya con el título, la descripción, el
+  precio y su ld+json de Product. Cuando exista, este archivo debería
+  generarse ahí mismo en vez de escribirse a mano.
+-->
+<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+
+  <url>
+    <loc>https://www.vesselgames.xyz/</loc>
+    <changefreq>daily</changefreq>
+    <priority>1.0</priority>
+  </url>
+
+  <url>
+    <loc>https://www.vesselgames.xyz/?seccion=gaming</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.vesselgames.xyz/?seccion=streaming</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.vesselgames.xyz/?seccion=cuentas</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.vesselgames.xyz/?seccion=software</loc>
+    <changefreq>daily</changefreq>
+    <priority>0.8</priority>
+  </url>
+
+  <url>
+    <loc>https://www.vesselgames.xyz/?seccion=actas</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+  <url>
+    <loc>https://www.vesselgames.xyz/?seccion=redes</loc>
+    <changefreq>weekly</changefreq>
+    <priority>0.7</priority>
+  </url>
+
+</urlset>

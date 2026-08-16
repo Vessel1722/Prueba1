@@ -2,3 +2,7 @@
 .vercel/
 desktop.ini
 v1.backup-*.html
+
+.vercel
+.env*
+v1.html

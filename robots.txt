@@ -1,0 +1,16 @@
+# Vessel Games · https://www.vesselgames.xyz/
+# Fase 77 — este archivo no existía, así que los buscadores entraban
+# sin instrucciones y sin saber dónde está el mapa del sitio.
+
+User-agent: *
+Allow: /
+
+# El panel de administración no es contenido. No lleva datos (el
+# permiso lo da Supabase, no la dirección), pero no pinta nada en el
+# índice de Google.
+Disallow: /?panel=1
+
+# Archivos de trabajo que no deberían salir en resultados
+Disallow: /promo-whatsapp.html
+
+Sitemap: https://www.vesselgames.xyz/sitemap.xml

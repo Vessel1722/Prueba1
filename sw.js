@@ -21,7 +21,7 @@
    propio service worker, sube el número de VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'vg-v1';
+const VERSION = 'vg-v2';   /* fase 77: sube al cambiar este archivo */
 const CACHE_PAGINA  = VERSION + '-pagina';
 const CACHE_ESTATIC = VERSION + '-estaticos';
 
@@ -74,10 +74,19 @@ self.addEventListener('fetch', (ev) => {
       fetch(req)
         .then((resp) => {
           const copia = resp.clone();
-          caches.open(CACHE_PAGINA).then((c) => c.put('/', copia)).catch(() => {});
+          /* Se guarda bajo la dirección COMPLETA y también bajo '/'.
+             La app distingue vistas por parámetros (?producto=54,
+             ?ir=compras), y antes sin señal siempre salía la portada
+             aunque el cliente hubiera abierto un producto: la copia se
+             guardaba solo en '/'. La de '/' se mantiene porque es la
+             que responde cuando se abre una dirección nunca visitada. */
+          caches.open(CACHE_PAGINA).then((c) => {
+            c.put(req, copia.clone()).catch(() => {});
+            c.put('/', copia).catch(() => {});
+          }).catch(() => {});
           return resp;
         })
-        .catch(() => caches.match('/').then((r) => r || caches.match(req)))
+        .catch(() => caches.match(req).then((r) => r || caches.match('/')))
     );
     return;
   }
