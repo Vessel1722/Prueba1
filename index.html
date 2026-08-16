@@ -68,7 +68,6 @@
    is_admin (ver bloque vg-admin-secure-v101 al final del archivo).
    Estas variables quedan vacías solo por compatibilidad con código viejo. */
 window.VG_ADMIN_EMAIL = "";
-window.VG_ADMIN_PASSWORD = "";
 window.WHATSAPP_NUMBER = "526611078412";
 
 /* Filtro para enlaces cuya dirección viene de la base de datos
@@ -15747,7 +15746,9 @@ window.vgProofPick=function(fuente){
 <script id="vg-supabase-admin-app-v34">
 (function(){
 'use strict';
-const PIN='4321';
+/* Aquí vivía un PIN de administrador escrito en el archivo. Se quitó:
+   código de la página lo leía. La autorización real la hace
+   vg-admin-secure-v101 contra Supabase Auth + la función is_admin(). */
 const CFG='vg_supabase_cfg_v1';
 let sb=null, adminOrders=[], adminProducts=[];
 const $=s=>document.querySelector(s), $$=s=>Array.from(document.querySelectorAll(s));
@@ -15785,7 +15786,25 @@ async function createOrder(source){
  return {...data,proof};
 }
 function patchWhats(){ /* v52 disabled duplicate Supabase order wrapper */ }
-window.vgAdminOpen=async function(){if(sessionStorage.getItem('vg_admin_ok')!=='1'){if(prompt('PIN de administrador')!==PIN){alert('PIN incorrecto');return}sessionStorage.setItem('vg_admin_ok','1')}$('#vgAdminModal')?.classList.add('active');vgAdminLoadConfig();await vgAdminLoadAll()};
+/* Antes pedía un PIN por prompt() y, si coincidía, se auto-otorgaba el
+   permiso. Ya no: esta función solo PINTA el panel. Quien decide si
+   puedes entrar es vg-admin-secure-v101, que comprueba la sesión de
+   Supabase y la función is_admin() del servidor, y solo entonces marca
+   la bandera de sesión y llama aquí.
+
+   Si se llega hasta aquí sin esa bandera, no se abre nada y se manda al
+   acceso normal. No se llama al gate desde aquí a propósito: el gate
+   llama a esta función, y hacerlo al revés crearía un bucle. */
+window.vgAdminOpen=async function(){
+  if(sessionStorage.getItem('vg_admin_ok')!=='1'){
+    alert('Entra con tu cuenta de administrador para abrir el panel.');
+    if(typeof window.vgOpenAuth==='function') window.vgOpenAuth('admin');
+    return;
+  }
+  $('#vgAdminModal')?.classList.add('active');
+  vgAdminLoadConfig();
+  await vgAdminLoadAll();
+};
 window.vgAdminClose=()=>$('#vgAdminModal')?.classList.remove('active');
 window.vgAdminSaveSupabase=function(){write(CFG,{url:$('#vgSupabaseUrl')?.value.trim()||'',anon:$('#vgSupabaseAnon')?.value.trim()||''});initSB();alert('Conexión guardada')};
 window.vgAdminLoadConfig=function(){let c=cfg(); if($('#vgSupabaseUrl'))$('#vgSupabaseUrl').value=c.url||''; if($('#vgSupabaseAnon'))$('#vgSupabaseAnon').value=c.anon||''; if($('#vgSupabaseSQL'))$('#vgSupabaseSQL').value=SQL_TEXT.trim()};
@@ -15895,8 +15914,15 @@ if(document.readyState==='loading')document.addEventListener('DOMContentLoaded',
     window.vgAdminOpen = function(){
       var modal = document.getElementById('vgAdminModal');
       if(!modal){ alert('No encontré el panel admin dentro del archivo.'); return; }
-      var pin = prompt('PIN de administrador');
-      if(pin !== '4321'){ alert('PIN incorrecto'); return; }
+      /* Este respaldo solo corre si no existiera ningún vgAdminOpen.
+         Antes comparaba un PIN escrito aquí mismo. Ahora exige
+         la bandera que únicamente pone el gate seguro tras validar
+         is_admin() contra Supabase. */
+      if(sessionStorage.getItem('vg_admin_ok') !== '1'){
+        alert('Entra con tu cuenta de administrador para abrir el panel.');
+        if(typeof window.vgOpenAuth === 'function') window.vgOpenAuth('admin');
+        return;
+      }
       modal.classList.add('active');
     };
   }
@@ -15910,8 +15936,13 @@ window.WHATSAPP_NUMBER = '526611078412';
 
 const CFG='vg_supabase_cfg_v1';
 const ADMIN_SESSION_KEY='vg_admin_email_session_v52';
+/* Aquí estaba la contraseña de administrador escrita en el archivo.
+   Se quitó: era legible para cualquiera que abriera el código, y la
+   comparación ocurría en el navegador, donde el visitante controla
+   todo. La contraseña de administrador vive ahora solo en Supabase
+   Auth (cifrada con bcrypt) y el permiso lo da la función is_admin()
+   del servidor. */
 const ADMIN_EMAIL=(window.VG_ADMIN_EMAIL||'admin@vesselgames.com').toLowerCase();
-const ADMIN_PASSWORD=window.VG_ADMIN_PASSWORD||'Vessel2026!';
 const state = window.vgAdminState = window.vgAdminState || {orders:[],products:[],selectedOrderId:null,sb:null,sig:''};
 const $=(s,r=document)=>r.querySelector(s);
 const $$=(s,r=document)=>Array.from(r.querySelectorAll(s));
@@ -15933,8 +15964,15 @@ function cleanSource(source){ const s=String(source||'web'); const map={"whatsap
 
 /* Login */
 function isLogged(){return sessionStorage.getItem(ADMIN_SESSION_KEY)==='1';}
-function loginMarkup(){return `<div class="vg-admin-login-card vg-admin-private-card"><div class="vg-admin-private-badge">Admin VG</div><h3>Solo administradores de VG</h3><p>Acceso privado y protegido. Ingresa tus credenciales para continuar.</p><input class="vg-admin-input" id="vgAdminEmail" type="email" placeholder="Correo administrador"><input class="vg-admin-input" id="vgAdminPassword" type="password" placeholder="Contraseña"><button class="vg-admin-btn primary" onclick="vgAdminLogin()">Entrar</button></div>`}
-window.vgAdminLogin=function(){const e=($('#vgAdminEmail')?.value||'').trim().toLowerCase(),p=$('#vgAdminPassword')?.value||'';if(e===ADMIN_EMAIL&&p===ADMIN_PASSWORD){sessionStorage.setItem(ADMIN_SESSION_KEY,'1');location.reload();}else alert('Correo o contraseña incorrectos.')};
+/* Esta tarjeta pedía correo y contraseña y los comparaba contra una
+   constante del propio archivo. Ya no pide credenciales: manda al
+   acceso normal del sitio, que es Supabase Auth. Así hay un solo sitio
+   donde se valida, y no dos. */
+function loginMarkup(){return `<div class="vg-admin-login-card vg-admin-private-card"><div class="vg-admin-private-badge">Admin VG</div><h3>Solo administradores de VG</h3><p>Entra con tu cuenta de administrador. El permiso lo confirma el servidor, no esta página.</p><button class="vg-admin-btn primary" onclick="vgAdminLogin()">Entrar con mi cuenta</button></div>`}
+window.vgAdminLogin=function(){
+  if(typeof window.vgOpenAuth==='function') window.vgOpenAuth('admin');
+  else alert('No se encontró el formulario de acceso.');
+};
 window.vgAdminLogout=function(){sessionStorage.removeItem(ADMIN_SESSION_KEY);location.reload();};
 function ensureLogout(){if(!isLogged())return; if($('#vgAdminLogoutBtn'))return; const head=$('.vg-admin-head > div'); if(head){const b=document.createElement('button');b.id='vgAdminLogoutBtn';b.className='vg-admin-btn danger';b.textContent='Cerrar sesión';b.onclick=window.vgAdminLogout;head.appendChild(b);}}
 window.vgAdminOpen=function(){const modal=$('#vgAdminModal'); if(modal) modal.classList.add('active'); const content=$('#vgAdminModal .vg-admin-content'); if(!isLogged()){ if(content) content.innerHTML=loginMarkup(); return;} ensureSections(); ensureLogout(); bindTabs(); window.vgAdminLoadAll();};
@@ -16097,17 +16135,11 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     }
   }
 
-  function addEnterKey(){
-    const pass=document.getElementById('vgAdminPassword');
-    if(pass && !pass.__vgEnterBind){
-      pass.__vgEnterBind=true;
-      pass.addEventListener('keydown',e=>{
-        if(e.key==='Enter' && typeof window.vgAdminLogin==='function'){
-          window.vgAdminLogin();
-        }
-      });
-    }
-  }
+  /* addEnterKey() ataba la tecla Enter al campo #vgAdminPassword del
+     formulario de admin. Ese campo ya no existe (el acceso pasó a
+     Supabase Auth), así que la función se queda vacía a propósito en
+     lugar de borrarse: se sigue llamando desde dos sitios más abajo. */
+  function addEnterKey(){}
 
   let lastY=window.scrollY||0;
   window.addEventListener('scroll',()=>{
@@ -24225,8 +24257,8 @@ function renderTickets(cont){cont.innerHTML='<h1 class="vg10-title">Tickets de s
 function startClientPolling(){clearInterval(state.poll); var s=session(); if(!s)return; state.lastAdminMsgAt=Number(localStorage.getItem('vg10_last_admin_msg_at')||Date.now()); state.poll=setInterval(checkClientNotifs,8000); checkClientNotifs(true)}
 async function checkClientNotifs(silent){var s=session(); if(!s)return; try{var orders=state.clientOrders.length?state.clientOrders:await loadOrders(false); var refs=orders.map(orderId); if(!refs.length)return; var c=sb(); if(!c)return; var r=await c.from('vg_live_chat_messages').select('*').eq('thread_type','order').in('thread_ref',refs).eq('sender_role','admin').order('created_at',{ascending:false}).limit(8); if(r.error||!r.data)return; var latest=r.data[0]; if(!latest)return; var ts=new Date(latest.created_at).getTime(); if(!state.lastAdminMsgAt||silent){state.lastAdminMsgAt=ts;localStorage.setItem('vg10_last_admin_msg_at',String(ts));return} if(ts>state.lastAdminMsgAt){state.lastAdminMsgAt=ts;localStorage.setItem('vg10_last_admin_msg_at',String(ts));setNotifCount(state.notifCount+1); var o=orders.find(function(x){return orderId(x)===String(latest.thread_ref)}); showPush(o||{id:latest.thread_ref},latest.message); if(state.clientView==='messages'&&state.activeClientOrder&&orderId(state.activeClientOrder)===String(latest.thread_ref))loadClientChat(latest.thread_ref)}}catch(e){console.warn('notif',e)}}
 function adminShell(){return '<div class="vg10-admin-app"><div class="vg10-admin-head"><div><h1 style="margin:0;font-size:28px">Panel administrador</h1><p style="margin:6px 0 0;color:#9fb0ca">Bandeja estable de pedidos, comprobantes y chat.</p></div><button class="vg10-close" onclick="document.getElementById(\'vg10AdminPanel\').classList.remove(\'active\')">×</button></div><div class="vg10-admin-tabs"><button class="vg10-btn primary" data-admin-tab="inbox">Bandeja</button><button class="vg10-btn" data-admin-tab="orders">Compras</button><button class="vg10-btn" data-admin-tab="support">Soporte</button><button class="vg10-btn danger" id="vg10AdminLogout">Cerrar sesión</button></div><div class="vg10-admin-body"><div class="vg10-admin-list"><input id="vg10AdminSearch" placeholder="Buscar pedido, cliente o producto..." style="width:100%;height:52px;border:1px solid rgba(148,163,184,.20);background:#111827;color:#fff;border-radius:16px;padding:0 14px;margin-bottom:14px"><div id="vg10AdminList" class="vg10-order-list"><div class="vg10-empty">Cargando...</div></div></div><div class="vg10-admin-detail" id="vg10AdminDetail"><div class="vg10-empty" style="margin:26px">Selecciona un pedido.</div></div></div></div>'}
-function adminLoginShell(){return '<div class="vg10-auth-card"><h2 style="margin:0 0 6px">Panel administrador</h2><p style="color:#9fb0ca;margin:0 0 18px">Acceso privado.</p><input id="vg10AdminEmail" placeholder="Correo"><input id="vg10AdminPass" type="password" placeholder="Contraseña"><div id="vg10AdminLoginMsg" style="min-height:22px;color:#fb7185;font-weight:700;margin:8px 0"></div><button class="vg10-btn primary" id="vg10AdminLoginBtn">Entrar</button></div>'}
-function openAdminPanel(){var root=qs('#vg10AdminPanel'); var logged=sessionStorage.getItem('vg10_admin_ok')==='1'||sessionStorage.getItem('vg_admin_email_session_v52')==='1'; root.classList.add('active'); if(!logged){root.innerHTML=adminLoginShell(); qs('#vg10AdminLoginBtn').onclick=function(){var e=(qs('#vg10AdminEmail').value||'').trim().toLowerCase(),p=qs('#vg10AdminPass').value||''; if(e===(window.VG_ADMIN_EMAIL||'admin@vesselgames.com').toLowerCase()&&p===(window.VG_ADMIN_PASSWORD||'Vessel2026!')){sessionStorage.setItem('vg10_admin_ok','1');sessionStorage.setItem('vg_admin_email_session_v52','1');openAdminPanel()}else qs('#vg10AdminLoginMsg').textContent='Credenciales incorrectas.'}; return} root.innerHTML=adminShell(); qs('#vg10AdminLogout').onclick=function(){sessionStorage.removeItem('vg10_admin_ok');sessionStorage.removeItem('vg_admin_email_session_v52');openAdminPanel()}; qs('#vg10AdminSearch').oninput=renderAdminList; loadAdminOrders(); clearInterval(state.adminPoll); state.adminPoll=setInterval(loadAdminOrders,12000)}
+function adminLoginShell(){return '<div class="vg10-auth-card"><h2 style="margin:0 0 6px">Panel administrador</h2><p style="color:#9fb0ca;margin:0 0 18px">Acceso privado. Entra con tu cuenta de administrador: el permiso lo confirma el servidor.</p><div id="vg10AdminLoginMsg" style="min-height:22px;color:#fb7185;font-weight:700;margin:8px 0"></div><button class="vg10-btn primary" id="vg10AdminLoginBtn">Entrar</button></div>'}
+function openAdminPanel(){var root=qs('#vg10AdminPanel'); var logged=sessionStorage.getItem('vg10_admin_ok')==='1'||sessionStorage.getItem('vg_admin_email_session_v52')==='1'; root.classList.add('active'); if(!logged){root.innerHTML=adminLoginShell(); qs('#vg10AdminLoginBtn').onclick=function(){ /* Esta era la cuarta copia del acceso con la contraseña escrita en el archivo. Ahora no valida nada aquí: manda al acceso de Supabase, que es quien confirma el rol. */ if(typeof window.vgOpenAuth==='function') window.vgOpenAuth('admin'); else qs('#vg10AdminLoginMsg').textContent='No se encontró el formulario de acceso.'; }; return} root.innerHTML=adminShell(); qs('#vg10AdminLogout').onclick=function(){sessionStorage.removeItem('vg10_admin_ok');sessionStorage.removeItem('vg_admin_email_session_v52');openAdminPanel()}; qs('#vg10AdminSearch').oninput=renderAdminList; loadAdminOrders(); clearInterval(state.adminPoll); state.adminPoll=setInterval(loadAdminOrders,12000)}
 async function loadAdminOrders(){try{state.adminOrders=await loadOrders(true);renderAdminList(); if(!state.activeAdminOrder&&state.adminOrders[0])openAdminOrder(orderId(state.adminOrders[0])); else if(state.activeAdminOrder)renderAdminDetail(state.activeAdminOrder)}catch(e){var l=qs('#vg10AdminList'); if(l)l.innerHTML='<div class="vg10-empty">Error cargando pedidos: '+esc(e.message||e)+'</div>'}}
 function renderAdminList(){var l=qs('#vg10AdminList'); if(!l)return; var q=(qs('#vg10AdminSearch')&&qs('#vg10AdminSearch').value||'').toLowerCase(); var arr=state.adminOrders.filter(function(o){return !q||JSON.stringify(o).toLowerCase().indexOf(q)>-1}); l.innerHTML=arr.map(function(o){return '<div class="vg10-order-card '+(state.activeAdminOrder&&orderId(state.activeAdminOrder)===orderId(o)?'active':'')+'" data-admin-order="'+esc(orderId(o))+'"><div><h4>'+esc(orderTitle(o))+'</h4><p>Pedido #'+esc(orderId(o))+'</p><p>'+esc(orderName(o))+' · '+esc(orderPhone(o))+'</p>'+statusChip(orderStatus(o))+'</div><div class="vg10-price">'+money(orderTotal(o))+'</div></div>'}).join('')||'<div class="vg10-empty">Sin pedidos.</div>'; qsa('[data-admin-order]',l).forEach(function(card){card.onclick=function(){openAdminOrder(card.getAttribute('data-admin-order'))}})}
 function openAdminOrder(ref){var o=state.adminOrders.find(function(x){return orderId(x)===String(ref)})||null; state.activeAdminOrder=o; renderAdminList(); renderAdminDetail(o)}
@@ -24725,7 +24757,7 @@ else init();
 
 <!-- ════════════════════════════════════════════════════════════════
      FASE 2 — CANDADO REAL DEL PANEL ADMIN (Supabase Auth + is_admin)
-     Reemplaza el PIN "4321" y la contraseña en texto plano. El panel
+     Reemplaza el PIN y la contraseña que estaban en texto plano. El panel
      admin solo abre si el usuario tiene sesión de Supabase Auth Y su
      fila en vg_users tiene is_admin = true.
      ════════════════════════════════════════════════════════════════ -->
