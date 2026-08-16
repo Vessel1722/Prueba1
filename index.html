@@ -14085,7 +14085,15 @@ window.vgProofPick=function(fuente){
 </div>
 </div>
 </div>
-<div class="modal" id="retroModal"><div class="retro-modal-card"><div class="retro-top-shell"><div class="retro-head"><div><span class="badge">Xbox 360 / Clásico</span><h2>Colección Xbox Retro</h2><p>Elige tus juegos, filtra por plataforma y compra por carrito o métodos de pago.</p></div><button class="x" onclick="closeRetroModal()">×</button></div><div class="retro-controls"><input id="retroSearch" oninput="renderRetroGrid()" placeholder="Buscar juego por nombre..." type="text"/><select id="retroPlatform" onchange="renderRetroGrid()"><option value="all">Todas las plataformas</option><option value="360">Xbox 360</option><option value="CLÁSICO">Xbox Clásico</option></select></div><div class="retro-sales-note"><div><b>Xbox Retro Collection</b><p>Elige los juegos que quieras y los agregamos a una cuenta nueva completa. La cuenta será solo tuya: podrás cambiar contraseña y agregar correo o número de recuperación.</p></div><span class="badge">Paquetes con descuento</span></div><div class="retro-filter-row"><button class="retro-filter-chip active" onclick="setRetroQuickFilter('all', this)" type="button">Todos</button><button class="retro-filter-chip" onclick="setRetroQuickFilter('360', this)" type="button">Xbox 360</button><button class="retro-filter-chip" onclick="setRetroQuickFilter('CLÁSICO', this)" type="button">Xbox Clásico</button><button class="retro-filter-chip" onclick="setRetroQuickSearch('Gears', this)" type="button">Gears</button><button class="retro-filter-chip" onclick="setRetroQuickSearch('Call of Duty', this)" type="button">Call of Duty</button><button class="retro-filter-chip" onclick="setRetroQuickSearch('Assassin', this)" type="button">Assassin’s Creed</button></div></div><div class="retro-grid" id="retroGridContainer"></div><div class="retro-footer"><div class="retro-totals"><span>Seleccionados: <strong id="retroCount">0</strong></span><span>Subtotal: <strong id="retroSubtotal">$0 MXN</strong></span><span>Descuento: <strong id="retroDiscount">$0 MXN</strong></span><span>Total final: <strong id="retroTotal">$0 MXN</strong></span></div><div class="modal-actions" style="position:static;padding-top:0;background:transparent;margin:0"><button class="primary" onclick="addRetroToCart()">Agregar al carrito</button><button class="primary whatsapp" onclick="buyRetroNow()">Comprar / ver métodos de pago</button></div></div></div></div>
+<!-- FASE 113 · La ventana de la colección Xbox Retro se retira: los juegos,
+     los filtros y el descuento viven ahora en la sección del catálogo.
+
+     El div se queda vacío a propósito. El guion principal hace
+     retroModal.addEventListener(...) sin comprobar que exista, y esa
+     línea va justo antes de init(): si se borra el elemento, se cae el
+     arranque entero de la tienda. Todo lo que había dentro (buscador,
+     chips, rejilla de 309 juegos y pie con totales) ya no se pinta. -->
+<div class="modal" id="retroModal" aria-hidden="true"></div>
 <!-- Login modal -->
 <!-- VG PRO DASHBOARD MODAL -->
 <div class="vg-pro-overlay" id="vgProModal">
@@ -41820,19 +41828,28 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     color:#bffff5;
   }
   .vgxr-combo{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
-  .vgxr-combo-txt{color:#c7cdea;font-size:0.8125rem;line-height:1.35;max-width:340px}
+  .vgxr-combo-txt{color:#c7cdea;font-size:0.8125rem;line-height:1.35;max-width:360px}
   .vgxr-combo-txt b{color:#fff;display:block;font-size:0.9375rem}
-  .vgxr-combo-btn{
-    border:0;
-    border-radius:14px;
-    padding:12px 18px;
+  .vgxr-aviso{
+    border:1px solid rgba(25,230,193,.30);
+    background:rgba(25,230,193,.10);
+    color:#bffff5;
+    border-radius:999px;
+    padding:10px 15px;
+    font-size:0.8125rem;
     font-weight:900;
-    font-size:0.875rem;
-    cursor:pointer;
-    color:#04140f;
-    background:linear-gradient(135deg,#19e6c1,#12b98f);
     white-space:nowrap;
   }
+  .vgxr-aviso.vgxr-listo{
+    border-color:rgba(25,230,193,.75);
+    background:linear-gradient(135deg,#19e6c1,#12b98f);
+    color:#04140f;
+  }
+
+  /* La ventana vieja de la colección ya no se abre desde ningún lado.
+     Esto es el cierre de seguridad por si algún bloque de más arriba
+     todavía le pone la clase "active". */
+  #retroModal{display:none !important}
   .vgxr-vacio{
     grid-column:1/-1 !important;
     border:1px dashed rgba(255,255,255,.18);
@@ -42000,7 +42017,7 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     .vgxr-combo{width:100%;gap:8px;flex-wrap:nowrap}
     .vgxr-combo-txt{max-width:none;flex:1 1 auto;font-size:0.75rem}
     .vgxr-combo-txt b{display:inline;font-size:0.75rem}
-    .vgxr-combo-btn{width:auto;padding:10px 13px;font-size:0.8125rem}
+    .vgxr-aviso{padding:9px 12px;font-size:0.75rem}
     .vgxr-ficha{padding:0}
     .vgxr-ficha-caja{
       grid-template-columns:1fr;
@@ -42188,10 +42205,66 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
       '</div>' +
       '<div class="vgxr-combo">' +
         '<div class="vgxr-combo-txt"><b>¿Vas a llevar 3 o más?</b>' +
-          'Ármalos juntos en una sola cuenta y te descontamos el 10%.</div>' +
-        '<button type="button" class="vgxr-combo-btn" onclick="window.vgxrCombo()">Armar combo</button>' +
+          'Van todos en una sola cuenta y el 10% se descuenta solo en el carrito.</div>' +
+        '<span class="vgxr-aviso" id="vgxrAviso"></span>' +
       '</div>' +
     '</div>';
+  }
+
+  /* ── El 10% por llevar 3 o más ──────────────────────────────────
+     Antes lo calculaba la ventana de la colección al armar el combo.
+     Ahora se aplica solo: en cuanto hay tres juegos retro en el
+     carrito, cada uno baja un 10%.
+
+     Se baja el precio de CADA juego en vez de meter una línea de
+     descuento en negativo. El servidor recalcula el pedido artículo por
+     artículo y a los precios menores que cero les pone cero (fase 77):
+     una línea de "-10%" se perdería y el cliente acabaría pagando el
+     total sin descuento. Bajando cada juego, la suma ya sale con el
+     descuento hecho y todos los precios son positivos.
+
+     vgxrBase guarda el precio de lista para poder deshacerlo si el
+     cliente quita juegos y se queda con menos de tres. */
+  var DESC_DESDE = 3;
+  var DESC_PCT = 0.10;
+
+  function elCarrito(){
+    try{ if(typeof cart !== 'undefined' && Array.isArray(cart)) return cart; }catch(e){}
+    return Array.isArray(window.cart) ? window.cart : null;
+  }
+  function esRetro(it){
+    return !!it && String(it.title||'').indexOf('Xbox Retro · ') === 0;
+  }
+  function ajustarDescuento(){
+    var c = elCarrito();
+    if(!c) return 0;
+    var retro = c.filter(esRetro);
+    var aplica = retro.length >= DESC_DESDE;
+    retro.forEach(function(it){
+      if(typeof it.vgxrBase !== 'number') it.vgxrBase = Number(it.price||0);
+      if(typeof it.vgxrOpcion !== 'string') it.vgxrOpcion = String(it.option||'');
+      it.price = aplica ? Math.round(it.vgxrBase * (1 - DESC_PCT)) : it.vgxrBase;
+      it.option = aplica ? (it.vgxrOpcion + ' · -10% por llevar ' + retro.length) : it.vgxrOpcion;
+    });
+    avisar(retro.length);
+    return retro.length;
+  }
+  function avisar(n){
+    var el = document.getElementById('vgxrAviso');
+    if(!el) return;
+    if(typeof n !== 'number'){
+      var c = elCarrito();
+      n = c ? c.filter(esRetro).length : 0;
+    }
+    if(n >= DESC_DESDE){
+      el.textContent = '10% aplicado · ' + n + ' juegos';
+      el.className = 'vgxr-aviso vgxr-listo';
+      return;
+    }
+    el.className = 'vgxr-aviso';
+    el.textContent = n === 0
+      ? 'Llevas 0 · faltan 3'
+      : 'Llevas ' + n + ' · ' + (DESC_DESDE - n) + ' más para el 10%';
   }
 
   function pintar(){
@@ -42208,6 +42281,7 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
 
     /* La cuenta de juegos va en los chips de la barra y no en
        #productsSubtitle: ese párrafo está oculto en toda la página. */
+    avisar();   /* la barra se rehace en cada pintada: el aviso también */
     portada();
   }
 
@@ -42254,13 +42328,17 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
         price: Number(g.price||0),
         image: imagen(g)
       });
+      var n = ajustarDescuento();
       if(typeof updateCartCount === 'function') updateCartCount();
     }catch(e){
       alert('No se pudo agregar al carrito: ' + (e.message||e));
       return false;
     }
-    if(typeof window.showToast === 'function')
-      window.showToast('Agregado al carrito', g.name + ' · ' + pesos(g.price));
+    if(typeof window.showToast === 'function'){
+      window.showToast('Agregado al carrito', n >= DESC_DESDE
+        ? g.name + ' · 10% aplicado a tus ' + n + ' juegos'
+        : g.name + ' · ' + pesos(g.price));
+    }
     return true;
   }
 
@@ -42295,13 +42373,6 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     });
   };
 
-  /* El combo con el 10% sigue siendo la ventana de siempre: es la que
-     sabe sumar varios juegos y aplicar el descuento. */
-  var abrirVentanaVieja = null;
-  window.vgxrCombo = function(){
-    if(typeof abrirVentanaVieja === 'function') abrirVentanaVieja();
-  };
-
   /* ── Ficha del juego ────────────────────────────────────────────*/
   function ficha(){
     var f = document.getElementById('vgxrFicha');
@@ -42324,8 +42395,8 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
             '<button class="vgxr-ficha-comprar" type="button">Comprar ahora</button>' +
             '<button class="vgxr-ficha-carrito" type="button">Agregar al carrito</button>' +
           '</div>' +
-          '<div class="vgxr-ficha-nota">¿Llevas 3 o más juegos? Te descontamos el 10%: ' +
-            '<button type="button">arma tu combo</button>.</div>' +
+          '<div class="vgxr-ficha-nota">Junta 3 o más juegos en el carrito y el 10% se ' +
+            'descuenta solo.</div>' +
         '</div>' +
       '</div>';
     document.body.appendChild(f);
@@ -42339,10 +42410,6 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
       if(!abierto) return;
       window.vgxrAgregar(abierto.id);
       cerrarFicha();
-    };
-    f.querySelector('.vgxr-ficha-nota button').onclick = function(){
-      cerrarFicha();
-      window.vgxrCombo();
     };
     return f;
   }
@@ -42490,10 +42557,9 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     }
 
     /* Todo lo que abría la ventana —la tarjeta "Juegos Retro", el
-       carrusel de la portada, el buscador— ahora trae a la sección.
-       La ventana se guarda para el combo con descuento. */
+       carrusel de la portada, el buscador, los enlaces guardados—
+       ahora trae a la sección. La ventana ya no existe. */
     if(typeof window.openRetroModal === 'function' && !window.openRetroModal.__vg112){
-      abrirVentanaVieja = window.openRetroModal;
       var nuevaO = function(){
         if(typeof window.showSection === 'function') window.showSection(CAT);
       };
@@ -42534,6 +42600,22 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
       nuevaS.__vg112 = true;
       window.setRetroQuickSearch = nuevaS;
     }
+
+    /* El 10% se repasa cada vez que el carrito se mira o se toca: al
+       pintarlo (ahí se quitan artículos), al actualizar el contador
+       (ahí se agregan) y al pasar a pagar. Así el descuento entra y
+       sale solo aunque el juego se quite desde el carrito o el carrito
+       se restaure guardado del navegador. */
+    ['renderCart', 'updateCartCount', 'openCart', 'openPaymentForCart'].forEach(function(nombre){
+      var orig = window[nombre];
+      if(typeof orig !== 'function' || orig.__vg112) return;
+      var nueva = function(){
+        try{ ajustarDescuento(); }catch(e){}
+        return orig.apply(this, arguments);
+      };
+      nueva.__vg112 = true;
+      window[nombre] = nueva;
+    });
   }
 
   var intentos = 0;
