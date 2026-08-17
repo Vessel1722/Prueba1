@@ -42582,6 +42582,34 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
       window.openRetroGameFromCarousel = nuevaC;
     }
 
+    /* ── Las portadas del carrusel ────────────────────────────────
+       El carrusel pedía la foto con getRetroGameImage, que le añade
+       "-youtube -thumbnail -disc -disk -manual" a la búsqueda. Esos
+       menos empujan al buscador hacia los escaneos de la FUNDA
+       ENTERA —contraportada, lomo y portada en una sola imagen—, y
+       así salió Unreal Tournament 3 en la portada de la tienda:
+       ilegible de tan pequeña.
+
+       La sección pide la misma foto sin esos menos y devuelve la
+       carátula de frente. Comprobado con las dos direcciones lado a
+       lado, mismo juego y mismo tamaño.
+
+       Se unifica: todo pasa por vgRetroImagen (fase 101), que además
+       respeta la foto que el dueño ponga desde el panel. Antes el
+       carrusel se la saltaba y seguía con la de Bing. */
+    if(typeof window.getRetroGameImage === 'function' && !window.getRetroGameImage.__vg112){
+      var nuevaF = function(g){
+        var real = null;
+        if(g && g.id) real = porId(g.id);
+        if(!real && g && g.name){
+          real = todos().filter(function(x){ return x.name === g.name; })[0];
+        }
+        return imagen(real || g || {});
+      };
+      nuevaF.__vg112 = true;
+      window.getRetroGameImage = nuevaF;
+    }
+
     /* El buscador dejaba el nombre del juego en la caja de la ventana.
        Ahora lo deja en el buscador de arriba, que es el que filtra la
        sección. */
@@ -42618,6 +42646,38 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     });
   }
 
+  /* Las tarjetas del carrusel pueden estar puestas antes de que este
+     bloque corra, y además el carrusel se duplica a sí mismo para dar
+     la vuelta sin cortes. Así que no basta con arreglar la función:
+     hay que repasar las fotos que ya están en pantalla y las copias
+     que aparezcan después. */
+  function repasarCarrusel(){
+    var imgs = document.querySelectorAll('#homeTiles .retro-carousel-card img');
+    if(!imgs.length) return;
+    var lista = todos();
+    Array.prototype.forEach.call(imgs, function(im){
+      if(im.dataset.vgxrRepasada === '1') return;
+      im.dataset.vgxrRepasada = '1';
+      var nombre = im.getAttribute('alt') || '';
+      var g = lista.filter(function(x){ return x.name === nombre; })[0];
+      if(!g) return;
+      var url = imagen(g);
+      if(url && im.getAttribute('src') !== url) im.setAttribute('src', url);
+    });
+  }
+
+  function vigilarCarrusel(){
+    repasarCarrusel();
+    var row = document.getElementById('homeTiles');
+    if(!row || row.dataset.vgxrVigilado === '1') return;
+    row.dataset.vgxrVigilado = '1';
+    var espera = null;
+    new MutationObserver(function(){
+      clearTimeout(espera);
+      espera = setTimeout(repasarCarrusel, 120);
+    }).observe(row, {childList:true});
+  }
+
   var intentos = 0;
   function arrancar(){
     if(!meterCategoria()){
@@ -42625,6 +42685,9 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
       return;
     }
     envolver();
+    vigilarCarrusel();
+    window.addEventListener('load', vigilarCarrusel, {once:true});
+    setTimeout(vigilarCarrusel, 1500);
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
