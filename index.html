@@ -24814,7 +24814,10 @@ window.sendPaymentWhatsApp = async function(){
       p_product_title:items[0].title, p_product_option:items[0].option,
       p_delivery_data:deliv,
       p_proof_data_url:proof, p_proof_file_name:f.name||'comprobante.jpg', p_proof_mime:f.type||'image/jpeg',
-      p_source:'web'
+      p_source:'web',
+      /* FASE 80 · El código viaja, pero quien decide si vale y cuánto
+         descuenta es el servidor. Aquí solo se dice cuál se escribió. */
+      p_cupon:(window._activeCoupon && window._activeCoupon.code) || null
     });
     if(r.error) throw r.error;
     var modal=qs('#paymentModal'); if(modal) modal.classList.remove('active');
@@ -39951,6 +39954,322 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
   });
 })();
 </script>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 117 · Los cupones se comprueban contra la base
+
+     Acompaña a supabase_fase80_CUPONES.sql. Antes de esto:
+
+       · la lista de cupones estaba escrita en la propia página
+         (VESSEL10, VESSEL20, NUEVO15 y GAMER5), así que borrar uno
+         desde el panel duraba hasta la siguiente recarga;
+       · los que se creaban en el panel se guardaban en el localStorage
+         del navegador del dueño, o sea que ningún cliente los tenía;
+       · y el descuento se decidía en el navegador, sin que el servidor
+         comprobara nada.
+
+     Ahora el navegador solo pregunta. La respuesta —y el descuento del
+     pedido— salen de la base:
+
+       vg_cupon_valido(codigo) → porcentaje, o null
+
+     Esa función responde por UN código a la vez, nunca da la lista, y
+     el disparador orders_cupon vuelve a comprobarlo al registrar el
+     pedido. Aunque alguien fuerce esta pantalla, el total guardado es
+     el que calcula el servidor.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script id="vg-cupones-js-v117">
+(function(){
+  'use strict';
+  if(window.__VG117__) return; window.__VG117__ = true;
+
+  function qs(s,r){ return (r||document).querySelector(s); }
+
+  /* Se comprueba que el cliente traiga de verdad lo que se le va a
+     pedir. En esta página hay varios ayudantes que devuelven objetos
+     parciales, y un cliente a medias tiraba la función entera. */
+  function sb(quiere){
+    var c = null;
+    try{ if(typeof window.vgGetSB === 'function') c = window.vgGetSB(); }catch(e){}
+    if(!c) return null;
+    if(quiere && typeof c[quiere] !== 'function') return null;
+    return c;
+  }
+
+  /* Se vacía la lista escrita en el código. Si algún bloque viejo la
+     vuelve a leer, no encontrará nada, que es justo lo que se busca:
+     los cuatro cupones de fábrica ya no existen. Si los quieres, se
+     crean desde el panel y viven en la base como los demás. */
+  try{ window.COUPONS = {}; }catch(e){}
+  try{ localStorage.removeItem('vg_custom_coupons'); }catch(e){}
+
+  function aviso(texto, clase){
+    var m = qs('#vgCouponMsg');
+    if(!m) return;
+    m.textContent = texto;
+    m.className = 'vg-coupon-msg ' + (clase || '');
+    m.style.display = 'block';
+  }
+
+  /* El total lo escribe esta función y no vgUpdatePayTotal, aunque
+     exista: aquella guarda el porcentaje en una variable suya, dentro
+     de una función cerrada, a la que desde aquí no se llega. Llamarla
+     repintaba el precio SIN descuento.
+
+     La base se toma del pedido y no de la pantalla: la pantalla ya
+     puede traer un descuento aplicado antes, y se descontaría dos
+     veces. baseTotal guarda el precio de lista. */
+  function pesos(n){
+    return '$' + Number(n||0).toLocaleString('es-MX') + ' MXN';
+  }
+
+  function base(){
+    var p = window.pendingPaymentOrder;
+    if(p){
+      var b = Number(p.baseTotal);
+      if(b > 0) return b;
+      var t = Number(p.total);
+      if(t > 0){ p.baseTotal = t; return t; }
+    }
+    var el = qs('#payModalTotal');
+    var n = el ? Number(String(el.textContent||'').replace(/[^0-9.]/g,'')) : 0;
+    return n > 0 ? n : 0;
+  }
+
+  function pintarTotal(){
+    var el = qs('#payModalTotal');
+    if(!el) return;
+    var b = base();
+    var pct = Number(window._couponDiscount || 0);
+    var del = qs('#payOriginalTotal');
+
+    if(pct > 0 && b > 0){
+      var conDesc = Math.round(b * (1 - pct/100));
+      el.textContent = pesos(conDesc);
+      el.dataset.vgMxn = conDesc;
+      if(del){ del.textContent = pesos(b); del.style.display = 'block'; }
+    }else{
+      el.textContent = pesos(b);
+      el.dataset.vgMxn = b;
+      if(del){ del.style.display = 'none'; }
+    }
+    /* El bloque de la fase 65 copia este número al pedido y al panel de
+       referencia; se le avisa moviendo el texto, que es lo que vigila. */
+  }
+
+  /* ── Aplicar un cupón ──────────────────────────────────────────
+     Sustituye a la versión que buscaba en una lista local. Ahora
+     pregunta a la base y espera la respuesta. */
+  window.vgApplyCoupon = function(){
+    var inp = qs('#vgCouponInput');
+    if(!inp) return;
+    var codigo = String(inp.value || '').trim().toUpperCase();
+
+    if(!codigo){
+      window._couponDiscount = 0;
+      window._activeCoupon = null;
+      aviso('Escribe un código', 'err');
+      pintarTotal();
+      return;
+    }
+
+    var c = sb('rpc');
+    if(!c){
+      aviso('No hay conexión para comprobar el código. Intenta de nuevo.', 'err');
+      window._activeCoupon = null;
+      window._couponDiscount = 0;
+      pintarTotal();
+      return;
+    }
+
+    aviso('Comprobando…', '');
+    c.rpc('vg_cupon_valido', {p_codigo: codigo}).then(function(r){
+      var pct = (r && !r.error) ? Number(r.data) : NaN;
+
+      if(r && r.error){
+        aviso('No se pudo comprobar el código. Intenta de nuevo.', 'err');
+        window._activeCoupon = null;
+        window._couponDiscount = 0;
+        pintarTotal();
+        return;
+      }
+
+      if(!pct || isNaN(pct) || pct <= 0){
+        /* Mismo mensaje para "no existe", "lo borraron" y "está mal
+           escrito": no hay por qué ayudar a adivinar códigos. */
+        aviso('Código inválido o expirado', 'err');
+        window._activeCoupon = null;
+        window._couponDiscount = 0;
+        pintarTotal();
+        return;
+      }
+
+      window._couponDiscount = pct;
+      window._activeCoupon = {code: codigo, pct: pct};
+      aviso('✓ ' + pct + '% de descuento aplicado', 'ok');
+      pintarTotal();
+    }).catch(function(){
+      aviso('No se pudo comprobar el código. Intenta de nuevo.', 'err');
+      window._activeCoupon = null;
+      window._couponDiscount = 0;
+      pintarTotal();
+    });
+  };
+
+  /* ── El panel: crear y borrar de verdad ───────────────────────── */
+  function fila(cup){
+    var apagado = cup.activo === false;
+    return '<div class="vgcup-fila' + (apagado ? ' vgcup-off' : '') + '">' +
+      '<span class="vgcup-codigo">' + String(cup.codigo).replace(/[<>&]/g,'') + '</span>' +
+      '<span class="vgcup-pct">' + Number(cup.pct) + '% descuento</span>' +
+      '<button type="button" class="vgcup-borrar" data-cup="' +
+        String(cup.codigo).replace(/[<>&"]/g,'') + '">Borrar</button>' +
+    '</div>';
+  }
+
+  window.vgRefreshCouponList = function(){
+    var lista = qs('#vgCouponList');
+    if(!lista) return;
+    var c = sb('from');
+    if(!c){ lista.innerHTML = '<div class="vgcup-vacio">Sin conexión con el servidor.</div>'; return; }
+
+    lista.innerHTML = '<div class="vgcup-vacio">Cargando…</div>';
+    c.from('vg_cupones').select('codigo,pct,activo').order('creado', {ascending:false})
+      .then(function(r){
+        if(r.error){
+          lista.innerHTML = '<div class="vgcup-vacio">No se pudieron leer los cupones. ' +
+            'Corre el archivo supabase_fase80_CUPONES.sql en Supabase.</div>';
+          return;
+        }
+        var filas = r.data || [];
+        lista.innerHTML = filas.length
+          ? filas.map(fila).join('')
+          : '<div class="vgcup-vacio">No hay cupones. Los que crees aquí valen para todos los clientes.</div>';
+      });
+  };
+
+  window.vgAddCoupon = function(){
+    var codigo = String((qs('#vgNewCouponCode')||{}).value || '').trim().toUpperCase();
+    var pct = Number((qs('#vgNewCouponPct')||{}).value || 0);
+    if(!codigo || !pct || pct < 1 || pct > 90){
+      alert('Escribe un código y un porcentaje entre 1 y 90.');
+      return;
+    }
+    var c = sb('from');
+    if(!c){ alert('No hay conexión con el servidor.'); return; }
+
+    c.from('vg_cupones').upsert({codigo: codigo, pct: pct, activo: true}, {onConflict: 'codigo'})
+      .then(function(r){
+        if(r.error){
+          alert('No se pudo guardar el cupón: ' + (r.error.message || 'error'));
+          return;
+        }
+        var a = qs('#vgNewCouponCode'); if(a) a.value = '';
+        var b = qs('#vgNewCouponPct');  if(b) b.value = '';
+        window.vgRefreshCouponList();
+      });
+  };
+
+  window.vgRemoveCoupon = function(codigo){
+    if(!codigo) return;
+    if(!confirm('¿Borrar el cupón ' + codigo + '? Dejará de funcionar para todos.')) return;
+    var c = sb('from');
+    if(!c){ alert('No hay conexión con el servidor.'); return; }
+    c.from('vg_cupones').delete().eq('codigo', String(codigo).toUpperCase())
+      .then(function(r){
+        if(r.error){ alert('No se pudo borrar: ' + (r.error.message || 'error')); return; }
+        window.vgRefreshCouponList();
+      });
+  };
+
+  /* El botón de borrar se atiende con un oyente delegado: la lista se
+     vuelve a dibujar entera cada vez y los onclick puestos uno por uno
+     se irían con el HTML viejo. */
+  document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest ? e.target.closest('.vgcup-borrar') : null;
+    if(!b) return;
+    window.vgRemoveCoupon(b.getAttribute('data-cup'));
+  });
+
+  /* Se rehace el cuadro del panel para que use estas funciones y no las
+     de antes, que leían el localStorage. */
+  window.vgRenderCouponAdmin = function(){
+    var sec = qs('#vgAdminSettings');
+    if(!sec) return;
+    var viejo = qs('#vg-coupon-admin');
+    if(viejo) viejo.remove();
+
+    var div = document.createElement('div');
+    div.id = 'vg-coupon-admin';
+    div.innerHTML =
+      '<h4>Cupones de descuento</h4>' +
+      '<p class="vgcup-nota">Viven en la base de datos: lo que crees o borres aquí ' +
+        'vale para todos los clientes al instante.</p>' +
+      '<div id="vgCouponList"></div>' +
+      '<div class="vgcup-alta">' +
+        '<input id="vgNewCouponCode" placeholder="Código (ej: PROMO30)" autocomplete="off">' +
+        '<input id="vgNewCouponPct" type="number" min="1" max="90" placeholder="%">' +
+        '<button type="button" class="vgcup-agregar">+ Agregar</button>' +
+      '</div>';
+    sec.appendChild(div);
+    div.querySelector('.vgcup-agregar').onclick = window.vgAddCoupon;
+    window.vgRefreshCouponList();
+  };
+
+  /* Al abrir Ajustes se repinta, por si el bloque viejo alcanzó a
+     dibujar el suyo. */
+  document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest
+      ? e.target.closest('#vgAdminModal .vg-admin-tab[data-tab="settings"]') : null;
+    if(b) setTimeout(window.vgRenderCouponAdmin, 160);
+  });
+})();
+</script>
+<style id="vg-cupones-css-v117">
+  #vg-coupon-admin{margin-top:20px;display:flex;flex-direction:column;gap:10px}
+  #vg-coupon-admin h4{
+    font-size:0.75rem;letter-spacing:.12em;text-transform:uppercase;
+    color:#8b93b0;margin:0;font-weight:700;
+  }
+  #vg-coupon-admin .vgcup-nota{margin:0;font-size:0.75rem;color:#7f879f;line-height:1.45}
+  #vgCouponList{display:flex;flex-direction:column;gap:8px}
+  .vgcup-fila{
+    display:flex;align-items:center;justify-content:space-between;gap:10px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:12px;padding:10px 12px;
+  }
+  .vgcup-fila.vgcup-off{opacity:.5}
+  .vgcup-codigo{font-weight:700;font-size:0.875rem;color:#fff}
+  .vgcup-pct{color:#19e6c1;font-size:0.875rem;font-variant-numeric:tabular-nums}
+  .vgcup-borrar{
+    min-height:36px;padding:0 12px;border-radius:10px;cursor:pointer;
+    background:rgba(255,77,125,.12);
+    border:1px solid rgba(255,77,125,.25);
+    color:#ff8fa0;font-size:0.75rem;font-weight:700;
+  }
+  .vgcup-vacio{
+    padding:14px;border-radius:12px;
+    border:1px dashed rgba(255,255,255,.14);
+    color:#8b93b0;font-size:0.8125rem;line-height:1.45;
+  }
+  .vgcup-alta{display:flex;gap:8px;flex-wrap:wrap}
+  .vgcup-alta input{
+    height:40px;border-radius:12px;padding:0 12px;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.10);
+    color:#eef1f8;font-size:0.875rem;
+  }
+  #vgNewCouponCode{flex:1;min-width:150px}
+  #vgNewCouponPct{width:80px}
+  .vgcup-agregar{
+    height:40px;padding:0 16px;border-radius:12px;cursor:pointer;
+    border:1px solid rgba(25,230,193,.35);
+    background:rgba(25,230,193,.10);
+    color:#19e6c1;font-weight:800;font-size:0.875rem;
+  }
+</style>
 
 
 </body>
