@@ -24014,6 +24014,15 @@ function showMineTab(name){
   loadAdmin();
 }
 
+/* FASE 116 · Se expone para el oyente delegado del final del archivo.
+   Motivo: al abrir el panel, bindTabs() del panel clásico reescribe el
+   onclick de TODO lo que tenga clase .vg-admin-tab, y estas cuatro
+   pestañas se vinculan una sola vez (b.__vg17bound). Desde la segunda
+   apertura, Soporte, Tokens e Imágenes quedaban con el manejador
+   genérico: activaba la sección, que está vacía porque quien la llena
+   es justo esta función. */
+window.vgAdminPestana17 = showMineTab;
+
 /* ═══════════════════════════════════════════════════════════════
    TOKENS — control del admin
    Permite corregir errores sumando o restando tokens a una cuenta.
@@ -39874,6 +39883,72 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
   window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 116 · Soporte, Tokens e Imágenes vuelven a abrir
+
+     El síntoma: se tocaba la pestaña, se marcaba como elegida y el
+     panel se quedaba en blanco. Pasaba a partir de la SEGUNDA vez que
+     se abría el panel en la misma visita.
+
+     La causa, en orden:
+
+       1. vgAdminOpen del panel clásico llama a bindTabs(), que asigna
+          onclick a TODO lo que tenga clase .vg-admin-tab.
+       2. Las cuatro pestañas del módulo de soporte (Pedidos, Soporte,
+          Tokens e Imágenes) se vinculan una sola vez, con la marca
+          b.__vg17bound. La primera apertura las crea después de
+          bindTabs y todo va bien.
+       3. En la segunda apertura ya existen, así que bindTabs les pisa
+          el onclick, y la marca impide volver a ponerlo.
+       4. El manejador genérico sí existe: activa #vgAdminSoporte,
+          #vgAdminTokens o #vgAdminImagenes. Pero esas secciones están
+          vacías: quien las llena es showMineTab, que ya no corre.
+
+     Pedidos se salvaba de casualidad, porque el módulo lo pinta a mano
+     en cada apertura.
+
+     El arreglo NO es volver a asignar el onclick —sería el mismo
+     empujón de siempre, y el próximo bloque que llame a bindTabs lo
+     vuelve a tirar—. Es un oyente delegado en el documento: un
+     addEventListener no se puede sobrescribir asignando onclick, así
+     que da igual cuántas veces y en qué orden se repinten las
+     pestañas. Corre después del manejador genérico (que ya cambió las
+     clases) y se encarga de lo único que faltaba: llenar la sección.
+     ═══════════════════════════════════════════════════════════════════ -->
+<script id="vg-pestanas-admin-js-v116">
+(function(){
+  'use strict';
+  if(window.__VG116__) return; window.__VG116__ = true;
+
+  var MIAS = ['pedidos', 'soporte', 'tokens', 'imagenes'];
+
+  document.addEventListener('click', function(e){
+    var t = e.target;
+    if(!t || !t.closest) return;
+    var boton = t.closest('#vgAdminModal .vg-admin-tab[data-tab]');
+    if(!boton) return;
+
+    var nombre = boton.getAttribute('data-tab');
+    if(MIAS.indexOf(nombre) < 0) return;              /* las demás no se tocan */
+    if(typeof window.vgAdminPestana17 !== 'function') return;
+
+    try{ window.vgAdminPestana17(nombre); }
+    catch(err){
+      /* Si el módulo de soporte no cargó, al menos se avisa en vez de
+         dejar el panel en blanco sin explicación. */
+      var mapa = {pedidos:'vgAdminPedidos', soporte:'vgAdminSoporte',
+                  tokens:'vgAdminTokens', imagenes:'vgAdminImagenes'};
+      var sec = document.getElementById(mapa[nombre]);
+      if(sec && !sec.textContent.trim()){
+        sec.innerHTML = '<div style="padding:24px;text-align:center;color:#8b93b0">'+
+          'No se pudo cargar esta sección. Cierra el panel y vuelve a abrirlo.</div>';
+      }
+    }
+  });
 })();
 </script>
 
