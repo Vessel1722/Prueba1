@@ -42267,6 +42267,13 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
       : 'Llevas ' + n + ' · ' + (DESC_DESDE - n) + ' más para el 10%';
   }
 
+  /* El carrito nuevo (fase 114) lo dibuja otro bloque, que reemplaza
+     renderCart entero y con él el envoltorio que aplicaba el 10%. Se
+     expone el cálculo para que lo llame antes de pintar. */
+  window.vgxrAjustarDescuento = ajustarDescuento;
+  window.vgxrEsRetro = esRetro;
+  window.vgxrDescuentoDesde = DESC_DESDE;
+
   function pintar(){
     var grid = document.getElementById('productsGrid');
     if(!grid) return;
@@ -42690,6 +42697,614 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     setTimeout(vigilarCarrusel, 1500);
   }
 
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
+  else arrancar();
+})();
+</script>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 114 · El carrito, como el mockup
+
+     Lo que se midió en un teléfono de 375 dp antes de tocar nada:
+
+       botón "Quitar"   62 × 32, empezaba en el px 312 y terminaba en el
+                        374; su tarjeta acababa en el 330. Se salía 44 px
+                        y el borde de la pantalla se lo comía.
+       área táctil      32 dp de alto (el mínimo cómodo son 48).
+       cantidad         no existía: dos copias del mismo juego eran dos
+                        renglones idénticos.
+       lista            recortaba el tercer artículo, sin scroll propio.
+       márgenes         10, 25 y 35 px conviviendo en la misma ventana.
+
+     Aquí se dibuja el carrito entero de nuevo sobre rejilla de 8 dp.
+
+     POR QUÉ CLASES PROPIAS (.vgc-*) Y NO LAS DE ANTES: las reglas de
+     .cart-item / .cart-thumb / .cart-remove-btn están repartidas en
+     media docena de capas con !important. Pelearse con ellas es cómo
+     nació el botón que se salía. Con nombres nuevos no hay pelea: las
+     viejas dejan de encontrar a quién pintar.
+
+     LO QUE SÍ SE CONSERVA A PROPÓSITO:
+       · la clase cart-remove-btn en el botón de quitar, porque hay un
+         oyente global que guarda el carrito cuando se toca;
+       · los id #cartTotal y #cartSubtotal, que es donde el módulo de
+         moneda busca los importes para pasarlos a dólares;
+       · data-vg-mxn en cada precio, por lo mismo;
+       · openPaymentForCart() y clearCart(), que son el pago y el vaciar
+         de siempre.
+
+     LA CANTIDAD NO CAMBIA EL CARRITO POR DENTRO. El − y el + agregan o
+     quitan copias del mismo artículo en el arreglo de siempre; agrupar
+     es solo pintura. Así el pedido, el texto de WhatsApp, el precio que
+     verifica el servidor y el 10% de Xbox Retro (que cuenta juegos)
+     siguen viendo exactamente lo que veían antes.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-carrito-nuevo-css-v114">
+
+  /* El panel deja de desplazarse entero: se vuelve una columna con la
+     lista al centro. Así el total y el botón de pagar quedan siempre a
+     la vista, que es lo que pedía la auditoría. El prefijo con #cartModal
+     es lo que le gana a las seis capas que ya mandaban sobre .cart-panel. */
+  html body #cartModal .cart-panel.vgc-panel{
+    display:flex !important;
+    flex-direction:column !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    max-height:min(760px, 92dvh) !important;
+    width:min(560px, calc(100vw - 32px)) !important;
+    background:#0d1220 !important;
+    border-radius:24px !important;
+  }
+  @media(max-width:640px){
+    /* Hoja que sube desde abajo, pegada a los bordes. El velo traía 10 px
+       de aire a cada lado: con ellos el margen del contenido quedaba en
+       10 + 16 y ya no caía en la rejilla de 8. */
+    html body #cartModal{
+      padding:0 !important;
+      align-items:flex-end !important;
+    }
+    html body #cartModal .cart-panel.vgc-panel{
+      width:100vw !important;
+      max-width:100vw !important;
+      max-height:92dvh !important;
+      border-radius:22px 22px 0 0 !important;
+      border-bottom:0 !important;
+    }
+    /* Las medidas del pie y del resumen en móvil NO van aquí: este
+       bloque está antes que las reglas base y, con la misma fuerza,
+       gana la última escrita. Van al final de la hoja. */
+  }
+
+  /* ── Cabecera ── */
+  html body #cartModal .vgc-top{
+    display:flex;align-items:flex-start;gap:12px;
+    padding:16px 16px 12px;
+    flex:0 0 auto;
+  }
+  html body #cartModal .vgc-top h2{
+    margin:0 !important;flex:1;
+    font-size:1.375rem !important;line-height:1.15 !important;
+    letter-spacing:-.02em;font-weight:800 !important;color:#fff !important;
+  }
+  html body #cartModal .vgc-top .vgc-sub{
+    display:block;margin-top:2px;
+    font-size:0.75rem;font-weight:500;color:#8b93b0;letter-spacing:0;
+  }
+  html body #cartModal .cart-panel.vgc-panel > .x{
+    position:static !important;
+    width:40px !important;height:40px !important;flex:0 0 40px !important;
+    border-radius:999px !important;
+    border:1px solid rgba(255,255,255,.10) !important;
+    background:rgba(255,255,255,.05) !important;
+    color:#c9d1e4 !important;
+    display:grid !important;place-items:center !important;
+    font-size:1.25rem !important;line-height:1 !important;
+    margin:0 !important;
+  }
+
+  /* ── Lista ── */
+  html body #cartModal .vgc-lista{
+    flex:1 1 auto;min-height:0;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:0 16px 8px;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  html body #cartModal .vgc-art{
+    display:flex;gap:12px;
+    padding:12px;
+    border-radius:16px;
+    background:#151c28;
+    border:1px solid rgba(255,255,255,.06);
+  }
+  html body #cartModal .vgc-foto{
+    position:relative;
+    width:64px;height:64px;flex:0 0 64px;
+    border-radius:12px;overflow:hidden;background:#080c14;
+  }
+  html body #cartModal .vgc-foto-bg{
+    position:absolute;inset:0;
+    background-size:cover;background-position:center;
+    filter:blur(12px) brightness(.45);transform:scale(1.25);
+  }
+  html body #cartModal .vgc-foto img{
+    position:relative;z-index:1;
+    width:100%;height:100%;object-fit:contain;display:block;padding:3px;
+  }
+  html body #cartModal .vgc-centro{
+    flex:1 1 auto;min-width:0;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  html body #cartModal .vgc-nombre{
+    margin:0;font-size:0.875rem;line-height:1.25;font-weight:700;color:#fff;
+    letter-spacing:-.01em;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  html body #cartModal .vgc-meta{
+    margin:-4px 0 0;font-size:0.6875rem;line-height:1.3;color:#8b93b0;
+    display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+  }
+  html body #cartModal .vgc-stepper{
+    display:flex;align-items:center;gap:4px;align-self:flex-start;
+    border:1px solid rgba(255,255,255,.12);border-radius:12px;
+    padding:2px;background:rgba(255,255,255,.03);
+  }
+  html body #cartModal .vgc-stepper button{
+    position:relative;
+    width:36px;height:32px;
+    border:0;border-radius:9px;background:transparent;
+    color:#dbe2f2;font-size:1.0625rem;line-height:1;font-weight:700;
+    cursor:pointer;display:grid;place-items:center;padding:0;
+  }
+  /* El botón se ve de 36 × 32 pero se toca en 48: el área invisible se
+     estira con un pseudo-elemento en vez de agrandar la caja, que
+     desarmaría la fila. */
+  html body #cartModal .vgc-stepper button::after{
+    content:"";position:absolute;top:-8px;bottom:-8px;left:-6px;right:-6px;
+  }
+  html body #cartModal .vgc-stepper button:hover{background:rgba(255,255,255,.08)}
+  html body #cartModal .vgc-stepper button[disabled]{opacity:.35;cursor:default}
+  html body #cartModal .vgc-n{
+    min-width:26px;text-align:center;
+    font-size:0.875rem;font-weight:800;color:#fff;
+    font-variant-numeric:tabular-nums;
+  }
+  html body #cartModal .vgc-derecha{
+    display:flex;flex-direction:column;align-items:flex-end;justify-content:space-between;
+    gap:8px;flex:0 0 auto;
+  }
+  html body #cartModal .vgc-precio{text-align:right;line-height:1.15}
+  html body #cartModal .vgc-precio b{
+    display:block;font-size:0.9375rem;font-weight:800;color:#fff;
+    letter-spacing:-.01em;font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  html body #cartModal .vgc-precio s{
+    font-size:0.6875rem;color:#7f879f;font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  html body #cartModal .vgc-art .cart-remove-btn{
+    position:relative;
+    width:40px !important;height:40px !important;flex:0 0 40px !important;
+    padding:0 !important;margin:0 !important;
+    border-radius:12px !important;
+    border:1px solid rgba(255,255,255,.10) !important;
+    background:rgba(255,255,255,.04) !important;
+    color:#9aa3bd !important;
+    display:grid !important;place-items:center !important;
+    font-size:0 !important;cursor:pointer;
+  }
+  html body #cartModal .vgc-art .cart-remove-btn::after{
+    content:"";position:absolute;inset:-4px;
+  }
+  html body #cartModal .vgc-art .cart-remove-btn:hover{
+    color:#ff8fa0 !important;
+    border-color:rgba(255,143,160,.45) !important;
+    background:rgba(255,143,160,.10) !important;
+  }
+  html body #cartModal .vgc-art .cart-remove-btn svg{width:17px;height:17px;display:block}
+
+  /* ── Cinta del 10% ── */
+  html body #cartModal .vgc-cinta{
+    display:flex;align-items:center;gap:8px;
+    margin:0 16px;padding:12px;flex:0 0 auto;
+    border-radius:14px;
+    background:linear-gradient(135deg,rgba(25,230,193,.16),rgba(124,77,255,.12));
+    border:1px solid rgba(25,230,193,.28);
+    font-size:0.75rem;color:#bffff5;line-height:1.35;
+  }
+  html body #cartModal .vgc-cinta b{color:#fff;font-weight:800}
+  html body #cartModal .vgc-cinta svg{flex:0 0 18px}
+
+  /* ── Resumen ── */
+  html body #cartModal .vgc-resumen{
+    margin:8px 16px 0;padding:16px;flex:0 0 auto;
+    border-radius:16px;background:#121824;
+    border:1px solid rgba(255,255,255,.06);
+    display:flex;flex-direction:column;gap:8px;
+  }
+  html body #cartModal .vgc-fila{
+    display:flex;justify-content:space-between;align-items:baseline;gap:12px;
+    font-size:0.8125rem;color:#9aa3bd;
+  }
+  html body #cartModal .vgc-fila > span:last-child{
+    color:#dbe2f2;font-weight:600;font-variant-numeric:tabular-nums;white-space:nowrap;
+  }
+  html body #cartModal .vgc-fila.vgc-ahorro > span:last-child{color:#19e6c1}
+  html body #cartModal .vgc-fila.vgc-total{
+    border-top:1px solid rgba(255,255,255,.08);
+    padding-top:12px;margin-top:4px;
+    font-size:1rem;color:#fff;font-weight:800;
+  }
+  html body #cartModal .vgc-fila.vgc-total > span:last-child{
+    font-size:1.25rem;color:#fff;font-weight:800;letter-spacing:-.02em;
+  }
+
+  /* ── Pie fijo ── */
+  html body #cartModal .cart-panel.vgc-panel .modal-actions.vgc-pie{
+    position:static !important;
+    flex:0 0 auto !important;
+    display:flex !important;
+    flex-direction:column !important;
+    gap:8px !important;
+    padding:12px 16px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    margin:0 !important;
+    background:linear-gradient(180deg,rgba(13,18,32,0),#0d1220 22%) !important;
+    border:0 !important;
+  }
+  html body #cartModal .vgc-pie .vgc-cta{
+    width:100% !important;height:56px !important;min-height:56px !important;
+    border:0 !important;border-radius:16px !important;cursor:pointer;
+    background:linear-gradient(135deg,#19e6c1,#12bd9c) !important;
+    color:#04231d !important;
+    font-size:1rem !important;font-weight:800 !important;letter-spacing:-.01em;
+    display:flex !important;align-items:center;justify-content:center;gap:8px;
+    box-shadow:0 8px 20px rgba(25,230,193,.22) !important;
+  }
+  html body #cartModal .vgc-pie .vgc-2{
+    width:100% !important;height:48px !important;min-height:48px !important;
+    border-radius:14px !important;cursor:pointer;
+    border:1px solid rgba(255,255,255,.12) !important;
+    background:transparent !important;color:#c9d1e4 !important;
+    font-size:0.875rem !important;font-weight:700 !important;
+    display:flex !important;align-items:center;justify-content:center;
+  }
+  html body #cartModal .vgc-pie .vgc-vaciar{
+    align-self:center;
+    min-height:40px;padding:0 12px;
+    border:0;background:none;cursor:pointer;
+    color:#7f879f;font-size:0.75rem;font-weight:600;
+    text-decoration:underline;text-underline-offset:3px;
+  }
+  html body #cartModal .vgc-pie .vgc-vaciar:hover{color:#ff8fa0}
+
+  /* ── Carrito vacío ── */
+  html body #cartModal .vgc-vacio{
+    margin:8px 16px 16px;padding:32px 20px;
+    border-radius:18px;border:1px dashed rgba(255,255,255,.14);
+    background:rgba(255,255,255,.02);
+    text-align:center;color:#8b93b0;
+  }
+  html body #cartModal .vgc-vacio b{display:block;color:#fff;font-size:1rem;margin-bottom:4px}
+  html body #cartModal .vgc-vacio p{margin:0 0 16px;font-size:0.8125rem;line-height:1.45}
+
+  html body #cartModal .cart-panel.vgc-panel :focus-visible{
+    outline:2px solid #19e6c1 !important;outline-offset:2px !important;
+  }
+
+  /* ── Ajustes de móvil, al final a propósito ──────────────────────
+     En una pantalla de 812 el pie y el resumen se comían la lista y
+     solo cabían dos juegos. Se recortan esos dos, nunca la lista. */
+  @media(max-width:640px){
+    html body #cartModal .vgc-resumen{padding:12px 16px !important}
+    html body #cartModal .vgc-resumen .vgc-fila.vgc-entrega{display:none !important}
+    html body #cartModal .cart-panel.vgc-panel .modal-actions.vgc-pie{
+      gap:6px !important;
+      padding:10px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+    }
+    html body #cartModal .vgc-pie .vgc-2{height:44px !important;min-height:44px !important}
+    html body #cartModal .vgc-pie .vgc-vaciar{min-height:32px}
+    /* La hoja va pegada a los bordes: sin costados y sin barra de
+       desplazamiento que le robe 5 px al margen derecho. */
+    html body #cartModal .cart-panel.vgc-panel{
+      border-left:0 !important;border-right:0 !important;
+    }
+  }
+  html body #cartModal .vgc-lista{scrollbar-width:none}
+  html body #cartModal .vgc-lista::-webkit-scrollbar{display:none}
+</style>
+
+<script id="vg-carrito-nuevo-js-v114">
+(function(){
+  'use strict';
+  if(window.__VG114__) return; window.__VG114__ = true;
+
+  function esc(s){
+    if(window.VG && typeof window.VG.esc === 'function') return window.VG.esc(s);
+    return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+  }
+  function elCarrito(){
+    try{ if(typeof cart !== 'undefined' && Array.isArray(cart)) return cart; }catch(e){}
+    return Array.isArray(window.cart) ? window.cart : null;
+  }
+  /* Los importes se escriben SIEMPRE en pesos y con data-vg-mxn: el
+     módulo de moneda los pasa a dólares si el cliente lo pidió. Si se
+     escribieran ya convertidos, ese módulo los volvería a leer como si
+     fueran pesos. */
+  function pesos(n){
+    if(typeof window.fmt === 'function') return window.fmt(n);
+    return Number(n) > 0 ? ('$' + Number(n).toLocaleString('es-MX') + ' MXN') : 'Cotizar';
+  }
+  function importe(n){
+    n = Number(n||0);
+    return n > 0 ? '<span data-vg-mxn="'+n+'">'+pesos(n)+'</span>' : '<span>Cotizar</span>';
+  }
+
+  /* Precio de lista: en los juegos retro con 10% aplicado el precio de
+     verdad vive en vgxrBase, y es el que hay que tachar. */
+  function base(it){
+    return (typeof it.vgxrBase === 'number') ? it.vgxrBase : Number(it.price||0);
+  }
+  function opcionBase(it){
+    return (typeof it.vgxrOpcion === 'string') ? it.vgxrOpcion : String(it.option||'');
+  }
+
+  /* Agrupar es solo pintura: el arreglo del carrito sigue teniendo una
+     entrada por unidad, que es lo que espera el resto de la tienda. */
+  function grupos(){
+    var c = elCarrito() || [];
+    var orden = [], mapa = {};
+    c.forEach(function(it, i){
+      var clave = String(it.title||'') + ' ' + opcionBase(it) + ' ' + base(it);
+      if(!mapa[clave]){
+        mapa[clave] = {clave:clave, it:it, n:0, indices:[], total:0, totalBase:0};
+        orden.push(mapa[clave]);
+      }
+      var g = mapa[clave];
+      g.n++;
+      g.indices.push(i);
+      g.total += Number(it.price||0);
+      g.totalBase += base(it);
+    });
+    return orden;
+  }
+
+  function iconoBote(){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" '+
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
+      '<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/></svg>';
+  }
+
+  /* Los botones NO llevan onclick con el nombre del producto dentro.
+     Se probó y se cayó: "Assassin's Creed" trae un apóstrofo, el
+     navegador lo devuelve como comilla al leer el atributo y la línea
+     de JavaScript se parte a la mitad. Van con el número del grupo y un
+     solo oyente para todo el carrito. */
+  function tarjeta(g, i){
+    var it = g.it;
+    var img = it.image ? String(it.image) : 'portada.png';
+    var unit = g.totalBase / g.n;
+    var hayDescuento = g.totalBase - g.total > 0.5;
+    var meta = opcionBase(it);
+    if(g.n > 1) meta = g.n + ' × ' + pesos(unit) + (meta ? ' · ' + meta : '');
+
+    return '<article class="vgc-art">'+
+      '<span class="vgc-foto">'+
+        '<span class="vgc-foto-bg" style="background-image:url(&quot;'+esc(img)+'&quot;)"></span>'+
+        '<img src="'+esc(img)+'" alt="" loading="lazy" decoding="async" '+
+          'referrerpolicy="no-referrer" onerror="this.style.visibility=\'hidden\'">'+
+      '</span>'+
+      '<div class="vgc-centro">'+
+        '<h4 class="vgc-nombre">'+esc(it.title||'Producto')+'</h4>'+
+        (meta ? '<p class="vgc-meta">'+esc(meta)+'</p>' : '')+
+        '<div class="vgc-stepper">'+
+          '<button type="button" data-vgc="menos" data-vgc-i="'+i+'" '+
+            'aria-label="Quitar uno de '+esc(it.title||'')+'">−</button>'+
+          '<span class="vgc-n" aria-live="polite">'+g.n+'</span>'+
+          '<button type="button" data-vgc="mas" data-vgc-i="'+i+'" '+
+            'aria-label="Agregar uno de '+esc(it.title||'')+'">+</button>'+
+        '</div>'+
+      '</div>'+
+      '<div class="vgc-derecha">'+
+        '<span class="vgc-precio">'+
+          '<b>'+importe(g.total)+'</b>'+
+          (hayDescuento ? '<s>'+importe(g.totalBase)+'</s>' : '')+
+        '</span>'+
+        '<button type="button" class="cart-remove-btn" data-vgc="quitar" data-vgc-i="'+i+'" '+
+          'aria-label="Quitar '+esc(it.title||'')+' del carrito" '+
+          'title="Quitar del carrito">'+iconoBote()+'</button>'+
+      '</div>'+
+    '</article>';
+  }
+
+  function cinta(n){
+    return '<div class="vgc-cinta">'+
+      '<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#19e6c1" '+
+        'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
+        '<path d="M20 12v9H4v-9M2 7h20v5H2zM12 21V7M12 7H7.5a2.5 2.5 0 0 1 0-5C11 2 12 7 12 7zM12 7h4.5a2.5 2.5 0 0 0 0-5C13 2 12 7 12 7z"/></svg>'+
+      '<span><b>10% aplicado</b> por llevar '+n+' juegos de Xbox Retro. Van todos en la misma cuenta.</span>'+
+    '</div>';
+  }
+
+  function resumen(subtotal, total){
+    var ahorro = subtotal - total;
+    return '<div class="vgc-resumen">'+
+      '<div class="vgc-fila"><span>Subtotal</span>'+
+        '<span id="cartSubtotal" data-vg-mxn="'+subtotal+'">'+pesos(subtotal)+'</span></div>'+
+      (ahorro > 0.5
+        ? '<div class="vgc-fila vgc-ahorro"><span>Descuento</span>'+
+          '<span data-vg-mxn="-'+Math.round(ahorro)+'">-'+pesos(Math.round(ahorro))+'</span></div>'
+        : '')+
+      '<div class="vgc-fila vgc-entrega"><span>Entrega digital</span><span>Incluida</span></div>'+
+      '<div class="vgc-fila vgc-total"><span>Total</span>'+
+        '<span id="cartTotal" data-vg-mxn="'+total+'">'+pesos(total)+'</span></div>'+
+    '</div>';
+  }
+
+  function pie(total, hayArticulos){
+    if(!hayArticulos){
+      return '<div class="modal-actions vgc-pie">'+
+        '<button type="button" class="vgc-cta" onclick="window.vgcSeguir()">Ver el catálogo</button>'+
+      '</div>';
+    }
+    return '<div class="modal-actions vgc-pie">'+
+      '<button type="button" class="vgc-cta" onclick="openPaymentForCart()">'+
+        '<span>Ir a pagar</span><span aria-hidden="true">·</span>'+
+        '<span data-vg-mxn="'+total+'">'+pesos(total)+'</span>'+
+      '</button>'+
+      '<button type="button" class="vgc-2" onclick="window.vgcSeguir()">Seguir comprando</button>'+
+      '<button type="button" class="vgc-vaciar" onclick="clearCart()">Vaciar el carrito</button>'+
+    '</div>';
+  }
+
+  function panel(){
+    var m = document.getElementById('cartModal');
+    return m ? m.querySelector('.cart-panel') : null;
+  }
+
+  window.vgcSeguir = function(){
+    if(typeof window.closeCart === 'function') window.closeCart();
+  };
+
+  function porIndice(i){
+    var gs = grupos();
+    i = Number(i);
+    return (i >= 0 && i < gs.length) ? gs[i] : null;
+  }
+
+  window.vgcMas = function(i){
+    var c = elCarrito(); var g = porIndice(i);
+    if(!c || !g) return;
+    var copia = {};
+    for(var k in g.it) if(Object.prototype.hasOwnProperty.call(g.it, k)) copia[k] = g.it[k];
+    /* La copia entra con el precio de lista: si el 10% aplica, lo vuelve
+       a calcular quien sabe hacerlo, no esta función. */
+    copia.price = base(g.it);
+    delete copia.vgxrBase;
+    copia.option = opcionBase(g.it);
+    delete copia.vgxrOpcion;
+    c.push(copia);
+    tocado();
+  };
+
+  window.vgcMenos = function(i){
+    var c = elCarrito(); var g = porIndice(i);
+    if(!c || !g) return;
+    if(g.n <= 1){ window.vgcQuitar(i); return; }
+    c.splice(g.indices[g.indices.length - 1], 1);
+    tocado();
+  };
+
+  window.vgcQuitar = function(i){
+    var c = elCarrito(); var g = porIndice(i);
+    if(!c || !g) return;
+    /* De atrás para adelante: quitar por el principio corre los índices
+       que faltan por quitar. */
+    for(var k = g.indices.length - 1; k >= 0; k--) c.splice(g.indices[k], 1);
+    tocado();
+  };
+
+  /* Un solo oyente para todo el carrito, en el modal y no en cada
+     botón: el contenido se vuelve a dibujar entero en cada cambio y los
+     oyentes puestos uno por uno se irían con el HTML viejo. */
+  (function oyente(){
+    var m = document.getElementById('cartModal');
+    if(!m){ setTimeout(oyente, 400); return; }
+    if(m.dataset.vgcOyente === '1') return;
+    m.dataset.vgcOyente = '1';
+    m.addEventListener('click', function(e){
+      var b = e.target.closest ? e.target.closest('[data-vgc]') : null;
+      if(!b || !m.contains(b)) return;
+      var accion = b.getAttribute('data-vgc');
+      var i = b.getAttribute('data-vgc-i');
+      if(accion === 'mas') window.vgcMas(i);
+      else if(accion === 'menos') window.vgcMenos(i);
+      else if(accion === 'quitar') window.vgcQuitar(i);
+    });
+  })();
+
+  function tocado(){
+    if(typeof window.updateCartCount === 'function') window.updateCartCount();
+    window.renderCart();
+    try{
+      /* Mismo aviso que usa el botón viejo para guardar el carrito. */
+      document.dispatchEvent(new CustomEvent('vg-cart-changed'));
+    }catch(e){}
+  }
+
+  window.renderCart = function renderCart(){
+    /* El 10% de Xbox Retro se repasa antes de leer precios: si acaban
+       de quedar menos de tres juegos, hay que devolverlos a su precio. */
+    if(typeof window.vgxrAjustarDescuento === 'function'){
+      try{ window.vgxrAjustarDescuento(); }catch(e){}
+    }
+
+    var p = panel();
+    if(!p) return;
+    p.classList.add('vgc-panel');
+
+    var gs = grupos();
+    var c = elCarrito() || [];
+    var total = c.reduce(function(s,x){ return s + Number(x.price||0); }, 0);
+    var subtotal = c.reduce(function(s,x){ return s + base(x); }, 0);
+
+    var retro = 0;
+    if(typeof window.vgxrEsRetro === 'function') retro = c.filter(window.vgxrEsRetro).length;
+    var desde = Number(window.vgxrDescuentoDesde || 3);
+
+    var piezas = [];
+    piezas.push(
+      '<div class="vgc-top">'+
+        '<h2>Carrito'+
+          '<span class="vgc-sub">'+
+            (c.length ? c.length + (c.length === 1 ? ' artículo' : ' artículos') + ' · entrega digital'
+                      : 'Todavía no tienes nada aquí')+
+          '</span>'+
+        '</h2>'+
+      '</div>'
+    );
+
+    if(!gs.length){
+      piezas.push(
+        '<div class="vgc-vacio">'+
+          '<b>Tu carrito está vacío</b>'+
+          '<p>Agrega juegos, cuentas o servicios y aparecerán aquí.</p>'+
+        '</div>'
+      );
+      piezas.push(pie(0, false));
+    }else{
+      piezas.push('<div class="vgc-lista">' +
+        gs.map(function(g, i){ return tarjeta(g, i); }).join('') + '</div>');
+      if(retro >= desde) piezas.push(cinta(retro));
+      piezas.push(resumen(subtotal, total));
+      piezas.push(pie(total, true));
+    }
+
+    /* El botón de cerrar es el de siempre: se saca antes de repintar y
+       se vuelve a meter, así conserva su onclick original. */
+    var cerrar = p.querySelector('.x');
+    p.innerHTML = piezas.join('');
+    if(cerrar){
+      var top = p.querySelector('.vgc-top');
+      if(top) top.appendChild(cerrar);
+    }
+
+    /* No hace falta avisarle al módulo de moneda: vigila el documento y
+       convierte solo lo que aparece, si el cliente eligió dólares. */
+  };
+
+  /* Guardar el carrito al quitar artículos: el oyente viejo espera un
+     clic en .cart-remove-btn, y el − y el + no lo son. */
+  document.addEventListener('vg-cart-changed', function(){
+    if(typeof window.saveCart === 'function'){
+      try{ window.saveCart(); }catch(e){}
+    }
+  });
+
+  /* Si el carrito ya estaba abierto cuando cargó este bloque. */
+  function arrancar(){
+    var m = document.getElementById('cartModal');
+    if(m && m.classList.contains('active')) window.renderCart();
+  }
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
   else arrancar();
 })();
