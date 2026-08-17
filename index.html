@@ -39304,5 +39304,579 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
 </script>
 
 
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 115 · La pantalla de pago, como el mockup
+
+     Mismo lenguaje que el carrito nuevo: rejilla de 8, márgenes de 16,
+     rótulos en versalitas, tarjetas de 16 de radio y el botón grande de
+     56 anclado abajo.
+
+     NO SE TOCA NADA DE LO QUE HACE FUNCIONAR EL PAGO. Los datos de
+     depósito los sigue trayendo el bloque de la fase 103 desde Supabase
+     y solo con sesión iniciada; el candado, el cupón, los campos de
+     contacto y el comprobante siguen siendo los suyos. Aquí se mueven
+     de sitio y se visten:
+
+       · el total sale de la esquina de la cabecera y pasa a ser una
+         tarjeta ancha, pero es EL MISMO elemento: #payModalTotal y
+         #payOriginalTotal siguen existiendo, que es donde el cupón
+         escribe el precio tachado y el nuevo;
+       · la × se convierte en la flecha de volver en lugar de crear otro
+         botón, para no perder su onclick;
+       · los métodos se pliegan en fichas y solo se abre el elegido. Si
+         este guion fallara, el CSS deja los datos a la vista como
+         estaban: la clase vgpay-plegable la pone el guion, no el HTML.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-pago-nuevo-css-v115">
+
+  /* ── La tarjeta: columna con el cuerpo desplazándose y el botón fijo ── */
+  html body #paymentModal .vg-pay-modal-new.vgpay-card{
+    display:flex !important;
+    flex-direction:column !important;
+    width:min(560px, calc(100vw - 32px)) !important;
+    max-height:min(820px, 92dvh) !important;
+    padding:0 !important;
+    overflow:hidden !important;
+    background:#0b101c !important;
+    border-radius:24px !important;
+  }
+
+  /* ── Cabecera ── */
+  html body #paymentModal .vgpay-top{
+    display:flex !important;align-items:center;gap:12px;
+    padding:16px 16px 12px;margin:0 !important;
+    flex:0 0 auto;
+  }
+  html body #paymentModal .vgpay-top .x.vgpay-atras{
+    position:static !important;
+    width:40px !important;height:40px !important;flex:0 0 40px !important;
+    border-radius:999px !important;
+    border:1px solid rgba(255,255,255,.10) !important;
+    background:rgba(255,255,255,.05) !important;
+    color:#c9d1e4 !important;
+    display:grid !important;place-items:center !important;
+    font-size:0 !important;margin:0 !important;cursor:pointer;
+  }
+  html body #paymentModal .vgpay-top .x.vgpay-atras svg{width:17px;height:17px;display:block}
+  html body #paymentModal .vgpay-titulo h2{
+    margin:0 !important;
+    font-family:inherit !important;
+    font-size:1.375rem !important;line-height:1.15 !important;
+    font-weight:800 !important;letter-spacing:-.02em !important;
+    text-transform:none !important;color:#fff !important;
+  }
+  html body #paymentModal .vgpay-titulo span{
+    display:block;margin-top:2px;
+    font-size:0.75rem;color:#8b93b0;font-weight:500;
+  }
+  html body #paymentModal .vgpay-pasos{
+    display:flex;gap:6px;padding:0 16px 14px;flex:0 0 auto;
+  }
+  html body #paymentModal .vgpay-pasos span{
+    height:4px;border-radius:2px;background:rgba(255,255,255,.12);flex:1;
+  }
+  html body #paymentModal .vgpay-pasos span.on{background:#19e6c1}
+
+  /* ── El total, ahora tarjeta ancha ── */
+  html body #paymentModal .vgpay-card .vg-pay-total-chip{
+    display:flex !important;align-items:center;justify-content:space-between;gap:12px;
+    margin:0 16px 16px !important;padding:16px !important;flex:0 0 auto;
+    border:1px solid rgba(25,230,193,.28) !important;
+    border-radius:16px !important;
+    background:linear-gradient(135deg,rgba(25,230,193,.14),rgba(25,230,193,.04)) !important;
+    text-align:left !important;
+  }
+  html body #paymentModal .vgpay-card .vg-pay-total-chip small{
+    display:block;font-size:0.6875rem;letter-spacing:.12em;text-transform:uppercase;
+    color:#8fe9d8 !important;font-weight:700;margin-bottom:2px;
+  }
+  html body #paymentModal .vgpay-card .vg-pay-total-chip strong{
+    display:block;font-size:1.625rem !important;font-weight:800 !important;
+    letter-spacing:-.03em;color:#fff !important;font-variant-numeric:tabular-nums;
+  }
+  html body #paymentModal .vgpay-card .vg-pay-total-chip del{
+    display:block;font-size:0.8125rem;color:#8b93b0 !important;
+  }
+  html body #paymentModal .vgpay-seguro{
+    display:inline-flex;align-items:center;gap:6px;
+    font-size:0.75rem;color:#8b93b0;white-space:nowrap;flex:0 0 auto;
+  }
+
+  /* ── Cuerpo ── */
+  html body #paymentModal .vgpay-cuerpo{
+    flex:1 1 auto;min-height:0;
+    overflow-y:auto;-webkit-overflow-scrolling:touch;
+    padding:0 16px 8px;
+    display:flex;flex-direction:column;gap:16px;
+    scrollbar-width:none;
+  }
+  html body #paymentModal .vgpay-cuerpo::-webkit-scrollbar{display:none}
+  html body #paymentModal .vgpay-rotulo{
+    margin:0 0 -8px;
+    font-size:0.6875rem;letter-spacing:.12em;text-transform:uppercase;
+    color:#8b93b0;font-weight:700;
+  }
+
+  /* ── Fichas de método ── */
+  html body #paymentModal .vg-pay-methods{
+    display:flex !important;flex-direction:column !important;gap:8px !important;
+    grid-template-columns:none !important;margin:0 !important;padding:0 !important;
+  }
+  html body #paymentModal .vg-pay-method{
+    margin:0 !important;padding:0 !important;
+    border-radius:14px !important;
+    background:#141b28 !important;
+    border:1px solid rgba(255,255,255,.07) !important;
+    overflow:hidden !important;
+    transition:border-color .16s ease, background .16s ease;
+  }
+  html body #paymentModal .vg-pay-method .vg-pay-method-icon{display:none !important}
+  html body #paymentModal .vg-pay-method > h4{display:none !important}
+  html body #paymentModal .vgpay-cabecera{
+    display:flex;align-items:center;gap:12px;
+    min-height:64px;padding:12px 14px;cursor:pointer;
+  }
+  html body #paymentModal .vgpay-marca{
+    width:40px;height:40px;flex:0 0 40px;border-radius:11px;
+    display:grid;place-items:center;
+    font-size:0.6875rem;font-weight:800;letter-spacing:.02em;color:#fff;
+  }
+  html body #paymentModal .vgpay-marca.bbva{background:#0b3d91}
+  html body #paymentModal .vgpay-marca.oxxo{background:#c8102e}
+  html body #paymentModal .vgpay-marca.binance{background:#f0b90b;color:#1a1608}
+  html body #paymentModal .vgpay-marca.otro{background:#2a3350;font-size:1rem}
+  html body #paymentModal .vgpay-txt{flex:1;min-width:0}
+  html body #paymentModal .vgpay-txt b{
+    display:block;font-size:0.875rem;font-weight:700;color:#fff;line-height:1.25;
+  }
+  html body #paymentModal .vgpay-txt span{
+    display:block;font-size:0.6875rem;color:#8b93b0;line-height:1.3;margin-top:1px;
+  }
+  html body #paymentModal .vgpay-radio{
+    width:22px;height:22px;flex:0 0 22px;border-radius:999px;
+    border:2px solid rgba(255,255,255,.20);
+    display:grid;place-items:center;
+  }
+  html body #paymentModal .vg-pay-method.on{
+    border-color:#19e6c1 !important;
+    background:rgba(25,230,193,.07) !important;
+  }
+  html body #paymentModal .vg-pay-method.on .vgpay-radio{border-color:#19e6c1}
+  html body #paymentModal .vg-pay-method.on .vgpay-radio::after{
+    content:"";width:11px;height:11px;border-radius:999px;background:#19e6c1;
+  }
+  /* Los datos se pliegan SOLO cuando el guion marca el contenedor. Sin
+     él (si algo fallara) se quedan a la vista, como antes. */
+  html body #paymentModal .vg-pay-methods.vgpay-plegable .vg-pay-method:not(.on) .vgpay-datos{
+    display:none !important;
+  }
+  html body #paymentModal .vgpay-datos{
+    padding:0 14px 14px;
+    display:flex;flex-direction:column;gap:8px;
+  }
+  html body #paymentModal .vg-pay-method-row{
+    display:flex !important;align-items:center;justify-content:space-between;gap:10px;
+    padding:10px 12px !important;margin:0 !important;
+    border:0 !important;border-radius:10px !important;
+    background:rgba(255,255,255,.04) !important;
+    font-size:0.75rem !important;color:#8b93b0 !important;
+  }
+  html body #paymentModal .vg-pay-method-row code{
+    color:#fff !important;font-size:0.8125rem !important;font-weight:700;
+    word-break:break-all;text-align:right;
+  }
+  html body #paymentModal .vg-pay-copy-all{
+    width:100% !important;min-height:44px !important;margin:0 !important;
+    border-radius:12px !important;
+    border:1px solid rgba(25,230,193,.35) !important;
+    background:rgba(25,230,193,.10) !important;
+    color:#19e6c1 !important;font-weight:800 !important;font-size:0.8125rem !important;
+    cursor:pointer;
+  }
+
+  /* ── Campos ──
+     Hay dos juegos de campos y solo uno se ve a la vez: los internos
+     (#vgInternalContactFields), para quien tiene sesión, y los de
+     #vg10PaymentContact para quien no. Se visten los dos por su clase
+     común, que era lo que faltaba: los visibles medían 39 de alto. */
+  html body #paymentModal .vg-payment-contact-grid{
+    display:flex !important;flex-direction:column !important;gap:12px !important;
+    margin:0 !important;padding:0 !important;border:0 !important;background:none !important;
+  }
+  html body #paymentModal .vg-payment-contact-grid::before{display:none !important}
+  html body #paymentModal .vg-payment-contact-grid label{
+    display:flex !important;flex-direction:column !important;gap:6px !important;
+    font-size:0.6875rem !important;color:#8b93b0 !important;
+    letter-spacing:.04em;font-weight:600;margin:0 !important;
+  }
+  html body #paymentModal .vg-payment-contact-grid input,
+  html body #paymentModal .vg-payment-contact-grid textarea{
+    min-height:48px !important;height:48px !important;
+    border-radius:13px !important;
+    background:#131a26 !important;
+    border:1px solid rgba(255,255,255,.09) !important;
+    color:#eef1f8 !important;font-size:0.875rem !important;
+    padding:0 14px !important;margin:0 !important;width:100% !important;
+    box-sizing:border-box !important;
+  }
+  html body #paymentModal .vg-payment-contact-grid textarea{
+    height:auto !important;min-height:72px !important;padding:12px 14px !important;
+    line-height:1.4 !important;
+  }
+
+  /* ── Cupón ── */
+  html body #paymentModal .vg-pay-coupon-row{
+    display:flex !important;gap:8px !important;margin:0 !important;
+  }
+  html body #paymentModal .vg-pay-coupon-row input{
+    flex:1;min-height:48px !important;height:48px !important;
+    border-radius:13px !important;background:#131a26 !important;
+    border:1px solid rgba(255,255,255,.09) !important;
+    color:#eef1f8 !important;font-size:0.875rem !important;padding:0 14px !important;
+  }
+  html body #paymentModal .vg-pay-coupon-row button{
+    min-height:48px !important;padding:0 18px !important;
+    border-radius:13px !important;
+    border:1px solid rgba(25,230,193,.35) !important;
+    background:rgba(25,230,193,.10) !important;
+    color:#19e6c1 !important;font-weight:800 !important;font-size:0.875rem !important;
+    cursor:pointer;
+  }
+
+  /* ── Comprobante ── */
+  html body #paymentModal .vg-pay-proof{
+    margin:0 !important;padding:16px !important;
+    border-radius:16px !important;
+    border:1px dashed rgba(255,255,255,.18) !important;
+    background:rgba(255,255,255,.02) !important;
+    display:flex;flex-direction:column;gap:12px;
+  }
+  html body #paymentModal .vg-pay-proof > p{
+    margin:0 !important;font-size:0.75rem !important;color:#8b93b0 !important;line-height:1.45;
+  }
+  html body #paymentModal .vg-pay-proof > p strong{color:#eef1f8 !important}
+  html body #paymentModal .vgcfuente-row{
+    display:flex !important;gap:8px !important;flex-wrap:wrap;
+  }
+  html body #paymentModal .vgcfuente-btn{
+    flex:1 1 140px;min-height:48px !important;
+    border-radius:13px !important;
+    border:1px solid rgba(255,255,255,.12) !important;
+    background:rgba(255,255,255,.04) !important;
+    color:#dbe2f2 !important;font-size:0.8125rem !important;font-weight:700 !important;
+    cursor:pointer;
+  }
+  html body #paymentModal .vgcfuente-hint{
+    flex:1 1 100%;font-size:0.6875rem;color:#7f879f;
+  }
+  html body #paymentModal .vg-pay-proof-name{
+    font-size:0.75rem !important;color:#8b93b0 !important;margin:0 !important;
+  }
+
+  /* ── Candado ── */
+  html body #paymentModal #vgPagoCandado{
+    margin:0 !important;padding:20px !important;
+    border-radius:16px !important;
+    border:1px solid rgba(25,230,193,.22) !important;
+    background:linear-gradient(135deg,rgba(25,230,193,.10),rgba(124,77,255,.08)) !important;
+  }
+
+  /* ── Pie fijo ── */
+  html body #paymentModal .vgpay-card .vg-pay-actions{
+    position:static !important;
+    flex:0 0 auto !important;
+    display:flex !important;flex-direction:column !important;gap:8px !important;
+    padding:12px 16px calc(16px + env(safe-area-inset-bottom, 0px)) !important;
+    margin:0 !important;border:0 !important;
+    background:linear-gradient(180deg,rgba(11,16,28,0),#0b101c 22%) !important;
+  }
+  html body #paymentModal .vgpay-card .vg-pay-actions .primary{
+    /* flex:0 0 auto no es adorno: una regla de más arriba les pone
+       flex:1 y, en una columna, eso estiraba el botón a 220 px de alto. */
+    flex:0 0 auto !important;
+    width:100% !important;height:56px !important;min-height:56px !important;max-height:56px !important;
+    border:0 !important;border-radius:16px !important;
+    background:linear-gradient(135deg,#19e6c1,#12bd9c) !important;
+    color:#04231d !important;
+    font-size:1rem !important;font-weight:800 !important;letter-spacing:-.01em;
+    display:flex !important;align-items:center;justify-content:center;gap:8px;
+    box-shadow:0 8px 20px rgba(25,230,193,.22) !important;cursor:pointer;
+  }
+  html body #paymentModal .vgpay-card .vg-pay-actions .secondary{
+    flex:0 0 auto !important;
+    width:100% !important;height:44px !important;min-height:44px !important;max-height:44px !important;
+    border-radius:14px !important;
+    border:1px solid rgba(255,255,255,.12) !important;
+    background:transparent !important;color:#c9d1e4 !important;
+    font-size:0.875rem !important;font-weight:700 !important;cursor:pointer;
+  }
+  html body #paymentModal .vgpay-nota{
+    display:flex;align-items:center;justify-content:center;gap:6px;
+    font-size:0.6875rem;color:#8b93b0;margin:0;
+  }
+
+  html body #paymentModal .vgpay-card :focus-visible{
+    outline:2px solid #19e6c1 !important;outline-offset:2px !important;
+  }
+
+  /* ── Móvil: hoja desde abajo, igual que el carrito ── */
+  @media(max-width:640px){
+    html body #paymentModal{padding:0 !important;align-items:flex-end !important}
+    html body #paymentModal .vg-pay-modal-new.vgpay-card{
+      width:100vw !important;max-width:100vw !important;
+      max-height:94dvh !important;
+      border-radius:22px 22px 0 0 !important;
+      border-left:0 !important;border-right:0 !important;border-bottom:0 !important;
+    }
+    html body #paymentModal .vgpay-card .vg-pay-actions{
+      padding:10px 16px calc(12px + env(safe-area-inset-bottom, 0px)) !important;
+      gap:6px !important;
+    }
+  }
+</style>
+
+<script id="vg-pago-nuevo-js-v115">
+(function(){
+  'use strict';
+  if(window.__VG115__) return; window.__VG115__ = true;
+
+  function modal(){ return document.getElementById('paymentModal'); }
+  function tarjeta(){ var m = modal(); return m ? m.querySelector('.vg-pay-modal-new') : null; }
+
+  function svgAtras(){
+    return '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" '+
+      'stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'+
+      '<path d="M19 12H6M12 5l-7 7 7 7"/></svg>';
+  }
+  function svgCandado(){
+    return '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
+      'stroke-width="2" stroke-linecap="round" aria-hidden="true">'+
+      '<rect x="4" y="10" width="16" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg>';
+  }
+
+  /* ── Armado de la pantalla ─────────────────────────────────────
+     Se hace una sola vez. Nada se crea de cero si ya existía: la ×, el
+     total y los campos son los mismos elementos, solo cambian de sitio
+     y de clase. */
+  function armar(){
+    var card = tarjeta();
+    if(!card || card.dataset.vgpay === '1') return !!card;
+    card.dataset.vgpay = '1';
+    card.classList.add('vgpay-card');
+
+    var cab = card.querySelector('.vg-pay-header');
+    var chip = card.querySelector('.vg-pay-total-chip');
+    var cerrar = card.querySelector('.x');
+    var acciones = card.querySelector('.vg-pay-actions');
+    if(!cab) return true;
+
+    /* 1 · Cabecera: la × pasa a ser la flecha de volver, para no perder
+       el onclick que ya trae. */
+    var nueva = document.createElement('div');
+    nueva.className = 'vg-pay-header vgpay-top';
+    if(cerrar){
+      cerrar.classList.add('vgpay-atras');
+      cerrar.setAttribute('aria-label', 'Volver al carrito');
+      cerrar.setAttribute('title', 'Volver');
+      cerrar.innerHTML = svgAtras();
+      nueva.appendChild(cerrar);
+    }
+    var tit = document.createElement('div');
+    tit.className = 'vgpay-titulo';
+    tit.innerHTML = '<h2>Pago</h2><span>Paso 2 de 2 · falta poco</span>';
+    nueva.appendChild(tit);
+
+    var pasos = document.createElement('div');
+    pasos.className = 'vgpay-pasos';
+    pasos.innerHTML = '<span class="on"></span><span class="on"></span>';
+
+    cab.parentNode.insertBefore(nueva, cab);
+    cab.parentNode.insertBefore(pasos, cab);
+
+    /* 2 · El total: el mismo elemento, ahora ancho y con el candado. */
+    if(chip){
+      if(!chip.querySelector('.vgpay-seguro')){
+        var seg = document.createElement('span');
+        seg.className = 'vgpay-seguro';
+        seg.innerHTML = svgCandado() + ' Protegido';
+        /* El texto y los importes se envuelven para que el candado quede
+           a la derecha sin tocar #payModalTotal. */
+        var izq = document.createElement('span');
+        while(chip.firstChild) izq.appendChild(chip.firstChild);
+        chip.appendChild(izq);
+        chip.appendChild(seg);
+      }
+      pasos.parentNode.insertBefore(chip, pasos.nextSibling);
+    }
+    cab.remove();
+
+    /* 3 · Cuerpo desplazable: todo lo que hay entre el total y los
+       botones se mete en una caja propia. */
+    var cuerpo = document.createElement('div');
+    cuerpo.className = 'vgpay-cuerpo';
+    var refInicio = chip || pasos;
+    var n = refInicio.nextSibling;
+    while(n && n !== acciones){
+      var sig = n.nextSibling;
+      cuerpo.appendChild(n);
+      n = sig;
+    }
+    card.insertBefore(cuerpo, acciones || null);
+
+    /* 4 · Nota bajo el botón. */
+    if(acciones && !acciones.querySelector('.vgpay-nota')){
+      var nota = document.createElement('p');
+      nota.className = 'vgpay-nota';
+      nota.innerHTML = svgCandado() + ' Tus datos no se comparten con nadie';
+      acciones.appendChild(nota);
+    }
+    return true;
+  }
+
+  /* ── Rótulos de sección ──────────────────────────────────────── */
+  function rotulo(texto, antesDe){
+    if(!antesDe || !antesDe.parentNode) return;
+    var previo = antesDe.previousElementSibling;
+    if(previo && previo.classList && previo.classList.contains('vgpay-rotulo')) return;
+    var p = document.createElement('p');
+    p.className = 'vgpay-rotulo';
+    p.textContent = texto;
+    antesDe.parentNode.insertBefore(p, antesDe);
+  }
+
+  /* ── Fichas de método ─────────────────────────────────────────
+     El bloque de la fase 103 vuelve a escribir estas tarjetas cada vez
+     que trae los datos, así que esto se repasa cuando cambian. */
+  var MARCAS = [
+    {re:/bbva/i,            clase:'bbva',    txt:'BBVA', sub:'Transferencia o depósito en ventanilla'},
+    {re:/oxxo|spin/i,       clase:'oxxo',    txt:'OXXO', sub:'Depósito en tienda o desde la app'},
+    {re:/binance|cripto/i,  clase:'binance', txt:'BNB',  sub:'Cripto, al tipo de cambio del día'}
+  ];
+
+  function fichas(){
+    var caja = document.getElementById('vgPayMethods');
+    if(!caja) return;
+    var tarjetas = caja.querySelectorAll('.vg-pay-method');
+    if(!tarjetas.length) return;
+
+    Array.prototype.forEach.call(tarjetas, function(t){
+      if(t.dataset.vgpay === '1') return;
+      t.dataset.vgpay = '1';
+
+      var h4 = t.querySelector('h4');
+      var nombre = h4 ? (h4.textContent || '').trim() : 'Pago';
+      var marca = null;
+      for(var i=0;i<MARCAS.length;i++){ if(MARCAS[i].re.test(nombre)){ marca = MARCAS[i]; break; } }
+
+      var cab = document.createElement('div');
+      cab.className = 'vgpay-cabecera';
+      cab.innerHTML =
+        '<span class="vgpay-marca ' + (marca ? marca.clase : 'otro') + '">' +
+          (marca ? marca.txt : '💳') + '</span>' +
+        '<span class="vgpay-txt"><b></b><span></span></span>' +
+        '<span class="vgpay-radio"></span>';
+      cab.querySelector('b').textContent = nombre;
+      cab.querySelector('.vgpay-txt span').textContent =
+        marca ? marca.sub : 'Toca para ver los datos';
+
+      /* Los renglones de datos y el botón de copiar se agrupan para
+         poder plegarlos. */
+      var datos = document.createElement('div');
+      datos.className = 'vgpay-datos';
+      var hijos = Array.prototype.slice.call(t.children);
+      hijos.forEach(function(h){
+        if(h === h4) return;
+        if(h.classList && h.classList.contains('vg-pay-method-icon')) return;
+        datos.appendChild(h);
+      });
+
+      t.insertBefore(cab, t.firstChild);
+      t.appendChild(datos);
+
+      cab.addEventListener('click', function(){ elegir(t); });
+    });
+
+    caja.classList.add('vgpay-plegable');
+    if(!caja.querySelector('.vg-pay-method.on')) elegir(caja.querySelector('.vg-pay-method'));
+  }
+
+  /* "Cómo pagas" va una sola vez: encima del candado mientras no haya
+     sesión, y encima de las fichas en cuanto aparecen. Sin esto salían
+     los dos, porque el candado no se borra, se oculta. */
+  function rotuloPagos(){
+    var m = modal(); if(!m) return;
+    var candado = document.getElementById('vgPagoCandado');
+    var caja = document.getElementById('vgPayMethods');
+    var hayFichas = caja && caja.querySelector('.vg-pay-method');
+    var destino = hayFichas ? caja : (candado || caja);
+    if(!destino) return;
+    Array.prototype.forEach.call(m.querySelectorAll('.vgpay-rotulo'), function(p){
+      if(p.textContent === 'Cómo pagas' && p.nextElementSibling !== destino) p.remove();
+    });
+    rotulo('Cómo pagas', destino);
+  }
+
+  function elegir(t){
+    if(!t) return;
+    var caja = document.getElementById('vgPayMethods');
+    if(caja) Array.prototype.forEach.call(caja.querySelectorAll('.vg-pay-method'), function(x){
+      x.classList.toggle('on', x === t);
+    });
+  }
+
+  function rotulos(){
+    /* Los campos de quien tiene sesión y los de quien no son bloques
+       distintos; se rotula el que esté puesto. */
+    var campos = document.getElementById('vg10PaymentContact') ||
+                 document.getElementById('vgInternalContactFields');
+    if(campos) rotulo('Tus datos', campos);
+    rotuloPagos();
+  }
+
+  function repasar(){
+    if(!armar()) return;
+    fichas();
+    rotulos();
+    /* Otro bloque reescribe el h2 con "Métodos de pago" al abrir. Como
+       este corre después, se vuelve a poner el título corto: el paso ya
+       lo explica el renglón de abajo. */
+    var h2 = document.querySelector('#paymentModal .vgpay-titulo h2');
+    if(h2 && h2.textContent !== 'Pago') h2.textContent = 'Pago';
+  }
+
+  /* Se repasa al abrir el pago y cada vez que algún bloque escribe
+     dentro (los métodos y los campos llegan después, y con sesión). */
+  function envolver(){
+    if(typeof window.openPaymentModal === 'function' && !window.openPaymentModal.__vg115){
+      var orig = window.openPaymentModal;
+      var nueva = function(){
+        var r = orig.apply(this, arguments);
+        repasar();
+        setTimeout(repasar, 60);
+        setTimeout(repasar, 400);
+        return r;
+      };
+      nueva.__vg115 = true;
+      window.openPaymentModal = nueva;
+    }
+    var m = modal();
+    if(m && m.dataset.vgpayObs !== '1'){
+      m.dataset.vgpayObs = '1';
+      var espera = null;
+      new MutationObserver(function(){
+        clearTimeout(espera);
+        espera = setTimeout(repasar, 80);
+      }).observe(m, {childList:true, subtree:true});
+    }
+  }
+
+  function arrancar(){ repasar(); envolver(); }
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar);
+  else arrancar();
+  window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
+
 </body>
 </html>
