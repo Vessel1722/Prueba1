@@ -24349,6 +24349,26 @@ async function loadAdmin(){
   renderAdminOrders(body);
 }
 
+/* FASE 118 · Lo que trae el cupón de un pedido, o null si no trae.
+
+   Lo que costaba ANTES del descuento se saca de los propios artículos
+   del pedido, que es exacto: el servidor descuenta sobre esa suma. Si
+   por lo que sea no vienen los artículos, se deduce del porcentaje, y
+   ahí puede bailar un peso por el redondeo. */
+function cuponDe(o){
+  var cod = (o && o.cupon) ? String(o.cupon).trim().toUpperCase() : '';
+  if(!cod) return null;
+  var pct   = Number(o.cupon_pct || 0);
+  var total = Number(ototal(o)) || 0;
+  var base  = 0;
+  try{
+    var its = Array.isArray(o.items) ? o.items : JSON.parse(o.items || '[]');
+    if(Array.isArray(its)) base = its.reduce(function(s,x){ return s + (Number(x && x.price) || 0); }, 0);
+  }catch(e){}
+  if(!(base > total) && pct > 0 && pct < 100) base = Math.round(total / (1 - pct/100));
+  return {codigo:cod, pct:pct, base:base, ahorro:Math.max(0, Math.round(base - total))};
+}
+
 function renderAdminOrders(body){
   var orders=A.orders;
   var nuevos=orders.filter(function(o){return o.unread_admin===true;}).length;
@@ -24361,6 +24381,8 @@ function renderAdminOrders(body){
       '<div class="vg17-stat"><span>Pedidos</span><b>'+orders.length+'</b></div>'+
       '<div class="vg17-stat"><span>Sin leer</span><b style="color:#ffd68a">'+nuevos+'</b></div>'+
       '<div class="vg17-stat"><span>Entregados</span><b>'+orders.filter(function(o){return ostatus(o)==='entregado';}).length+'</b></div>'+
+      '<div class="vg17-stat"><span>Con cupón</span><b style="color:#19e6c1">'+
+        orders.filter(function(o){ return !!cuponDe(o); }).length+'</b></div>'+
     '</div>'+
     /* Tres columnas: lista | detalle | chat. Cada una con su propio
        desplazamiento y al alto completo, para que el chat siga visible
@@ -24369,12 +24391,16 @@ function renderAdminOrders(body){
       '<div class="vgA-col vgA-list">'+
         '<div class="vgA-colhead">Pedidos <b>'+orders.length+'</b></div>'+
         '<div class="vgA-scroll">'+orders.map(function(o){
+          var cup = cuponDe(o);
           return '<div class="vgA-row '+(oid(o)===A.ref?'active':'')+' st-'+esc(ostatus(o))+'" data-o="'+esc(oid(o))+'">'+
             (o.unread_admin?'<i class="vgA-new"></i>':'')+
             '<div class="vgA-rowtop"><b>'+esc(otitle(o))+'</b><span class="vgA-amt">'+money(ototal(o))+'</span></div>'+
             '<div class="vgA-rowsub">'+esc(o.customer_name||o.client_name||'Cliente')+
               (o.customer_phone||o.client_phone ? ' · '+esc(o.customer_phone||o.client_phone) : '')+'</div>'+
-            '<div class="vgA-rowfoot">'+chip(ostatus(o))+'<time>'+esc(dateMX(o.created_at))+'</time></div>'+
+            '<div class="vgA-rowfoot">'+chip(ostatus(o))+
+              (cup ? '<span class="vgA-cup" title="Cupón '+esc(cup.codigo)+': '+cup.pct+'% de descuento">🎟 '+
+                     esc(cup.codigo)+' −'+cup.pct+'%</span>' : '')+
+              '<time>'+esc(dateMX(o.created_at))+'</time></div>'+
           '</div>';
         }).join('')+'</div>'+
       '</div>'+
@@ -24405,6 +24431,24 @@ async function renderAdminDetail(o){
         esc(o.customer_phone||o.client_phone||'')+'\n'+esc(o.customer_email||'')+'</b></div>'+
       '<div class="vg17-box"><span>Producto solicitado</span><b>'+esc(oitemsText(o))+'</b></div>'+
     '</div>'+
+    /* FASE 118 · Qué cupón usó y cuánto le quitó. Solo aparece si el
+       pedido trae uno de verdad: el que valida el servidor. */
+    (function(){
+      var cup = cuponDe(o);
+      if(!cup) return '';
+      return '<div class="vg17-box vgA-cupbox">'+
+        '<span>🎟 Cupón usado</span>'+
+        '<div class="vgA-cupgrid">'+
+          '<div><small>Código</small><b>'+esc(cup.codigo)+'</b></div>'+
+          '<div><small>Descuento</small><b>'+cup.pct+'%</b></div>'+
+          '<div><small>Precio de lista</small><b>'+money(cup.base)+'</b></div>'+
+          '<div><small>Se le descontó</small><b class="vgA-cupahorro">'+money(cup.ahorro)+'</b></div>'+
+        '</div>'+
+        '<p class="vgA-cupquien">Lo usó '+esc(o.customer_name||o.client_name||'un cliente')+
+          (o.customer_email ? ' · '+esc(o.customer_email) : '')+
+          (o.customer_phone||o.client_phone ? ' · '+esc(o.customer_phone||o.client_phone) : '')+'</p>'+
+      '</div>';
+    })()+
     (o.delivery_data?'<div class="vg17-box"><span>Datos que dejó el cliente</span><b>'+esc(o.delivery_data)+'</b></div>':'')+
     '<div class="vg17-box vg17-proof"><span>Comprobante de pago</span>'+
       (proof
@@ -40270,6 +40314,187 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     color:#19e6c1;font-weight:800;font-size:0.875rem;
   }
 </style>
+
+
+<!-- ═══════════════════════════════════════════════════════════════════
+     VG FASE 118 · Ver quién usó cupón, cuál y cuánto le quitó
+
+     Los datos ya se guardaban desde la fase 80: cada pedido lleva su
+     cupon y su cupon_pct, puestos por el servidor y no por el
+     navegador. Aquí solo se enseñan:
+
+       · una cuenta de "Con cupón" arriba de la lista de pedidos;
+       · una etiqueta 🎟 en cada pedido que traiga uno;
+       · un recuadro en el detalle con el código, el porcentaje, el
+         precio de lista, lo que se descontó y quién lo usó;
+       · y un resumen en Ajustes, junto a los cupones, con los últimos
+         pedidos que usaron alguno.
+
+     El resumen lee la tabla orders directamente. Solo funciona con
+     sesión de dueño, porque las políticas de la base no dejan que
+     nadie más lea pedidos ajenos.
+     ═══════════════════════════════════════════════════════════════════ -->
+<style id="vg-cupon-panel-css-v118">
+  /* Etiqueta en la fila de la lista */
+  .vgA-cup{
+    display:inline-flex;align-items:center;gap:4px;
+    padding:2px 7px;border-radius:999px;
+    background:rgba(25,230,193,.12);
+    border:1px solid rgba(25,230,193,.30);
+    color:#8ff5e3;font-size:0.6875rem;font-weight:800;
+    letter-spacing:.01em;white-space:nowrap;
+  }
+  .vgA-rowfoot{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  .vgA-rowfoot time{margin-left:auto}
+
+  /* Recuadro del detalle */
+  .vg17-box.vgA-cupbox{
+    border-color:rgba(25,230,193,.28) !important;
+    background:linear-gradient(135deg,rgba(25,230,193,.10),rgba(124,77,255,.06)) !important;
+  }
+  .vgA-cupgrid{
+    display:grid;grid-template-columns:repeat(auto-fit,minmax(110px,1fr));
+    gap:10px;margin-top:8px;
+  }
+  .vgA-cupgrid > div{
+    background:rgba(0,0,0,.22);border-radius:12px;padding:10px 12px;
+  }
+  .vgA-cupgrid small{
+    display:block;font-size:0.6875rem;color:#8b93b0;
+    letter-spacing:.06em;text-transform:uppercase;margin-bottom:3px;
+  }
+  .vgA-cupgrid b{font-size:1rem;color:#fff;font-variant-numeric:tabular-nums}
+  .vgA-cupgrid b.vgA-cupahorro{color:#19e6c1}
+  .vgA-cupquien{
+    margin:10px 0 0;font-size:0.75rem;color:#a9b2cf;line-height:1.45;
+  }
+
+  /* Resumen en Ajustes */
+  #vg-cupon-usos{margin-top:22px;display:flex;flex-direction:column;gap:10px}
+  #vg-cupon-usos h4{
+    font-size:0.75rem;letter-spacing:.12em;text-transform:uppercase;
+    color:#8b93b0;margin:0;font-weight:700;
+  }
+  #vgCuponUsosLista{display:flex;flex-direction:column;gap:8px}
+  .vgcu-fila{
+    display:grid;grid-template-columns:1fr auto;gap:4px 10px;
+    background:rgba(255,255,255,.04);
+    border:1px solid rgba(255,255,255,.07);
+    border-radius:12px;padding:10px 12px;
+  }
+  .vgcu-cliente{font-size:0.875rem;color:#fff;font-weight:700}
+  .vgcu-cup{
+    justify-self:end;font-size:0.75rem;font-weight:800;color:#8ff5e3;
+    background:rgba(25,230,193,.12);border:1px solid rgba(25,230,193,.30);
+    border-radius:999px;padding:2px 8px;white-space:nowrap;
+  }
+  .vgcu-sub{grid-column:1/-1;font-size:0.75rem;color:#8b93b0;font-variant-numeric:tabular-nums}
+  .vgcu-vacio{
+    padding:14px;border-radius:12px;border:1px dashed rgba(255,255,255,.14);
+    color:#8b93b0;font-size:0.8125rem;line-height:1.45;
+  }
+</style>
+
+<script id="vg-cupon-panel-js-v118">
+(function(){
+  'use strict';
+  if(window.__VG118__) return; window.__VG118__ = true;
+
+  function qs(s,r){ return (r||document).querySelector(s); }
+  function esc(s){
+    return String(s==null?'':s).replace(/[&<>"']/g,function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];});
+  }
+  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX') + ' MXN'; }
+  function fecha(s){
+    try{
+      var d = new Date(s);
+      return d.toLocaleDateString('es-MX',{day:'2-digit',month:'short'}) + ' ' +
+             d.toLocaleTimeString('es-MX',{hour:'2-digit',minute:'2-digit'});
+    }catch(e){ return ''; }
+  }
+  function sb(quiere){
+    var c = null;
+    try{ if(typeof window.vgGetSB === 'function') c = window.vgGetSB(); }catch(e){}
+    if(!c) return null;
+    if(quiere && typeof c[quiere] !== 'function') return null;
+    return c;
+  }
+
+  /* Precio de lista: la suma de los artículos, que es sobre lo que el
+     servidor aplicó el descuento. */
+  function base(o){
+    var total = Number(o.total || 0);
+    var b = 0;
+    try{
+      var its = Array.isArray(o.items) ? o.items : JSON.parse(o.items || '[]');
+      if(Array.isArray(its)) b = its.reduce(function(s,x){ return s + (Number(x && x.price)||0); }, 0);
+    }catch(e){}
+    var pct = Number(o.cupon_pct || 0);
+    if(!(b > total) && pct > 0 && pct < 100) b = Math.round(total / (1 - pct/100));
+    return b;
+  }
+
+  window.vgRenderCuponUsos = function(){
+    var sec = qs('#vgAdminSettings');
+    if(!sec) return;
+
+    var caja = qs('#vg-cupon-usos');
+    if(!caja){
+      caja = document.createElement('div');
+      caja.id = 'vg-cupon-usos';
+      caja.innerHTML = '<h4>Quién ha usado cupones</h4><div id="vgCuponUsosLista"></div>';
+      sec.appendChild(caja);
+    }
+    var lista = qs('#vgCuponUsosLista');
+    lista.innerHTML = '<div class="vgcu-vacio">Cargando…</div>';
+
+    var c = sb('from');
+    if(!c){ lista.innerHTML = '<div class="vgcu-vacio">Sin conexión con el servidor.</div>'; return; }
+
+    c.from('orders')
+      .select('id,created_at,cupon,cupon_pct,total,items,customer_name,client_name,customer_email,customer_phone,client_phone,product_title')
+      .not('cupon','is',null)
+      .order('created_at',{ascending:false})
+      .limit(50)
+      .then(function(r){
+        if(r.error){
+          lista.innerHTML = '<div class="vgcu-vacio">No se pudieron leer los pedidos: ' +
+            esc(r.error.message) + '</div>';
+          return;
+        }
+        var filas = (r.data || []).filter(function(o){ return o.cupon; });
+        if(!filas.length){
+          lista.innerHTML = '<div class="vgcu-vacio">Todavía nadie ha usado un cupón. ' +
+            'Cuando alguien lo haga, aparece aquí con su nombre y cuánto se le descontó.</div>';
+          return;
+        }
+        lista.innerHTML = filas.map(function(o){
+          var b = base(o);
+          var ahorro = Math.max(0, Math.round(b - Number(o.total||0)));
+          var quien = o.customer_name || o.client_name || 'Cliente';
+          var contacto = o.customer_email || o.customer_phone || o.client_phone || '';
+          return '<div class="vgcu-fila">' +
+            '<span class="vgcu-cliente">' + esc(quien) + '</span>' +
+            '<span class="vgcu-cup">🎟 ' + esc(o.cupon) + ' −' + Number(o.cupon_pct||0) + '%</span>' +
+            '<span class="vgcu-sub">' + esc(fecha(o.created_at)) +
+              ' · pagó ' + pesos(o.total) + ' de ' + pesos(b) +
+              ' · se le descontó ' + pesos(ahorro) +
+              (contacto ? ' · ' + esc(contacto) : '') +
+            '</span>' +
+          '</div>';
+        }).join('');
+      });
+  };
+
+  /* Se pinta al entrar a Ajustes, junto a la lista de cupones. */
+  document.addEventListener('click', function(e){
+    var b = e.target && e.target.closest
+      ? e.target.closest('#vgAdminModal .vg-admin-tab[data-tab="settings"]') : null;
+    if(b) setTimeout(window.vgRenderCuponUsos, 220);
+  });
+})();
+</script>
 
 
 </body>
