@@ -42630,5 +42630,221 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 129 · Los restos del tema oscuro dentro del tema claro.
+
+     La v127 dejó legible lo que yo pude enumerar, pero estas dos
+     pantallas tienen más componentes de los que se pueden listar a
+     mano: degradados heredados, el chat en negro, las respuestas
+     rápidas en lila sobre lila, y las cifras en el turquesa de marca
+     —que sobre blanco da 1.5:1 y es casi invisible—.
+
+     Dos partes:
+     1. CSS para lo estructural que sí se puede nombrar.
+     2. Un reparador que recorre el panel, mide el contraste real de
+        cada texto contra su fondo y baja la luminosidad hasta que
+        cumple, conservando el tono. Así también quedan cubiertos los
+        componentes que aún no he visto.
+     ============================================================ -->
+<style id="vg-paneles-contraste-css-v129">
+
+/* ── Degradados heredados: fuera dentro del área clara ────────── */
+#vg17Client#vg17Client .vg17-top,
+#vg17Client#vg17Client .vg17-hero,
+#vg17Client#vg17Client .vg17-hero.st-entregado,
+#vg17Client#vg17Client .vg17-hero.st-cancelado,
+#vg17Client#vg17Client .vg17-msgs,
+#vgAdminModal#vgAdminModal .vgA-detail > *:first-child{
+  background-image:none!important;
+}
+#vg17Client#vg17Client .vg17-hero{
+  background:var(--l-surface)!important;
+  border:1px solid var(--l-line)!important;
+  color:var(--l-ink)!important;
+}
+#vg17Client#vg17Client .vg17-hero h3,
+#vg17Client#vg17Client .vg17-hero b{color:var(--l-ink)!important}
+#vg17Client#vg17Client .vg17-hero p{color:var(--l-muted)!important}
+
+/* La franja de color del estado se queda, pero como filo lateral. */
+#vg17Client#vg17Client .vg17-card::before,
+#vg17Client#vg17Client .vg17-row::before{
+  background-image:none!important;
+}
+
+/* ── El chat: era negro dentro del panel claro ───────────────── */
+#vg17Client#vg17Client .vg17-msgs,
+#vgAdminModal#vgAdminModal .vg17-msgs,
+#vgAdminModal#vgAdminModal .vgA-chat,
+#vgAdminModal#vgAdminModal #vg17AMsgs,
+#vgAdminModal#vgAdminModal #vg17AChat{
+  background:var(--l-surface)!important;
+  color:var(--l-ink)!important;
+}
+#vg17Client#vg17Client .vg17-msg div,
+#vgAdminModal#vgAdminModal .vg17-msg div{
+  background:var(--l-surface-3)!important;
+  color:var(--l-ink)!important;
+  border:1px solid var(--l-line)!important;
+}
+#vg17Client#vg17Client .vg17-inputbar,
+#vgAdminModal#vgAdminModal .vg17-inputbar,
+#vgAdminModal#vgAdminModal .vgA-compose{
+  background:var(--l-surface)!important;
+  border-top:1px solid var(--l-line)!important;
+}
+
+/* ── Respuestas rápidas: eran lila claro sobre lila claro ────── */
+#vgAdminModal#vgAdminModal .vg17-quick button,
+#vg17Client#vg17Client .vg17-quick button{
+  background:var(--l-surface)!important;
+  color:var(--l-ink-2)!important;
+  border:1px solid var(--l-line-2)!important;
+}
+#vgAdminModal#vgAdminModal .vg17-quick button:hover{
+  background:var(--l-surface-3)!important;
+  color:var(--l-ink)!important;
+}
+
+/* ── Cifras y precios: el turquesa de marca da 1.5:1 sobre blanco ── */
+#vg17Client#vg17Client .vg17-price,
+#vg17Client#vg17Client .vg17-hero-price,
+#vg17Client#vg17Client .vg17-stat b,
+#vgAdminModal#vgAdminModal .vg17-stat b,
+#vgAdminModal#vgAdminModal .vgA-amt{
+  color:var(--l-ink)!important;
+}
+/* El ahorro del cupón sí conserva verde, pero uno legible. */
+#vgAdminModal#vgAdminModal .vgA-cupahorro{color:var(--l-accent-ink)!important}
+
+/* ── Chips: seguían saliendo cortados ("PENDI") ──────────────── */
+#vg17Client#vg17Client .vg17-chip,
+#vgAdminModal#vgAdminModal .vg17-chip{
+  width:auto!important;
+  min-width:max-content!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  flex:0 0 auto!important;
+}
+
+/* ── Botón principal: fondo sólido, no lavado ────────────────── */
+#vg17Client#vg17Client .vg17-btn.primary,
+#vg17Client#vg17Client .vg17-btn.ok,
+#vgAdminModal#vgAdminModal .vg-admin-btn.primary{
+  background-image:none!important;
+  background:var(--l-accent)!important;
+  color:#fff!important;
+}
+</style>
+
+<script id="vg-paneles-contraste-js-v129">
+(function(){
+  "use strict";
+
+  var PANELES = ['#vg17Client', '#vgAdminModal'];
+  /* La barra lateral es oscura a propósito: ahí no se toca nada. */
+  var EXENTOS = '.vg17-tabs, .vg-admin-tabs, .vg17-avatar, .vg-admin-logo';
+  var MINIMO = 4.5;
+
+  function canal(x){ x/=255; return x<=0.03928 ? x/12.92 : Math.pow((x+0.055)/1.055, 2.4); }
+  function lum(c){ return 0.2126*canal(c[0]) + 0.7152*canal(c[1]) + 0.0722*canal(c[2]); }
+  function contraste(a,b){
+    var l1=lum(a), l2=lum(b), hi=Math.max(l1,l2), lo=Math.min(l1,l2);
+    return (hi+0.05)/(lo+0.05);
+  }
+  function aRGB(s){
+    var m = String(s||'').match(/[\d.]+/g);
+    return m && m.length>=3 ? [ +m[0], +m[1], +m[2], m[3]===undefined?1:+m[3] ] : null;
+  }
+
+  /* Fondo real: sube por los padres hasta encontrar uno opaco. */
+  function fondoDe(el){
+    var n = el;
+    while(n && n.nodeType === 1){
+      var c = aRGB(getComputedStyle(n).backgroundColor);
+      if(c && c[3] > 0.5) return c;
+      n = n.parentElement;
+    }
+    return [255,255,255,1];
+  }
+
+  /* Oscurece conservando el tono: sólo baja los tres canales en
+     proporción hasta que el contraste cumple. Así el verde sigue
+     siendo verde y el ámbar sigue siendo ámbar. */
+  function ajustar(color, fondo){
+    var f = 1;
+    for(var i=0; i<24; i++){
+      var probado = [color[0]*f, color[1]*f, color[2]*f];
+      if(contraste(probado, fondo) >= MINIMO){
+        return 'rgb(' + Math.round(probado[0]) + ',' + Math.round(probado[1]) + ',' + Math.round(probado[2]) + ')';
+      }
+      f *= 0.88;
+    }
+    return '#101820';
+  }
+
+  function tieneTextoPropio(el){
+    for(var i=0; i<el.childNodes.length; i++){
+      var n = el.childNodes[i];
+      if(n.nodeType === 3 && n.textContent.trim()) return true;
+    }
+    return false;
+  }
+
+  function reparar(raiz){
+    var elementos = raiz.querySelectorAll('*');
+    for(var i=0; i<elementos.length; i++){
+      var el = elementos[i];
+      if(el.closest(EXENTOS)) continue;
+      if(!tieneTextoPropio(el)) continue;
+      if(el.getAttribute('data-vg129') === 'ok') continue;
+      if(!el.getClientRects().length) continue;
+
+      var cs = getComputedStyle(el);
+      var fg = aRGB(cs.color);
+      if(!fg) continue;
+      var bg = fondoDe(el);
+      if(contraste(fg, bg) >= MINIMO){ el.setAttribute('data-vg129','ok'); continue; }
+
+      el.style.setProperty('color', ajustar(fg, bg), 'important');
+      el.setAttribute('data-vg129','ok');
+    }
+  }
+
+  /* Antes esto era un antirrebote simple y NUNCA llegaba a
+     dispararse: la página muta el DOM sin parar (el carrusel, el
+     observador de la fase 119), así que el temporizador se reiniciaba
+     antes de vencer. Ahora hay ejecución garantizada cada 400 ms como
+     mucho, pase lo que pase. */
+  var pendiente = null, ultimo = 0;
+  function ejecutar(){
+      for(var i=0; i<PANELES.length; i++){
+        var p = document.querySelector(PANELES[i]);
+        /* Sólo con el panel visible: si está oculto, las medidas de
+           color salen congeladas a mitad de transición y mienten.
+           Ojo: no vale offsetParent, que en un elemento position:fixed
+           es siempre null y dejaba el reparador sin correr nunca. */
+        if(p && p.getClientRects().length){ try{ reparar(p); }catch(e){} }
+      }
+  }
+  function repasar(){
+    var ahora = +new Date();
+    if(ahora - ultimo > 400){ ultimo = ahora; ejecutar(); return; }
+    clearTimeout(pendiente);
+    pendiente = setTimeout(function(){ ultimo = +new Date(); ejecutar(); }, 200);
+  }
+
+  function arrancar(){
+    repasar();
+    new MutationObserver(repasar).observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['class','style']});
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 </body>
 </html>
