@@ -41908,5 +41908,136 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 125 · El portal ocupa la pantalla y cada columna scrollea
+     por su cuenta.
+
+     Cuatro cosas que se veían mal en escritorio, y las tres primeras
+     salen de la misma raíz:
+
+     · .vg17-wrap tenía max-width:1240px con margin:0 auto, así que en
+       un monitor ancho quedaban cientos de píxeles muertos a los
+       lados.
+     · .vg17-panel tenía overflow:auto, o sea que al bajar scrolleaba
+       el panel ENTERO y la cabecera se iba de la pantalla.
+     · Sin altura definida, la columna del detalle del pedido crecía
+       hasta cortarse.
+     · Los chips de estado salían truncados ("PENDI", "CANCE").
+     ============================================================ -->
+<style id="vg-portal-pantalla-css-v125">
+
+@media (min-width:901px){
+
+  /* El panel deja de scrollear como bloque: manda cada región. */
+  #vg17Client.vg17-panel{
+    overflow:hidden!important;
+  }
+
+  /* De 1240 centrados a toda la pantalla. */
+  #vg17Client .vg17-wrap{
+    max-width:none!important;
+    width:100%!important;
+    margin:0!important;
+    padding:0!important;
+    height:100vh!important;
+    height:100dvh!important;
+  }
+
+  /* La cabecera ya no necesita pegarse: tiene su propia fila. */
+  #vg17Client .vg17-top{
+    position:static!important;
+    flex:0 0 auto!important;
+  }
+
+  /* El menú scrollea solo si no cabe. */
+  #vg17Client .vg17-tabs{
+    min-height:0!important;
+    overflow-y:auto!important;
+  }
+
+  /* La tarjeta de datos de juego, con su propio desplazamiento para
+     que nunca empuje ni desborde la columna del menú. */
+  #vg17Client .vg17-wrap > *:not(.vg17-top):not(.vg17-tabs):not(#vg17CBody){
+    min-height:0!important;
+    overflow-y:auto!important;
+    max-height:100%!important;
+  }
+
+  /* ── El cuerpo ──────────────────────────────────────────────
+     Por defecto scrollea él. Cuando dentro hay dos columnas, se
+     convierte en contenedor de altura fija y deja que scrolleen
+     ellas: así al repasar los pedidos NO se mueve ni la cabecera,
+     ni el menú, ni el detalle de la derecha. */
+  #vg17Client #vg17CBody{
+    min-height:0!important;
+    overflow-y:auto!important;
+  }
+  #vg17Client #vg17CBody:has(.vg17-split){
+    overflow:hidden!important;
+    display:flex!important;
+    flex-direction:column!important;
+    gap:24px!important;
+  }
+  /* Las cifras de arriba se quedan quietas. */
+  #vg17Client #vg17CBody:has(.vg17-split) > .vg17-cards{
+    flex:0 0 auto!important;
+    margin:0!important;
+  }
+
+  /* ── Las dos columnas ──────────────────────────────────────
+     La lista manda y el detalle va a ancho fijo, que es lo que pide
+     leer un pedido. Cada una con su barra. */
+  #vg17Client .vg17-split{
+    grid-template-columns:1fr 460px!important;
+    gap:24px!important;
+    align-items:stretch!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+  }
+  #vg17Client .vg17-split > *{
+    min-height:0!important;
+    overflow-y:auto!important;
+    max-height:100%!important;
+  }
+}
+
+/* ── Chips de estado: dejan de salir cortados ─────────────────
+   Se veía "PENDI" y "CANCE" porque la caja no daba de sí. */
+#vg17Client .vg17-chip{
+  width:auto!important;
+  min-width:0!important;
+  max-width:none!important;
+  white-space:nowrap!important;
+  overflow:visible!important;
+  text-overflow:clip!important;
+  flex:0 0 auto!important;
+  padding:0 10px!important;
+}
+
+/* ── Móvil ───────────────────────────────────────────────────
+   Aquí no queremos regiones con desplazamiento propio: en un
+   teléfono se espera que la página entera baje de una pieza. */
+@media (max-width:900px){
+  #vg17Client.vg17-panel{overflow:auto!important}
+  #vg17Client .vg17-wrap{
+    height:auto!important;
+    max-width:none!important;
+    padding:0 0 32px!important;
+  }
+  #vg17Client #vg17CBody,
+  #vg17Client .vg17-split > *,
+  #vg17Client .vg17-tabs{
+    overflow:visible!important;
+    max-height:none!important;
+    height:auto!important;
+  }
+  #vg17Client .vg17-split{
+    grid-template-columns:1fr!important;
+    gap:16px!important;
+  }
+}
+</style>
+
 </body>
 </html>
