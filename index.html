@@ -42137,5 +42137,498 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 127 · El panel admin y el portal pasan al tema claro del
+     mockup, color incluido.
+
+     Alcance deliberado: SOLO estas dos superficies. La tienda sigue
+     oscura, porque es la cara pública y no se pidió cambiarla.
+
+     El patrón es el del mockup: barra lateral pizarra oscura y
+     contenido claro. El acento #007D69 da 5.08:1 con texto blanco,
+     así que los botones cumplen accesibilidad.
+     ============================================================ -->
+<style id="vg-paneles-claro-css-v127">
+
+#vgAdminModal,
+#vg17Client{
+  --l-bg:#F1F3F5;
+  --l-surface:#FFFFFF;
+  --l-surface-2:#F7F9FA;
+  --l-surface-3:#EDF0F2;
+  --l-ink:#101820;
+  --l-ink-2:#3D4C57;
+  --l-muted:#61707A;      /* 5.11:1 sobre blanco */
+  --l-faint:#9AA7B0;
+  --l-line:#E2E7EA;
+  --l-line-2:#D3DADE;
+  --l-accent:#007D69;
+  --l-accent-ink:#006555;
+  --l-accent-wash:#E4F6F2;
+  --l-slate:#28323B;
+  --l-ok:#0A7D57;    --l-ok-wash:#E3F6EE;   /* 4.57:1 sobre su lavado */
+  --l-warn:#8C5C08;  --l-warn-wash:#FBF1DC; /* 5.13:1 */
+  --l-crit:#BE3B36;  --l-crit-wash:#FBE9E8; /* 4.63:1 */
+  --l-info-wash:#E8EEF4;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   FONDOS BASE
+   ══════════════════════════════════════════════════════════════ */
+#vg17Client.vg17-panel,
+#vgAdminModal.vg-admin-modal{
+  background:var(--l-bg)!important;
+  color:var(--l-ink)!important;
+}
+#vgAdminModal .vg-admin-panel{
+  background:var(--l-bg)!important;
+  color:var(--l-ink)!important;
+  border:0!important;
+  box-shadow:none!important;
+}
+#vg17Client #vg17CBody,
+#vgAdminModal .vg-admin-content{
+  background:var(--l-bg)!important;
+  color:var(--l-ink)!important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BARRA LATERAL — pizarra oscura, como el mockup
+   ══════════════════════════════════════════════════════════════ */
+@media (min-width:901px){
+  #vg17Client .vg17-tabs,
+  #vgAdminModal .vg-admin-tabs{
+    background:var(--l-slate)!important;
+    border-right:1px solid var(--l-slate)!important;
+    border-bottom:0!important;
+  }
+  #vg17Client .vg17-tab,
+  #vgAdminModal .vg-admin-tab,
+  #vgAdminModal .vg-admin-tab-x{
+    background:transparent!important;
+    color:rgba(255,255,255,.74)!important;
+    border:0!important;
+    box-shadow:none!important;
+  }
+  #vg17Client .vg17-tab:hover,
+  #vgAdminModal .vg-admin-tab:hover,
+  #vgAdminModal .vg-admin-tab-x:hover{
+    background:rgba(255,255,255,.08)!important;
+    color:#fff!important;
+  }
+  #vg17Client .vg17-tab.active,
+  #vgAdminModal .vg-admin-tab.active,
+  #vgAdminModal .vg-admin-tab-x.active{
+    background:rgba(255,255,255,.12)!important;
+    color:#fff!important;
+    border:0!important;
+  }
+}
+
+/* En móvil la lateral desaparece: las pestañas son píldoras claras. */
+@media (max-width:900px){
+  #vg17Client .vg17-tabs,
+  #vgAdminModal .vg-admin-tabs{
+    background:var(--l-surface)!important;
+    border-bottom:1px solid var(--l-line)!important;
+  }
+  #vg17Client .vg17-wrap .vg17-tabs .vg17-tab,
+  #vgAdminModal .vg-admin-tabs .vg-admin-tab,
+  #vgAdminModal .vg-admin-tabs .vg-admin-tab-x{
+    background:var(--l-surface-3)!important;
+    color:var(--l-ink-2)!important;
+    border:1px solid var(--l-line)!important;
+  }
+  #vg17Client .vg17-wrap .vg17-tabs .vg17-tab.active,
+  #vgAdminModal .vg-admin-tabs .vg-admin-tab.active{
+    background:var(--l-slate)!important;
+    color:#fff!important;
+    border-color:var(--l-slate)!important;
+  }
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CABECERA — blanca
+   ══════════════════════════════════════════════════════════════ */
+#vg17Client .vg17-top,
+#vgAdminModal .vg-admin-head{
+  background:var(--l-surface)!important;
+  border-bottom:1px solid var(--l-line)!important;
+}
+#vg17Client .vg17-top :is(h1,h2),
+#vgAdminModal .vg-admin-head h2{color:var(--l-ink)!important}
+#vg17Client .vg17-top p,
+#vgAdminModal .vg-admin-head p{color:var(--l-muted)!important}
+#vg17Client .vg17-avatar{
+  background:var(--l-accent)!important;
+  color:#fff!important;
+  border:0!important;
+}
+#vg17Client .vg17-salir,
+#vg17Client .vg17-x,
+#vgAdminModal .vg-admin-x{
+  background:var(--l-surface)!important;
+  color:var(--l-ink-2)!important;
+  border:1px solid var(--l-line-2)!important;
+}
+#vg17Client .vg17-salir:hover,
+#vg17Client .vg17-x:hover,
+#vgAdminModal .vg-admin-x:hover{
+  background:var(--l-surface-3)!important;
+  color:var(--l-ink)!important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   TARJETAS, CAJAS Y PANELES — blancos con borde fino
+   ══════════════════════════════════════════════════════════════ */
+#vg17Client .vg17-stat,
+#vg17Client .vg17-box,
+#vg17Client .vg17-list,
+#vg17Client .vg17-card,
+#vg17Client .vgdj,
+#vgAdminModal .vg17-stat,
+#vgAdminModal .vg17-box,
+#vgAdminModal .vgA-col,
+#vgAdminModal .vg-admin-card,
+#vgAdminModal .vg-admin-stat,
+#vgAdminModal .vg-admin-toolbar-card{
+  background:var(--l-surface)!important;
+  border:1px solid var(--l-line)!important;
+  color:var(--l-ink)!important;
+  box-shadow:none!important;
+}
+
+/* Etiquetas pequeñas en versalitas */
+#vg17Client .vg17-stat span,
+#vg17Client .vg17-box > span,
+#vgAdminModal .vg17-stat span,
+#vgAdminModal .vg-admin-stat span{
+  color:var(--l-muted)!important;
+}
+#vg17Client .vg17-stat b,
+#vg17Client .vg17-box > b,
+#vgAdminModal .vg17-stat b,
+#vgAdminModal .vg-admin-stat b{
+  color:var(--l-ink)!important;
+}
+
+/* Cabeceras de panel */
+#vg17Client .vg17-listhead,
+#vgAdminModal .vgA-colhead{
+  background:var(--l-surface-2)!important;
+  color:var(--l-ink)!important;
+  border-bottom:1px solid var(--l-line)!important;
+}
+#vgAdminModal .vgA-colhead b{color:var(--l-muted)!important}
+
+/* Filas */
+#vg17Client .vg17-row,
+#vgAdminModal .vgA-row{
+  background:transparent!important;
+  border-bottom:1px solid var(--l-line)!important;
+  color:var(--l-ink-2)!important;
+}
+#vg17Client .vg17-row:hover,
+#vgAdminModal .vgA-row:hover{background:var(--l-surface-2)!important}
+#vgAdminModal .vgA-row.active{
+  background:var(--l-accent-wash)!important;
+  border-color:var(--l-line)!important;
+}
+#vg17Client .vg17-row b,
+#vgAdminModal .vgA-rowtop b{color:var(--l-ink)!important}
+#vgAdminModal .vgA-rowsub,
+#vgAdminModal .vgA-rowfoot time{color:var(--l-muted)!important}
+#vgAdminModal .vgA-amt{color:var(--l-ink)!important}
+#vg17Client .vg17-thumb{background:var(--l-surface-3)!important}
+#vg17Client .vg17-price{color:var(--l-ink)!important}
+
+/* Tablas del panel */
+#vgAdminModal .vg-admin-table th{
+  background:var(--l-surface-2)!important;
+  color:var(--l-muted)!important;
+  border-bottom:1px solid var(--l-line)!important;
+}
+#vgAdminModal .vg-admin-table td{
+  color:var(--l-ink-2)!important;
+  border-bottom:1px solid var(--l-line)!important;
+}
+#vgAdminModal .vg-admin-table tr.vg-selected-order td{
+  background:var(--l-accent-wash)!important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   ESTADOS — cada uno con su color y su fondo propio
+   ══════════════════════════════════════════════════════════════ */
+#vg17Client .vg17-chip,
+#vgAdminModal .vg17-chip{
+  background:var(--l-info-wash)!important;
+  color:var(--l-ink-2)!important;
+  border:0!important;
+}
+#vg17Client .vg17-chip.pendiente,
+#vgAdminModal .vg17-chip.pendiente{background:var(--l-warn-wash)!important;color:var(--l-warn)!important}
+#vg17Client .vg17-chip.proceso,
+#vgAdminModal .vg17-chip.proceso{background:var(--l-info-wash)!important;color:var(--l-slate)!important}
+#vg17Client .vg17-chip.entregado,
+#vgAdminModal .vg17-chip.entregado{background:var(--l-ok-wash)!important;color:var(--l-ok)!important}
+#vg17Client .vg17-chip.cancelado,
+#vgAdminModal .vg17-chip.cancelado{background:var(--l-crit-wash)!important;color:var(--l-crit)!important}
+
+#vgAdminModal .vgA-cup{
+  background:var(--l-accent-wash)!important;
+  color:var(--l-accent-ink)!important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   BOTONES
+   ══════════════════════════════════════════════════════════════ */
+#vg17Client .vg17-btn,
+#vgAdminModal .vg-admin-btn,
+#vgAdminModal .vg-admin-mini-btn{
+  background:var(--l-surface)!important;
+  color:var(--l-ink-2)!important;
+  border:1px solid var(--l-line-2)!important;
+}
+#vg17Client .vg17-btn:hover,
+#vgAdminModal .vg-admin-btn:hover{
+  background:var(--l-surface-3)!important;
+  color:var(--l-ink)!important;
+  border-color:var(--l-line-2)!important;
+}
+#vg17Client .vg17-btn.primary,
+#vg17Client .vg17-btn.ok,
+#vg17Client .vgdj button,
+#vgAdminModal .vg-admin-btn.primary,
+#vgAdminModal .vg119-entregar{
+  background:var(--l-accent)!important;
+  color:#fff!important;
+  border-color:transparent!important;
+}
+#vg17Client .vg17-btn.primary:hover,
+#vgAdminModal .vg-admin-btn.primary:hover,
+#vgAdminModal .vg119-entregar:hover{
+  background:var(--l-accent-ink)!important;
+  color:#fff!important;
+  opacity:1!important;
+}
+#vgAdminModal .vg-admin-btn.danger{
+  background:var(--l-crit-wash)!important;
+  color:var(--l-crit)!important;
+  border-color:var(--l-crit-wash)!important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   CAMPOS
+   ══════════════════════════════════════════════════════════════ */
+#vg17Client input,
+#vg17Client textarea,
+#vg17Client select,
+#vgAdminModal .vg-admin-input,
+#vgAdminModal .vg-admin-select,
+#vgAdminModal .vg-admin-textarea,
+#vgAdminModal input,
+#vgAdminModal textarea,
+#vgAdminModal select{
+  background:var(--l-surface)!important;
+  color:var(--l-ink)!important;
+  border:1px solid var(--l-line-2)!important;
+}
+#vg17Client input::placeholder,
+#vg17Client textarea::placeholder,
+#vgAdminModal input::placeholder,
+#vgAdminModal textarea::placeholder{color:var(--l-faint)!important}
+#vg17Client input:focus,
+#vgAdminModal input:focus{
+  border-color:var(--l-accent)!important;
+  outline:2px solid var(--l-accent-wash)!important;
+}
+#vg17Client label,
+#vg17Client .vg17-form label > span{color:var(--l-ink-2)!important}
+
+/* ══════════════════════════════════════════════════════════════
+   LÍNEA DE PROGRESO DEL PEDIDO
+   ══════════════════════════════════════════════════════════════ */
+#vg17Client .vg17-dot{
+  background:var(--l-surface)!important;
+  border:2px solid var(--l-line-2)!important;
+  color:var(--l-faint)!important;
+}
+#vg17Client .vg17-step.done .vg17-dot{
+  background:var(--l-accent)!important;
+  border-color:var(--l-accent)!important;
+  color:#fff!important;
+}
+#vg17Client .vg17-step::before{background:var(--l-line-2)!important}
+#vg17Client .vg17-step.done::before{background:var(--l-accent)!important}
+#vg17Client .vg17-step b{color:var(--l-ink)!important}
+#vg17Client .vg17-step span{color:var(--l-muted)!important}
+
+/* Aviso de chat bloqueado */
+#vg17Client .vg17-lock{
+  background:var(--l-surface-2)!important;
+  border:1px solid var(--l-line)!important;
+  color:var(--l-muted)!important;
+}
+#vg17Client .vg17-lock b{color:var(--l-ink-2)!important}
+
+/* ══════════════════════════════════════════════════════════════
+   CHAT, VACÍOS Y AVISOS
+   ══════════════════════════════════════════════════════════════ */
+#vg17Client .vg17-msgs{background:var(--l-surface)!important}
+#vg17Client .vg17-msg div{
+  background:var(--l-surface-3)!important;
+  color:var(--l-ink)!important;
+}
+#vg17Client .vg17-msg small{color:var(--l-faint)!important}
+#vg17Client .vg17-inputbar{
+  background:var(--l-surface)!important;
+  border-top:1px solid var(--l-line)!important;
+}
+#vg17Client .vg17-empty,
+#vgAdminModal .vg17-empty{color:var(--l-muted)!important;background:transparent!important}
+#vg17Client .vg17-ok{background:var(--l-ok-wash)!important;color:var(--l-ok)!important}
+#vg17Client .vg17-err{background:var(--l-crit-wash)!important;color:var(--l-crit)!important}
+#vg17Client .vg17-warn{background:var(--l-warn-wash)!important;color:var(--l-warn)!important}
+
+/* La marca del logotipo se mantiene: es identidad, no interfaz. */
+#vg17Client .vg17-avatar,
+#vgAdminModal .vg-admin-logo{filter:none!important}
+
+/* ── Textos que heredaban color claro del tema oscuro ─────────
+   Sin esto, un <b> con color blanco queda invisible sobre la
+   tarjeta blanca. Detectado midiendo contraste elemento a
+   elemento, no a ojo. */
+#vg17Client .vgdj b,
+#vg17Client .vgdj strong,
+#vg17Client .vg17-box b,
+#vg17Client .vg17-box strong,
+#vg17Client .vg17-list b,
+#vg17Client .vg17-card h4,
+#vg17Client .vg17-hero h3,
+#vgAdminModal .vg-admin-card b,
+#vgAdminModal .vg-admin-cardtop b,
+#vgAdminModal .vg-admin-toolbar-card b{
+  color:var(--l-ink)!important;
+}
+#vg17Client .vgdj p,
+#vg17Client .vgdj label,
+#vg17Client .vg17-card p,
+#vg17Client .vg17-hero p,
+#vgAdminModal .vg-admin-cardtop small,
+#vgAdminModal .vg-admin-toolbar-card small,
+#vgAdminModal .vg-admin-note{
+  color:var(--l-muted)!important;
+}
+</style>
+
+
+<!-- ============================================================
+     FASE 128 · Los restos oscuros del panel admin.
+
+     Medido con las transiciones desactivadas (con ellas activas las
+     lecturas salen congeladas y engañan): el modal, su contenido, la
+     cabecera y los campos seguían oscuros aunque las tarjetas y los
+     botones ya eran claros.
+
+     Esos colores no aparecen literales en el archivo —salen de
+     variables o degradados—, así que en vez de perseguir el selector
+     se usa el id repetido, que da especificidad (0,2,0,0) y no puede
+     perder contra nada de las capas anteriores.
+     ============================================================ -->
+<style id="vg-admin-claro-fix-css-v128">
+
+/* Fondo del modal y de sus contenedores */
+#vgAdminModal#vgAdminModal{
+  background:var(--l-bg)!important;
+  color:var(--l-ink)!important;
+}
+#vgAdminModal#vgAdminModal .vg-admin-panel,
+#vgAdminModal#vgAdminModal .vg-admin-content,
+#vgAdminModal#vgAdminModal .vg-admin-section{
+  background:var(--l-bg)!important;
+  color:var(--l-ink)!important;
+  border-color:var(--l-line)!important;
+  box-shadow:none!important;
+}
+
+/* Cabecera blanca */
+#vgAdminModal#vgAdminModal .vg-admin-head{
+  background:var(--l-surface)!important;
+  border-bottom:1px solid var(--l-line)!important;
+}
+#vgAdminModal#vgAdminModal .vg-admin-head h2{color:var(--l-ink)!important}
+#vgAdminModal#vgAdminModal .vg-admin-head p{color:var(--l-muted)!important}
+
+/* La barra lateral, al pizarra del mockup y no al casi negro previo */
+@media (min-width:901px){
+  #vgAdminModal#vgAdminModal .vg-admin-tabs{
+    background:var(--l-slate)!important;
+    border-right:1px solid var(--l-slate)!important;
+  }
+}
+@media (max-width:900px){
+  #vgAdminModal#vgAdminModal .vg-admin-tabs{
+    background:var(--l-surface)!important;
+    border-bottom:1px solid var(--l-line)!important;
+  }
+}
+
+/* Campos: eran blancos translúcidos sobre oscuro, o sea grises
+   sucios sobre claro. */
+#vgAdminModal#vgAdminModal input,
+#vgAdminModal#vgAdminModal textarea,
+#vgAdminModal#vgAdminModal select,
+#vgAdminModal#vgAdminModal .vg-admin-input,
+#vgAdminModal#vgAdminModal .vg-admin-select,
+#vgAdminModal#vgAdminModal .vg-admin-textarea,
+#vgAdminModal#vgAdminModal .vg-users-search{
+  background:var(--l-surface)!important;
+  color:var(--l-ink)!important;
+  border:1px solid var(--l-line-2)!important;
+  border-radius:8px!important;
+}
+#vgAdminModal#vgAdminModal input::placeholder,
+#vgAdminModal#vgAdminModal textarea::placeholder{color:var(--l-faint)!important}
+
+/* Texto suelto que seguía en claro sobre fondo claro */
+#vgAdminModal#vgAdminModal .vg-admin-section > h3,
+#vgAdminModal#vgAdminModal .vg-admin-section > h4,
+#vgAdminModal#vgAdminModal .vg-admin-section > p,
+#vgAdminModal#vgAdminModal label{
+  color:var(--l-ink-2)!important;
+}
+
+/* El mismo tratamiento para el portal, por si alguna de sus capas
+   se resiste igual. */
+#vg17Client#vg17Client.vg17-panel{
+  background:var(--l-bg)!important;
+  color:var(--l-ink)!important;
+}
+#vg17Client#vg17Client #vg17CBody{
+  background:var(--l-bg)!important;
+  color:var(--l-ink)!important;
+}
+#vg17Client#vg17Client .vg17-top{
+  background:var(--l-surface)!important;
+}
+
+/* La × cerraba en blanco sobre blanco: invisible. Detectado
+   midiendo contraste, ratio 1:1. */
+#vgAdminModal#vgAdminModal .vg-admin-x,
+#vg17Client#vg17Client .vg17-x,
+#vg17Client#vg17Client .vg17-salir{
+  background:var(--l-surface)!important;
+  color:var(--l-ink-2)!important;
+  border:1px solid var(--l-line-2)!important;
+}
+#vgAdminModal#vgAdminModal .vg-admin-x:hover,
+#vg17Client#vg17Client .vg17-x:hover,
+#vg17Client#vg17Client .vg17-salir:hover{
+  background:var(--l-surface-3)!important;
+  color:var(--l-ink)!important;
+}
+</style>
+
 </body>
 </html>
