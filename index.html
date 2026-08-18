@@ -42039,5 +42039,103 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 126 · En móvil, "Tus datos de juego" deja de abrir el panel.
+
+     La tarjeta .vgdj se inserta al PRINCIPIO de .vg17-wrap. En
+     escritorio la rejilla la recolocaba en su fila, pero en móvil
+     volvía al flujo natural y era lo primero que veía el cliente:
+     una pantalla entera de campos vacíos antes de sus compras.
+
+     Aquí se ordena por CSS —sin tocar el DOM— y se compacta: se va
+     al final, se le quita el párrafo explicativo y los campos se
+     aprietan. Sigue estando, pero deja de estorbar.
+
+     De paso, la cabecera dejaba "CERRAR SESIÓN" cortada debajo de
+     la ×; ahora los botones bajan a su propia línea si no caben.
+     ============================================================ -->
+<style id="vg-datos-juego-movil-css-v126">
+
+@media (max-width:900px){
+
+  /* Orden visual sin tocar el marcado. El navegador respeta `order`
+     dentro de un contenedor flexible, así que la tarjeta se va al
+     final aunque en el DOM siga siendo la primera. */
+  #vg17Client .vg17-wrap{
+    display:flex!important;
+    flex-direction:column!important;
+  }
+  #vg17Client .vg17-top{order:1!important}
+  #vg17Client .vg17-tabs{order:2!important}
+  #vg17Client #vg17CBody{order:3!important}
+  #vg17Client .vg17-wrap > *:not(.vg17-top):not(.vg17-tabs):not(#vg17CBody){
+    order:4!important;
+  }
+
+  /* ── La tarjeta, en versión discreta ─────────────────────── */
+  #vg17Client .vgdj{
+    margin:8px 16px 24px!important;
+    padding:12px!important;
+    border-radius:12px!important;
+  }
+  #vg17Client .vgdj b{
+    font-size:13px!important;
+    margin-bottom:4px!important;
+  }
+  /* El párrafo de tres líneas es lo que más ocupaba y lo que menos
+     aporta una vez guardados los datos. */
+  #vg17Client .vgdj p{
+    display:none!important;
+  }
+  #vg17Client .vgdj label{
+    font-size:10px!important;
+    margin:0 0 4px!important;
+  }
+  #vg17Client .vgdj input{
+    margin:0 0 8px!important;
+    font-size:13px!important;
+  }
+  #vg17Client .vgdj button{
+    margin-top:4px!important;
+  }
+
+  /* ── Cabecera: los botones dejan de pisarse ──────────────── */
+  #vg17Client .vg17-top{
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:8px 12px!important;
+  }
+  #vg17Client .vg17-head-l{
+    flex:1 1 auto!important;
+    min-width:0!important;
+  }
+  #vg17Client .vg17-head-l h2{
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+    white-space:nowrap!important;
+  }
+  #vg17Client .vg17-head-r{
+    flex:0 0 auto!important;
+    margin-left:auto!important;
+    white-space:nowrap!important;
+  }
+  #vg17Client .vg17-wrap .vg17-head-r .vg17-salir{
+    overflow:visible!important;
+    text-overflow:clip!important;
+    white-space:nowrap!important;
+    font-size:11px!important;
+    padding:0 12px!important;
+  }
+}
+
+/* Pantallas estrechas de verdad: el nombre y los botones se reparten
+   en dos líneas antes que apretarse. */
+@media (max-width:420px){
+  #vg17Client .vg17-head-l{flex:1 1 100%!important}
+  #vg17Client .vg17-head-r{flex:1 1 100%!important;margin-left:0!important;justify-content:flex-end!important}
+}
+</style>
+
 </body>
 </html>
