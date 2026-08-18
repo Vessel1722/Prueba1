@@ -40948,5 +40948,207 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 121 · Retícula de 8 dp en el panel admin y el portal del
+     cliente, más el ajuste móvil de las tres superficies.
+
+     Sólo geometría, igual que la v120: padding, margin, gap, radio,
+     retícula y alturas. Ni una propiedad de color.
+
+     Las dos superficies comparten las clases vg17-*, así que un
+     bloque las cubre a las dos. Valores que estaban fuera de la
+     retícula: 5, 6, 7, 10, 11, 13, 14, 15 y 18.
+     ============================================================ -->
+<style id="vg-reticula-paneles-css-v121">
+
+/* ── Armazón del panel admin ────────────────────────────────────
+   Con el id delante a propósito: hay reglas previas del tipo
+   `#vgAdminModal .vg-admin-tabs{gap:10px!important}` y un selector
+   de clase suelta pierde contra ellas por especificidad. */
+#vgAdminModal .vg-admin-tabs{
+  gap:8px!important;
+  padding:8px 16px!important;
+}
+#vgAdminModal .vg-admin-tab,
+#vgAdminModal .vg-admin-tab-x{
+  padding:8px 16px!important;
+  min-height:40px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+}
+#vgAdminModal .vg-admin-head,
+#vgAdminModal .vg-admin-header{
+  gap:16px!important;
+  padding:0 16px!important;
+}
+#vgAdminModal .vg-admin-body,
+#vgAdminModal .vg-admin-content{
+  padding:16px!important;
+}
+
+/* ── Tarjetas de estadística (panel y portal) ─────────────────── */
+.vg17-cards{
+  gap:16px!important;
+  margin-bottom:24px!important;
+}
+.vg17-stat{
+  padding:16px!important;
+  border-radius:12px!important;
+}
+.vg17-stat span{
+  margin-bottom:8px!important;
+}
+
+/* ── Cajas de contenido ───────────────────────────────────────── */
+.vg17-box{
+  padding:16px!important;
+  margin-bottom:16px!important;
+  border-radius:12px!important;
+}
+.vg17-box > span{
+  margin-bottom:8px!important;
+}
+
+/* ── Botones y pestañas del portal ───────────────────────────── */
+.vg17-btn{
+  padding:12px 16px!important;
+  border-radius:8px!important;
+  min-height:40px!important;
+}
+.vg17-tabs{
+  padding:16px 0!important;
+  gap:8px!important;
+}
+.vg17-tab{
+  padding:8px 16px!important;
+  min-height:40px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+}
+.vg17-quick{
+  gap:8px!important;
+}
+
+/* ── Lista de pedidos del panel (tres columnas) ──────────────── */
+.vgA-grid{
+  gap:16px!important;
+}
+.vgA-col{
+  border-radius:12px!important;
+}
+.vgA-colhead{
+  min-height:48px!important;
+  padding:0 16px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+.vgA-scroll{
+  padding:16px!important;
+}
+.vgA-row{
+  padding:16px!important;
+  border-radius:12px!important;
+  margin-bottom:8px!important;
+}
+.vgA-rowtop{
+  gap:8px!important;
+  margin-bottom:8px!important;
+}
+.vgA-rowsub{
+  margin-bottom:8px!important;
+}
+.vgA-rowfoot{
+  gap:8px!important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL
+   Lo pulsable sube a 48 dp y las rejillas de varias columnas se
+   deshacen antes de que las celdas queden ilegibles.
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width:768px){
+
+  /* Objetivos táctiles.
+     Los de la ficha van con selector largo a propósito: la v120 fija
+     `.card .premium-actions .detail-btn` a 40 dp con especificidad
+     (0,3,0), y una regla corta como `.detail-btn` pierde contra ella
+     aunque lleve !important y venga después. */
+  #productsGrid .card .premium-actions .detail-btn,
+  #productsGrid .card .premium-actions .quick-add-btn,
+  #featuredGrid .card .premium-actions .detail-btn,
+  #featuredGrid .card .premium-actions .quick-add-btn{
+    height:48px!important;
+    min-height:48px!important;
+  }
+  .vg17-tab,
+  .vg17-btn,
+  #vgAdminModal .vg-admin-tab,
+  #vgAdminModal .vg-admin-tab-x{
+    min-height:48px!important;
+  }
+  .vg17-quick button{
+    min-height:48px!important;
+    padding:8px 16px!important;
+  }
+
+  /* Las pestañas se desplazan en horizontal en vez de romperse en
+     varias filas, con el margen suficiente para que se vea que hay
+     más a la derecha. */
+  #vgAdminModal .vg-admin-tabs,
+  .vg17-tabs{
+    flex-wrap:nowrap!important;
+    overflow-x:auto!important;
+    padding-right:24px!important;
+    -webkit-overflow-scrolling:touch;
+  }
+
+  /* Estadísticas: de cuatro columnas a dos */
+  .vg17-cards{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    margin-bottom:16px!important;
+  }
+  .vg17-stat{
+    padding:12px!important;
+  }
+
+  /* Las tres columnas del panel se apilan */
+  .vgA-grid{
+    grid-template-columns:1fr!important;
+    grid-template-rows:auto!important;
+    height:auto!important;
+    gap:16px!important;
+  }
+  .vgA-col{
+    min-height:0!important;
+  }
+  .vgA-scroll{
+    padding:12px!important;
+  }
+  .vgA-row{
+    padding:12px!important;
+  }
+
+  #vgAdminModal .vg-admin-body,
+  #vgAdminModal .vg-admin-content{
+    padding:16px 12px!important;
+  }
+  .vg17-box{
+    padding:12px!important;
+    margin-bottom:12px!important;
+  }
+}
+
+@media (max-width:480px){
+  /* En pantallas estrechas dos columnas de estadística ya aprietan
+     demasiado la cifra contra su etiqueta. */
+  .vg17-cards{
+    grid-template-columns:1fr!important;
+  }
+}
+</style>
+
 </body>
 </html>
