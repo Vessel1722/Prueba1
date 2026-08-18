@@ -41748,5 +41748,165 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 124 · Arregla la tarjeta que saltaba de sitio.
+
+     La rejilla de la v122 definió tres áreas (lateral, cabecera,
+     cuerpo) pero la tarjeta "Tus datos de juego" (.vgdj, fase 70) se
+     cuelga como hija directa de .vg17-wrap:
+
+       destino = '.vg17-body' || '.vg17-panel-body'
+                 || .vg17-tabs.parentElement   <- esta es la que aplica
+
+     Al no tener área, el navegador la auto-colocaba en la rejilla
+     implícita, y su altura dependía de lo que midiera la pestaña
+     abierta: por eso cambiaba de sitio en cada clic.
+
+     Ahora tiene su propia fila al pie de la columna del menú, y
+     cualquier otro hijo que alguien inyecte mañana cae ahí también
+     en vez de descolocarse.
+     ============================================================ -->
+<style id="vg-datos-juego-fix-css-v124">
+
+@media (min-width:901px){
+  #vg17Client .vg17-wrap{
+    grid-template-areas:
+      "lateral cabecera"
+      "lateral cuerpo"
+      "extra   cuerpo"!important;
+    /* Clave para que la tarjeta NO se mueva: la fila que absorbe el
+       crecimiento del cuerpo es la TERCERA (1fr). Las dos primeras se
+       quedan a su tamaño natural, y como el menú siempre tiene los
+       mismos seis botones, el punto donde arranca la tarjeta es
+       siempre el mismo mida lo que mida la pestaña abierta. */
+    grid-template-rows:auto auto 1fr!important;
+  }
+
+  /* Todo hijo directo que no sea una de las tres piezas conocidas se
+     va al pie de la columna del menú. Vale para .vgdj y para lo que
+     venga después, sin tener que enumerarlo. */
+  #vg17Client .vg17-wrap > *:not(.vg17-top):not(.vg17-tabs):not(#vg17CBody){
+    grid-area:extra!important;
+    margin:0 16px 24px!important;
+    align-self:start!important;
+  }
+}
+
+/* La tarjeta, al ritmo del resto del panel */
+#vg17Client .vgdj{
+  padding:16px!important;
+  border-radius:12px!important;
+}
+#vg17Client .vgdj b{
+  font-size:13.5px!important;
+  font-weight:800!important;
+  display:block!important;
+  margin-bottom:8px!important;
+}
+#vg17Client .vgdj p{
+  font-size:12px!important;
+  line-height:1.45!important;
+  color:var(--muted,#A7ACBA)!important;
+  margin:0 0 16px!important;
+}
+#vg17Client .vgdj label{
+  display:block!important;
+  font-size:11px!important;
+  font-weight:700!important;
+  letter-spacing:.06em!important;
+  text-transform:uppercase!important;
+  color:var(--muted,#A7ACBA)!important;
+  margin:0 0 6px!important;
+}
+#vg17Client .vgdj input{
+  width:100%!important;
+  min-height:40px!important;
+  padding:0 12px!important;
+  border-radius:8px!important;
+  margin:0 0 16px!important;
+  font-size:13.5px!important;
+}
+#vg17Client .vgdj button{
+  min-height:40px!important;
+  padding:0 20px!important;
+  border-radius:8px!important;
+  font-weight:800!important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL · que nada quede pequeño ni apretado para el pulgar
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width:900px){
+  /* En bloque, la tarjeta vuelve al flujo normal y no necesita área. */
+  #vg17Client .vg17-wrap > *:not(.vg17-top):not(.vg17-tabs):not(#vg17CBody){
+    grid-area:auto!important;
+    margin:16px!important;
+  }
+
+  /* Todo lo que se toca, a 48 dp.
+     Medido: en estos controles min-height NO levanta la altura,
+     porque son items de un flex en fila y la caja la manda el
+     contenido. Lo que sí funciona es fijar altura de línea + relleno:
+     20 + 14 + 14 = 48 exactos. Los selectores llevan la cadena larga
+     para ganar a las reglas equivalentes de la v122. */
+  #vg17Client .vgdj input,
+  #vg17Client .vgdj button,
+  #vg17Client .vg17-copy,
+  #vg17Client .vg17-quick button{
+    min-height:48px!important;
+    padding-top:12px!important;
+    padding-bottom:12px!important;
+  }
+  #vg17Client .vgdj input{padding-left:12px!important;padding-right:12px!important}
+
+  #vg17Client .vg17-wrap .vg17-tabs .vg17-tab,
+  #vg17Client .vg17-wrap #vg17CBody .vg17-btn{
+    height:48px!important;
+    min-height:48px!important;
+    box-sizing:border-box!important;
+    padding-top:0!important;
+    padding-bottom:0!important;
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+  }
+
+  /* El botón de cerrar sesión y la × se tocan con el pulgar pegados
+     al borde de la pantalla: son los que peor se dan. */
+  #vg17Client .vg17-wrap .vg17-head-r .vg17-salir{
+    height:44px!important;
+    min-height:44px!important;
+    box-sizing:border-box!important;
+    padding:0 16px!important;
+    display:inline-flex!important;
+    align-items:center!important;
+  }
+  #vg17Client .vg17-wrap .vg17-head-r .vg17-x{
+    width:44px!important;
+    height:44px!important;
+    padding:0!important;
+    flex:0 0 auto!important;
+  }
+  #vg17Client .vg17-head-r{gap:8px!important}
+
+  /* La cabecera se parte en dos líneas si hace falta, en vez de
+     aplastar el nombre contra los botones. */
+  #vg17Client .vg17-top{
+    flex-wrap:wrap!important;
+    gap:12px!important;
+    padding:16px!important;
+  }
+  #vg17Client .vg17-top h2{font-size:17px!important}
+
+  /* Las filas de pedido dejan sitio al precio y al chip. */
+  #vg17Client .vg17-row{
+    grid-template-columns:40px 1fr auto!important;
+    gap:12px!important;
+  }
+  #vg17Client .vg17-thumb{width:40px!important;height:40px!important}
+}
+</style>
+
 </body>
 </html>
