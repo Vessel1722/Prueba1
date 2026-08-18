@@ -573,7 +573,7 @@ if (typeof window.escapeHtml !== 'function') window.escapeHtml = window.VG.esc;
   /* Responsive */
   @media (max-width: 999px){
     .grid{
-      grid-template-columns:repeat(auto-fill,minmax(240px,1fr))!important;
+      grid-template-columns:repeat(auto-fill,minmax(216px,1fr))!important;
     }
     .imgbox{
       height:205px!important;
@@ -40825,6 +40825,128 @@ button.vg119-incompleto{
   }
 })();
 </script>
+
+
+<!-- ============================================================
+     FASE 120 · Retícula de 8 dp en la tienda.
+     Sólo geometría: padding, margin, gap, radio, retícula y escala
+     tipográfica. Ni una propiedad de color — la paleta sigue
+     pendiente y este bloque no la toca.
+
+     Medido antes de tocar nada: las tarjetas de cada fila YA cerraban
+     parejas y la proporción de imagen YA era uniforme (16:10). Lo que
+     estaba descuadrado era el ritmo: 14, 18, 20, 22, 28 y un
+     13.2125px accidental en el bloque de botones.
+     ============================================================ -->
+<style id="vg-reticula-css-v120">
+
+/* ── Rejilla del catálogo ──────────────────────────────────────
+   De cinco columnas de 177 px a cuatro más anchas, con canaleta de
+   24 dp. La ficha gana ancho para que el título quepa en una línea
+   más a menudo. */
+#productsGrid.grid,
+#featuredGrid.grid{
+  grid-template-columns:repeat(auto-fill,minmax(216px,1fr))!important;
+  gap:24px!important;
+}
+
+/* ── Ficha ─────────────────────────────────────────────────────
+   Radio de 12 dp como el mockup, y el cuerpo como columna flexible
+   con separación de 8 dp en vez de márgenes sueltos por elemento. */
+.card{
+  border-radius:12px!important;
+}
+.card .imgbox{
+  border-radius:12px 12px 0 0!important;
+}
+.card .info{
+  padding:16px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:8px!important;
+}
+.card .info > *{
+  margin:0!important;
+}
+.card .info h3{
+  font-size:16px!important;
+  line-height:24px!important;
+}
+.card .info .desc{
+  font-size:13px!important;
+  line-height:20px!important;
+}
+.card .info .meta{
+  margin:0!important;
+}
+
+/* El precio se despega del texto y se pega al bloque de botones,
+   que es con lo que forma pareja. */
+.card .price-line{
+  margin:8px 0 0!important;
+  padding:8px 16px!important;
+  border-radius:8px!important;
+  gap:8px!important;
+}
+.card .price-line .price{
+  font-size:18px!important;
+  line-height:24px!important;
+}
+
+/* El 13.2125px salía de un cálculo en em; aquí queda en 16 dp. */
+.card .premium-actions{
+  margin:16px 0 0!important;
+  gap:8px!important;
+}
+.card .premium-actions .detail-btn{
+  min-height:40px!important;
+  border-radius:8px!important;
+}
+.card .premium-actions .quick-add-btn{
+  min-height:40px!important;
+  border-radius:8px!important;
+}
+
+/* ── Columnas de la vista de catálogo ──────────────────────── */
+#marketView .layout{
+  gap:24px!important;
+}
+#marketView .sidebar{
+  padding:16px!important;
+  border-radius:16px!important;
+}
+#marketView .side-title{
+  margin:0 0 8px!important;
+}
+
+/* ── Cabeceras de sección ──────────────────────────────────── */
+#marketView .market-head,
+#homeView .market-head{
+  margin:24px 0 16px!important;
+  gap:16px!important;
+}
+#sectionHero{
+  margin:0 0 24px!important;
+  border-radius:24px!important;
+}
+
+/* ── Fila de categorías ────────────────────────────────────── */
+#catRow{
+  gap:8px!important;
+}
+
+/* ── Móvil: la canaleta baja a 16 dp y la ficha ocupa el ancho ── */
+@media (max-width:768px){
+  #productsGrid.grid,
+  #featuredGrid.grid{
+    grid-template-columns:repeat(auto-fill,minmax(160px,1fr))!important;
+    gap:16px!important;
+  }
+  #marketView .layout{
+    gap:16px!important;
+  }
+}
+</style>
 
 </body>
 </html>
