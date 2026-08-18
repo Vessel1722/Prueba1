@@ -40497,5 +40497,334 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
 </script>
 
 
+
+<!-- ============================================================
+     FASE 119 · Arreglos de la auditoría de interfaz.
+     No toca colores: la paleta queda pendiente a propósito.
+     Todo va con clases propias vg119- porque el CSS de este
+     archivo está en capas y las clases genéricas se pisan.
+     ============================================================ -->
+<style id="vg-auditoria-css-v119">
+/* 1 · Badge sin valor informativo: se esconde en vez de mentir. */
+.card-badge.vg119-oculto{display:none!important}
+
+/* 2 · Unidad de entrada bajo el precio ("desde 1,085 Diamantes"). */
+.vg119-unidad{
+  display:block!important;
+  font-size:0.66rem!important;
+  line-height:1.25!important;
+  opacity:.72!important;
+  margin-top:2px!important;
+}
+
+/* 3 · Aviso de lo que falta para poder confirmar el pedido. */
+.vg119-falta{
+  display:block;
+  margin-top:8px;
+  font-size:0.72rem;
+  line-height:1.35;
+  text-align:center;
+  opacity:.85;
+}
+.vg119-falta:empty{display:none}
+button.vg119-incompleto{
+  opacity:.55!important;
+  cursor:not-allowed!important;
+}
+
+/* 4 · Acción por fila en la lista de pedidos del panel. */
+.vg119-entregar{
+  margin-top:6px;
+  width:100%;
+  padding:7px 10px;
+  font-size:0.7rem;
+  font-weight:800;
+  border-radius:9px;
+  border:1px solid currentColor;
+  background:transparent;
+  color:inherit;
+  cursor:pointer;
+  opacity:.78;
+}
+.vg119-entregar:hover{opacity:1}
+.vg119-entregar[disabled]{opacity:.35;cursor:default}
+
+/* 5 · Mínimo táctil de 48 dp en móvil. Sólo crece, nunca encoge. */
+@media (max-width:768px){
+  .detail-btn,
+  .quick-add-btn,
+  .cart-remove-btn,
+  .cat-btn,
+  .vg-pay-method,
+  .vg17-btn{
+    min-height:48px!important;
+  }
+  /* El corazón necesita selector largo: una regla de una capa
+     anterior lo fija en 40 con !important y gana a `.vg-fav-btn`
+     a secas. Va absoluto, así que crecer no mueve la tarjeta. */
+  .card .imgbox .vg-fav-btn{
+    width:48px!important;
+    height:48px!important;
+    min-width:48px!important;
+    min-height:48px!important;
+  }
+  .vg-quickview-btn{
+    min-width:48px!important;
+    min-height:48px!important;
+  }
+  /* La casilla se dibuja pequeña, pero la fila entera es el objetivo. */
+  .vgacc{min-height:48px!important;display:flex!important;align-items:center!important}
+}
+</style>
+
+<script id="vg-auditoria-js-v119">
+(function(){
+  "use strict";
+
+  function qs(s,r){ return (r||document).querySelector(s); }
+  function qsa(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+
+  /* ────────────────────────────────────────────────────────────
+     1 · Badges: de cuatro a dos.
+     "Disponible" y "Premium" salían de reglas automáticas sobre el
+     título, así que casi toda ficha llevaba uno y el distintivo
+     dejaba de distinguir. Se conservan "Más vendido" y cualquier
+     etiqueta que ponga el panel (por ejemplo "Agotado").
+     ──────────────────────────────────────────────────────────── */
+  var SIN_VALOR = ['disponible','premium'];
+  if(typeof window.getCardBadge === 'function'){
+    var badgeOriginal = window.getCardBadge;
+    window.getCardBadge = function(p){
+      var b = badgeOriginal.apply(this, arguments) || {label:'', cls:''};
+      var etiqueta = String(b.label||'').trim().toLowerCase();
+      if(SIN_VALOR.indexOf(etiqueta) !== -1){
+        return {label:'', cls:(b.cls||'') + ' vg119-oculto'};
+      }
+      return b;
+    };
+  }
+
+  /* ────────────────────────────────────────────────────────────
+     2 · "Cotizar" fuera del orden por precio, y unidad de entrada
+     bajo el precio.
+     ──────────────────────────────────────────────────────────── */
+  function productoDeTarjeta(card){
+    var b = qs('.detail-btn', card);
+    var m = b && /openProduct\((\d+)\)/.exec(b.getAttribute('onclick')||'');
+    if(!m || !window.SERVICES) return null;
+    var id = Number(m[1]);
+    for(var i=0;i<window.SERVICES.length;i++){
+      if(window.SERVICES[i].id === id) return window.SERVICES[i];
+    }
+    return null;
+  }
+
+  /* La opción más barata es la que fija el "Desde", así que es la
+     que hay que nombrar para que el precio signifique algo. */
+  function opcionMasBarata(p){
+    var ops = (p && p.options) || [];
+    var mejor = null;
+    for(var i=0;i<ops.length;i++){
+      var precio = Number(ops[i].price||0);
+      if(precio > 0 && (!mejor || precio < Number(mejor.price||0))) mejor = ops[i];
+    }
+    return mejor;
+  }
+
+  function ponerUnidad(grid){
+    qsa('.card', grid).forEach(function(card){
+      if(qs('.vg119-unidad', card)) return;
+      var contador = qs('.option-count', card);
+      if(!contador) return;
+      var p = productoDeTarjeta(card);
+      var op = opcionMasBarata(p);
+      if(!op || !op.name) return;
+      var linea = document.createElement('small');
+      linea.className = 'vg119-unidad';
+      linea.textContent = 'desde ' + op.name;
+      contador.parentNode.insertBefore(linea, contador);
+    });
+  }
+
+  /* Un producto sin cifra no se puede comparar con los demás, así
+     que al ordenar por precio se va al final en lugar de encabezar
+     la lista con un 0 que no es un precio. */
+  function cotizarAlFinal(grid){
+    var sel = qs('#sortSelect');
+    var orden = (sel && sel.value) || 'default';
+    if(orden !== 'priceAsc' && orden !== 'priceDesc') return;
+    qsa('.card', grid).forEach(function(card){
+      var precio = qs('.price', card);
+      if(precio && /^cotizar$/i.test(precio.textContent.trim())) grid.appendChild(card);
+    });
+  }
+
+  function repasarRejillas(){
+    ['#productsGrid','#featuredGrid'].forEach(function(sel){
+      var grid = qs(sel);
+      if(!grid) return;
+      ponerUnidad(grid);
+      if(sel === '#productsGrid') cotizarAlFinal(grid);
+    });
+  }
+
+  if(typeof window.renderProducts === 'function'){
+    var renderOriginal = window.renderProducts;
+    window.renderProducts = function(){
+      var r = renderOriginal.apply(this, arguments);
+      try{ repasarRejillas(); }catch(e){}
+      return r;
+    };
+  }
+
+  /* ────────────────────────────────────────────────────────────
+     3 · El botón de pago deja de prometer lo que no puede cumplir.
+     Antes decía "Confirmar pedido" con el comprobante sin subir y
+     los términos sin aceptar; el aviso llegaba después de pulsar.
+     ──────────────────────────────────────────────────────────── */
+  function botonConfirmar(){
+    var modal = qs('#paymentModal');
+    if(!modal) return null;
+    /* Una vez que le cambiamos la etiqueta ya no dice "confirmar",
+       así que lo marcamos la primera vez y después lo buscamos por
+       esa marca. Sin esto el estado se queda congelado. */
+    var marcado = qs('[data-vg119-texto]', modal);
+    if(marcado) return marcado;
+    var encontrado = null;
+    qsa('button', modal).forEach(function(b){
+      if(/confirmar/i.test(b.textContent||'')) encontrado = b;
+    });
+    return encontrado;
+  }
+
+  function revisarPago(){
+    var btn = botonConfirmar();
+    if(!btn) return;
+
+    var proof  = qs('#proofInput');
+    var acepta = qs('#vgAceptaTerminos');
+
+    /* Guarda deliberada: si alguno de los dos controles no está en el
+       DOM, no bloqueamos nada. Vale más un botón de más que una
+       tienda que no deja comprar. */
+    var faltaComprobante = !!proof  && !(proof.files && proof.files[0]);
+    var faltaTerminos    = !!acepta && !acepta.checked;
+
+    var pendientes = [];
+    if(faltaComprobante) pendientes.push('subir tu comprobante');
+    if(faltaTerminos)    pendientes.push('aceptar los Términos');
+
+    if(!btn.getAttribute('data-vg119-texto')){
+      btn.setAttribute('data-vg119-texto', btn.textContent.trim());
+    }
+    var textoOriginal = btn.getAttribute('data-vg119-texto');
+
+    var aviso = qs('#vg119Falta');
+    if(!aviso){
+      aviso = document.createElement('span');
+      aviso.id = 'vg119Falta';
+      aviso.className = 'vg119-falta';
+      if(btn.parentNode) btn.parentNode.insertBefore(aviso, btn.nextSibling);
+    }
+
+    if(pendientes.length){
+      btn.disabled = true;
+      btn.classList.add('vg119-incompleto');
+      btn.textContent = pendientes.length === 2
+        ? 'Falta subir tu comprobante y aceptar los Términos'
+        : 'Falta ' + pendientes[0];
+      aviso.textContent = 'En cuanto lo hagas se activa el botón.';
+    }else{
+      btn.disabled = false;
+      btn.classList.remove('vg119-incompleto');
+      btn.textContent = textoOriginal;
+      aviso.textContent = '';
+    }
+  }
+
+  document.addEventListener('change', function(e){
+    var t = e.target;
+    if(t && (t.id === 'proofInput' || t.id === 'vgAceptaTerminos')) revisarPago();
+  }, true);
+
+  /* ────────────────────────────────────────────────────────────
+     4 · Acción por fila en la lista de pedidos del panel.
+     Marcar entregado obligaba a abrir cada pedido; con doce
+     pendientes al día eso es la diferencia entre un minuto y quince.
+     ──────────────────────────────────────────────────────────── */
+  function clienteSupabase(){
+    try{ if(typeof window.SB === 'function') return window.SB(); }catch(e){}
+    try{ if(typeof window.sb === 'function') return window.sb(); }catch(e){}
+    return null;
+  }
+
+  function ponerBotonEntregar(){
+    qsa('.vgA-row').forEach(function(row){
+      if(qs('.vg119-entregar', row)) return;
+      var ref = row.getAttribute('data-o');
+      if(!ref) return;
+      if(/st-entregado|st-cancelado/.test(row.className)) return;
+
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vg119-entregar';
+      btn.textContent = 'Marcar entregado';
+      btn.title = 'Cambia el estado del pedido #' + ref + ' sin abrirlo';
+
+      btn.addEventListener('click', function(ev){
+        ev.stopPropagation();
+        var c = clienteSupabase();
+        if(!c){ alert('Sin conexión con el servidor.'); return; }
+        if(!confirm('¿Marcar el pedido #' + ref + ' como entregado?')) return;
+        btn.disabled = true;
+        btn.textContent = 'Guardando…';
+        c.from('orders').update({status:'entregado'}).eq('id', ref).then(function(r){
+          if(r && r.error){
+            btn.disabled = false;
+            btn.textContent = 'Marcar entregado';
+            alert('No se pudo actualizar: ' + (r.error.message||r.error));
+            return;
+          }
+          btn.textContent = 'Entregado';
+          row.className = row.className.replace(/st-\w+/, 'st-entregado');
+          if(typeof window.toast === 'function') window.toast('Estado actualizado','entregado');
+        })['catch'](function(err){
+          btn.disabled = false;
+          btn.textContent = 'Marcar entregado';
+          alert('No se pudo actualizar: ' + (err.message||err));
+        });
+      });
+
+      row.appendChild(btn);
+    });
+  }
+
+  /* El panel se repinta entero desde varios bloques, así que en vez
+     de engancharnos a una función concreta observamos el DOM. */
+  var repaso = null;
+  var observador = new MutationObserver(function(){
+    clearTimeout(repaso);
+    repaso = setTimeout(function(){
+      try{ ponerBotonEntregar(); }catch(e){}
+      try{ revisarPago(); }catch(e){}
+      try{ repasarRejillas(); }catch(e){}
+    }, 120);
+  });
+
+  function arrancar(){
+    try{ repasarRejillas(); }catch(e){}
+    try{ revisarPago(); }catch(e){}
+    try{ ponerBotonEntregar(); }catch(e){}
+    observador.observe(document.body, {childList:true, subtree:true});
+  }
+
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', arrancar);
+  }else{
+    arrancar();
+  }
+})();
+</script>
+
 </body>
 </html>
