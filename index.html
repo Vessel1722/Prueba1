@@ -41150,5 +41150,240 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 122 · El portal del cliente pasa al diseño del mockup.
+
+     Sin tocar el DOM: la estructura que ya existe —.vg17-top,
+     .vg17-tabs y #vg17CBody— se recoloca con áreas de rejilla, así
+     que las pestañas se convierten en barra lateral sin mover un
+     solo nodo y sin romper bindClientNav().
+
+     Los colores salen de las variables de la propia tienda
+     (--panel, --card, --brand...). No se define ni un hex nuevo.
+     ============================================================ -->
+<style id="vg-portal-css-v122">
+
+/* ── Armazón: cabecera arriba, pestañas a la izquierda ────────── */
+@media (min-width:901px){
+  #vg17Client .vg17-wrap{
+    display:grid!important;
+    grid-template-columns:232px 1fr!important;
+    grid-template-rows:auto 1fr!important;
+    grid-template-areas:
+      "lateral cabecera"
+      "lateral cuerpo"!important;
+    min-height:640px!important;
+    gap:0!important;
+  }
+  #vg17Client .vg17-top{
+    grid-area:cabecera!important;
+    min-height:64px!important;
+    padding:0 24px!important;
+    margin:0!important;
+    border-bottom:1px solid var(--line,rgba(255,255,255,.10))!important;
+  }
+  #vg17Client .vg17-tabs{
+    grid-area:lateral!important;
+    display:flex!important;
+    flex-direction:column!important;
+    align-items:stretch!important;
+    gap:2px!important;
+    padding:24px 16px!important;
+    margin:0!important;
+    overflow-x:visible!important;
+    overflow-y:auto!important;
+    background:var(--panel,#101C36)!important;
+    border-right:1px solid var(--line,rgba(255,255,255,.10))!important;
+  }
+  #vg17Client #vg17CBody{
+    grid-area:cuerpo!important;
+    padding:24px!important;
+    min-width:0!important;
+  }
+}
+
+/* ── Cada pestaña, como entrada de menú ──────────────────────── */
+#vg17Client .vg17-tab{
+  flex:none!important;
+  width:100%!important;
+  min-height:40px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  text-align:left!important;
+  padding:0 8px!important;
+  border-radius:8px!important;
+  border:0!important;
+  background:transparent!important;
+  color:var(--muted,#A7ACBA)!important;
+  font-size:13px!important;
+  font-weight:600!important;
+}
+#vg17Client .vg17-tab:hover{
+  background:rgba(255,255,255,.05)!important;
+  color:var(--text,#F7F3EA)!important;
+}
+#vg17Client .vg17-tab.active{
+  background:rgba(255,255,255,.09)!important;
+  color:var(--text,#F7F3EA)!important;
+}
+
+/* ── Cabecera: avatar, nombre y acciones ─────────────────────── */
+#vg17Client .vg17-top{
+  display:flex!important;
+  align-items:center!important;
+  gap:16px!important;
+}
+#vg17Client .vg17-head-l{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  min-width:0!important;
+}
+#vg17Client .vg17-head-r{
+  margin-left:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+}
+#vg17Client .vg17-avatar{
+  width:32px!important;
+  height:32px!important;
+  border-radius:8px!important;
+  flex:0 0 auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-weight:800!important;
+  font-size:12.5px!important;
+}
+#vg17Client .vg17-top h2{
+  margin:0!important;
+  font-size:19px!important;
+  font-weight:800!important;
+  letter-spacing:-.02em!important;
+  line-height:1.15!important;
+}
+#vg17Client .vg17-top p{
+  margin:0!important;
+  font-size:11.5px!important;
+  color:var(--muted,#A7ACBA)!important;
+}
+#vg17Client .vg17-salir,
+#vg17Client .vg17-x{
+  min-height:32px!important;
+  padding:0 12px!important;
+  border-radius:8px!important;
+  font-size:12px!important;
+  font-weight:700!important;
+}
+#vg17Client .vg17-x{width:32px!important;padding:0!important}
+
+/* ── Tarjetas de cifra, al estilo KPI ────────────────────────── */
+#vg17Client .vg17-cards{
+  display:grid!important;
+  grid-template-columns:repeat(3,1fr)!important;
+  gap:24px!important;
+  margin:0 0 24px!important;
+}
+#vg17Client .vg17-stat{
+  padding:16px!important;
+  border-radius:12px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:8px!important;
+}
+#vg17Client .vg17-stat span{
+  margin:0!important;
+  font-size:10px!important;
+  letter-spacing:.10em!important;
+}
+#vg17Client .vg17-stat b{
+  font-size:30px!important;
+  font-weight:800!important;
+  letter-spacing:-.03em!important;
+  line-height:1!important;
+  font-variant-numeric:tabular-nums!important;
+}
+
+/* ── Cajas de contenido, al estilo panel ─────────────────────── */
+#vg17Client .vg17-box{
+  padding:16px!important;
+  margin:0 0 16px!important;
+  border-radius:12px!important;
+}
+#vg17Client .vg17-box > span{
+  margin:0 0 8px!important;
+  font-size:10px!important;
+  letter-spacing:.10em!important;
+}
+
+/* ── Botones ─────────────────────────────────────────────────── */
+#vg17Client .vg17-btn{
+  min-height:40px!important;
+  padding:0 16px!important;
+  border-radius:8px!important;
+  display:inline-flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  gap:8px!important;
+}
+
+/* ── Móvil: vuelve a apilarse, las pestañas arriba ───────────── */
+@media (max-width:900px){
+  #vg17Client .vg17-wrap{
+    display:block!important;
+  }
+  #vg17Client .vg17-tabs{
+    display:flex!important;
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    overflow-x:auto!important;
+    gap:8px!important;
+    padding:16px 16px!important;
+    background:transparent!important;
+    border-right:0!important;
+    border-bottom:1px solid var(--line,rgba(255,255,255,.10))!important;
+  }
+  /* Selector largo a propósito: hay reglas previas con más
+     especificidad que fijan el alto y el radio de la pestaña, y una
+     versión corta pierde contra ellas aunque venga después. */
+  /* La altura de la pestaña nace del relleno (10px + 10px + 20 de
+     texto = 40), no de ninguna regla de height. Dentro de un flex en
+     fila, min-height no la levanta; sí lo hace el relleno. */
+  #vg17Client .vg17-wrap .vg17-tabs .vg17-tab{
+    width:auto!important;
+    padding:14px 16px!important;
+    border-radius:999px!important;
+    background:var(--card2,#171B26)!important;
+  }
+  #vg17Client .vg17-wrap .vg17-tabs .vg17-tab.active{
+    background:rgba(255,255,255,.14)!important;
+  }
+  #vg17Client .vg17-top{
+    padding:16px!important;
+  }
+  #vg17Client #vg17CBody{
+    padding:16px!important;
+  }
+  #vg17Client .vg17-cards{
+    grid-template-columns:1fr 1fr!important;
+    gap:8px!important;
+    margin-bottom:16px!important;
+  }
+  #vg17Client .vg17-stat b{
+    font-size:24px!important;
+  }
+  #vg17Client .vg17-wrap .vg17-btn{
+    padding:14px 16px!important;
+    min-height:48px!important;
+  }
+}
+@media (max-width:480px){
+  #vg17Client .vg17-cards{grid-template-columns:1fr!important}
+}
+</style>
+
 </body>
 </html>
