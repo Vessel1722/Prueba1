@@ -15561,6 +15561,10 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   window.vgXboxJuegos=function(){return activeGames()};
   window.vgXboxTarjeta=tarjetaXbox;
   window.vgXboxCargado=function(){return !!state.loaded};
+  /* El panel necesita también los ocultos y los agotados, y el mismo cliente
+     de Supabase con la sesión del administrador para leer los costos. */
+  window.vgXboxTodos=function(){return state.games||[]};
+  window.vgXboxSB=getSB;
 
   function groupCount(rows,keyFn){var map={}; rows.forEach(function(r){var k=keyFn(r)||'Sin dato'; map[k]=(map[k]||0)+1}); return Object.keys(map).map(function(k){return {name:k,count:map[k]}}).sort(function(a,b){return b.count-a.count}).slice(0,8)}
   window.loadAnalyticsAdmin=async function(){
@@ -43907,6 +43911,163 @@ button.vg119-incompleto{
 })();
 </script>
 
+<!-- FASE 83 · El panel de Xbox, para trabajar con 900 juegos.
+
+     Tres cosas que con cuatro juegos no hacían falta:
+
+     · Buscador. La lista se cortaba en 100 filas sin manera de filtrar, así
+       que editar el juego 400 era imposible.
+     · Cada fila enseña lo que te cuesta, lo que ganas y el margen. Eso vive
+       en vg_xbox_costos, que solo abre el administrador; si por lo que sea
+       no se puede leer, la fila se pinta igual sin esos datos.
+     · Y el enlace para comprarlo. Cuando entra un pedido no hay que ir a
+       buscar el juego a Kinguin: el botón lleva directo a la oferta con la
+       que se calculó el precio, y el de al lado a la búsqueda por si esa
+       oferta ya no está. -->
+<script id="vg-xbox-panel-fase83-js">
+(function(){
+  'use strict';
+
+  var TOPE = 80;            // filas por tanda en el panel
+  var mostrados = TOPE;
+  var costos = null;        // slug -> {costo, region, url_proveedor}
+  var pidiendoCostos = false;
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX'); }
+
+  function buscarEnKinguin(titulo){
+    return 'https://www.kinguin.net/listing?phrase=' + encodeURIComponent(String(titulo||'')) +
+           '&platforms=10,20&hideUnavailable=1&active=1';
+  }
+
+  /* Los costos se leen una vez por sesión. Si el usuario no es admin, la
+     tabla no le devuelve nada: no es un error, es la política haciendo su
+     trabajo, así que se guarda un mapa vacío y no se vuelve a intentar. */
+  function traerCostos(despues){
+    /* Si ya están, o ya vienen en camino, no se hace nada: llamar aquí al
+       callback repintaría, y repintar vuelve a pasar por aquí. */
+    if(costos || pidiendoCostos) return;
+    var sb = (typeof window.vgXboxSB === 'function') ? window.vgXboxSB() : null;
+    if(!sb){ costos = {}; if(despues) despues(); return; }
+    pidiendoCostos = true;
+    (async function(){
+      var mapa = {}, desde = 0;
+      try{
+        while(true){
+          var r = await sb.from('vg_xbox_costos').select('*').range(desde, desde+999);
+          if(r.error) break;
+          (r.data||[]).forEach(function(c){ mapa[c.slug] = c; });
+          if(!r.data || r.data.length < 1000) break;
+          desde += 1000;
+        }
+      }catch(e){}
+      costos = mapa;
+      pidiendoCostos = false;
+      if(despues) despues();
+    })();
+  }
+
+  function asegurarBuscador(){
+    if(document.getElementById('vgX83Buscar')) return;
+    var lista = document.getElementById('vgXboxAdminList');
+    if(!lista) return;
+    var caja = document.createElement('div');
+    caja.className = 'vg-x83-barra';
+    caja.innerHTML = '<input id="vgX83Buscar" type="search" placeholder="Buscar juego en el catálogo…">' +
+      '<span id="vgX83Cuenta"></span>';
+    lista.parentNode.insertBefore(caja, lista);
+    caja.querySelector('#vgX83Buscar').oninput = function(){ mostrados = TOPE; window.renderXboxAdminGames(); };
+  }
+
+  function fila(g){
+    var c = (costos && g.slug) ? costos[g.slug] : null;
+    var costo = c ? Number(c.costo||0) : 0;
+    var gana = costo ? Number(g.price||0) - costo : 0;
+    var margen = costo ? Math.round(gana / costo * 100) : 0;
+    var enlace = (c && c.url_proveedor) ? c.url_proveedor : buscarEnKinguin(g.title);
+
+    return '<div class="vg-xbox-admin-row vg-x83-row">' +
+      '<img src="' + esc(g.image||'portada.png') + '" onerror="this.src=\'portada.png\'" alt="">' +
+      '<div><b>' + esc(g.title) + '</b><small>' + esc(g.platform) +
+        (g.edicion ? ' · ' + esc(g.edicion) : '') +
+        ' · ' + esc(g.status||'active') +
+        (Number(g.precio_lista)>0 ? ' · Store ' + pesos(g.precio_lista) : '') + '</small>' +
+        '<div class="vg-x83-cuentas">' +
+          '<span class="vg-x83-venta">' + pesos(g.price) + '</span>' +
+          (costo ? '<span>te cuesta <b>' + pesos(costo) + '</b></span>' +
+                   '<span class="vg-x83-gana">ganas ' + pesos(gana) + ' · ' + margen + '%</span>' +
+                   (c.region ? '<span class="vg-x83-region">' + esc(c.region) + '</span>' : '')
+                 : '<span class="vg-x83-sincosto">sin costo guardado</span>') +
+        '</div>' +
+      '</div>' +
+      '<div class="vg-xbox-admin-actions vg-x83-acciones">' +
+        '<a class="vg-admin-btn vg-x83-comprar" href="' + esc(enlace) + '" target="_blank" rel="noopener">Comprar ↗</a>' +
+        (c && c.url_proveedor ? '<a class="vg-admin-btn" href="' + esc(buscarEnKinguin(g.title)) + '" target="_blank" rel="noopener">Buscar ↗</a>' : '') +
+        '<button class="vg-admin-btn" onclick="editXboxAdminGame(\'' + esc(g.id) + '\')">Editar</button>' +
+        '<button class="vg-admin-btn danger" onclick="deleteXboxAdminGame(\'' + esc(g.id) + '\')">Borrar</button>' +
+      '</div>' +
+    '</div>';
+  }
+
+  function pintar(mensaje){
+    var box = document.getElementById('vgXboxAdminList');
+    if(!box) return;
+    var msg = document.getElementById('vgXboxAdminMessage');
+    if(msg && mensaje !== undefined) msg.textContent = mensaje || '';
+
+    asegurarBuscador();
+    traerCostos(function(){ pintar(); });
+
+    var todos = (typeof window.vgXboxTodos === 'function') ? (window.vgXboxTodos()||[]) : [];
+    if(!todos.length){
+      box.innerHTML = '<div class="vg-admin-note">Aún no hay juegos cargados.</div>';
+      var c0 = document.getElementById('vgX83Cuenta'); if(c0) c0.textContent = '';
+      return;
+    }
+
+    var caja = document.getElementById('vgX83Buscar');
+    var q = String(caja && caja.value || '').trim().toLowerCase();
+    var lista = q ? todos.filter(function(g){
+      return [g.title, g.edicion, g.platform].join(' ').toLowerCase().indexOf(q) >= 0;
+    }) : todos;
+
+    var vista = lista.slice(0, mostrados);
+    box.innerHTML = vista.map(fila).join('') +
+      (vista.length < lista.length
+        ? '<button class="vg-admin-btn vg-x83-mas" id="vgX83Mas" type="button">Ver ' +
+          Math.min(TOPE, lista.length - vista.length) + ' más</button>'
+        : '');
+
+    var boton = document.getElementById('vgX83Mas');
+    if(boton) boton.onclick = function(){ mostrados += TOPE; pintar(); };
+
+    var cuenta = document.getElementById('vgX83Cuenta');
+    if(cuenta) cuenta.textContent = 'Mostrando ' + vista.length + ' de ' + lista.length +
+      (q ? ' que coinciden' : ' juegos') +
+      (costos && !Object.keys(costos).length ? ' · costos no disponibles' : '');
+  }
+
+  function envolver(){
+    if(window.renderXboxAdminGames && window.renderXboxAdminGames.__vg83) return;
+    window.renderXboxAdminGames = function(mensaje){ mostrados = TOPE; pintar(mensaje); };
+    window.renderXboxAdminGames.__vg83 = true;
+  }
+
+  function arrancar(){
+    envolver();
+    setTimeout(envolver, 900);
+    setTimeout(envolver, 2400);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 <!-- FASE 82 · Xbox One / Series deja de ser una ventana y pasa a ser una
      sección de la tienda, como Fortnite o Xbox Retro.
 
@@ -44198,6 +44359,36 @@ button.vg119-incompleto{
     position:sticky; top:0; z-index:3;
     background:#0b0d16;
   }
+
+  /* Panel de administración del catálogo (fase 83). */
+  .vg-x83-barra{
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    margin:10px 0 12px;
+  }
+  #vgX83Buscar{
+    flex:1; min-width:180px;
+    border:1px solid rgba(255,255,255,.12);
+    background:rgba(255,255,255,.055);
+    color:#fff; border-radius:14px; padding:10px 14px; outline:none;
+  }
+  #vgX83Cuenta{ color:#8b90a0; font-size:12px; }
+  .vg-x83-cuentas{
+    display:flex; gap:10px; flex-wrap:wrap; align-items:baseline;
+    margin-top:5px; font-size:11.5px; color:#8b90a0;
+  }
+  .vg-x83-venta{ color:#19e6c1; font-weight:800; font-size:14px; }
+  .vg-x83-gana{ color:#7fd6a0; }
+  .vg-x83-region{ border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:1px 6px; }
+  .vg-x83-sincosto{ color:#7a7f8d; font-style:italic; }
+  .vg-x83-acciones{ display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start; }
+  .vg-x83-comprar{
+    background:rgba(25,230,193,.14) !important;
+    border-color:rgba(25,230,193,.45) !important;
+    color:#19e6c1 !important;
+    text-decoration:none; display:inline-flex; align-items:center;
+  }
+  .vg-x83-acciones a{ text-decoration:none; display:inline-flex; align-items:center; }
+  .vg-x83-mas{ width:100%; margin-top:10px; }
 
   /* Pie de la sección de la tienda (fase 82), mismo aire que el de la
      ventana pero colgado del catálogo normal. */
