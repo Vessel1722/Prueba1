@@ -15439,12 +15439,26 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   async function loadXboxGames(){
     var client=getSB();
     if(!client){state.games=localGames();state.loaded=true;renderXboxCurrentGames();renderXboxAdminGames('Sin Supabase: los juegos se guardan solo en este navegador.');return;}
-    /* FASE 81 · Con 4 juegos daba igual; con más de mil, no: PostgREST
-       devuelve 1,000 filas como mucho si no se le pide un rango, así que
-       faltarían juegos sin que nadie se entere. El orden del catálogo lo
-       pone la pantalla al pintar (columna 'orden'), no la consulta: así
-       esto sigue funcionando aunque la base todavía no tenga esa columna. */
-    var res=await client.from(XBOX_TABLE).select('*').order('created_at',{ascending:false}).range(0,4999);
+    /* FASE 82 · Supabase no devuelve más de 1,000 filas por consulta, y da
+       igual el rango que le pidas: es un tope del servidor, no del cliente.
+       Con 1,178 juegos en la tabla faltaban 178 y los que llegaban eran un
+       recorte arbitrario, así que el catálogo se quedaba clavado siempre en
+       los mismos. Se pide de mil en mil hasta que devuelva menos de mil.
+
+       El orden del catálogo lo pone la pantalla al pintar (columna 'orden'),
+       no la consulta: aquí solo hace falta un orden estable para paginar sin
+       repetir ni saltarse filas, y el id sirve. */
+    var todas=[], desde=0, res=null;
+    while(true){
+      res=await client.from(XBOX_TABLE).select('*').order('id',{ascending:true}).range(desde,desde+999);
+      if(res.error)break;
+      var lote=res.data||[];
+      todas=todas.concat(lote);
+      if(lote.length<1000)break;
+      desde+=1000;
+      if(desde>=20000)break;
+    }
+    if(!res.error)res={data:todas,error:null};
     if(res.error){state.games=localGames();state.loaded=true;renderXboxCurrentGames();renderXboxAdminGames('No se pudo leer la tabla '+XBOX_TABLE+'. Crea la tabla en Supabase para publicar juegos a todos los clientes.');return;}
     state.games=(res.data||[]).map(normalizeGame); state.loaded=true; renderXboxCurrentGames(); renderXboxAdminGames();
   }
@@ -15540,6 +15554,13 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   window.saveXboxAdminGame=async function(){var title=String($('#vgXboxAdminTitle').value||'').trim(); if(!title){alert('Escribe el nombre del juego.');return;} var game={title:title,platform:$('#vgXboxAdminPlatform').value||'Xbox Series',price:Number($('#vgXboxAdminPrice').value||0),image:String($('#vgXboxAdminImage').value||'').trim(),status:$('#vgXboxAdminStatus').value||'active',updated_at:new Date().toISOString()}; var ed=$('#vgXboxAdminEdicion'), li=$('#vgXboxAdminLista'); if(ed)game.edicion=String(ed.value||'').trim(); if(li)game.precio_lista=Number(li.value||0)||null; var client=getSB(); if(client){var id=state.selectedEditId; var guarda=function(datos){return id?client.from(XBOX_TABLE).update(datos).eq('id',id):client.from(XBOX_TABLE).insert(datos)}; var res=await guarda(game); /* FASE 81 · Si todavía no corriste el SQL de la fase 81, la base no tiene edicion ni precio_lista: se guarda sin ellas en vez de tronar. */ if(res.error&&/edicion|precio_lista/i.test(String(res.error.message||''))){var basico=Object.assign({},game); delete basico.edicion; delete basico.precio_lista; res=await guarda(basico);} if(res.error){alert('No se pudo guardar en Supabase: '+res.error.message); return;}} else {var arr=localGames(); if(state.selectedEditId){arr=arr.map(function(x){return String(x.id)===String(state.selectedEditId)?Object.assign({},x,game):x})}else{game.id='local_'+Date.now();game.created_at=new Date().toISOString();arr.unshift(game)} saveLocalGames(arr)} clearXboxAdminForm(); await loadXboxGames();};
   window.deleteXboxAdminGame=async function(id){if(!confirm('¿Borrar este juego del catálogo Xbox One / Series?'))return; var client=getSB(); if(client){var res=await client.from(XBOX_TABLE).delete().eq('id',id); if(res.error){alert('No se pudo borrar: '+res.error.message); return;}} else {saveLocalGames(localGames().filter(function(x){return String(x.id)!==String(id)}))} await loadXboxGames();};
   window.loadXboxGames=loadXboxGames;
+
+  /* FASE 82 · La sección de la tienda pinta los mismos juegos con la misma
+     ficha. En vez de duplicar el catálogo y la tarjeta, se asoman los dos
+     desde aquí: así solo hay un sitio donde arreglar cualquiera de los dos. */
+  window.vgXboxJuegos=function(){return activeGames()};
+  window.vgXboxTarjeta=tarjetaXbox;
+  window.vgXboxCargado=function(){return !!state.loaded};
 
   function groupCount(rows,keyFn){var map={}; rows.forEach(function(r){var k=keyFn(r)||'Sin dato'; map[k]=(map[k]||0)+1}); return Object.keys(map).map(function(k){return {name:k,count:map[k]}}).sort(function(a,b){return b.count-a.count}).slice(0,8)}
   window.loadAnalyticsAdmin=async function(){
@@ -43886,6 +43907,223 @@ button.vg119-incompleto{
 })();
 </script>
 
+<!-- FASE 82 · Xbox One / Series deja de ser una ventana y pasa a ser una
+     sección de la tienda, como Fortnite o Xbox Retro.
+
+     La ventana flotante servía cuando eran cuatro juegos. Con mil y pico no:
+     era una caja con su propio scroll dentro de una página que también
+     scrollea, y en el teléfono eso se siente trabado —empujas y a veces
+     mueve la de atrás—. Una sección normal corre con el scroll de siempre.
+
+     De paso hereda lo que ya funciona en el resto de la tienda: el buscador
+     de arriba, el ordenador, la portada de sección y el chip en la barra de
+     categorías. Aquí no se pinta ninguna tarjeta nueva: se usan el catálogo
+     y la ficha del bloque de la fase 81. -->
+<script id="vg-xbox-seccion-fase82-js">
+(function(){
+  'use strict';
+
+  var POR_TANDA = 48;
+  var mostrados = POR_TANDA;
+  var pidiendo  = false;
+
+  function icono(){
+    return '<svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" '+
+      'stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="vertical-align:-3px">'+
+      '<circle cx="12" cy="12" r="9"/><path d="M6.5 5.5c2.2 1.2 4 3 5.5 5 1.5-2 3.3-3.8 5.5-5"/>'+
+      '<path d="M4.2 17.5C6 14 9 11 12 8.6c3 2.4 6 5.4 7.8 8.9"/></svg>';
+  }
+
+  /* El chip va pegado al de Xbox Retro: son las dos secciones de Xbox y el
+     cliente que busca una suele mirar la otra. */
+  function meterCategoria(){
+    if(typeof CATEGORIES === 'undefined' || !Array.isArray(CATEGORIES)) return false;
+    for(var i=0;i<CATEGORIES.length;i++) if(CATEGORIES[i].id === 'xbox') return true;
+    var iRetro = -1;
+    for(var j=0;j<CATEGORIES.length;j++) if(CATEGORIES[j].id === 'retro'){ iRetro = j; break; }
+    CATEGORIES.splice(iRetro >= 0 ? iRetro : 1, 0, {
+      id:'xbox', label:'Xbox One / Series', icon:icono(),
+      desc:'Juegos digitales para Xbox One y Xbox Series. Se entregan por código: lo canjeas en tu cuenta y el juego queda a tu nombre para siempre.',
+      bg:'radial-gradient(90% 120% at 78% 20%,#12603c,#0b2f22 45%,#08140f)'
+    });
+    if(typeof renderNav === 'function') renderNav();
+    return true;
+  }
+
+  function juegos(){
+    return (typeof window.vgXboxJuegos === 'function') ? (window.vgXboxJuegos() || []) : [];
+  }
+
+  function ordenados(){
+    var caja = document.getElementById('globalSearch');
+    var q = String(caja && caja.value || '').trim().toLowerCase();
+    var lista = juegos().filter(function(j){
+      return !q || [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+    var sel = document.getElementById('sortSelect');
+    var orden = String(sel && sel.value || 'default');
+    if(orden === 'priceAsc')       lista.sort(function(a,b){ return Number(a.price||0)-Number(b.price||0) });
+    else if(orden === 'priceDesc') lista.sort(function(a,b){ return Number(b.price||0)-Number(a.price||0) });
+    else if(orden === 'name')      lista.sort(function(a,b){ return String(a.title||'').localeCompare(String(b.title||''),'es') });
+    else lista.sort(function(a,b){
+      return (Number(a.orden||0)-Number(b.orden||0)) || String(a.title||'').localeCompare(String(b.title||''),'es');
+    });
+    return lista;
+  }
+
+  function pie(total, visibles){
+    var grid = document.getElementById('productsGrid'); if(!grid) return;
+    var pie = document.getElementById('vgX82Pie');
+    if(!pie){
+      pie = document.createElement('div');
+      pie.id = 'vgX82Pie';
+      pie.className = 'vg-x82-pie';
+      pie.innerHTML = '<span id="vgX82Cuenta"></span><button class="vg-x82-mas" id="vgX82Mas" type="button">Ver más juegos</button>';
+      grid.parentNode.insertBefore(pie, grid.nextSibling);
+      pie.querySelector('#vgX82Mas').onclick = function(){ mostrados += POR_TANDA; pintar(true); };
+    }
+    pie.style.display = total ? '' : 'none';
+    var cuenta = document.getElementById('vgX82Cuenta');
+    if(cuenta) cuenta.textContent = 'Mostrando ' + visibles + ' de ' + total + ' juegos';
+    var mas = document.getElementById('vgX82Mas');
+    if(mas) mas.style.display = visibles < total ? '' : 'none';
+  }
+
+  function esconderPie(){
+    var pie = document.getElementById('vgX82Pie');
+    if(pie) pie.style.display = 'none';
+  }
+
+  function pintar(mantener){
+    var grid = document.getElementById('productsGrid'); if(!grid) return;
+    if(!mantener) mostrados = POR_TANDA;
+
+    var lista = ordenados();
+    var vacio = document.getElementById('emptyState');
+
+    /* Traer mil y pico de juegos de Supabase toma un par de segundos. Sin
+       esto, en ese rato se veía el cartel de "no hay productos", que es lo
+       peor que puede leer alguien que acaba de entrar a la sección. */
+    var cargando = (typeof window.vgXboxCargado === 'function') && !window.vgXboxCargado();
+    if(!lista.length && cargando){
+      grid.innerHTML = '<div class="vg-x82-cargando">Cargando el catálogo de Xbox…</div>';
+      if(vacio) vacio.style.display = 'none';
+      pie(0,0);
+      return;
+    }
+
+    if(!lista.length){
+      grid.innerHTML = '';
+      if(vacio) vacio.style.display = 'block';
+      pie(0,0);
+      return;
+    }
+    if(vacio) vacio.style.display = 'none';
+
+    var vista = lista.slice(0, mostrados);
+    if(typeof window.vgXboxTarjeta === 'function'){
+      grid.innerHTML = vista.map(window.vgXboxTarjeta).join('');
+    }
+    pie(lista.length, vista.length);
+  }
+
+  /* Al llegar cerca del final se trae la siguiente tanda solo. El botón se
+     queda igual para quien no scrollea o para el que llega con el teclado. */
+  function vigilarScroll(){
+    window.addEventListener('scroll', function(){
+      if(typeof activeCategory === 'undefined' || activeCategory !== 'xbox') return;
+      var pieCaja = document.getElementById('vgX82Pie');
+      if(!pieCaja || pieCaja.style.display === 'none') return;
+      var mas = document.getElementById('vgX82Mas');
+      if(!mas || mas.style.display === 'none') return;
+      var r = pieCaja.getBoundingClientRect();
+      if(r.top < innerHeight + 600){ mostrados += POR_TANDA; pintar(true); }
+    }, {passive:true});
+  }
+
+  function entrar(){
+    var titulo = document.getElementById('productsTitle');
+    if(titulo) titulo.textContent = 'Juegos de Xbox One / Series';
+    pintar();
+    if(!pidiendo && typeof window.vgXboxCargado === 'function' && !window.vgXboxCargado() && typeof window.loadXboxGames === 'function'){
+      pidiendo = true;
+      Promise.resolve(window.loadXboxGames()).then(function(){ pidiendo = false; pintar(); });
+    }
+  }
+
+  function envolver(){
+    if(typeof window.showSection === 'function' && !window.showSection.__vg82){
+      var orig = window.showSection;
+      var nueva = function(cat){
+        var r = orig.apply(this, arguments);
+        if(cat === 'xbox') entrar(); else esconderPie();
+        return r;
+      };
+      nueva.__vg82 = true;
+      window.showSection = nueva;
+    }
+
+    /* El buscador y el ordenador llaman a renderProducts, que repintaría el
+       catálogo normal encima del nuestro. */
+    if(typeof window.renderProducts === 'function' && !window.renderProducts.__vg82){
+      var origR = window.renderProducts;
+      var nuevaR = function(){
+        if(typeof activeCategory !== 'undefined' && activeCategory === 'xbox'){ pintar(); return; }
+        esconderPie();
+        return origR.apply(this, arguments);
+      };
+      nuevaR.__vg82 = true;
+      window.renderProducts = nuevaR;
+    }
+
+    /* En la barra lateral cada categoría lleva cuántos productos tiene. Los
+       juegos de Xbox no viven en SERVICES, así que salía un "0" que parecía
+       una sección rota. */
+    if(typeof window.renderNav === 'function' && !window.renderNav.__vg82){
+      var origN = window.renderNav;
+      var nuevaN = function(){
+        var r = origN.apply(this, arguments);
+        try{
+          var n = juegos().length;
+          document.querySelectorAll('.side-item').forEach(function(b){
+            if(!/xbox one/i.test(b.textContent)) return;
+            var s = b.querySelector('span');
+            if(s) s.textContent = n ? n : '·';
+          });
+        }catch(e){}
+        return r;
+      };
+      nuevaN.__vg82 = true;
+      window.renderNav = nuevaN;
+    }
+  }
+
+  /* La tarjeta de la portada llevaba a la ventana flotante; ahora lleva a
+     la sección. La ventana sigue existiendo para el cotizador. */
+  function apuntarTarjeta(){
+    var tile = document.getElementById('vgXboxCurrentTile');
+    if(!tile || tile.__vg82) return;
+    tile.__vg82 = true;
+    tile.onclick = function(){
+      if(typeof window.showSection === 'function') window.showSection('xbox');
+      else if(typeof window.openXboxCurrentModal === 'function') window.openXboxCurrentModal();
+    };
+  }
+
+  function arrancar(){
+    meterCategoria();
+    envolver();
+    apuntarTarjeta();
+    vigilarScroll();
+    setTimeout(function(){ meterCategoria(); envolver(); apuntarTarjeta(); }, 800);
+    setTimeout(function(){ meterCategoria(); envolver(); apuntarTarjeta(); }, 2200);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 <!-- FASE 81 · La ventana de Xbox One / Series con catálogo de verdad.
 
      Antes eran cuatro juegos cargados a mano y la ficha solo tenía nombre,
@@ -43960,6 +44198,29 @@ button.vg119-incompleto{
     position:sticky; top:0; z-index:3;
     background:#0b0d16;
   }
+
+  /* Pie de la sección de la tienda (fase 82), mismo aire que el de la
+     ventana pero colgado del catálogo normal. */
+  .vg-x82-pie{
+    display:flex; align-items:center; justify-content:center;
+    gap:14px; flex-wrap:wrap;
+    padding:18px 0 34px;
+  }
+  #vgX82Cuenta{ color:#8b90a0; font-size:12.5px; }
+  .vg-x82-mas{
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(25,230,193,.35);
+    color:#19e6c1;
+    border-radius:999px; padding:11px 26px;
+    font-size:14px; font-weight:700; cursor:pointer;
+  }
+  .vg-x82-mas:hover{ background:rgba(25,230,193,.12); }
+  .vg-x82-cargando{
+    grid-column:1 / -1;
+    text-align:center; color:#8b90a0;
+    padding:48px 16px; font-size:14px;
+  }
+  @media(max-width:560px){ .vg-x82-mas{ width:100%; } }
 
   /* Pie del catálogo: cuántos se ven y el botón para traer más. */
   .vg-x81-pie{
