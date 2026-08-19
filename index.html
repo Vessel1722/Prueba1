@@ -41974,10 +41974,24 @@ button.vg119-incompleto{
     overflow-y:auto!important;
   }
   #vg17Client #vg17CBody:has(.vg17-split){
-    overflow:hidden!important;
+    /* Scrollea el cuerpo, no se recorta. Antes era overflow:hidden y
+       cualquier cosa añadida debajo —como la tarjeta de datos de
+       juego— robaba altura a las columnas hasta dejar la lista en una
+       rendija. */
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
     display:flex!important;
     flex-direction:column!important;
     gap:24px!important;
+  }
+  /* Las dos columnas nunca bajan de esto, pase lo que pase debajo. */
+  #vg17Client #vg17CBody:has(.vg17-split) > .vg17-split{
+    flex:1 1 auto!important;
+    min-height:min(55vh, 460px)!important;
+  }
+  /* Lo que se cuelgue detrás no compite por la altura. */
+  #vg17Client #vg17CBody:has(.vg17-split) > .vgdj{
+    flex:0 0 auto!important;
   }
   /* Las cifras de arriba se quedan quietas. */
   #vg17Client #vg17CBody:has(.vg17-split) > .vg17-cards{
@@ -43519,6 +43533,147 @@ button.vg119-incompleto{
   }
 }
 </style>
+
+
+<!-- ============================================================
+     FASE 134 · "Tus datos de juego" pasa a vivir dentro del
+     contenido, que es donde le corresponde.
+
+     Historial de mis propios intentos, para no repetirlos:
+       v124 · la puse al pie de la columna del menú. Dejó de saltar,
+              pero 232 px son pocos y los campos se cortaban.
+       v133 · la moví a una banda al pie de la columna ancha. Dejó de
+              cortarse, pero la banda se comía media pantalla y
+              "Tus pedidos" quedaba en una rendija.
+
+     El fallo de fondo era tratarla como una franja de la rejilla. No
+     lo es: es una tarjeta más del contenido. El propio código de la
+     fase 70 ya lo intentaba —busca '.vg17-body' primero— pero ese
+     contenedor no existe y caía en el último recurso, que es colgarla
+     de .vg17-wrap.
+
+     Aquí se la lleva a #vg17CBody, que es el contenedor que buscaba.
+     Con eso fluye y scrollea con el resto, no aprieta nada y no
+     necesita sitio reservado en la rejilla.
+     ============================================================ -->
+<style id="vg-datos-juego-flujo-css-v134">
+
+@media (min-width:901px){
+  /* Se retira la franja "extra": ya no hace falta. */
+  #vg17Client#vg17Client .vg17-wrap{
+    grid-template-areas:
+      "lateral cabecera"
+      "lateral cuerpo"!important;
+    grid-template-rows:auto 1fr!important;
+  }
+  /* Por si algún otro elemento se cuelga de .vg17-wrap en el futuro:
+     que caiga en la columna del cuerpo y no descuadre la rejilla. */
+  #vg17Client#vg17Client .vg17-wrap > *:not(.vg17-top):not(.vg17-tabs):not(#vg17CBody){
+    grid-area:cuerpo!important;
+    align-self:end!important;
+    margin:0!important;
+    max-height:none!important;
+    overflow:visible!important;
+  }
+}
+
+/* ── La tarjeta, como una más del contenido ──────────────────── */
+#vg17Client#vg17Client .vgdj{
+  display:grid!important;
+  grid-template-columns:1fr!important;
+  gap:8px!important;
+  padding:20px!important;
+  margin:24px 0 0!important;
+  border-radius:12px!important;
+  background:var(--l-surface)!important;
+  border:1px solid var(--l-line)!important;
+  max-height:none!important;
+  overflow:visible!important;
+  align-self:auto!important;
+}
+#vg17Client#vg17Client .vgdj b{
+  font-size:14px!important;font-weight:800!important;margin:0!important;color:var(--l-ink)!important;
+}
+#vg17Client#vg17Client .vgdj p{
+  margin:0 0 8px!important;font-size:12.5px!important;color:var(--l-muted)!important;max-width:70ch!important;
+}
+#vg17Client#vg17Client .vgdj input{
+  width:100%!important;min-width:0!important;max-width:100%!important;box-sizing:border-box!important;
+  min-height:40px!important;padding:0 12px!important;margin:0!important;border-radius:8px!important;
+  font-size:13.5px!important;
+}
+#vg17Client#vg17Client .vgdj button{
+  justify-self:start!important;min-height:40px!important;padding:0 20px!important;
+  border-radius:8px!important;margin:8px 0 0!important;white-space:nowrap!important;
+}
+
+/* Desde 760 px, etiqueta a la izquierda y campo a la derecha: cuatro
+   filas compactas en vez de ocho bloques apilados. */
+@media (min-width:760px){
+  #vg17Client#vg17Client .vgdj{
+    grid-template-columns:190px minmax(0,1fr)!important;
+    gap:12px 16px!important;
+    align-items:center!important;
+  }
+  #vg17Client#vg17Client .vgdj b,
+  #vg17Client#vg17Client .vgdj p,
+  #vg17Client#vg17Client .vgdj button{
+    grid-column:1 / -1!important;
+  }
+  #vg17Client#vg17Client .vgdj label{
+    margin:0!important;
+    font-size:11px!important;
+    font-weight:700!important;
+    letter-spacing:.06em!important;
+    text-transform:uppercase!important;
+    color:var(--l-muted)!important;
+    white-space:normal!important;
+  }
+}
+</style>
+
+<script id="vg-datos-juego-flujo-js-v134">
+(function(){
+  "use strict";
+
+  /* La tarjeta se cuelga de .vg17-wrap porque el contenedor que busca
+     su código —.vg17-body— no existe. Se la lleva a #vg17CBody, que
+     es el equivalente real: así fluye con el contenido en vez de
+     necesitar sitio propio en la rejilla.
+
+     Ojo con no romper su guardia anti-duplicados: comprueba
+     destino.querySelector('.vgdj') sobre .vg17-wrap, y #vg17CBody
+     está dentro, así que la sigue encontrando. */
+  function recolocar(){
+    var panel = document.getElementById('vg17Client');
+    if(!panel) return;
+    var cuerpo = panel.querySelector('#vg17CBody');
+    if(!cuerpo) return;
+    var tarjetas = panel.querySelectorAll('.vgdj');
+    for(var i=0; i<tarjetas.length; i++){
+      var t = tarjetas[i];
+      if(t.parentElement === cuerpo) continue;   /* ya está donde toca */
+      cuerpo.appendChild(t);
+    }
+  }
+
+  var pendiente = null, ultimo = 0;
+  function repasar(){
+    var ahora = +new Date();
+    if(ahora - ultimo > 300){ ultimo = ahora; try{ recolocar(); }catch(e){} return; }
+    clearTimeout(pendiente);
+    pendiente = setTimeout(function(){ ultimo = +new Date(); try{ recolocar(); }catch(e){} }, 200);
+  }
+
+  function arrancar(){
+    repasar();
+    new MutationObserver(repasar).observe(document.body, {childList:true, subtree:true});
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
 
 </body>
 </html>
