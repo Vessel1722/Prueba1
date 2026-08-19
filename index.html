@@ -42993,5 +42993,179 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 131 · Deshace un solape que introduje yo.
+
+     En la fase 123 estilé .vg17-row como si fuera una fila de pedido
+     completa (rejilla 48px 1fr auto). Pero en el portal esa clase es
+     otra cosa: la linea corta que lleva el chip de estado y el
+     precio, y nada mas:
+
+       <div class="vg17-row">CHIP<span class="vg17-price">$190 MXN</span></div>
+
+     Con mi rejilla, el chip caia en una celda de 48 px, se desbordaba
+     y aterrizaba encima del precio. De ahi el "PENDIENTE" pisando el
+     "$190 MXN" en todas las filas.
+
+     Vuelve a ser lo que era: una fila flexible.
+     ============================================================ -->
+<style id="vg-solape-movil-css-v131">
+
+/* ── La linea de chip + precio ────────────────────────────────
+   Se anula la rejilla de la v123 y todo lo que venia con ella
+   (relleno, borde inferior y radio de "fila de lista"). */
+#vg17Client#vg17Client .vg17-row,
+#vgAdminModal#vgAdminModal .vg17-row{
+  display:flex!important;
+  grid-template-columns:none!important;
+  align-items:center!important;
+  justify-content:flex-start!important;
+  gap:12px!important;
+  flex-wrap:wrap!important;
+  padding:0!important;
+  margin:8px 0 0!important;
+  border-bottom:0!important;
+  border-radius:0!important;
+  background:transparent!important;
+}
+#vg17Client#vg17Client .vg17-row:hover{background:transparent!important}
+
+/* Ni el chip ni el precio se encogen: cada uno ocupa lo suyo. */
+#vg17Client#vg17Client .vg17-row > *,
+#vgAdminModal#vgAdminModal .vg17-row > *{
+  flex:0 0 auto!important;
+  min-width:0!important;
+}
+#vg17Client#vg17Client .vg17-price{
+  white-space:nowrap!important;
+  font-size:14px!important;
+}
+
+/* La tarjeta de pedido: el bloque de arriba con su miniatura. */
+#vg17Client#vg17Client .vg17-card{
+  padding:14px!important;
+  border-radius:12px!important;
+  margin-bottom:8px!important;
+}
+#vg17Client#vg17Client .vg17-card h4{
+  font-size:14.5px!important;
+  line-height:1.35!important;
+  margin:0 0 4px!important;
+}
+#vg17Client#vg17Client .vg17-card p{
+  font-size:12px!important;
+  margin:0!important;
+}
+/* La miniatura de la tarjeta es una letra, no una imagen: que no la
+   estire la regla de 48 px pensada para la lista. */
+#vg17Client#vg17Client .vg17-card .vg17-thumb{
+  width:40px!important;
+  height:40px!important;
+  flex:0 0 40px!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  font-weight:800!important;
+  font-size:14px!important;
+  border-radius:10px!important;
+}
+
+/* ══════════════════════════════════════════════════════════════
+   MÓVIL · que nada se pise ni se corte
+   ══════════════════════════════════════════════════════════════ */
+@media (max-width:900px){
+
+  /* Cabecera: el nombre se recorta con puntos y los botones nunca.
+     Antes salia "RRAR S" porque el boton se comprimia por debajo de
+     su texto y lo recortaba por los dos lados. */
+  #vg17Client#vg17Client .vg17-top{
+    flex-wrap:wrap!important;
+    align-items:center!important;
+    gap:8px 10px!important;
+    padding:12px 16px!important;
+  }
+  #vg17Client#vg17Client .vg17-head-l{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  #vg17Client#vg17Client .vg17-head-l h2{
+    font-size:16px!important;
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  #vg17Client#vg17Client .vg17-head-l p{
+    white-space:nowrap!important;
+    overflow:hidden!important;
+    text-overflow:ellipsis!important;
+  }
+  #vg17Client#vg17Client .vg17-head-r{
+    flex:0 0 auto!important;
+    display:flex!important;
+    align-items:center!important;
+    gap:8px!important;
+    overflow:visible!important;
+  }
+  #vg17Client#vg17Client .vg17-wrap .vg17-head-r .vg17-salir{
+    flex:0 0 auto!important;
+    width:auto!important;
+    min-width:max-content!important;
+    padding:0 12px!important;
+    font-size:11px!important;
+    white-space:nowrap!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+  }
+  #vg17Client#vg17Client .vg17-wrap .vg17-head-r .vg17-x{
+    flex:0 0 44px!important;
+    width:44px!important;
+  }
+
+  /* Por debajo de 430 el nombre y los botones no caben en la misma
+     linea sin apretarse: cada uno a la suya. */
+  @media (max-width:430px){
+    #vg17Client#vg17Client .vg17-head-l{flex:1 1 100%!important}
+    #vg17Client#vg17Client .vg17-head-r{
+      flex:1 1 100%!important;
+      justify-content:flex-end!important;
+    }
+  }
+
+  /* La barra de pestañas se desplaza SOLA en horizontal.
+     En la v125 le puse overflow:visible junto con el resto y le quité
+     su desplazamiento propio: las pestañas se salían del panel y
+     arrastraban toda la pantalla de lado. */
+  #vg17Client#vg17Client .vg17-tabs,
+  #vgAdminModal#vgAdminModal .vg-admin-tabs{
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    flex-wrap:nowrap!important;
+    max-width:100%!important;
+  }
+  /* Y el panel nunca se arrastra de lado: sólo baja. */
+  #vg17Client#vg17Client.vg17-panel{
+    overflow-x:hidden!important;
+    overflow-y:auto!important;
+  }
+  #vg17Client#vg17Client .vg17-wrap{
+    max-width:100%!important;
+    overflow-x:hidden!important;
+  }
+
+  /* La linea de chip + precio, con aire suficiente para el pulgar. */
+  #vg17Client#vg17Client .vg17-row{
+    gap:10px!important;
+    margin-top:10px!important;
+  }
+  #vg17Client#vg17Client .vg17-chip{
+    font-size:10.5px!important;
+    padding:0 9px!important;
+    min-height:24px!important;
+  }
+}
+</style>
+
 </body>
 </html>
