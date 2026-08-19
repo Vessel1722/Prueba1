@@ -43632,28 +43632,178 @@ button.vg119-incompleto{
 }
 </style>
 
-<script id="vg-datos-juego-flujo-js-v134">
+<!-- El reubicador de la fase 134 se retira: lo sustituye el de la
+     fase 135, que ademas distingue escritorio de movil. -->
+
+
+<!-- ============================================================
+     FASE 135 · "Tus datos de juego" vuelve al lateral, esta vez
+     diseñada para ese ancho.
+
+     Lo que fallaba antes no era el sitio, era que la metí ahí con el
+     formulario pensado para una columna ancha: etiquetas en una
+     línea, campos sin encoger y una tarjeta con barra propia. En
+     232 px eso se corta por fuerza.
+
+     Ahora entra DENTRO de la barra —como un bloque más del menú, no
+     como franja de la rejilla— y el formulario se recompone: campos
+     al ancho útil, etiquetas que parten línea, y alturas ajustadas.
+
+     En móvil la barra es una tira horizontal de pestañas, así que
+     allí la tarjeta se va al final del contenido, que es su sitio.
+     ============================================================ -->
+<style id="vg-datos-juego-lateral-css-v135">
+
+@media (min-width:901px){
+
+  /* La barra deja sitio y scrollea si el menú más la tarjeta no caben. */
+  #vg17Client#vg17Client .vg17-tabs{
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    align-content:flex-start!important;
+  }
+
+  /* ── La tarjeta, dentro de la barra ─────────────────────────── */
+  #vg17Client#vg17Client .vg17-tabs .vgdj{
+    display:block!important;
+    flex:0 0 auto!important;
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+    margin:24px 0 0!important;
+    padding:14px!important;
+    border-radius:10px!important;
+    background:var(--l-surface)!important;
+    border:1px solid var(--l-line)!important;
+    overflow:visible!important;
+    max-height:none!important;
+  }
+  #vg17Client#vg17Client .vg17-tabs .vgdj b{
+    display:block!important;
+    font-size:12.5px!important;
+    font-weight:800!important;
+    line-height:1.3!important;
+    margin:0 0 6px!important;
+    color:var(--l-ink)!important;
+  }
+  #vg17Client#vg17Client .vg17-tabs .vgdj p{
+    margin:0 0 14px!important;
+    font-size:11px!important;
+    line-height:1.4!important;
+    color:var(--l-muted)!important;
+  }
+  /* Las etiquetas parten línea en vez de recortarse: en 200 px
+     "GAMERTAG DE XBOX" no cabe de una pieza. */
+  #vg17Client#vg17Client .vg17-tabs .vgdj label{
+    display:block!important;
+    font-size:9.5px!important;
+    font-weight:700!important;
+    letter-spacing:.07em!important;
+    text-transform:uppercase!important;
+    color:var(--l-muted)!important;
+    margin:0 0 5px!important;
+    white-space:normal!important;
+    overflow:visible!important;
+    text-overflow:clip!important;
+    line-height:1.3!important;
+  }
+  #vg17Client#vg17Client .vg17-tabs .vgdj input{
+    display:block!important;
+    width:100%!important;
+    min-width:0!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0 10px!important;
+    margin:0 0 12px!important;
+    border-radius:8px!important;
+    font-size:12.5px!important;
+    background:var(--l-bg)!important;
+    border:1px solid var(--l-line-2)!important;
+    color:var(--l-ink)!important;
+  }
+  #vg17Client#vg17Client .vg17-tabs .vgdj input:last-of-type{
+    margin-bottom:14px!important;
+  }
+  #vg17Client#vg17Client .vg17-tabs .vgdj button{
+    display:block!important;
+    width:100%!important;
+    box-sizing:border-box!important;
+    height:38px!important;
+    min-height:38px!important;
+    padding:0 12px!important;
+    margin:0!important;
+    border-radius:8px!important;
+    font-size:12.5px!important;
+    font-weight:800!important;
+    background:var(--l-accent)!important;
+    color:var(--l-sobre)!important;
+    border:0!important;
+    white-space:nowrap!important;
+  }
+  #vg17Client#vg17Client .vg17-tabs .vgdj .msg{
+    display:block!important;
+    margin-top:8px!important;
+    font-size:10.5px!important;
+    line-height:1.35!important;
+  }
+
+  /* El cuerpo recupera todo su alto: ya no comparte con la tarjeta. */
+  #vg17Client#vg17Client #vg17CBody:has(.vg17-split) > .vg17-split{
+    min-height:0!important;
+  }
+}
+
+/* ── Móvil: la barra es una tira de pestañas, la tarjeta va al
+      final del contenido ───────────────────────────────────────── */
+@media (max-width:900px){
+  #vg17Client#vg17Client .vgdj{
+    display:block!important;
+    width:auto!important;
+    margin:16px!important;
+    padding:12px!important;
+  }
+  #vg17Client#vg17Client .vgdj input{
+    width:100%!important;
+    max-width:100%!important;
+    box-sizing:border-box!important;
+  }
+}
+</style>
+
+<script id="vg-datos-juego-lateral-js-v135">
 (function(){
   "use strict";
 
-  /* La tarjeta se cuelga de .vg17-wrap porque el contenedor que busca
-     su código —.vg17-body— no existe. Se la lleva a #vg17CBody, que
-     es el equivalente real: así fluye con el contenido en vez de
-     necesitar sitio propio en la rejilla.
+  /* Donde debe vivir la tarjeta segun el ancho:
+       escritorio · dentro de la barra lateral, bajo el menu
+       movil      · al final del contenido, porque la barra pasa a ser
+                    una tira horizontal de pestañas
+     Se mueve sola al cambiar el tamaño de la ventana. */
+  var ESCRITORIO = '(min-width:901px)';
 
-     Ojo con no romper su guardia anti-duplicados: comprueba
-     destino.querySelector('.vgdj') sobre .vg17-wrap, y #vg17CBody
-     está dentro, así que la sigue encontrando. */
+  function destino(panel){
+    /* Se pregunta con la MISMA consulta que usa el CSS, no con
+       window.innerWidth. Si se comparan por separado pueden discrepar
+       —la anchura del navegador incluye la barra de desplazamiento y
+       la consulta no— y entonces la tarjeta acaba metida en la tira
+       horizontal de pestañas, aplastada a unos pocos pixeles. */
+    if(window.matchMedia && window.matchMedia(ESCRITORIO).matches)
+      return panel.querySelector('.vg17-tabs');
+    return panel.querySelector('#vg17CBody');
+  }
+
   function recolocar(){
     var panel = document.getElementById('vg17Client');
     if(!panel) return;
-    var cuerpo = panel.querySelector('#vg17CBody');
-    if(!cuerpo) return;
+    var casa = destino(panel);
+    if(!casa) return;
     var tarjetas = panel.querySelectorAll('.vgdj');
     for(var i=0; i<tarjetas.length; i++){
       var t = tarjetas[i];
-      if(t.parentElement === cuerpo) continue;   /* ya está donde toca */
-      cuerpo.appendChild(t);
+      if(t.parentElement === casa) continue;
+      casa.appendChild(t);
     }
   }
 
@@ -43668,6 +43818,12 @@ button.vg119-incompleto{
   function arrancar(){
     repasar();
     new MutationObserver(repasar).observe(document.body, {childList:true, subtree:true});
+    window.addEventListener('resize', repasar, {passive:true});
+    if(window.matchMedia){
+      var mq = window.matchMedia(ESCRITORIO);
+      if(mq.addEventListener) mq.addEventListener('change', repasar);
+      else if(mq.addListener) mq.addListener(repasar);
+    }
   }
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
