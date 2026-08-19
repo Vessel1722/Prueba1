@@ -15462,7 +15462,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     if(res.error){state.games=localGames();state.loaded=true;renderXboxCurrentGames();renderXboxAdminGames('No se pudo leer la tabla '+XBOX_TABLE+'. Crea la tabla en Supabase para publicar juegos a todos los clientes.');return;}
     state.games=(res.data||[]).map(normalizeGame); state.loaded=true; renderXboxCurrentGames(); renderXboxAdminGames();
   }
-  function normalizeGame(g){return {id:g.id||('local_'+Date.now()),title:g.title||g.name||'Juego Xbox',platform:g.platform||'Xbox One / Series',price:Number(g.price||0),image:g.image||g.cover_url||'',status:g.status||'active',created_at:g.created_at||new Date().toISOString(),edicion:g.edicion||'',precio_lista:Number(g.precio_lista||0),orden:Number(g.orden||0)}}
+  function normalizeGame(g){return {id:g.id||('local_'+Date.now()),title:g.title||g.name||'Juego Xbox',platform:g.platform||'Xbox One / Series',price:Number(g.price||0),image:g.image||g.cover_url||'',status:g.status||'active',created_at:g.created_at||new Date().toISOString(),edicion:g.edicion||'',precio_lista:Number(g.precio_lista||0),orden:Number(g.orden||0),slug:g.slug||''}}
   function activeGames(){return (state.games||[]).filter(function(g){return String(g.status||'active')==='active'})}
 
   /* FASE 81 · El catálogo dejó de ser un puñado de juegos cargados a mano y
@@ -43944,6 +43944,82 @@ button.vg119-incompleto{
            '&platforms=10,20&hideUnavailable=1&active=1';
   }
 
+  /* FASE 85 · Kinguin no acepta llamadas desde una página web —no manda las
+     cabeceras de CORS—, así que preguntarle el precio de hoy desde aquí es
+     imposible. Lo hace por nosotros una función en Vercel, que sí es un
+     servidor. Va firmada con la sesión de Supabase: la función le pregunta a
+     la propia base si quien llama es administrador antes de contestar. */
+  async function tokenAdmin(){
+    var sb = (typeof window.vgXboxSB === 'function') ? window.vgXboxSB() : null;
+    if(!sb || !sb.auth || !sb.auth.getSession) return '';
+    try{
+      var s = await sb.auth.getSession();
+      return (s && s.data && s.data.session && s.data.session.access_token) || '';
+    }catch(e){ return ''; }
+  }
+
+  async function api(ruta){
+    var t = await tokenAdmin();
+    var r = await fetch(ruta, { headers: { Authorization: 'Bearer ' + t } });
+    return r.json();
+  }
+
+  async function precioDeHoy(boton){
+    var fila = boton.closest('.vg-x83-row'); if(!fila) return;
+    var hueco = fila.querySelector('.vg-x83-vivo'); if(!hueco) return;
+    boton.disabled = true;
+    hueco.className = 'vg-x83-vivo';
+    hueco.textContent = 'consultando…';
+    try{
+      var d = await api('/api/precio?slug=' + encodeURIComponent(boton.getAttribute('data-slug')));
+      if(d.error){
+        hueco.className = 'vg-x83-vivo vg-x83-mal';
+        hueco.textContent = d.error;
+      } else if(!d.encontrado){
+        hueco.className = 'vg-x83-vivo vg-x83-mal';
+        hueco.textContent = 'Kinguin ya no lo tiene con ese nombre';
+      } else {
+        var t = 'hoy te cuesta ' + pesos(d.costoAhora);
+        if(d.ganas != null) t += ' · ganarías ' + pesos(d.ganas) + ' (' + d.margen + '%)';
+        if(d.precioSugerido && d.precioSugerido !== d.tuPrecio) t += ' · sugerido ' + pesos(d.precioSugerido);
+        if(d.alerta) t += ' · ' + d.alerta;
+        hueco.className = 'vg-x83-vivo ' + (d.alerta ? 'vg-x83-mal' : 'vg-x83-bien');
+        hueco.textContent = t;
+      }
+    }catch(e){
+      hueco.className = 'vg-x83-vivo vg-x83-mal';
+      hueco.textContent = 'no se pudo consultar';
+    }
+    boton.disabled = false;
+  }
+
+  async function repaso(aplicar){
+    var caja = document.getElementById('vgX83Informe'); if(!caja) return;
+    caja.textContent = 'Preguntándole a Kinguin por los ' + ((typeof window.vgXboxTodos === 'function') ? window.vgXboxTodos().length : '') + ' juegos. Tarda medio minuto.';
+    try{
+      var d = await api('/api/cron-precios' + (aplicar ? '' : '?ensayo=1'));
+      if(d.error){ caja.textContent = 'Error: ' + d.error; return; }
+      var l = [];
+      l.push('Revisados ' + d.revisados + ' juegos en ' + d.segundos + 's · 1 EUR = ' + d.tipoCambio + ' MXN');
+      l.push('Suben ' + d.suben + ' · bajan ' + d.bajan + ' · se esconden ' + d.seEsconden + ' · vuelven ' + d.vuelven + ' · sin cambio ' + d.sinCambio);
+      if(aplicar) l.push('Aplicados: ' + d.escritos + ' precios y ' + d.escondidos + ' escondidos' + (d.pendientes ? ' · quedan ' + d.pendientes + ' para la próxima corrida' : ''));
+      if(d.masSuben && d.masSuben.length){
+        l.push('');
+        l.push('Los que más suben:');
+        d.masSuben.forEach(function(m){ l.push('   ' + pesos(m.antes) + ' → ' + pesos(m.ahora) + '   ' + m.title); });
+      }
+      if(d.seEscondieron && d.seEscondieron.length){
+        l.push('');
+        l.push('Se esconden:');
+        d.seEscondieron.forEach(function(m){ l.push('   ' + m.title + ' — ' + m.motivo); });
+      }
+      caja.textContent = l.join('\n');
+      if(aplicar && typeof window.loadXboxGames === 'function'){ costos = null; window.loadXboxGames(); }
+    }catch(e){
+      caja.textContent = 'No se pudo: ' + String((e && e.message) || e);
+    }
+  }
+
   /* Los costos se leen una vez por sesión. Si el usuario no es admin, la
      tabla no le devuelve nada: no es un error, es la política haciendo su
      trabajo, así que se guarda un mapa vacío y no se vuelve a intentar. */
@@ -43978,9 +44054,16 @@ button.vg119-incompleto{
     var caja = document.createElement('div');
     caja.className = 'vg-x83-barra';
     caja.innerHTML = '<input id="vgX83Buscar" type="search" placeholder="Buscar juego en el catálogo…">' +
-      '<span id="vgX83Cuenta"></span>';
+      '<button class="vg-admin-btn" id="vgX83Ensayo" type="button">Revisar precios de hoy</button>' +
+      '<button class="vg-admin-btn primary" id="vgX83Aplicar" type="button">Aplicar cambios</button>' +
+      '<span id="vgX83Cuenta"></span>' +
+      '<pre class="vg-x83-informe" id="vgX83Informe"></pre>';
     lista.parentNode.insertBefore(caja, lista);
     caja.querySelector('#vgX83Buscar').oninput = function(){ mostrados = TOPE; window.renderXboxAdminGames(); };
+    caja.querySelector('#vgX83Ensayo').onclick = function(){ repaso(false); };
+    caja.querySelector('#vgX83Aplicar').onclick = function(){
+      if(confirm('Se van a cambiar los precios de la tienda con los de Kinguin de hoy. ¿Le entramos?')) repaso(true);
+    };
   }
 
   function fila(g){
@@ -43990,7 +44073,7 @@ button.vg119-incompleto{
     var margen = costo ? Math.round(gana / costo * 100) : 0;
     var enlace = (c && c.url_proveedor) ? c.url_proveedor : buscarEnKinguin(g.title);
 
-    return '<div class="vg-xbox-admin-row vg-x83-row">' +
+    return '<div class="vg-xbox-admin-row vg-x83-row" data-slug="' + esc(g.slug||'') + '">' +
       '<img src="' + esc(g.image||'portada.png') + '" onerror="this.src=\'portada.png\'" alt="">' +
       '<div><b>' + esc(g.title) + '</b><small>' + esc(g.platform) +
         (g.edicion ? ' · ' + esc(g.edicion) : '') +
@@ -44002,9 +44085,11 @@ button.vg119-incompleto{
                    '<span class="vg-x83-gana">ganas ' + pesos(gana) + ' · ' + margen + '%</span>' +
                    (c.region ? '<span class="vg-x83-region">' + esc(c.region) + '</span>' : '')
                  : '<span class="vg-x83-sincosto">sin costo guardado</span>') +
+          '<span class="vg-x83-vivo"></span>' +
         '</div>' +
       '</div>' +
       '<div class="vg-xbox-admin-actions vg-x83-acciones">' +
+        (g.slug ? '<button class="vg-admin-btn vg-x83-ahora" type="button" data-slug="' + esc(g.slug) + '">Precio de hoy ↻</button>' : '') +
         '<a class="vg-admin-btn vg-x83-comprar" href="' + esc(enlace) + '" target="_blank" rel="noopener">Comprar ↗</a>' +
         (c && c.url_proveedor ? '<a class="vg-admin-btn" href="' + esc(buscarEnKinguin(g.title)) + '" target="_blank" rel="noopener">Buscar ↗</a>' : '') +
         '<button class="vg-admin-btn" onclick="editXboxAdminGame(\'' + esc(g.id) + '\')">Editar</button>' +
@@ -44044,6 +44129,10 @@ button.vg119-incompleto{
 
     var boton = document.getElementById('vgX83Mas');
     if(boton) boton.onclick = function(){ mostrados += TOPE; pintar(); };
+
+    Array.prototype.forEach.call(box.querySelectorAll('.vg-x83-ahora'), function(b){
+      b.onclick = function(){ precioDeHoy(b); };
+    });
 
     var cuenta = document.getElementById('vgX83Cuenta');
     if(cuenta) cuenta.textContent = 'Mostrando ' + vista.length + ' de ' + lista.length +
@@ -44380,6 +44469,17 @@ button.vg119-incompleto{
   .vg-x83-gana{ color:#7fd6a0; }
   .vg-x83-region{ border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:1px 6px; }
   .vg-x83-sincosto{ color:#7a7f8d; font-style:italic; }
+  .vg-x83-vivo{ }
+  .vg-x83-bien{ color:#7fd6a0; }
+  .vg-x83-mal{ color:#ff9a9a; font-weight:700; }
+  .vg-x83-informe{
+    flex-basis:100%; margin:0;
+    white-space:pre-wrap; word-break:break-word;
+    color:#c9cfdd; font-size:12px; line-height:1.55;
+    font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  .vg-x83-informe:empty{ display:none; }
+  .vg-x83-ahora{ white-space:nowrap; }
   .vg-x83-acciones{ display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start; }
   .vg-x83-comprar{
     background:rgba(25,230,193,.14) !important;
