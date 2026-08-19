@@ -42774,15 +42774,25 @@ button.vg119-incompleto{
      proporción hasta que el contraste cumple. Así el verde sigue
      siendo verde y el ámbar sigue siendo ámbar. */
   function ajustar(color, fondo){
-    var f = 1;
-    for(var i=0; i<24; i++){
-      var probado = [color[0]*f, color[1]*f, color[2]*f];
+    /* La dirección depende del fondo. Sobre claro hay que oscurecer,
+       pero sobre oscuro hay que ACLARAR: la primera versión sólo sabía
+       oscurecer y sobre el tema carbón habría empeorado cada texto que
+       intentaba arreglar. */
+    var aclarar = lum(fondo) < 0.22;
+    var probado = [color[0], color[1], color[2]];
+    for(var i=0; i<26; i++){
       if(contraste(probado, fondo) >= MINIMO){
         return 'rgb(' + Math.round(probado[0]) + ',' + Math.round(probado[1]) + ',' + Math.round(probado[2]) + ')';
       }
-      f *= 0.88;
+      if(aclarar){
+        probado = [ probado[0] + (255-probado[0])*0.14,
+                    probado[1] + (255-probado[1])*0.14,
+                    probado[2] + (255-probado[2])*0.14 ];
+      }else{
+        probado = [ probado[0]*0.88, probado[1]*0.88, probado[2]*0.88 ];
+      }
     }
-    return '#101820';
+    return aclarar ? '#ECEFF3' : '#101820';
   }
 
   function tieneTextoPropio(el){
@@ -42845,6 +42855,143 @@ button.vg119-incompleto{
   else arrancar();
 })();
 </script>
+
+
+<!-- ============================================================
+     FASE 130 · Paleta elegida: "Carbón suave" (opción 06).
+
+     Oscuro pero sin llegar al negro: fondo #16181D, tarjetas
+     #1E2128, barra lateral #101216 y acento verde #34D399.
+
+     Los bloques v127 y v128 ya montaron toda la estructura sobre
+     variables, así que basta con redefinirlas. Lo único que hay que
+     tocar aparte son los sitios donde se puso texto blanco sobre el
+     acento: sobre este verde, el blanco da 1.92:1. Va con verde muy
+     oscuro (#06231A), que da 8.65:1.
+     ============================================================ -->
+<style id="vg-paneles-carbon-css-v130">
+
+#vgAdminModal,
+#vg17Client{
+  --l-bg:#16181D;          /* fondo de la aplicación */
+  --l-surface:#1E2128;     /* tarjetas y paneles */
+  --l-surface-2:#242831;   /* cabeceras de panel */
+  --l-surface-3:#2B303A;   /* miniaturas, chips neutros */
+  --l-ink:#ECEFF3;         /* 13.97:1 sobre la tarjeta */
+  --l-ink-2:#C3CAD3;       /* 9.75:1 */
+  --l-muted:#98A1AC;       /* 6.16:1 */
+  --l-faint:#8A93A0;       /* 5.19:1 — el #7C8593 se quedaba en 4.32 */
+  --l-line:rgba(255,255,255,.09);
+  --l-line-2:rgba(255,255,255,.16);
+  --l-accent:#34D399;
+  --l-accent-ink:#34D399;  /* como texto sobre oscuro: 8.38:1 */
+  --l-accent-wash:rgba(52,211,153,.14);
+  --l-sobre:#06231A;       /* texto SOBRE el acento: 8.65:1 */
+  --l-slate:#101216;       /* barra lateral */
+  --l-ok:#4ADE80;    --l-ok-wash:rgba(74,222,128,.14);    /* 6.89:1 */
+  --l-warn:#FBBF24;  --l-warn-wash:rgba(251,191,36,.14);  /* 7.09:1 */
+  --l-crit:#F87171;  --l-crit-wash:rgba(248,113,113,.14); /* 4.73:1 */
+  --l-info-wash:rgba(255,255,255,.08);
+}
+
+/* ── Texto sobre el acento ────────────────────────────────────
+   Aquí estaba el fallo de bulto si sólo se cambiaran las
+   variables: los bloques anteriores fijan color:#fff sobre el
+   acento, y sobre este verde el blanco es ilegible. */
+#vg17Client#vg17Client .vg17-btn.primary,
+#vg17Client#vg17Client .vg17-btn.ok,
+#vg17Client#vg17Client .vgdj button,
+#vg17Client#vg17Client .vg17-avatar,
+#vg17Client#vg17Client .vg17-step.done .vg17-dot,
+#vgAdminModal#vgAdminModal .vg-admin-btn.primary,
+#vgAdminModal#vgAdminModal .vg119-entregar{
+  background:var(--l-accent)!important;
+  color:var(--l-sobre)!important;
+  border-color:transparent!important;
+}
+#vg17Client#vg17Client .vg17-btn.primary:hover,
+#vgAdminModal#vgAdminModal .vg-admin-btn.primary:hover,
+#vgAdminModal#vgAdminModal .vg119-entregar:hover{
+  background:#2BBE88!important;
+  color:var(--l-sobre)!important;
+}
+
+/* ── Barra lateral ───────────────────────────────────────────
+   El tenue al 42% se quedaba en 3.52:1 sobre este negro; sube. */
+@media (min-width:901px){
+  #vg17Client#vg17Client .vg17-tabs,
+  #vgAdminModal#vgAdminModal .vg-admin-tabs{
+    background:var(--l-slate)!important;
+    border-right:1px solid rgba(255,255,255,.08)!important;
+  }
+  #vg17Client#vg17Client .vg17-tab,
+  #vgAdminModal#vgAdminModal .vg-admin-tab,
+  #vgAdminModal#vgAdminModal .vg-admin-tab-x{
+    color:rgba(255,255,255,.72)!important;
+  }
+  #vg17Client#vg17Client .vg17-tab.active,
+  #vgAdminModal#vgAdminModal .vg-admin-tab.active,
+  #vgAdminModal#vgAdminModal .vg-admin-tab-x.active{
+    background:rgba(255,255,255,.10)!important;
+    color:#FFFFFF!important;
+  }
+}
+@media (max-width:900px){
+  #vg17Client#vg17Client .vg17-tabs,
+  #vgAdminModal#vgAdminModal .vg-admin-tabs{
+    background:var(--l-bg)!important;
+    border-bottom:1px solid var(--l-line)!important;
+  }
+  #vg17Client#vg17Client .vg17-wrap .vg17-tabs .vg17-tab,
+  #vgAdminModal#vgAdminModal .vg-admin-tabs .vg-admin-tab,
+  #vgAdminModal#vgAdminModal .vg-admin-tabs .vg-admin-tab-x{
+    background:var(--l-surface)!important;
+    color:var(--l-ink-2)!important;
+    border:1px solid var(--l-line-2)!important;
+  }
+  #vg17Client#vg17Client .vg17-wrap .vg17-tabs .vg17-tab.active,
+  #vgAdminModal#vgAdminModal .vg-admin-tabs .vg-admin-tab.active{
+    background:var(--l-accent)!important;
+    color:var(--l-sobre)!important;
+    border-color:transparent!important;
+  }
+}
+
+/* ── Botones secundarios y campos, ya en oscuro ─────────────── */
+#vg17Client#vg17Client .vg17-salir,
+#vg17Client#vg17Client .vg17-x,
+#vgAdminModal#vgAdminModal .vg-admin-x,
+#vg17Client#vg17Client .vg17-btn,
+#vgAdminModal#vgAdminModal .vg-admin-btn,
+#vgAdminModal#vgAdminModal .vg17-quick button,
+#vg17Client#vg17Client .vg17-quick button{
+  background:var(--l-surface)!important;
+  color:var(--l-ink-2)!important;
+  border:1px solid var(--l-line-2)!important;
+}
+#vg17Client#vg17Client .vg17-btn:hover,
+#vgAdminModal#vgAdminModal .vg-admin-btn:hover,
+#vgAdminModal#vgAdminModal .vg17-quick button:hover{
+  background:var(--l-surface-3)!important;
+  color:var(--l-ink)!important;
+}
+#vg17Client#vg17Client input,
+#vg17Client#vg17Client textarea,
+#vg17Client#vg17Client select,
+#vgAdminModal#vgAdminModal input,
+#vgAdminModal#vgAdminModal textarea,
+#vgAdminModal#vgAdminModal select{
+  background:var(--l-bg)!important;
+  color:var(--l-ink)!important;
+  border:1px solid var(--l-line-2)!important;
+}
+#vg17Client#vg17Client input::placeholder,
+#vgAdminModal#vgAdminModal input::placeholder,
+#vg17Client#vg17Client textarea::placeholder,
+#vgAdminModal#vgAdminModal textarea::placeholder{
+  color:var(--l-faint)!important;
+}
+</style>
 
 </body>
 </html>
