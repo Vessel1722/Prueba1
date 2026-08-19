@@ -43167,5 +43167,199 @@ button.vg119-incompleto{
 }
 </style>
 
+
+<!-- ============================================================
+     FASE 132 · El panel admin en móvil: alturas fijas que
+     desbordaban.
+
+     Medido con el marcado real y el panel forzado a 390 px: cuatro
+     solapes, y todos con la misma raíz. La lista de pedidos vive en
+     .vgA-grid, que en escritorio lleva height:calc(100vh - 190px)
+     para que las tres columnas llenen la pantalla y scrolleen por
+     dentro. En móvil las columnas se apilan pero la altura fija
+     seguía puesta, así que el contenido se salía de la caja y se
+     montaba encima de lo siguiente: las cifras de arriba pisaban la
+     cabecera de la lista, y el botón "Enviar" del chat caía sobre
+     "Entregar pedido".
+
+     En móvil no hay columnas que llenar: todo va en alto natural y
+     scrollea la página.
+     ============================================================ -->
+<style id="vg-admin-movil-css-v132">
+
+@media (max-width:900px){
+
+  /* ── Flujo normal en todo el armazón ────────────────────────
+     El panel y su contenido seguían siendo rejilla con altura fija y
+     overflow:hidden aunque las columnas ya no existieran. Con eso,
+     cualquier bloque que creciera se montaba encima del siguiente.
+     En móvil no hay nada que repartir: todo en bloque, alto natural,
+     y scrollea el panel entero. Así el solape es imposible. */
+  #vgAdminModal#vgAdminModal .vg-admin-panel,
+  #vgAdminModal#vgAdminModal .vg-admin-content,
+  #vgAdminModal#vgAdminModal .vg-admin-section{
+    display:block!important;
+    grid-template-areas:none!important;
+    grid-template-columns:none!important;
+    grid-template-rows:none!important;
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    overflow:visible!important;
+  }
+  #vgAdminModal#vgAdminModal .vg-admin-head,
+  #vgAdminModal#vgAdminModal .vg-admin-tabs,
+  #vgAdminModal#vgAdminModal .vg-admin-content,
+  #vgAdminModal#vgAdminModal .vg-admin-section{
+    grid-area:auto!important;
+    position:static!important;
+    float:none!important;
+  }
+  /* El modal es un flex centrado con relleno de 16. En una pantalla
+     estrecha el panel no cabe y, al estar centrado, se desborda por
+     los DOS lados: la × se iba fuera y no se podia cerrar. En movil
+     ocupa la pantalla entera y se acabo el centrado. */
+  #vgAdminModal#vgAdminModal{
+    display:block!important;
+    padding:0!important;
+    align-items:stretch!important;
+    justify-content:flex-start!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+  }
+  /* El panel tiene ancho fijo de 920 px: en un telefono de 390 se
+     desbordaria entero. Se ancla al ancho de la ventana, no al del
+     contenedor, para que no dependa de como este posicionado el
+     modal. */
+  #vgAdminModal#vgAdminModal .vg-admin-panel{
+    width:100%!important;
+    max-width:100vw!important;
+    margin:0!important;
+    border-radius:0!important;
+    border-left:0!important;
+    border-right:0!important;
+  }
+
+  /* ── Fuera las alturas fijas ───────────────────────────────── */
+  #vgAdminModal#vgAdminModal .vgA-grid{
+    display:grid!important;
+    grid-template-columns:1fr!important;
+    grid-template-rows:none!important;
+    grid-auto-rows:min-content!important;
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    gap:16px!important;
+  }
+  #vgAdminModal#vgAdminModal .vgA-col{
+    height:auto!important;
+    max-height:none!important;
+    min-height:0!important;
+    overflow:visible!important;
+  }
+  /* La lista deja de tener su propia barra: scrollea la página. */
+  #vgAdminModal#vgAdminModal .vgA-scroll{
+    height:auto!important;
+    max-height:none!important;
+    overflow:visible!important;
+    padding:8px!important;
+  }
+  /* El chat sí conserva un alto máximo, pero acotado y con su barra,
+     que si no la conversación entera empuja la pantalla. */
+  #vgAdminModal#vgAdminModal .vg17-msgs{
+    height:auto!important;
+    max-height:280px!important;
+    overflow-y:auto!important;
+  }
+
+  /* ── Cifras de arriba: dos columnas, no cuatro ─────────────── */
+  #vgAdminModal#vgAdminModal .vg17-cards{
+    display:grid!important;
+    grid-template-columns:1fr 1fr!important;
+    grid-auto-rows:min-content!important;
+    height:auto!important;
+    gap:8px!important;
+    margin:0 0 16px!important;
+  }
+  #vgAdminModal#vgAdminModal .vg17-stat{
+    padding:12px!important;
+    min-height:0!important;
+  }
+  #vgAdminModal#vgAdminModal .vg17-stat b{
+    font-size:22px!important;
+    line-height:1.15!important;
+  }
+
+  /* ── Fila de pedido: que el importe no choque con el título ── */
+  #vgAdminModal#vgAdminModal .vgA-rowtop{
+    display:flex!important;
+    align-items:baseline!important;
+    gap:10px!important;
+    flex-wrap:wrap!important;
+  }
+  #vgAdminModal#vgAdminModal .vgA-rowtop b{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    font-size:13.5px!important;
+    line-height:1.35!important;
+  }
+  #vgAdminModal#vgAdminModal .vgA-amt{
+    flex:0 0 auto!important;
+    margin-left:auto!important;
+    white-space:nowrap!important;
+  }
+  #vgAdminModal#vgAdminModal .vgA-rowfoot{
+    display:flex!important;
+    align-items:center!important;
+    gap:8px!important;
+    flex-wrap:wrap!important;
+  }
+  #vgAdminModal#vgAdminModal .vgA-rowfoot time{
+    margin-left:auto!important;
+    white-space:nowrap!important;
+  }
+  #vgAdminModal#vgAdminModal .vgA-cup{white-space:nowrap!important}
+
+  /* ── Barra de escribir: el botón debajo, no al lado ────────── */
+  #vgAdminModal#vgAdminModal .vg17-inputbar{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:8px!important;
+    align-items:stretch!important;
+  }
+  #vgAdminModal#vgAdminModal .vg17-inputbar textarea{
+    flex:1 1 100%!important;
+    min-width:0!important;
+  }
+  #vgAdminModal#vgAdminModal .vg17-inputbar .vg17-btn,
+  #vgAdminModal#vgAdminModal .vg17-inputbar button{
+    flex:0 0 auto!important;
+    margin-left:auto!important;
+    min-height:48px!important;
+  }
+
+  /* ── Botones sueltos y campos, sin apretarse ───────────────── */
+  #vgAdminModal#vgAdminModal .vg-users-toolbar,
+  #vgAdminModal#vgAdminModal .vg17-quick{
+    display:flex!important;
+    flex-wrap:wrap!important;
+    gap:8px!important;
+  }
+  #vgAdminModal#vgAdminModal .vg-admin-input,
+  #vgAdminModal#vgAdminModal .vg-users-search{
+    flex:1 1 100%!important;
+    min-width:0!important;
+    min-height:48px!important;
+  }
+  #vgAdminModal#vgAdminModal .vg-admin-btn,
+  #vgAdminModal#vgAdminModal .vg17-quick button{
+    min-height:48px!important;
+    flex:0 1 auto!important;
+    white-space:normal!important;
+    text-align:left!important;
+  }
+}
+</style>
+
 </body>
 </html>
