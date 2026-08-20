@@ -204,9 +204,12 @@ function supa(ruta, opciones) {
 /* ¿Quien llama es el administrador? Se le pregunta a la propia base con el
    token de sesión de quien hace la llamada: si is_admin() dice que sí, es que
    sí. Aquí no se guarda ninguna contraseña ni se confía en el navegador. */
+const limpia = (v) => String(v == null ? '' : v).trim().replace(/^["']|["']$/g, '');
+const tieneRaros = (v) => /[^\x20-\x7E]/.test(String(v || ''));
+
 async function esAdmin(req) {
   const auth = req.headers.authorization || '';
-  const token = auth.replace(/^Bearer\s+/i, '').trim();
+  const token = limpia(auth.replace(/^Bearer\s+/i, ''));
   if (!token) {
     return { ok: false, motivo: 'El navegador no mandó tu sesión. Sal del panel y vuelve a entrar.' };
   }
@@ -214,10 +217,30 @@ async function esAdmin(req) {
   /* La llave del portero. Antes solo se miraba SUPABASE_ANON_KEY, y si esa
      variable faltaba en Vercel, Supabase rechazaba la llamada y la función
      te tomaba por desconocido aunque tu sesión fuera buena. Sirve igual la
-     service_role: quien decide el rol es el token de arriba, no ésta. */
-  const clave = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY || '';
+     service_role: quien decide el rol es el token de arriba, no ésta.
+
+     Y se limpian: un valor pegado con espacios o con un salto de línea al
+     final rompe la llamada entera, y el error que salía —"no se pudo hablar
+     con Supabase"— no decía por dónde. */
+  const anon = limpia(process.env.SUPABASE_ANON_KEY);
+  const servicio = limpia(process.env.SUPABASE_SERVICE_KEY);
+  const clave = anon || servicio;
   if (!clave) {
     return { ok: false, motivo: 'A Vercel le faltan SUPABASE_ANON_KEY y SUPABASE_SERVICE_KEY.' };
+  }
+
+  /* Una llave con un carácter raro —comillas curvas, un guion largo, un
+     acento -- hace que la llamada ni salga. Se dice cuál es la mala para no
+     tener que adivinar. */
+  const malas = [];
+  if (anon && tieneRaros(anon)) malas.push('SUPABASE_ANON_KEY');
+  if (servicio && tieneRaros(servicio)) malas.push('SUPABASE_SERVICE_KEY');
+  if (tieneRaros(token)) malas.push('tu sesión del navegador');
+  if (malas.length) {
+    return {
+      ok: false,
+      motivo: 'Hay caracteres raros en ' + malas.join(' y ') + '. Suele pasar al pegar el valor con comillas o espacios: bórrala en Vercel y pégala de nuevo, sin comillas.',
+    };
   }
 
   const url = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '') + '/rest/v1/rpc/is_admin';
@@ -234,7 +257,7 @@ async function esAdmin(req) {
     if ((await r.json()) === true) return { ok: true };
     return { ok: false, motivo: 'Tu usuario existe pero no tiene is_admin en vg_users.' };
   } catch (e) {
-    return { ok: false, motivo: 'No se pudo hablar con Supabase: ' + String(e.message).slice(0, 90) };
+    return { ok: false, motivo: 'No se pudo hablar con Supabase: ' + String(e.message).slice(0, 220) };
   }
 }
 
