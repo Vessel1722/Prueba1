@@ -15472,7 +15472,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     if(res.error){state.games=localGames();state.loaded=true;renderXboxCurrentGames();renderXboxAdminGames('No se pudo leer la tabla '+XBOX_TABLE+'. Crea la tabla en Supabase para publicar juegos a todos los clientes.');return;}
     state.games=(res.data||[]).map(normalizeGame); state.loaded=true; renderXboxCurrentGames(); renderXboxAdminGames();
   }
-  function normalizeGame(g){return {id:g.id||('local_'+Date.now()),title:g.title||g.name||'Juego Xbox',platform:g.platform||'Xbox One / Series',price:Number(g.price||0),image:g.image||g.cover_url||'',status:g.status||'active',created_at:g.created_at||new Date().toISOString(),edicion:g.edicion||'',precio_lista:Number(g.precio_lista||0),orden:Number(g.orden||0),slug:g.slug||''}}
+  function normalizeGame(g){return {id:g.id||('local_'+Date.now()),title:g.title||g.name||'Juego Xbox',platform:g.platform||'Xbox One / Series',price:Number(g.price||0),image:g.image||g.cover_url||'',status:g.status||'active',created_at:g.created_at||new Date().toISOString(),edicion:g.edicion||'',precio_lista:Number(g.precio_lista||0),orden:Number(g.orden||0),slug:g.slug||'',generos:String(g.generos||'')}}
   function activeGames(){return (state.games||[]).filter(function(g){return String(g.status||'active')==='active'})}
 
   /* FASE 90 · El catálogo dejó de ser un puñado de juegos cargados a mano y
@@ -43950,6 +43950,178 @@ button.vg119-incompleto{
 })();
 </script>
 
+<!-- FASE 105 · "Lo que buscan", cruzado con el catálogo de Xbox.
+
+     La pestaña ya existía desde la fase 75 y guarda cada búsqueda que se fue
+     sin resultado. Lo que le faltaba es la otra mitad: si eso que te pidieron
+     ya lo tienes. Con el catálogo de Xbox creciendo solo, una búsqueda de
+     hace un mes puede estar cubierta hoy y no había manera de saberlo sin ir
+     a comprobarlo una por una.
+
+     Cada línea recibe una etiqueta: cuántos juegos del catálogo coinciden con
+     esa búsqueda, o el aviso de que sigue sin haber nada. -->
+<script id="vg-buscado-cruce-fase105-js">
+(function(){
+  'use strict';
+
+  function llano(s){
+    return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+      .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  }
+
+  function cuantosHay(termino){
+    var lista = (typeof window.vgXboxTodos==='function') ? (window.vgXboxTodos()||[]) : [];
+    var q = llano(termino);
+    if(!q || q.length < 3 || !lista.length) return null;
+    var n = 0;
+    for(var i=0;i<lista.length;i++){
+      if(llano(lista[i].title + ' ' + (lista[i].edicion||'')).indexOf(q) >= 0) n++;
+    }
+    return n;
+  }
+
+  function enriquecer(fila){
+    if(fila.dataset.vg105) return;
+    /* El término es lo primero que se pinta en la fila; se toma el texto y se
+       le quita el número de veces que se repitió, que va aparte. */
+    var texto = (fila.querySelector('b, .vgbq-que, strong') || fila).textContent || '';
+    var termino = texto.split('·')[0].replace(/\d+\s*(veces|búsquedas?)/gi,'').trim();
+    var n = cuantosHay(termino);
+    if(n === null) return;
+    fila.dataset.vg105 = '1';
+
+    var eti = document.createElement('span');
+    eti.className = 'vg-x105-eti ' + (n ? 'vg-x105-hay' : 'vg-x105-nohay');
+    eti.textContent = n ? ('ya tienes ' + n + (n === 1 ? ' juego' : ' juegos')) : 'sigue sin haber nada';
+    fila.appendChild(eti);
+  }
+
+  var pedido = false;
+  function repasar(){
+    if(pedido) return;
+    pedido = true;
+    setTimeout(function(){
+      pedido = false;
+      try{
+        Array.prototype.forEach.call(document.querySelectorAll('.vgbq-fila'), enriquecer);
+      }catch(e){}
+    }, 60);
+  }
+
+  function arrancar(){
+    if(document.body.dataset.vg105) return;
+    document.body.dataset.vg105 = '1';
+    new MutationObserver(repasar).observe(document.body, {childList:true, subtree:true});
+    repasar();
+  }
+
+  if(document.readyState === 'complete') arrancar();
+  else window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
+<!-- FASE 104 · El enlace de compra, dentro del pedido.
+
+     Hasta ahora, cuando entraba una venta de Xbox había que ir al catálogo,
+     buscar el juego y de ahí saltar a Kinguin. Son cinco pasos y una
+     búsqueda por cada pedido, todos los días.
+
+     Este bloque no toca cómo se pintan los pedidos: los espera y les cuelga
+     una línea con lo que te cuesta, lo que ganas y el botón para comprarlo.
+     Si el pedido no es de un juego del catálogo, no añade nada. -->
+<script id="vg-pedido-compra-fase104-js">
+(function(){
+  'use strict';
+
+  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX'); }
+  function esc(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function llano(s){
+    return String(s||'').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g,'')
+      .replace(/[^a-z0-9 ]/g,' ').replace(/\s+/g,' ').trim();
+  }
+
+  function buscarJuego(titulo){
+    var lista = (typeof window.vgXboxTodos==='function') ? (window.vgXboxTodos()||[]) : [];
+    if(!lista.length || !titulo) return null;
+    var objetivo = llano(titulo);
+    if(!objetivo) return null;
+    for(var i=0;i<lista.length;i++) if(llano(lista[i].title) === objetivo) return lista[i];
+    /* Si no cuadra exacto, el que más se le parezca: el pedido puede llevar
+       la edición pegada o algún adorno. */
+    var mejor=null, punt=0;
+    var a = objetivo.split(' ');
+    for(var k=0;k<lista.length;k++){
+      var b = llano(lista[k].title).split(' ');
+      var comunes=0;
+      for(var m=0;m<a.length;m++) if(b.indexOf(a[m])>=0) comunes++;
+      var p = comunes / Math.max(a.length, b.length);
+      if(p>punt){ punt=p; mejor=lista[k]; }
+    }
+    return punt >= 0.7 ? mejor : null;
+  }
+
+  function enriquecer(tarjeta){
+    if(tarjeta.dataset.vg104) return;
+    var t = tarjeta.querySelector('.vg-order-main-title');
+    if(!t) return;
+    var juego = buscarJuego(t.textContent);
+    if(!juego){ tarjeta.dataset.vg104 = 'no'; return; }
+    tarjeta.dataset.vg104 = '1';
+
+    var costos = (typeof window.vgXboxCostos==='function')
+      ? window.vgXboxCostos(function(){ tarjeta.removeAttribute('data-vg104'); repasar(); })
+      : null;
+    var c = (costos && juego.slug) ? costos[juego.slug] : null;
+
+    var costo = c ? Number(c.costo||0) : 0;
+    var venta = Number(juego.price||0);
+    var gana = costo ? venta - costo : null;
+    var enlace = (c && c.url_proveedor) ? c.url_proveedor
+      : 'https://www.kinguin.net/listing?phrase=' + encodeURIComponent(juego.title) + '&platforms=10,20&hideUnavailable=1&active=1';
+
+    var caja = document.createElement('div');
+    caja.className = 'vg-x104-compra';
+    caja.innerHTML =
+      '<span class="vg-x104-eti">Para entregar este pedido</span>' +
+      (costo ? '<span>te cuesta <b>' + pesos(costo) + '</b></span>' +
+               '<span class="vg-x104-gana">ganas ' + pesos(gana) + '</span>' +
+               (c.region ? '<span class="vg-x104-reg">' + esc(c.region) + '</span>' : '')
+             : '<span class="vg-x104-sin">sin costo guardado</span>') +
+      '<a class="vg-x104-btn" href="' + esc(enlace) + '" target="_blank" rel="noopener">Comprar en Kinguin ↗</a>';
+
+    tarjeta.appendChild(caja);
+  }
+
+  var pedido = false;
+  function repasar(){
+    if(pedido) return;
+    pedido = true;
+    /* Con setTimeout y no con requestAnimationFrame: en una pestaña de fondo
+       el navegador no da cuadros, y el panel se deja abierto en otra pestaña
+       más a menudo de lo que parece. */
+    setTimeout(function(){
+      pedido = false;
+      try{
+        Array.prototype.forEach.call(document.querySelectorAll('.vg-order-card'), enriquecer);
+      }catch(e){}
+    }, 40);
+  }
+
+  function arrancar(){
+    if(document.body.dataset.vg104) return;
+    document.body.dataset.vg104 = '1';
+    new MutationObserver(repasar).observe(document.body, {childList:true, subtree:true});
+    repasar();
+  }
+
+  if(document.readyState === 'complete') arrancar();
+  else window.addEventListener('load', arrancar, {once:true});
+})();
+</script>
+
 <!-- FASE 98 · El buscador de arriba: los tres fallos que se veían al usarlo.
 
      1) Al pulsar un juego retro salía "no hay artículos para mostrar". El
@@ -44386,6 +44558,14 @@ button.vg119-incompleto{
       (costos && !Object.keys(costos).length ? ' · costos no disponibles' : '');
   }
 
+  /* Los costos, para quien los necesite fuera de aquí: la ficha del pedido
+     los usa para enseñar cuánto te deja esa venta (fase 104). */
+  window.vgXboxCostos = function(despues){
+    if(costos) return costos;
+    traerCostos(despues);
+    return null;
+  };
+
   function envolver(){
     if(window.renderXboxAdminGames && window.renderXboxAdminGames.__vg92) return;
     window.renderXboxAdminGames = function(mensaje){ mostrados = TOPE; pintar(mensaje); };
@@ -44450,11 +44630,56 @@ button.vg119-incompleto{
     return (typeof window.vgXboxJuegos === 'function') ? (window.vgXboxJuegos() || []) : [];
   }
 
+  /* FASE 103 · Filtros por género y por precio.
+
+     Con dos mil y pico juegos, buscar por nombre solo sirve si ya sabes qué
+     quieres. El que entra a mirar necesita otra cosa: "shooters", "de mundo
+     abierto", "algo barato". Los géneros vienen del propio catálogo —los que
+     manda Kinguin más las etiquetas de IGDB— así que no hay que clasificar
+     nada a mano. */
+  var generoActivo = 'todos';
+  var precioActivo = 'todos';
+
+  var BANDAS_PRECIO = [
+    { id:'todos', texto:'Cualquier precio', min:0,    max:Infinity },
+    { id:'b1',    texto:'Hasta $200',       min:0,    max:200 },
+    { id:'b2',    texto:'$200 a $500',      min:200,  max:500 },
+    { id:'b3',    texto:'$500 a $1,000',    min:500,  max:1000 },
+    { id:'b4',    texto:'Más de $1,000',    min:1000, max:Infinity },
+  ];
+
+  function generosDelCatalogo(){
+    var cuenta = {};
+    juegos().forEach(function(j){
+      String(j.generos || '').split('·').forEach(function(g){
+        g = g.trim();
+        if(g) cuenta[g] = (cuenta[g] || 0) + 1;
+      });
+    });
+    /* Solo los que tienen suficientes juegos: una fila de chips con
+       "Novela visual (3)" no ayuda a nadie. */
+    return Object.keys(cuenta)
+      .filter(function(g){ return cuenta[g] >= 12; })
+      .sort(function(a,b){ return cuenta[b] - cuenta[a]; })
+      .slice(0, 14)
+      .map(function(g){ return { nombre:g, n:cuenta[g] }; });
+  }
+
+  function bandaDe(id){
+    for(var i=0;i<BANDAS_PRECIO.length;i++) if(BANDAS_PRECIO[i].id === id) return BANDAS_PRECIO[i];
+    return BANDAS_PRECIO[0];
+  }
+
   function ordenados(){
     var caja = document.getElementById('globalSearch');
     var q = String(caja && caja.value || '').trim().toLowerCase();
+    var banda = bandaDe(precioActivo);
     var lista = juegos().filter(function(j){
-      return !q || [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(q) >= 0;
+      if(q && [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(q) < 0) return false;
+      if(generoActivo !== 'todos' && String(j.generos || '').indexOf(generoActivo) < 0) return false;
+      var p = Number(j.price || 0);
+      if(p < banda.min || p > banda.max) return false;
+      return true;
     });
     var sel = document.getElementById('sortSelect');
     var orden = String(sel && sel.value || 'default');
@@ -44490,9 +44715,65 @@ button.vg119-incompleto{
     if(pie) pie.style.display = 'none';
   }
 
+  function asegurarFiltros(){
+    var grid = document.getElementById('productsGrid'); if(!grid) return;
+    var total = juegos().length;
+    var caja = document.getElementById('vgX103Filtros');
+
+    /* Se rehacen solo si cambió el catálogo: pintarlos en cada tecla del
+       buscador haría parpadear los chips mientras el cliente escribe. */
+    if(caja && caja.dataset.total === String(total)) return;
+    if(caja && caja.parentNode) caja.parentNode.removeChild(caja);
+    if(!total) return;
+
+    caja = document.createElement('div');
+    caja.id = 'vgX103Filtros';
+    caja.className = 'vg-x103-filtros';
+    caja.dataset.total = String(total);
+
+    var gens = generosDelCatalogo();
+    var fila1 = '<div class="vg-x103-fila"><button class="vg-x103-chip" data-gen="todos" type="button">Todos</button>' +
+      gens.map(function(g){
+        return '<button class="vg-x103-chip" data-gen="' + g.nombre.replace(/"/g,'&quot;') + '" type="button">' +
+               g.nombre + ' <span>' + g.n + '</span></button>';
+      }).join('') + '</div>';
+
+    var fila2 = '<div class="vg-x103-fila vg-x103-precio">' +
+      BANDAS_PRECIO.map(function(b){
+        return '<button class="vg-x103-chip" data-precio="' + b.id + '" type="button">' + b.texto + '</button>';
+      }).join('') + '</div>';
+
+    caja.innerHTML = fila1 + fila2;
+    grid.parentNode.insertBefore(caja, grid);
+
+    Array.prototype.forEach.call(caja.querySelectorAll('[data-gen]'), function(b){
+      b.onclick = function(){ generoActivo = b.getAttribute('data-gen'); pintar(); };
+    });
+    Array.prototype.forEach.call(caja.querySelectorAll('[data-precio]'), function(b){
+      b.onclick = function(){ precioActivo = b.getAttribute('data-precio'); pintar(); };
+    });
+  }
+
+  function marcarFiltros(){
+    var caja = document.getElementById('vgX103Filtros'); if(!caja) return;
+    Array.prototype.forEach.call(caja.querySelectorAll('[data-gen]'), function(b){
+      b.classList.toggle('vg-x103-on', b.getAttribute('data-gen') === generoActivo);
+    });
+    Array.prototype.forEach.call(caja.querySelectorAll('[data-precio]'), function(b){
+      b.classList.toggle('vg-x103-on', b.getAttribute('data-precio') === precioActivo);
+    });
+  }
+
+  function quitarFiltros(){
+    var caja = document.getElementById('vgX103Filtros');
+    if(caja && caja.parentNode) caja.parentNode.removeChild(caja);
+  }
+
   function pintar(mantener){
     var grid = document.getElementById('productsGrid'); if(!grid) return;
     if(!mantener) mostrados = POR_TANDA;
+    asegurarFiltros();
+    marcarFiltros();
 
     var lista = ordenados();
     var vacio = document.getElementById('emptyState');
@@ -44612,7 +44893,7 @@ button.vg119-incompleto{
       var orig = window.showSection;
       var nueva = function(cat){
         var r = orig.apply(this, arguments);
-        if(cat === 'xbox') entrar(); else esconderPie();
+        if(cat === 'xbox') entrar(); else { esconderPie(); quitarFiltros(); }
         return r;
       };
       nueva.__vg91 = true;
@@ -44625,7 +44906,7 @@ button.vg119-incompleto{
       var origR = window.renderProducts;
       var nuevaR = function(){
         if(typeof activeCategory !== 'undefined' && activeCategory === 'xbox'){ pintar(); limpiarExtra(); return; }
-        esconderPie();
+        esconderPie(); quitarFiltros();
         var r = origR.apply(this, arguments);
         pintarExtraBusqueda();
         return r;
@@ -44755,6 +45036,73 @@ button.vg119-incompleto{
   .vg-xbox-current-controls{
     position:sticky; top:0; z-index:3;
     background:#0b0d16;
+  }
+
+  /* El cruce de "Lo que buscan" con el catálogo (fase 105). */
+  .vg-x105-eti{
+    display:inline-block; margin-left:10px;
+    border-radius:999px; padding:2px 10px;
+    font-size:11px; font-weight:700; white-space:nowrap;
+  }
+  .vg-x105-hay{ background:rgba(25,230,193,.14); border:1px solid rgba(25,230,193,.42); color:#19e6c1; }
+  .vg-x105-nohay{ background:rgba(255,145,145,.10); border:1px solid rgba(255,145,145,.35); color:#ff9a9a; }
+
+  /* La línea de compra dentro del pedido (fase 104). */
+  .vg-x104-compra{
+    grid-column:1 / -1;
+    display:flex; align-items:center; gap:10px; flex-wrap:wrap;
+    margin-top:10px; padding-top:10px;
+    border-top:1px dashed rgba(255,255,255,.14);
+    font-size:12px; color:#8b90a0;
+  }
+  .vg-x104-eti{ font-weight:700; color:#c9cfdd; }
+  .vg-x104-gana{ color:#7fd6a0; font-weight:700; }
+  .vg-x104-reg{ border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:1px 7px; }
+  .vg-x104-sin{ font-style:italic; color:#7a7f8d; }
+  .vg-x104-btn{
+    margin-left:auto;
+    background:rgba(25,230,193,.14);
+    border:1px solid rgba(25,230,193,.45);
+    color:#19e6c1 !important; text-decoration:none;
+    border-radius:999px; padding:8px 16px;
+    font-size:12.5px; font-weight:800; white-space:nowrap;
+  }
+  .vg-x104-btn:hover{ background:rgba(25,230,193,.22); }
+  @media(max-width:560px){
+    .vg-x104-btn{ margin-left:0; width:100%; text-align:center; }
+  }
+
+  /* Filtros por género y precio de la sección de Xbox (fase 103). */
+  .vg-x103-filtros{
+    max-width:1480px; margin:0 auto 6px; padding:0 22px;
+    display:flex; flex-direction:column; gap:8px;
+  }
+  .vg-x103-fila{
+    display:flex; gap:8px; flex-wrap:nowrap;
+    overflow-x:auto; scrollbar-width:none;
+    padding-bottom:2px;
+  }
+  .vg-x103-fila::-webkit-scrollbar{ display:none; }
+  .vg-x103-chip{
+    flex:0 0 auto;
+    background:rgba(255,255,255,.05);
+    border:1px solid rgba(255,255,255,.12);
+    color:#c9cfdd; border-radius:999px;
+    padding:8px 14px; font-size:13px; font-weight:600;
+    cursor:pointer; white-space:nowrap;
+    transition:background .14s, border-color .14s, color .14s;
+  }
+  .vg-x103-chip span{ opacity:.5; font-weight:400; margin-left:3px; }
+  .vg-x103-chip:hover{ background:rgba(255,255,255,.09); }
+  .vg-x103-chip.vg-x103-on{
+    background:rgba(25,230,193,.14);
+    border-color:rgba(25,230,193,.5);
+    color:#19e6c1;
+  }
+  .vg-x103-precio .vg-x103-chip{ font-size:12.5px; padding:7px 13px; }
+  @media(max-width:560px){
+    .vg-x103-filtros{ padding:0 10px; }
+    .vg-x103-chip{ padding:7px 12px; font-size:12.5px; }
   }
 
   /* Los juegos de Xbox que salen al buscar desde otra sección (fase 95). */

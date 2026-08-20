@@ -66,6 +66,46 @@ const slugDe = (titulo, edicion) =>
   (titulo + '-' + edicion).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
     .replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '').slice(0, 90);
 
+/* ───────── Géneros ─────────
+   Kinguin manda sus géneros por id (FPS, RPG, Carreras…) y las etiquetas de
+   IGDB, que van más de modo de juego (multijugador, cooperativo, mundo
+   abierto). Se juntan en una lista corta y en español, que es lo que ve el
+   cliente en los filtros de la tienda.
+   OJO: esta tabla es la misma que la de nucleo.mjs en la carpeta
+   vessel-precios. Si cambias una, cambia la otra. */
+const GENEROS_ID = {
+  1: 'Acción', 2: 'Aventura', 3: 'Estrategia', 4: 'RPG', 5: 'MMO',
+  7: 'Carreras', 8: 'Deportes', 9: 'Shooter', 12: 'Simulación',
+  16: 'Simulación', 17: 'Indie', 19: 'Casual', 20: 'Puzzle',
+  23: 'Mundo abierto', 27: 'Puzzle', 28: 'Terror', 29: 'Plataformas',
+  30: 'Aventura', 31: 'Historia', 33: 'Shooter', 34: 'Novela visual',
+  35: 'Supervivencia', 37: 'Lucha', 40: 'Hack and slash', 41: 'Cooperativo',
+};
+
+const GENEROS_TAG = {
+  'multiplayer': 'Multijugador', 'co-operative': 'Cooperativo',
+  'single player': 'Un jugador', 'split screen': 'Pantalla dividida',
+  'battle royale': 'Battle Royale', 'massively multiplayer online (mmo)': 'MMO',
+  'open world': 'Mundo abierto', 'survival': 'Supervivencia', 'horror': 'Terror',
+  'sandbox': 'Sandbox', 'science fiction': 'Ciencia ficción', 'fantasy': 'Fantasía',
+  'stealth': 'Sigilo', 'warfare': 'Bélico', 'kids': 'Para niños',
+  'sport': 'Deportes', 'racing': 'Carreras', 'party': 'Fiesta',
+};
+
+function generosDe(p) {
+  const a = p.attributes || {};
+  const salida = [];
+  for (const id of a.genres || []) {
+    const g = GENEROS_ID[id];
+    if (g && salida.indexOf(g) < 0) salida.push(g);
+  }
+  for (const t of a.igdbTags || []) {
+    const g = GENEROS_TAG[String(t).toLowerCase()];
+    if (g && salida.indexOf(g) < 0) salida.push(g);
+  }
+  return salida;
+}
+
 const REG = 'AR|TR|BR|US|EU|UK|GB|IN|MX|CA|AU|DE|NG|EG|SA|ZA|SG|KR|TW|CL|CO|CH|LATAM|NA|ROW|GLOBAL|EMEA|APAC';
 
 function tituloLimpio(nombre) {
@@ -159,6 +199,7 @@ function agrupar(crudos, tipoCambio) {
     if (!previo) {
       mapa.set(slug, {
         slug, titulo, edicion, costoBase, ofertas: 1,
+        generos: generosDe(p),
         region: regionDe(p),
         url: urlDeKinguin(p),
         plataforma: ((a.platforms || []).indexOf('20') >= 0 && (a.platforms || []).indexOf('10') >= 0)
@@ -167,6 +208,9 @@ function agrupar(crudos, tipoCambio) {
       });
     } else {
       previo.ofertas++;
+      /* Los géneros se juntan de todas las ofertas del mismo juego: unas los
+         traen y otras no. */
+      for (const g of generosDe(p)) if (previo.generos.indexOf(g) < 0) previo.generos.push(g);
       if (costoBase < previo.costoBase) {
         previo.costoBase = costoBase;
         previo.region = regionDe(p);

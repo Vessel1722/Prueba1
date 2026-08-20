@@ -17,7 +17,8 @@
  */
 const P = require('./_precios');
 
-const TOPE_ESCRITURAS = 300;   // por corrida, para no pasarse del tiempo
+const TOPE_ESCRITURAS = 300;   // cambios de precio por corrida, para no pasarse del minuto
+const TOPE_ALTAS = 200;        // altas por corrida; el resto entra al día siguiente
 const CONCURRENCIA_PAGINAS = 10;
 const CONCURRENCIA = 12;
 
@@ -63,7 +64,7 @@ module.exports = async (req, res) => {
        a mirarlo era el fallo que dejaba publicar un juego más caro que en la
        propia tienda: las rebajas de Microsoft duran días. */
     const preciosMS = await P.preciosDeMicrosoft(filas.map((f) => f.ms_id));
-    const cambios = { sube: [], baja: [], oculta: [], revive: [], igual: 0, sinCambio: 0, store: [] };
+    const cambios = { sube: [], baja: [], oculta: [], revive: [], alta: [], igual: 0, sinCambio: 0, store: [] };
 
     for (const f of filas) {
       const o = kinguin.get(f.slug);
@@ -103,6 +104,27 @@ module.exports = async (req, res) => {
       } else {
         cambios.igual++;
       }
+      kinguin.delete(f.slug);   // lo que sobre al final son juegos nuevos
+    }
+
+    /* ── Altas ──
+       Lo que quedó en el mapa de Kinguin no está en la tienda. Antes esto
+       solo lo hacía el script de la PC, así que un juego nuevo no entraba
+       hasta que se corría a mano y se reimportaba el CSV. Con el catálogo
+       moviéndose todos los días, eso es un catálogo que envejece solo.
+
+       Sin precio de la Store no se puede comprobar que no salga más caro que
+       Microsoft, así que esos esperan a la siguiente corrida del script de
+       la PC, que sí sabe preguntárselo. */
+    for (const [slug, o] of kinguin) {
+      const costo = Math.round(o.costoBase * (1 + P.CFG.cuota));
+      const r = P.precioDeVenta(costo, o.ofertas, 0);
+      if (r.venta == null) continue;
+      cambios.alta.push({
+        slug, title: o.titulo, edicion: o.edicion, plataforma: o.plataforma,
+        ahora: r.venta, costo, region: o.region, url: o.url,
+        generos: (o.generos || []).join(' · '), portada: o.portada,
+      });
     }
 
     const resumen = {
@@ -114,6 +136,8 @@ module.exports = async (req, res) => {
       vuelven: cambios.revive.length,
       sinCambio: cambios.igual,
       preciosDeXboxQueCambiaron: cambios.store.length,
+      altasNuevas: cambios.alta.length,
+      primerasAltas: cambios.alta.slice(0, 6).map(function (a) { return a.title + ' a ' + a.ahora; }),
       tipoCambio: Number(tipoCambio.toFixed(4)),
       masSuben: cambios.sube.slice().sort((a, b) => (b.ahora - b.antes) - (a.ahora - a.antes)).slice(0, 8),
       seEscondieron: cambios.oculta.slice(0, 8),
@@ -143,6 +167,33 @@ module.exports = async (req, res) => {
       });
     });
 
+    /* Las altas entran al final del catálogo, con orden alto, para no
+       desordenar lo que ya estaba colocado. */
+    const aDarDeAlta = cambios.alta.slice(0, TOPE_ALTAS);
+    if (aDarDeAlta.length) {
+      const lotes = [];
+      for (let i = 0; i < aDarDeAlta.length; i += 100) lotes.push(aDarDeAlta.slice(i, i + 100));
+      for (const lote of lotes) {
+        await P.supa('vg_xbox_games', {
+          method: 'POST',
+          body: JSON.stringify(lote.map(function (a, i) {
+            return {
+              slug: a.slug, title: a.title, edicion: a.edicion, platform: a.plataforma,
+              generos: a.generos || null, price: a.ahora, precio_lista: null,
+              image: a.portada || '', status: 'active', orden: 9000 + i,
+            };
+          })),
+        });
+        await P.supa('vg_xbox_costos', {
+          method: 'POST',
+          headers: { Prefer: 'resolution=merge-duplicates' },
+          body: JSON.stringify(lote.map(function (a) {
+            return { slug: a.slug, costo: a.costo, region: a.region, url_proveedor: a.url, actualizado: new Date().toISOString() };
+          })),
+        });
+      }
+    }
+
     const aEsconder = cambios.oculta.slice(0, TOPE_ESCRITURAS);
     await P.enTanda(aEsconder, 8, async (o) => {
       await P.supa('vg_xbox_games?slug=eq.' + encodeURIComponent(o.slug), {
@@ -152,6 +203,7 @@ module.exports = async (req, res) => {
     });
 
     resumen.escritos = aTocar.length;
+    resumen.dadosDeAlta = aDarDeAlta.length;
     resumen.escondidos = aEsconder.length;
     resumen.pendientes = Math.max(0,
       (cambios.sube.length + cambios.baja.length + cambios.revive.length - aTocar.length) +
