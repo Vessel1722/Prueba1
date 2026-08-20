@@ -15439,7 +15439,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   async function loadXboxGames(){
     var client=getSB();
     if(!client){state.games=localGames();state.loaded=true;renderXboxCurrentGames();renderXboxAdminGames('Sin Supabase: los juegos se guardan solo en este navegador.');return;}
-    /* FASE 82 · Supabase no devuelve más de 1,000 filas por consulta, y da
+    /* FASE 91 · Supabase no devuelve más de 1,000 filas por consulta, y da
        igual el rango que le pidas: es un tope del servidor, no del cliente.
        Con 1,178 juegos en la tabla faltaban 178 y los que llegaban eran un
        recorte arbitrario, así que el catálogo se quedaba clavado siempre en
@@ -15465,7 +15465,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   function normalizeGame(g){return {id:g.id||('local_'+Date.now()),title:g.title||g.name||'Juego Xbox',platform:g.platform||'Xbox One / Series',price:Number(g.price||0),image:g.image||g.cover_url||'',status:g.status||'active',created_at:g.created_at||new Date().toISOString(),edicion:g.edicion||'',precio_lista:Number(g.precio_lista||0),orden:Number(g.orden||0),slug:g.slug||''}}
   function activeGames(){return (state.games||[]).filter(function(g){return String(g.status||'active')==='active'})}
 
-  /* FASE 81 · El catálogo dejó de ser un puñado de juegos cargados a mano y
+  /* FASE 90 · El catálogo dejó de ser un puñado de juegos cargados a mano y
      pasó de mil. Eso cambia tres cosas de la ventana:
        · la ficha ahora enseña edición y precio de la Microsoft Store tachado,
          que es lo que hace ver la oferta;
@@ -15481,27 +15481,27 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     var precio=Number(g.price||0), lista=Number(g.precio_lista||0), off=Math.round(descuentoXbox(g)*100);
     return '<article class="vg-xbox-game-card">'+
       '<div class="vg-xbox-game-cover"><img loading="lazy" decoding="async" src="'+esc(g.image||'portada.png')+'" alt="'+esc(g.title)+'" onerror="this.src=\'portada.png\'">'+
-      (off>=15?'<span class="vg-x81-off">-'+off+'%</span>':'')+'</div>'+
+      (off>=15?'<span class="vg-x90-off">-'+off+'%</span>':'')+'</div>'+
       '<div class="vg-xbox-game-info"><h4>'+esc(g.title)+'</h4>'+
       '<div class="vg-xbox-game-meta"><span class="vg-xbox-platform">'+esc(g.platform)+'</span>'+
-      (g.edicion&&!/^standard$/i.test(g.edicion)?'<span class="vg-x81-edicion">'+esc(g.edicion)+'</span>':'')+'</div>'+
-      '<div class="vg-x81-precios"><span class="vg-xbox-price">'+(precio>0?money(precio):'Cotizar')+'</span>'+
-      (lista>precio&&precio>0?'<s class="vg-x81-lista">'+money(lista)+'</s>':'')+'</div>'+
+      (g.edicion&&!/^standard$/i.test(g.edicion)?'<span class="vg-x90-edicion">'+esc(g.edicion)+'</span>':'')+'</div>'+
+      '<div class="vg-x90-precios"><span class="vg-xbox-price">'+(precio>0?money(precio):'Cotizar')+'</span>'+
+      (lista>precio&&precio>0?'<s class="vg-x90-lista">'+money(lista)+'</s>':'')+'</div>'+
       '<button class="primary whatsapp" type="button" onclick="buyXboxCurrentGame(\''+esc(g.id)+'\')">'+(precio>0?'Comprar':'Cotizar')+'</button>'+
       '</div></article>';
   }
   function pieXbox(total,visibles){
     var body=$('.vg-xbox-current-body'); if(!body)return;
-    var pie=$('#vgX81Pie');
+    var pie=$('#vgX90Pie');
     if(!pie){
-      pie=document.createElement('div'); pie.id='vgX81Pie'; pie.className='vg-x81-pie';
-      pie.innerHTML='<span id="vgX81Cuenta"></span><button class="vg-x81-mas" id="vgX81Mas" type="button">Ver más juegos</button>';
+      pie=document.createElement('div'); pie.id='vgX90Pie'; pie.className='vg-x90-pie';
+      pie.innerHTML='<span id="vgX90Cuenta"></span><button class="vg-x90-mas" id="vgX90Mas" type="button">Ver más juegos</button>';
       body.appendChild(pie);
-      var boton=pie.querySelector('#vgX81Mas');
+      var boton=pie.querySelector('#vgX90Mas');
       if(boton)boton.onclick=function(){ state.mostrados=(state.mostrados||PASO_XBOX)+PASO_XBOX; renderXboxCurrentGames(false); };
     }
-    var cuenta=$('#vgX81Cuenta'); if(cuenta)cuenta.textContent=total?('Mostrando '+visibles+' de '+total+' juegos'):'';
-    var mas=$('#vgX81Mas'); if(mas)mas.style.display=(visibles<total)?'':'none';
+    var cuenta=$('#vgX90Cuenta'); if(cuenta)cuenta.textContent=total?('Mostrando '+visibles+' de '+total+' juegos'):'';
+    var mas=$('#vgX90Mas'); if(mas)mas.style.display=(visibles<total)?'':'none';
   }
 
   window.renderXboxCurrentGames=function(mantener){
@@ -15548,14 +15548,14 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     if(!$('.vg-admin-tab[data-tab="xboxcurrent"]',tabs)){var x=document.createElement('button');x.className='vg-admin-tab';x.dataset.tab='xboxcurrent';x.textContent='Xbox One / Series';x.onclick=function(){activateAdminTab('xboxcurrent')};tabs.appendChild(x)}
     if(!$('#vgAdminXboxcurrent',content)){var xs=document.createElement('section');xs.className='vg-admin-section';xs.id='vgAdminXboxcurrent';xs.innerHTML='<div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox One / Series:</b> agrega aquí los juegos que tienes disponibles. Se muestran en la nueva ventana pública de Xbox One / Series.</div><div class="vg-xbox-admin-form"><input id="vgXboxAdminTitle" placeholder="Nombre del juego"><input id="vgXboxAdminEdicion" placeholder="Edición (Standard, Deluxe, Gold...)"><select id="vgXboxAdminPlatform"><option>Xbox Series</option><option>Xbox One</option><option>Xbox One / Series</option></select><input id="vgXboxAdminPrice" type="number" min="0" placeholder="Tu precio MXN"><input id="vgXboxAdminLista" type="number" min="0" placeholder="Precio Microsoft Store (para tachar)"><input id="vgXboxAdminImage" placeholder="URL de portada"><select id="vgXboxAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="saveXboxAdminGame()">Guardar</button></div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="clearXboxAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="loadXboxGames()">Recargar juegos</button></div><div id="vgXboxAdminMessage" class="vg-analytics-muted"></div><div class="vg-xbox-admin-list" id="vgXboxAdminList"></div>';content.appendChild(xs)}
   }
-  window.renderXboxAdminGames=function(message){var box=$('#vgXboxAdminList'); if(!box)return; var msg=$('#vgXboxAdminMessage'); if(msg)msg.textContent=message||''; if(!state.games.length){box.innerHTML='<div class="vg-admin-note">Aún no hay juegos cargados.</div>';return;} /* FASE 81 · Con el catálogo importado son más de mil filas: pintarlas todas deja el panel pegado. Se enseñan las primeras 100 y el resto se busca desde la ventana pública. */ var tope=state.games.slice(0,100); box.innerHTML=(state.games.length>tope.length?'<div class="vg-admin-note">Mostrando '+tope.length+' de '+state.games.length+' juegos del catálogo.</div>':'')+tope.map(function(g){return '<div class="vg-xbox-admin-row"><img src="'+esc(g.image||'portada.png')+'" onerror="this.src=\'portada.png\'" alt=""><div><b>'+esc(g.title)+'</b><small>'+esc(g.platform)+(g.edicion?' · '+esc(g.edicion):'')+' · '+(Number(g.price)>0?money(g.price):'Cotizar')+(Number(g.precio_lista)>0?' (Store '+money(g.precio_lista)+')':'')+' · '+esc(g.status||'active')+'</small></div><div class="vg-xbox-admin-actions"><button class="vg-admin-btn" onclick="editXboxAdminGame(\''+esc(g.id)+'\')">Editar</button><button class="vg-admin-btn danger" onclick="deleteXboxAdminGame(\''+esc(g.id)+'\')">Borrar</button></div></div>'}).join('');};
+  window.renderXboxAdminGames=function(message){var box=$('#vgXboxAdminList'); if(!box)return; var msg=$('#vgXboxAdminMessage'); if(msg)msg.textContent=message||''; if(!state.games.length){box.innerHTML='<div class="vg-admin-note">Aún no hay juegos cargados.</div>';return;} /* FASE 90 · Con el catálogo importado son más de mil filas: pintarlas todas deja el panel pegado. Se enseñan las primeras 100 y el resto se busca desde la ventana pública. */ var tope=state.games.slice(0,100); box.innerHTML=(state.games.length>tope.length?'<div class="vg-admin-note">Mostrando '+tope.length+' de '+state.games.length+' juegos del catálogo.</div>':'')+tope.map(function(g){return '<div class="vg-xbox-admin-row"><img src="'+esc(g.image||'portada.png')+'" onerror="this.src=\'portada.png\'" alt=""><div><b>'+esc(g.title)+'</b><small>'+esc(g.platform)+(g.edicion?' · '+esc(g.edicion):'')+' · '+(Number(g.price)>0?money(g.price):'Cotizar')+(Number(g.precio_lista)>0?' (Store '+money(g.precio_lista)+')':'')+' · '+esc(g.status||'active')+'</small></div><div class="vg-xbox-admin-actions"><button class="vg-admin-btn" onclick="editXboxAdminGame(\''+esc(g.id)+'\')">Editar</button><button class="vg-admin-btn danger" onclick="deleteXboxAdminGame(\''+esc(g.id)+'\')">Borrar</button></div></div>'}).join('');};
   window.clearXboxAdminForm=function(){state.selectedEditId=null; ['vgXboxAdminTitle','vgXboxAdminEdicion','vgXboxAdminPrice','vgXboxAdminLista','vgXboxAdminImage'].forEach(function(id){var el=$('#'+id); if(el)el.value=''}); var p=$('#vgXboxAdminPlatform'); if(p)p.value='Xbox Series'; var st=$('#vgXboxAdminStatus'); if(st)st.value='active'};
   window.editXboxAdminGame=function(id){var g=state.games.find(function(x){return String(x.id)===String(id)}); if(!g)return; state.selectedEditId=id; $('#vgXboxAdminTitle').value=g.title||''; var ed=$('#vgXboxAdminEdicion'); if(ed)ed.value=g.edicion||''; $('#vgXboxAdminPlatform').value=g.platform||'Xbox Series'; $('#vgXboxAdminPrice').value=Number(g.price||0); var li=$('#vgXboxAdminLista'); if(li)li.value=Number(g.precio_lista||0)||''; $('#vgXboxAdminImage').value=g.image||''; $('#vgXboxAdminStatus').value=g.status||'active'; activateAdminTab('xboxcurrent')};
-  window.saveXboxAdminGame=async function(){var title=String($('#vgXboxAdminTitle').value||'').trim(); if(!title){alert('Escribe el nombre del juego.');return;} var game={title:title,platform:$('#vgXboxAdminPlatform').value||'Xbox Series',price:Number($('#vgXboxAdminPrice').value||0),image:String($('#vgXboxAdminImage').value||'').trim(),status:$('#vgXboxAdminStatus').value||'active',updated_at:new Date().toISOString()}; var ed=$('#vgXboxAdminEdicion'), li=$('#vgXboxAdminLista'); if(ed)game.edicion=String(ed.value||'').trim(); if(li)game.precio_lista=Number(li.value||0)||null; var client=getSB(); if(client){var id=state.selectedEditId; var guarda=function(datos){return id?client.from(XBOX_TABLE).update(datos).eq('id',id):client.from(XBOX_TABLE).insert(datos)}; var res=await guarda(game); /* FASE 81 · Si todavía no corriste el SQL de la fase 81, la base no tiene edicion ni precio_lista: se guarda sin ellas en vez de tronar. */ if(res.error&&/edicion|precio_lista/i.test(String(res.error.message||''))){var basico=Object.assign({},game); delete basico.edicion; delete basico.precio_lista; res=await guarda(basico);} if(res.error){alert('No se pudo guardar en Supabase: '+res.error.message); return;}} else {var arr=localGames(); if(state.selectedEditId){arr=arr.map(function(x){return String(x.id)===String(state.selectedEditId)?Object.assign({},x,game):x})}else{game.id='local_'+Date.now();game.created_at=new Date().toISOString();arr.unshift(game)} saveLocalGames(arr)} clearXboxAdminForm(); await loadXboxGames();};
+  window.saveXboxAdminGame=async function(){var title=String($('#vgXboxAdminTitle').value||'').trim(); if(!title){alert('Escribe el nombre del juego.');return;} var game={title:title,platform:$('#vgXboxAdminPlatform').value||'Xbox Series',price:Number($('#vgXboxAdminPrice').value||0),image:String($('#vgXboxAdminImage').value||'').trim(),status:$('#vgXboxAdminStatus').value||'active',updated_at:new Date().toISOString()}; var ed=$('#vgXboxAdminEdicion'), li=$('#vgXboxAdminLista'); if(ed)game.edicion=String(ed.value||'').trim(); if(li)game.precio_lista=Number(li.value||0)||null; var client=getSB(); if(client){var id=state.selectedEditId; var guarda=function(datos){return id?client.from(XBOX_TABLE).update(datos).eq('id',id):client.from(XBOX_TABLE).insert(datos)}; var res=await guarda(game); /* FASE 90 · Si todavía no corriste el SQL de la fase 90, la base no tiene edicion ni precio_lista: se guarda sin ellas en vez de tronar. */ if(res.error&&/edicion|precio_lista/i.test(String(res.error.message||''))){var basico=Object.assign({},game); delete basico.edicion; delete basico.precio_lista; res=await guarda(basico);} if(res.error){alert('No se pudo guardar en Supabase: '+res.error.message); return;}} else {var arr=localGames(); if(state.selectedEditId){arr=arr.map(function(x){return String(x.id)===String(state.selectedEditId)?Object.assign({},x,game):x})}else{game.id='local_'+Date.now();game.created_at=new Date().toISOString();arr.unshift(game)} saveLocalGames(arr)} clearXboxAdminForm(); await loadXboxGames();};
   window.deleteXboxAdminGame=async function(id){if(!confirm('¿Borrar este juego del catálogo Xbox One / Series?'))return; var client=getSB(); if(client){var res=await client.from(XBOX_TABLE).delete().eq('id',id); if(res.error){alert('No se pudo borrar: '+res.error.message); return;}} else {saveLocalGames(localGames().filter(function(x){return String(x.id)!==String(id)}))} await loadXboxGames();};
   window.loadXboxGames=loadXboxGames;
 
-  /* FASE 82 · La sección de la tienda pinta los mismos juegos con la misma
+  /* FASE 91 · La sección de la tienda pinta los mismos juegos con la misma
      ficha. En vez de duplicar el catálogo y la tarjeta, se asoman los dos
      desde aquí: así solo hay un sitio donde arreglar cualquiera de los dos. */
   window.vgXboxJuegos=function(){return activeGames()};
@@ -43911,7 +43911,7 @@ button.vg119-incompleto{
 })();
 </script>
 
-<!-- FASE 83 · El panel de Xbox, para trabajar con 900 juegos.
+<!-- FASE 92 · El panel de Xbox, para trabajar con 900 juegos.
 
      Tres cosas que con cuatro juegos no hacían falta:
 
@@ -43924,7 +43924,7 @@ button.vg119-incompleto{
        buscar el juego a Kinguin: el botón lleva directo a la oferta con la
        que se calculó el precio, y el de al lado a la búsqueda por si esa
        oferta ya no está. -->
-<script id="vg-xbox-panel-fase83-js">
+<script id="vg-xbox-panel-fase92-js">
 (function(){
   'use strict';
 
@@ -43944,7 +43944,7 @@ button.vg119-incompleto{
            '&platforms=10,20&hideUnavailable=1&active=1';
   }
 
-  /* FASE 85 · Kinguin no acepta llamadas desde una página web —no manda las
+  /* FASE 93 · Kinguin no acepta llamadas desde una página web —no manda las
      cabeceras de CORS—, así que preguntarle el precio de hoy desde aquí es
      imposible. Lo hace por nosotros una función en Vercel, que sí es un
      servidor. Va firmada con la sesión de Supabase: la función le pregunta a
@@ -43965,36 +43965,36 @@ button.vg119-incompleto{
   }
 
   async function precioDeHoy(boton){
-    var fila = boton.closest('.vg-x83-row'); if(!fila) return;
-    var hueco = fila.querySelector('.vg-x83-vivo'); if(!hueco) return;
+    var fila = boton.closest('.vg-x92-row'); if(!fila) return;
+    var hueco = fila.querySelector('.vg-x92-vivo'); if(!hueco) return;
     boton.disabled = true;
-    hueco.className = 'vg-x83-vivo';
+    hueco.className = 'vg-x92-vivo';
     hueco.textContent = 'consultando…';
     try{
       var d = await api('/api/precio?slug=' + encodeURIComponent(boton.getAttribute('data-slug')));
       if(d.error){
-        hueco.className = 'vg-x83-vivo vg-x83-mal';
+        hueco.className = 'vg-x92-vivo vg-x92-mal';
         hueco.textContent = d.error;
       } else if(!d.encontrado){
-        hueco.className = 'vg-x83-vivo vg-x83-mal';
+        hueco.className = 'vg-x92-vivo vg-x92-mal';
         hueco.textContent = 'Kinguin ya no lo tiene con ese nombre';
       } else {
         var t = 'hoy te cuesta ' + pesos(d.costoAhora);
         if(d.ganas != null) t += ' · ganarías ' + pesos(d.ganas) + ' (' + d.margen + '%)';
         if(d.precioSugerido && d.precioSugerido !== d.tuPrecio) t += ' · sugerido ' + pesos(d.precioSugerido);
         if(d.alerta) t += ' · ' + d.alerta;
-        hueco.className = 'vg-x83-vivo ' + (d.alerta ? 'vg-x83-mal' : 'vg-x83-bien');
+        hueco.className = 'vg-x92-vivo ' + (d.alerta ? 'vg-x92-mal' : 'vg-x92-bien');
         hueco.textContent = t;
       }
     }catch(e){
-      hueco.className = 'vg-x83-vivo vg-x83-mal';
+      hueco.className = 'vg-x92-vivo vg-x92-mal';
       hueco.textContent = 'no se pudo consultar';
     }
     boton.disabled = false;
   }
 
   async function repaso(aplicar){
-    var caja = document.getElementById('vgX83Informe'); if(!caja) return;
+    var caja = document.getElementById('vgX92Informe'); if(!caja) return;
     caja.textContent = 'Preguntándole a Kinguin por los ' + ((typeof window.vgXboxTodos === 'function') ? window.vgXboxTodos().length : '') + ' juegos. Tarda medio minuto.';
     try{
       var d = await api('/api/cron-precios' + (aplicar ? '' : '?ensayo=1'));
@@ -44048,20 +44048,20 @@ button.vg119-incompleto{
   }
 
   function asegurarBuscador(){
-    if(document.getElementById('vgX83Buscar')) return;
+    if(document.getElementById('vgX92Buscar')) return;
     var lista = document.getElementById('vgXboxAdminList');
     if(!lista) return;
     var caja = document.createElement('div');
-    caja.className = 'vg-x83-barra';
-    caja.innerHTML = '<input id="vgX83Buscar" type="search" placeholder="Buscar juego en el catálogo…">' +
-      '<button class="vg-admin-btn" id="vgX83Ensayo" type="button">Revisar precios de hoy</button>' +
-      '<button class="vg-admin-btn primary" id="vgX83Aplicar" type="button">Aplicar cambios</button>' +
-      '<span id="vgX83Cuenta"></span>' +
-      '<pre class="vg-x83-informe" id="vgX83Informe"></pre>';
+    caja.className = 'vg-x92-barra';
+    caja.innerHTML = '<input id="vgX92Buscar" type="search" placeholder="Buscar juego en el catálogo…">' +
+      '<button class="vg-admin-btn" id="vgX92Ensayo" type="button">Revisar precios de hoy</button>' +
+      '<button class="vg-admin-btn primary" id="vgX92Aplicar" type="button">Aplicar cambios</button>' +
+      '<span id="vgX92Cuenta"></span>' +
+      '<pre class="vg-x92-informe" id="vgX92Informe"></pre>';
     lista.parentNode.insertBefore(caja, lista);
-    caja.querySelector('#vgX83Buscar').oninput = function(){ mostrados = TOPE; window.renderXboxAdminGames(); };
-    caja.querySelector('#vgX83Ensayo').onclick = function(){ repaso(false); };
-    caja.querySelector('#vgX83Aplicar').onclick = function(){
+    caja.querySelector('#vgX92Buscar').oninput = function(){ mostrados = TOPE; window.renderXboxAdminGames(); };
+    caja.querySelector('#vgX92Ensayo').onclick = function(){ repaso(false); };
+    caja.querySelector('#vgX92Aplicar').onclick = function(){
       if(confirm('Se van a cambiar los precios de la tienda con los de Kinguin de hoy. ¿Le entramos?')) repaso(true);
     };
   }
@@ -44073,24 +44073,24 @@ button.vg119-incompleto{
     var margen = costo ? Math.round(gana / costo * 100) : 0;
     var enlace = (c && c.url_proveedor) ? c.url_proveedor : buscarEnKinguin(g.title);
 
-    return '<div class="vg-xbox-admin-row vg-x83-row" data-slug="' + esc(g.slug||'') + '">' +
+    return '<div class="vg-xbox-admin-row vg-x92-row" data-slug="' + esc(g.slug||'') + '">' +
       '<img src="' + esc(g.image||'portada.png') + '" onerror="this.src=\'portada.png\'" alt="">' +
       '<div><b>' + esc(g.title) + '</b><small>' + esc(g.platform) +
         (g.edicion ? ' · ' + esc(g.edicion) : '') +
         ' · ' + esc(g.status||'active') +
         (Number(g.precio_lista)>0 ? ' · Store ' + pesos(g.precio_lista) : '') + '</small>' +
-        '<div class="vg-x83-cuentas">' +
-          '<span class="vg-x83-venta">' + pesos(g.price) + '</span>' +
+        '<div class="vg-x92-cuentas">' +
+          '<span class="vg-x92-venta">' + pesos(g.price) + '</span>' +
           (costo ? '<span>te cuesta <b>' + pesos(costo) + '</b></span>' +
-                   '<span class="vg-x83-gana">ganas ' + pesos(gana) + ' · ' + margen + '%</span>' +
-                   (c.region ? '<span class="vg-x83-region">' + esc(c.region) + '</span>' : '')
-                 : '<span class="vg-x83-sincosto">sin costo guardado</span>') +
-          '<span class="vg-x83-vivo"></span>' +
+                   '<span class="vg-x92-gana">ganas ' + pesos(gana) + ' · ' + margen + '%</span>' +
+                   (c.region ? '<span class="vg-x92-region">' + esc(c.region) + '</span>' : '')
+                 : '<span class="vg-x92-sincosto">sin costo guardado</span>') +
+          '<span class="vg-x92-vivo"></span>' +
         '</div>' +
       '</div>' +
-      '<div class="vg-xbox-admin-actions vg-x83-acciones">' +
-        (g.slug ? '<button class="vg-admin-btn vg-x83-ahora" type="button" data-slug="' + esc(g.slug) + '">Precio de hoy ↻</button>' : '') +
-        '<a class="vg-admin-btn vg-x83-comprar" href="' + esc(enlace) + '" target="_blank" rel="noopener">Comprar ↗</a>' +
+      '<div class="vg-xbox-admin-actions vg-x92-acciones">' +
+        (g.slug ? '<button class="vg-admin-btn vg-x92-ahora" type="button" data-slug="' + esc(g.slug) + '">Precio de hoy ↻</button>' : '') +
+        '<a class="vg-admin-btn vg-x92-comprar" href="' + esc(enlace) + '" target="_blank" rel="noopener">Comprar ↗</a>' +
         (c && c.url_proveedor ? '<a class="vg-admin-btn" href="' + esc(buscarEnKinguin(g.title)) + '" target="_blank" rel="noopener">Buscar ↗</a>' : '') +
         '<button class="vg-admin-btn" onclick="editXboxAdminGame(\'' + esc(g.id) + '\')">Editar</button>' +
         '<button class="vg-admin-btn danger" onclick="deleteXboxAdminGame(\'' + esc(g.id) + '\')">Borrar</button>' +
@@ -44110,11 +44110,11 @@ button.vg119-incompleto{
     var todos = (typeof window.vgXboxTodos === 'function') ? (window.vgXboxTodos()||[]) : [];
     if(!todos.length){
       box.innerHTML = '<div class="vg-admin-note">Aún no hay juegos cargados.</div>';
-      var c0 = document.getElementById('vgX83Cuenta'); if(c0) c0.textContent = '';
+      var c0 = document.getElementById('vgX92Cuenta'); if(c0) c0.textContent = '';
       return;
     }
 
-    var caja = document.getElementById('vgX83Buscar');
+    var caja = document.getElementById('vgX92Buscar');
     var q = String(caja && caja.value || '').trim().toLowerCase();
     var lista = q ? todos.filter(function(g){
       return [g.title, g.edicion, g.platform].join(' ').toLowerCase().indexOf(q) >= 0;
@@ -44123,27 +44123,27 @@ button.vg119-incompleto{
     var vista = lista.slice(0, mostrados);
     box.innerHTML = vista.map(fila).join('') +
       (vista.length < lista.length
-        ? '<button class="vg-admin-btn vg-x83-mas" id="vgX83Mas" type="button">Ver ' +
+        ? '<button class="vg-admin-btn vg-x92-mas" id="vgX92Mas" type="button">Ver ' +
           Math.min(TOPE, lista.length - vista.length) + ' más</button>'
         : '');
 
-    var boton = document.getElementById('vgX83Mas');
+    var boton = document.getElementById('vgX92Mas');
     if(boton) boton.onclick = function(){ mostrados += TOPE; pintar(); };
 
-    Array.prototype.forEach.call(box.querySelectorAll('.vg-x83-ahora'), function(b){
+    Array.prototype.forEach.call(box.querySelectorAll('.vg-x92-ahora'), function(b){
       b.onclick = function(){ precioDeHoy(b); };
     });
 
-    var cuenta = document.getElementById('vgX83Cuenta');
+    var cuenta = document.getElementById('vgX92Cuenta');
     if(cuenta) cuenta.textContent = 'Mostrando ' + vista.length + ' de ' + lista.length +
       (q ? ' que coinciden' : ' juegos') +
       (costos && !Object.keys(costos).length ? ' · costos no disponibles' : '');
   }
 
   function envolver(){
-    if(window.renderXboxAdminGames && window.renderXboxAdminGames.__vg83) return;
+    if(window.renderXboxAdminGames && window.renderXboxAdminGames.__vg92) return;
     window.renderXboxAdminGames = function(mensaje){ mostrados = TOPE; pintar(mensaje); };
-    window.renderXboxAdminGames.__vg83 = true;
+    window.renderXboxAdminGames.__vg92 = true;
   }
 
   function arrancar(){
@@ -44157,7 +44157,7 @@ button.vg119-incompleto{
 })();
 </script>
 
-<!-- FASE 82 · Xbox One / Series deja de ser una ventana y pasa a ser una
+<!-- FASE 91 · Xbox One / Series deja de ser una ventana y pasa a ser una
      sección de la tienda, como Fortnite o Xbox Retro.
 
      La ventana flotante servía cuando eran cuatro juegos. Con mil y pico no:
@@ -44168,8 +44168,8 @@ button.vg119-incompleto{
      De paso hereda lo que ya funciona en el resto de la tienda: el buscador
      de arriba, el ordenador, la portada de sección y el chip en la barra de
      categorías. Aquí no se pinta ninguna tarjeta nueva: se usan el catálogo
-     y la ficha del bloque de la fase 81. -->
-<script id="vg-xbox-seccion-fase82-js">
+     y la ficha del bloque de la fase 90. -->
+<script id="vg-xbox-seccion-fase91-js">
 (function(){
   'use strict';
 
@@ -44223,24 +44223,24 @@ button.vg119-incompleto{
 
   function pie(total, visibles){
     var grid = document.getElementById('productsGrid'); if(!grid) return;
-    var pie = document.getElementById('vgX82Pie');
+    var pie = document.getElementById('vgX91Pie');
     if(!pie){
       pie = document.createElement('div');
-      pie.id = 'vgX82Pie';
-      pie.className = 'vg-x82-pie';
-      pie.innerHTML = '<span id="vgX82Cuenta"></span><button class="vg-x82-mas" id="vgX82Mas" type="button">Ver más juegos</button>';
+      pie.id = 'vgX91Pie';
+      pie.className = 'vg-x91-pie';
+      pie.innerHTML = '<span id="vgX91Cuenta"></span><button class="vg-x91-mas" id="vgX91Mas" type="button">Ver más juegos</button>';
       grid.parentNode.insertBefore(pie, grid.nextSibling);
-      pie.querySelector('#vgX82Mas').onclick = function(){ mostrados += POR_TANDA; pintar(true); };
+      pie.querySelector('#vgX91Mas').onclick = function(){ mostrados += POR_TANDA; pintar(true); };
     }
     pie.style.display = total ? '' : 'none';
-    var cuenta = document.getElementById('vgX82Cuenta');
+    var cuenta = document.getElementById('vgX91Cuenta');
     if(cuenta) cuenta.textContent = 'Mostrando ' + visibles + ' de ' + total + ' juegos';
-    var mas = document.getElementById('vgX82Mas');
+    var mas = document.getElementById('vgX91Mas');
     if(mas) mas.style.display = visibles < total ? '' : 'none';
   }
 
   function esconderPie(){
-    var pie = document.getElementById('vgX82Pie');
+    var pie = document.getElementById('vgX91Pie');
     if(pie) pie.style.display = 'none';
   }
 
@@ -44256,7 +44256,7 @@ button.vg119-incompleto{
        peor que puede leer alguien que acaba de entrar a la sección. */
     var cargando = (typeof window.vgXboxCargado === 'function') && !window.vgXboxCargado();
     if(!lista.length && cargando){
-      grid.innerHTML = '<div class="vg-x82-cargando">Cargando el catálogo de Xbox…</div>';
+      grid.innerHTML = '<div class="vg-x91-cargando">Cargando el catálogo de Xbox…</div>';
       if(vacio) vacio.style.display = 'none';
       pie(0,0);
       return;
@@ -44282,9 +44282,9 @@ button.vg119-incompleto{
   function vigilarScroll(){
     window.addEventListener('scroll', function(){
       if(typeof activeCategory === 'undefined' || activeCategory !== 'xbox') return;
-      var pieCaja = document.getElementById('vgX82Pie');
+      var pieCaja = document.getElementById('vgX91Pie');
       if(!pieCaja || pieCaja.style.display === 'none') return;
-      var mas = document.getElementById('vgX82Mas');
+      var mas = document.getElementById('vgX91Mas');
       if(!mas || mas.style.display === 'none') return;
       var r = pieCaja.getBoundingClientRect();
       if(r.top < innerHeight + 600){ mostrados += POR_TANDA; pintar(true); }
@@ -44302,34 +44302,34 @@ button.vg119-incompleto{
   }
 
   function envolver(){
-    if(typeof window.showSection === 'function' && !window.showSection.__vg82){
+    if(typeof window.showSection === 'function' && !window.showSection.__vg91){
       var orig = window.showSection;
       var nueva = function(cat){
         var r = orig.apply(this, arguments);
         if(cat === 'xbox') entrar(); else esconderPie();
         return r;
       };
-      nueva.__vg82 = true;
+      nueva.__vg91 = true;
       window.showSection = nueva;
     }
 
     /* El buscador y el ordenador llaman a renderProducts, que repintaría el
        catálogo normal encima del nuestro. */
-    if(typeof window.renderProducts === 'function' && !window.renderProducts.__vg82){
+    if(typeof window.renderProducts === 'function' && !window.renderProducts.__vg91){
       var origR = window.renderProducts;
       var nuevaR = function(){
         if(typeof activeCategory !== 'undefined' && activeCategory === 'xbox'){ pintar(); return; }
         esconderPie();
         return origR.apply(this, arguments);
       };
-      nuevaR.__vg82 = true;
+      nuevaR.__vg91 = true;
       window.renderProducts = nuevaR;
     }
 
     /* En la barra lateral cada categoría lleva cuántos productos tiene. Los
        juegos de Xbox no viven en SERVICES, así que salía un "0" que parecía
        una sección rota. */
-    if(typeof window.renderNav === 'function' && !window.renderNav.__vg82){
+    if(typeof window.renderNav === 'function' && !window.renderNav.__vg91){
       var origN = window.renderNav;
       var nuevaN = function(){
         var r = origN.apply(this, arguments);
@@ -44343,7 +44343,7 @@ button.vg119-incompleto{
         }catch(e){}
         return r;
       };
-      nuevaN.__vg82 = true;
+      nuevaN.__vg91 = true;
       window.renderNav = nuevaN;
     }
   }
@@ -44352,8 +44352,8 @@ button.vg119-incompleto{
      la sección. La ventana sigue existiendo para el cotizador. */
   function apuntarTarjeta(){
     var tile = document.getElementById('vgXboxCurrentTile');
-    if(!tile || tile.__vg82) return;
-    tile.__vg82 = true;
+    if(!tile || tile.__vg91) return;
+    tile.__vg91 = true;
     tile.onclick = function(){
       if(typeof window.showSection === 'function') window.showSection('xbox');
       else if(typeof window.openXboxCurrentModal === 'function') window.openXboxCurrentModal();
@@ -44374,7 +44374,7 @@ button.vg119-incompleto{
 })();
 </script>
 
-<!-- FASE 81 · La ventana de Xbox One / Series con catálogo de verdad.
+<!-- FASE 90 · La ventana de Xbox One / Series con catálogo de verdad.
 
      Antes eran cuatro juegos cargados a mano y la ficha solo tenía nombre,
      plataforma y precio. Ahora el catálogo se importa de golpe, así que la
@@ -44383,10 +44383,10 @@ button.vg119-incompleto{
      que hace ver la oferta— y el porcentaje de descuento encima de la
      portada.
 
-     Los nombres van con prefijo vg-x81- a propósito: en esta hoja hay más
+     Los nombres van con prefijo vg-x90- a propósito: en esta hoja hay más
      de sesenta bloques encimados y una clase genérica se la come cualquiera
      de los que vienen antes. -->
-<style id="vg-xbox-fase81-css">
+<style id="vg-xbox-fase90-css">
   /* Tres controles en fila: buscar, plataforma y orden. El bloque de la
      fase 75 los dejaba en dos columnas y el tercero se caía de renglón. */
   .vg-xbox-current-controls{ grid-template-columns:minmax(0,1fr) 200px 210px; }
@@ -44408,7 +44408,7 @@ button.vg119-incompleto{
      2160x2160, así que una caja cuadrada las enseña completas sin franjas
      negras arriba y abajo. */
   .vg-xbox-game-cover{ position:relative; flex-shrink:0; height:auto; aspect-ratio:1/1; }
-  .vg-x81-off{
+  .vg-x90-off{
     position:absolute; top:8px; right:8px;
     background:#1f9d55; color:#fff;
     font-size:11px; font-weight:800; letter-spacing:.3px;
@@ -44416,17 +44416,17 @@ button.vg119-incompleto{
     box-shadow:0 2px 8px rgba(0,0,0,.35);
   }
 
-  .vg-x81-edicion{
+  .vg-x90-edicion{
     font-size:10.5px; color:#c9cfdd;
     border:1px solid rgba(255,255,255,.16);
     border-radius:7px; padding:2px 7px;
     white-space:nowrap;
   }
 
-  .vg-x81-precios{
+  .vg-x90-precios{
     display:flex; align-items:baseline; gap:8px; flex-wrap:wrap;
   }
-  .vg-x81-lista{
+  .vg-x90-lista{
     color:#8b90a0; font-size:12.5px; text-decoration:line-through;
   }
 
@@ -44449,85 +44449,85 @@ button.vg119-incompleto{
     background:#0b0d16;
   }
 
-  /* Panel de administración del catálogo (fase 83). */
-  .vg-x83-barra{
+  /* Panel de administración del catálogo (fase 92). */
+  .vg-x92-barra{
     display:flex; align-items:center; gap:12px; flex-wrap:wrap;
     margin:10px 0 12px;
   }
-  #vgX83Buscar{
+  #vgX92Buscar{
     flex:1; min-width:180px;
     border:1px solid rgba(255,255,255,.12);
     background:rgba(255,255,255,.055);
     color:#fff; border-radius:14px; padding:10px 14px; outline:none;
   }
-  #vgX83Cuenta{ color:#8b90a0; font-size:12px; }
-  .vg-x83-cuentas{
+  #vgX92Cuenta{ color:#8b90a0; font-size:12px; }
+  .vg-x92-cuentas{
     display:flex; gap:10px; flex-wrap:wrap; align-items:baseline;
     margin-top:5px; font-size:11.5px; color:#8b90a0;
   }
-  .vg-x83-venta{ color:#19e6c1; font-weight:800; font-size:14px; }
-  .vg-x83-gana{ color:#7fd6a0; }
-  .vg-x83-region{ border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:1px 6px; }
-  .vg-x83-sincosto{ color:#7a7f8d; font-style:italic; }
-  .vg-x83-vivo{ }
-  .vg-x83-bien{ color:#7fd6a0; }
-  .vg-x83-mal{ color:#ff9a9a; font-weight:700; }
-  .vg-x83-informe{
+  .vg-x92-venta{ color:#19e6c1; font-weight:800; font-size:14px; }
+  .vg-x92-gana{ color:#7fd6a0; }
+  .vg-x92-region{ border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:1px 6px; }
+  .vg-x92-sincosto{ color:#7a7f8d; font-style:italic; }
+  .vg-x92-vivo{ }
+  .vg-x92-bien{ color:#7fd6a0; }
+  .vg-x92-mal{ color:#ff9a9a; font-weight:700; }
+  .vg-x92-informe{
     flex-basis:100%; margin:0;
     white-space:pre-wrap; word-break:break-word;
     color:#c9cfdd; font-size:12px; line-height:1.55;
     font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
   }
-  .vg-x83-informe:empty{ display:none; }
-  .vg-x83-ahora{ white-space:nowrap; }
-  .vg-x83-acciones{ display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start; }
-  .vg-x83-comprar{
+  .vg-x92-informe:empty{ display:none; }
+  .vg-x92-ahora{ white-space:nowrap; }
+  .vg-x92-acciones{ display:flex; gap:6px; flex-wrap:wrap; align-items:flex-start; }
+  .vg-x92-comprar{
     background:rgba(25,230,193,.14) !important;
     border-color:rgba(25,230,193,.45) !important;
     color:#19e6c1 !important;
     text-decoration:none; display:inline-flex; align-items:center;
   }
-  .vg-x83-acciones a{ text-decoration:none; display:inline-flex; align-items:center; }
-  .vg-x83-mas{ width:100%; margin-top:10px; }
+  .vg-x92-acciones a{ text-decoration:none; display:inline-flex; align-items:center; }
+  .vg-x92-mas{ width:100%; margin-top:10px; }
 
-  /* Pie de la sección de la tienda (fase 82), mismo aire que el de la
+  /* Pie de la sección de la tienda (fase 91), mismo aire que el de la
      ventana pero colgado del catálogo normal. */
-  .vg-x82-pie{
+  .vg-x91-pie{
     display:flex; align-items:center; justify-content:center;
     gap:14px; flex-wrap:wrap;
     padding:18px 0 34px;
   }
-  #vgX82Cuenta{ color:#8b90a0; font-size:12.5px; }
-  .vg-x82-mas{
+  #vgX91Cuenta{ color:#8b90a0; font-size:12.5px; }
+  .vg-x91-mas{
     background:rgba(255,255,255,.05);
     border:1px solid rgba(25,230,193,.35);
     color:#19e6c1;
     border-radius:999px; padding:11px 26px;
     font-size:14px; font-weight:700; cursor:pointer;
   }
-  .vg-x82-mas:hover{ background:rgba(25,230,193,.12); }
-  .vg-x82-cargando{
+  .vg-x91-mas:hover{ background:rgba(25,230,193,.12); }
+  .vg-x91-cargando{
     grid-column:1 / -1;
     text-align:center; color:#8b90a0;
     padding:48px 16px; font-size:14px;
   }
-  @media(max-width:560px){ .vg-x82-mas{ width:100%; } }
+  @media(max-width:560px){ .vg-x91-mas{ width:100%; } }
 
   /* Pie del catálogo: cuántos se ven y el botón para traer más. */
-  .vg-x81-pie{
+  .vg-x90-pie{
     display:flex; align-items:center; justify-content:center;
     gap:14px; flex-wrap:wrap;
     padding:6px 22px 26px;
   }
-  #vgX81Cuenta{ color:#8b90a0; font-size:12.5px; }
-  .vg-x81-mas{
+  #vgX90Cuenta{ color:#8b90a0; font-size:12.5px; }
+  .vg-x90-mas{
     background:rgba(255,255,255,.05);
     border:1px solid rgba(25,230,193,.35);
     color:#19e6c1;
     border-radius:999px; padding:11px 26px;
     font-size:14px; font-weight:700; cursor:pointer;
   }
-  .vg-x81-mas:hover{ background:rgba(25,230,193,.12); }
+  .vg-x90-mas:hover{ background:rgba(25,230,193,.12); }
 
   @media(max-width:980px){
     /* El buscador ocupa el renglón completo y los dos selectores se reparten
@@ -44545,12 +44545,12 @@ button.vg119-incompleto{
     .vg-xbox-current-form > *{ min-width:0; max-width:100%; }
     .vg-xbox-current-form{ grid-template-columns:minmax(0,1fr) minmax(0,150px); }
 
-    .vg-x81-pie{ padding:4px 12px 22px; }
+    .vg-x90-pie{ padding:4px 12px 22px; }
   }
   @media(max-width:560px){
-    .vg-x81-off{ font-size:10px; padding:2px 6px; top:6px; right:6px; }
-    .vg-x81-lista{ font-size:11.5px; }
-    .vg-x81-mas{ width:100%; }
+    .vg-x90-off{ font-size:10px; padding:2px 6px; top:6px; right:6px; }
+    .vg-x90-lista{ font-size:11.5px; }
+    .vg-x90-mas{ width:100%; }
   }
 </style>
 
