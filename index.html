@@ -43934,6 +43934,166 @@ button.vg119-incompleto{
 })();
 </script>
 
+<!-- FASE 98 · El buscador de arriba: los tres fallos que se veían al usarlo.
+
+     1) Al pulsar un juego retro salía "no hay artículos para mostrar". El
+        buscador lo mandaba a openRetroModal(), y esa ventana se retiró en la
+        fase 113 del sitio viejo: el div sigue ahí vacío a propósito, así que
+        abrirla no da error, simplemente no pasa nada y el cliente se queda
+        mirando una pantalla vacía. Ahora va a la sección y le abre la ficha.
+
+     2) Los juegos retro salían sin foto. Sus portadas no están guardadas: se
+        arman a partir del nombre con getRetroGameImage(), y el índice leía un
+        campo image que en esos datos viene vacío.
+
+     3) Y los de Xbox One / Series no salían: el índice tiene Fortnite y retro,
+        y se armó antes de que existiera esa sección.
+
+     Nada de esto toca el bloque del buscador: se envuelven sus dos puertas
+     —el índice y el "al pulsar"—, que es como está hecho todo lo demás. -->
+<script id="vg-buscador-xbox-fase98-js">
+(function(){
+  'use strict';
+
+  /* Los mismos números que usa el buscador para no chocar con el catálogo
+     real (1..999). El de Xbox es nuevo. */
+  var BASE_RETRO    = 9100000;
+  var BASE_FORTNITE = 9200000;
+  var BASE_XBOX     = 9300000;
+
+  function juegosXbox(){
+    return (typeof window.vgXboxJuegos === 'function') ? (window.vgXboxJuegos() || []) : [];
+  }
+
+  function retroPorIndice(i){
+    var lista = Array.isArray(window.RETRO_GAMES_DATA) ? window.RETRO_GAMES_DATA : [];
+    return lista[i] || null;
+  }
+
+  function retroPorNombre(nombre){
+    var lista = Array.isArray(window.RETRO_GAMES_DATA) ? window.RETRO_GAMES_DATA : [];
+    for(var i = 0; i < lista.length; i++){
+      if(lista[i] && lista[i].name === nombre) return lista[i];
+    }
+    return null;
+  }
+
+  /* ── Los juegos de Xbox One / Series, al índice ── */
+  function deXbox(){
+    var salida = [];
+    var juegos = juegosXbox();
+
+    salida.push({
+      id: BASE_XBOX,
+      title: 'Juegos Xbox One / Series',
+      displayTitle: 'Juegos Xbox One / Series',
+      description: 'Catálogo digital con entrega por código: lo canjeas en tu cuenta y el juego queda a tu nombre.',
+      categoryName: 'Xbox One / Series',
+      category: 'xbox',
+      image: 'portada.png',
+      alt: 'Juegos de Xbox One y Series',
+      options: [{ name: 'Ver el catálogo completo', price: 0 }],
+      _vgBuscador: true
+    });
+
+    for(var i = 0; i < juegos.length; i++){
+      var g = juegos[i];
+      if(!g || !g.title) continue;
+      salida.push({
+        id: BASE_XBOX + 1 + i,
+        title: g.title,
+        displayTitle: g.title,
+        description: [g.platform, g.edicion, 'entrega por código'].filter(Boolean).join(' · '),
+        categoryName: 'Xbox One / Series',
+        category: 'xbox',
+        image: g.image || 'portada.png',
+        alt: g.title,
+        options: [{ name: g.platform || 'Xbox One / Series', price: Number(g.price || 0) }],
+        _vgBuscador: true
+      });
+    }
+    return salida;
+  }
+
+  /* ── Portadas de los retro ──
+     Se arman igual que en la sección: con el nombre y la plataforma. */
+  function ponerFotosRetro(entradas){
+    if(typeof window.getRetroGameImage !== 'function') return entradas;
+    for(var i = 0; i < entradas.length; i++){
+      var e = entradas[i];
+      if(!e || e.categoryName !== 'Xbox Retro') continue;
+      if(e.image && e.image !== 'portada.png') continue;
+      var g = retroPorNombre(e.title);
+      if(!g) continue;
+      try{ e.image = window.getRetroGameImage(g) || e.image; }catch(err){}
+    }
+    return entradas;
+  }
+
+  function envolverIndice(){
+    if(typeof window.vgExtraSearchIndex !== 'function' || window.vgExtraSearchIndex.__vg98) return;
+    var original = window.vgExtraSearchIndex;
+    var nueva = function(){
+      var base = [];
+      try{ base = original() || []; }catch(e){}
+      return ponerFotosRetro(base).concat(deXbox());
+    };
+    nueva.__vg98 = true;
+    window.vgExtraSearchIndex = nueva;
+  }
+
+  function envolverApertura(){
+    if(typeof window.openSearchResultProduct !== 'function' || window.openSearchResultProduct.__vg98) return;
+    var original = window.openSearchResultProduct;
+
+    var nueva = function(id){
+      var n = Number(id);
+
+      /* Xbox One / Series */
+      if(n >= BASE_XBOX){
+        var caja = document.getElementById('globalSearch');
+        var juego = juegosXbox()[n - BASE_XBOX - 1];
+        /* El nombre se queda escrito: la sección lo usa de filtro y el
+           cliente aterriza en el juego que pulsó, no en los novecientos. */
+        if(caja){
+          caja.value = (n === BASE_XBOX || !juego) ? '' : (juego.title || '');
+          caja.blur();
+        }
+        if(typeof window.showSection === 'function') window.showSection('xbox');
+        if(typeof window.renderProducts === 'function') setTimeout(window.renderProducts, 60);
+        return;
+      }
+
+      /* Xbox Retro: a la sección, y con la ficha del juego abierta */
+      if(n >= BASE_RETRO && n < BASE_FORTNITE){
+        var cajaR = document.getElementById('globalSearch');
+        if(cajaR){ cajaR.value = ''; cajaR.blur(); }
+        if(typeof window.showSection === 'function') window.showSection('retro');
+        var g = (n === BASE_RETRO) ? null : retroPorIndice(n - BASE_RETRO - 1);
+        if(g && typeof window.vgxrVer === 'function'){
+          setTimeout(function(){ try{ window.vgxrVer(g.id); }catch(e){} }, 320);
+        }
+        return;
+      }
+
+      return original.apply(this, arguments);
+    };
+    nueva.__vg98 = true;
+    window.openSearchResultProduct = nueva;
+  }
+
+  function arrancar(){
+    envolverIndice();
+    envolverApertura();
+    setTimeout(function(){ envolverIndice(); envolverApertura(); }, 900);
+    setTimeout(function(){ envolverIndice(); envolverApertura(); }, 2600);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 <!-- FASE 92 · El panel de Xbox, para trabajar con 900 juegos.
 
      Tres cosas que con cuatro juegos no hacían falta:
