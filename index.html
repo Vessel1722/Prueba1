@@ -44672,15 +44672,7 @@ button.vg119-incompleto{
      manda Kinguin más las etiquetas de IGDB— así que no hay que clasificar
      nada a mano. */
   var generoActivo = 'todos';
-  var precioActivo = 'todos';
 
-  var BANDAS_PRECIO = [
-    { id:'todos', texto:'Cualquier precio', min:0,    max:Infinity },
-    { id:'b1',    texto:'Hasta $200',       min:0,    max:200 },
-    { id:'b2',    texto:'$200 a $500',      min:200,  max:500 },
-    { id:'b3',    texto:'$500 a $1,000',    min:500,  max:1000 },
-    { id:'b4',    texto:'Más de $1,000',    min:1000, max:Infinity },
-  ];
 
   function generosDelCatalogo(){
     var cuenta = {};
@@ -44699,20 +44691,26 @@ button.vg119-incompleto{
       .map(function(g){ return { nombre:g, n:cuenta[g] }; });
   }
 
-  function bandaDe(id){
-    for(var i=0;i<BANDAS_PRECIO.length;i++) if(BANDAS_PRECIO[i].id === id) return BANDAS_PRECIO[i];
-    return BANDAS_PRECIO[0];
+
+  /* El tope de precio lo pone la barra de la tienda, la de "Hasta $100",
+     "Hasta $300"… Se lee de su chip marcado en vez de tener otra fila igual
+     debajo. */
+  function topeDePrecio(){
+    var activo = document.querySelector('.vg-filter-bar .vg-filter-chip.active');
+    var v = activo && activo.getAttribute('data-price');
+    if(!v || v === 'all') return Infinity;
+    var n = Number(v);
+    return isFinite(n) && n > 0 ? n : Infinity;
   }
 
   function ordenados(){
     var caja = document.getElementById('globalSearch');
     var q = String(caja && caja.value || '').trim().toLowerCase();
-    var banda = bandaDe(precioActivo);
+    var tope = topeDePrecio();
     var lista = juegos().filter(function(j){
       if(q && [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(q) < 0) return false;
       if(generoActivo !== 'todos' && String(j.generos || '').indexOf(generoActivo) < 0) return false;
-      var p = Number(j.price || 0);
-      if(p < banda.min || p > banda.max) return false;
+      if(Number(j.price || 0) > tope) return false;
       return true;
     });
     var sel = document.getElementById('sortSelect');
@@ -44766,25 +44764,29 @@ button.vg119-incompleto{
     caja.dataset.total = String(total);
 
     var gens = generosDelCatalogo();
+    /* FASE 109 · Solo géneros. El precio ya lo filtra la tienda con su propia
+       barra de chips (vgApplyPriceFilter), que estaba justo encima: tener dos
+       filas de precios seguidas, con cortes distintos, era un lío. */
     var fila1 = '<div class="vg-x103-fila"><button class="vg-x103-chip" data-gen="todos" type="button">Todos</button>' +
-      gens.map(function(g){
-        return '<button class="vg-x103-chip" data-gen="' + g.nombre.replace(/"/g,'&quot;') + '" type="button">' +
+      gens.map(function(g, i){
+        /* Los que pasan del octavo se pliegan en el teléfono. Se marcan uno a
+           uno en vez de recortar la fila por altura: recortando, el segundo
+           renglón quedaba cortado por la mitad y se veían medios chips. */
+        return '<button class="vg-x103-chip' + (i >= 8 ? ' vg-x103-extra' : '') +
+               '" data-gen="' + g.nombre.replace(/"/g,'&quot;') + '" type="button">' +
                g.nombre + ' <span>' + g.n + '</span></button>';
       }).join('') + '</div>';
 
-    var fila2 = '<div class="vg-x103-fila vg-x103-precio">' +
-      BANDAS_PRECIO.map(function(b){
-        return '<button class="vg-x103-chip" data-precio="' + b.id + '" type="button">' + b.texto + '</button>';
-      }).join('') + '</div>';
+    var fila2 = '';
 
     caja.innerHTML = fila1 + fila2 +
       '<button class="vg-x103-ver" id="vgX103Ver" type="button">Ver todos los géneros</button>';
     grid.parentNode.insertBefore(caja, grid);
 
-    /* En el teléfono, dieciocho chips son 280px: un tercio de la pantalla
-       antes de ver un solo juego. Se muestran dos renglones y el resto se
-       abre a petición. En pantalla ancha caben todos y el botón sobra: lo
-       esconde la propia hoja de estilos. */
+    /* En el teléfono, tantos chips se comen media pantalla antes de ver un
+       solo juego. Se muestran los ocho primeros y el resto se abre a
+       petición. En pantalla ancha caben todos y el botón sobra: lo esconde
+       la propia hoja de estilos. */
     var ver = caja.querySelector('#vgX103Ver');
     if(ver) ver.onclick = function(){
       var abierto = caja.classList.toggle('vg-x103-abierto');
@@ -44794,18 +44796,12 @@ button.vg119-incompleto{
     Array.prototype.forEach.call(caja.querySelectorAll('[data-gen]'), function(b){
       b.onclick = function(){ generoActivo = b.getAttribute('data-gen'); pintar(); };
     });
-    Array.prototype.forEach.call(caja.querySelectorAll('[data-precio]'), function(b){
-      b.onclick = function(){ precioActivo = b.getAttribute('data-precio'); pintar(); };
-    });
   }
 
   function marcarFiltros(){
     var caja = document.getElementById('vgX103Filtros'); if(!caja) return;
     Array.prototype.forEach.call(caja.querySelectorAll('[data-gen]'), function(b){
       b.classList.toggle('vg-x103-on', b.getAttribute('data-gen') === generoActivo);
-    });
-    Array.prototype.forEach.call(caja.querySelectorAll('[data-precio]'), function(b){
-      b.classList.toggle('vg-x103-on', b.getAttribute('data-precio') === precioActivo);
     });
   }
 
@@ -44943,6 +44939,19 @@ button.vg119-incompleto{
       };
       nueva.__vg91 = true;
       window.showSection = nueva;
+    }
+
+    /* FASE 109 · Los chips de precio de la tienda no pasan por
+       renderProducts, así que al pulsarlos la sección no se enteraba. */
+    if(typeof window.vgApplyPriceFilter === 'function' && !window.vgApplyPriceFilter.__vg109){
+      var origP = window.vgApplyPriceFilter;
+      var nuevaP = function(){
+        var r = origP.apply(this, arguments);
+        if(typeof activeCategory !== 'undefined' && activeCategory === 'xbox') setTimeout(function(){ pintar(); }, 20);
+        return r;
+      };
+      nuevaP.__vg109 = true;
+      window.vgApplyPriceFilter = nuevaP;
     }
 
     /* El buscador y el ordenador llaman a renderProducts, que repintaría el
@@ -45192,13 +45201,11 @@ button.vg119-incompleto{
   @media(max-width:560px){
     .vg-x103-filtros{ padding:0 10px; }
     .vg-x103-chip{ padding:6px 11px; font-size:12px; }
-    /* Dos renglones de géneros y el resto plegado. */
-    .vg-x103-filtros .vg-x103-fila:first-child{
-      max-height:72px; overflow:hidden;
-    }
-    .vg-x103-filtros.vg-x103-abierto .vg-x103-fila:first-child{
-      max-height:none;
-    }
+    /* Los ocho primeros géneros y el resto plegado. Se esconden chip a chip
+       y no recortando la fila: recortando por altura, el segundo renglón
+       quedaba partido por la mitad y se veían medios chips. */
+    .vg-x103-extra{ display:none; }
+    .vg-x103-abierto .vg-x103-extra{ display:inline-block; }
     .vg-x103-ver{ display:block; }
   }
 
