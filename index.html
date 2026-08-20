@@ -40839,7 +40839,7 @@ button.vg119-incompleto{
       btn.disabled = true;
       btn.classList.add('vg119-incompleto');
       btn.textContent = pendientes.length === 2
-        ? 'Falta subir tu comprobante y aceptar los Términos'
+        ? 'Falta tu comprobante y aceptar los Términos'
         : 'Falta ' + pendientes[0];
       aviso.textContent = 'En cuanto lo hagas se activa el botón.';
     }else{
@@ -43960,6 +43960,40 @@ button.vg119-incompleto{
 
      Cada línea recibe una etiqueta: cuántos juegos del catálogo coinciden con
      esa búsqueda, o el aviso de que sigue sin haber nada. -->
+<script id="vg-panel-pestanas-fase107-js">
+(function(){
+  'use strict';
+
+  /* Al cambiar de pestaña, el panel se queda donde estaba. En escritorio da
+     igual porque la sección nueva empieza arriba; en el teléfono, con el
+     panel scrolleado a la mitad, cambiabas de pestaña y seguías viendo lo de
+     antes: parecía que no había pasado nada. */
+  function arriba(){
+    var modal = document.getElementById('vgAdminModal');
+    if(modal) modal.scrollTop = 0;
+    var panel = modal && modal.querySelector('.vg-admin-panel');
+    if(panel) panel.scrollTop = 0;
+    var cont = modal && modal.querySelector('.vg-admin-content');
+    if(cont) cont.scrollTop = 0;
+  }
+
+  function arrancar(){
+    if(document.body.dataset.vg107) return;
+    document.body.dataset.vg107 = '1';
+    /* En captura y sobre el documento: las pestañas se crean y se rehacen
+       sobre la marcha, así que engancharse a cada botón no sirve. */
+    document.addEventListener('click', function(e){
+      var t = e.target;
+      if(!t || !t.closest) return;
+      if(t.closest('.vg-admin-tab')) setTimeout(arriba, 30);
+    }, true);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 <script id="vg-buscado-cruce-fase105-js">
 (function(){
   'use strict';
@@ -44661,7 +44695,7 @@ button.vg119-incompleto{
     return Object.keys(cuenta)
       .filter(function(g){ return cuenta[g] >= 12; })
       .sort(function(a,b){ return cuenta[b] - cuenta[a]; })
-      .slice(0, 14)
+      .slice(0, 12)
       .map(function(g){ return { nombre:g, n:cuenta[g] }; });
   }
 
@@ -44743,8 +44777,19 @@ button.vg119-incompleto{
         return '<button class="vg-x103-chip" data-precio="' + b.id + '" type="button">' + b.texto + '</button>';
       }).join('') + '</div>';
 
-    caja.innerHTML = fila1 + fila2;
+    caja.innerHTML = fila1 + fila2 +
+      '<button class="vg-x103-ver" id="vgX103Ver" type="button">Ver todos los géneros</button>';
     grid.parentNode.insertBefore(caja, grid);
+
+    /* En el teléfono, dieciocho chips son 280px: un tercio de la pantalla
+       antes de ver un solo juego. Se muestran dos renglones y el resto se
+       abre a petición. En pantalla ancha caben todos y el botón sobra: lo
+       esconde la propia hoja de estilos. */
+    var ver = caja.querySelector('#vgX103Ver');
+    if(ver) ver.onclick = function(){
+      var abierto = caja.classList.toggle('vg-x103-abierto');
+      ver.textContent = abierto ? 'Ver menos' : 'Ver todos los géneros';
+    };
 
     Array.prototype.forEach.call(caja.querySelectorAll('[data-gen]'), function(b){
       b.onclick = function(){ generoActivo = b.getAttribute('data-gen'); pintar(); };
@@ -45038,6 +45083,39 @@ button.vg119-incompleto{
     background:#0b0d16;
   }
 
+  /* FASE 108 · El botón de pagar cambia de texto cuando falta algo, y el
+     aviso completo —"Falta tu comprobante y aceptar los Términos"— no cabe
+     en el ancho del botón: se salía por los lados y se leía cortado.
+
+     El botón está pensado para una línea. Se le deja envolver y crecer de
+     alto, que es lo que un aviso necesita. */
+  .vg119-incompleto{
+    white-space:normal !important;
+    height:auto !important;
+    min-height:48px !important;
+    line-height:1.3 !important;
+    padding:11px 16px !important;
+    font-size:13px !important;
+    text-align:center !important;
+  }
+
+  /* FASE 107 · En el teléfono, cambiar de pestaña en el panel no llevaba a
+     ningún lado: se veían TODAS las secciones, una debajo de otra, y la que
+     acababas de pulsar quedaba a pantallas de distancia.
+
+     El motivo es el mismo patrón que el del panel entero: el bloque de móvil
+     pone .vg-admin-section en display:block con !important para deshacer la
+     rejilla, y de paso pisa el display:none de la regla base, que es lo único
+     que mantenía escondidas las que no están activas.
+
+     Se deja el block —lo necesita para el alto natural— pero solo para la
+     que está abierta. */
+  @media(max-width:900px){
+    #vgAdminModal#vgAdminModal .vg-admin-section:not(.active){
+      display:none !important;
+    }
+  }
+
   /* El cruce de "Lo que buscan" con el catálogo (fase 105). */
   .vg-x105-eti{
     display:inline-block; margin-left:10px;
@@ -45077,18 +45155,20 @@ button.vg119-incompleto{
     max-width:1480px; margin:0 auto 6px; padding:0 22px;
     display:flex; flex-direction:column; gap:8px;
   }
+  /* FASE 106 · Los filtros iban en una fila que se desplazaba de lado y sin
+     barra visible. En un teléfono se arrastra con el dedo y se entiende; en
+     una computadora de escritorio no hay forma de llegar a lo que queda
+     fuera. Ahora bajan de renglón y caben todos a la vista. */
   .vg-x103-fila{
-    display:flex; gap:8px; flex-wrap:nowrap;
-    overflow-x:auto; scrollbar-width:none;
+    display:flex; gap:6px; flex-wrap:wrap;
     padding-bottom:2px;
   }
-  .vg-x103-fila::-webkit-scrollbar{ display:none; }
   .vg-x103-chip{
     flex:0 0 auto;
     background:rgba(255,255,255,.05);
     border:1px solid rgba(255,255,255,.12);
     color:#c9cfdd; border-radius:999px;
-    padding:8px 14px; font-size:13px; font-weight:600;
+    padding:6px 12px; font-size:12.5px; font-weight:600;
     cursor:pointer; white-space:nowrap;
     transition:background .14s, border-color .14s, color .14s;
   }
@@ -45099,10 +45179,27 @@ button.vg119-incompleto{
     border-color:rgba(25,230,193,.5);
     color:#19e6c1;
   }
-  .vg-x103-precio .vg-x103-chip{ font-size:12.5px; padding:7px 13px; }
+  .vg-x103-precio .vg-x103-chip{ font-size:12px; padding:6px 12px; }
+
+  /* El botón de desplegar solo hace falta donde los chips no caben. */
+  .vg-x103-ver{
+    display:none;
+    background:none; border:0; color:#19e6c1;
+    font-size:12.5px; font-weight:700; cursor:pointer;
+    padding:2px 0; text-align:left; align-self:flex-start;
+  }
+
   @media(max-width:560px){
     .vg-x103-filtros{ padding:0 10px; }
-    .vg-x103-chip{ padding:7px 12px; font-size:12.5px; }
+    .vg-x103-chip{ padding:6px 11px; font-size:12px; }
+    /* Dos renglones de géneros y el resto plegado. */
+    .vg-x103-filtros .vg-x103-fila:first-child{
+      max-height:72px; overflow:hidden;
+    }
+    .vg-x103-filtros.vg-x103-abierto .vg-x103-fila:first-child{
+      max-height:none;
+    }
+    .vg-x103-ver{ display:block; }
   }
 
   /* Los juegos de Xbox que salen al buscar desde otra sección (fase 95). */
