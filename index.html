@@ -15370,7 +15370,12 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   function esc(v){return String(v == null ? '' : v).replace(/[&<>"']/g,function(m){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]})}
   function money(n){return '$'+Number(n||0).toLocaleString('es-MX',{maximumFractionDigits:0})+' MXN'}
   function readCfg(){try{var c=JSON.parse(localStorage.getItem(CFG_KEY)||'{}');return {url:c.url||window.VG_SUPABASE_URL||'',anon:c.anon||window.VG_SUPABASE_ANON_KEY||''}}catch(e){return {url:window.VG_SUPABASE_URL||'',anon:window.VG_SUPABASE_ANON_KEY||''}}}
-  function getSB(){var c=readCfg(); if(!window.supabase||!c.url||!c.anon)return null; window.__vgAdminExtraSB=window.__vgAdminExtraSB||{client:null,sig:''}; var sig=c.url+'|'+String(c.anon).slice(0,14); if(!window.__vgAdminExtraSB.client||window.__vgAdminExtraSB.sig!==sig){window.__vgAdminExtraSB.client=window.supabase.createClient(c.url,c.anon); window.__vgAdminExtraSB.sig=sig;} return window.__vgAdminExtraSB.client;}
+  /* FASE 94 · Este cliente se creaba sin decirle dónde está la sesión, así
+     que miraba el cajón por omisión y siempre iba como anónimo. Leer el
+     catálogo funcionaba —es público— pero guardar y borrar juegos desde el
+     panel se los rechazaba Supabase, y los costos salían vacíos. La sesión
+     del administrador vive en 'vg_sb_auth'. */
+  function getSB(){var c=readCfg(); if(!window.supabase||!c.url||!c.anon)return null; window.__vgAdminExtraSB=window.__vgAdminExtraSB||{client:null,sig:''}; var sig=c.url+'|'+String(c.anon).slice(0,14); if(!window.__vgAdminExtraSB.client||window.__vgAdminExtraSB.sig!==sig){window.__vgAdminExtraSB.client=window.supabase.createClient(c.url,c.anon,{auth:{persistSession:true,autoRefreshToken:true,storageKey:'vg_sb_auth'}}); window.__vgAdminExtraSB.sig=sig;} return window.__vgAdminExtraSB.client;}
   function getServices(){try{if(typeof SERVICES!=='undefined'&&Array.isArray(SERVICES))return SERVICES}catch(e){} return Array.isArray(window.SERVICES)?window.SERVICES:[]}
   function slug(v){return String(v||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g,'').replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,'').slice(0,80)}
   function cleanUrl(params){var url = new URL(window.location.href); url.search=''; url.hash=''; if(params){Object.keys(params).forEach(function(k){if(params[k] != null && params[k] !== '')url.searchParams.set(k,params[k])})} history.replaceState({},'',url.pathname+(url.search||''));}
@@ -43949,13 +43954,53 @@ button.vg119-incompleto{
      imposible. Lo hace por nosotros una función en Vercel, que sí es un
      servidor. Va firmada con la sesión de Supabase: la función le pregunta a
      la propia base si quien llama es administrador antes de contestar. */
+  /* FASE 94 · La sesión del administrador no vive donde se creía.
+
+     Quien hace el login guarda la sesión en localStorage bajo la llave
+     'vg_sb_auth', porque su cliente se creó con storageKey. Los demás
+     clientes de la página se crean sin opciones, así que miran el cajón por
+     omisión —otro— y ahí no hay nada. Resultado: el panel te tenía por
+     administrador pero al preguntarle a Supabase salía como anónimo, y de
+     ahí el "Solo el administrador" y el "costos no disponibles".
+
+     Aquí se usa un cliente propio apuntado al cajón correcto. */
+  function sbConSesion(){
+    if(window.__vgX94SB) return window.__vgX94SB;
+    var url = window.VG_SUPABASE_URL, anon = window.VG_SUPABASE_ANON_KEY;
+    if(window.supabase && url && anon){
+      window.__vgX94SB = window.supabase.createClient(url, anon, {
+        auth: { persistSession:true, autoRefreshToken:true, storageKey:'vg_sb_auth' }
+      });
+      return window.__vgX94SB;
+    }
+    return (typeof window.vgXboxSB === 'function') ? window.vgXboxSB() : null;
+  }
+
   async function tokenAdmin(){
-    var sb = (typeof window.vgXboxSB === 'function') ? window.vgXboxSB() : null;
-    if(!sb || !sb.auth || !sb.auth.getSession) return '';
+    var sb = sbConSesion();
+    if(sb && sb.auth && sb.auth.getSession){
+      try{
+        /* Con la sesión caducada, getSession() se va a la red a renovarla y
+           puede tardar. El botón no se queda colgado por eso: a los tres
+           segundos se tira del cajón, que para leer el token basta. */
+        var s = await Promise.race([
+          sb.auth.getSession(),
+          new Promise(function(r){ setTimeout(function(){ r(null) }, 3000) })
+        ]);
+        var t = s && s.data && s.data.session && s.data.session.access_token;
+        if(t) return t;
+      }catch(e){}
+    }
+    /* Y si aun así no aparece, se lee el cajón a mano: más vale eso que
+       decirle "no eres administrador" a quien sí lo es. */
     try{
-      var s = await sb.auth.getSession();
-      return (s && s.data && s.data.session && s.data.session.access_token) || '';
-    }catch(e){ return ''; }
+      var crudo = localStorage.getItem('vg_sb_auth');
+      if(crudo){
+        var j = JSON.parse(crudo);
+        return (j && (j.access_token || (j.currentSession && j.currentSession.access_token))) || '';
+      }
+    }catch(e){}
+    return '';
   }
 
   async function api(ruta){
@@ -44027,7 +44072,9 @@ button.vg119-incompleto{
     /* Si ya están, o ya vienen en camino, no se hace nada: llamar aquí al
        callback repintaría, y repintar vuelve a pasar por aquí. */
     if(costos || pidiendoCostos) return;
-    var sb = (typeof window.vgXboxSB === 'function') ? window.vgXboxSB() : null;
+    /* Con el cliente que sí lleva la sesión: vg_xbox_costos solo abre para el
+       administrador, y el cliente de siempre iba como anónimo. */
+    var sb = sbConSesion();
     if(!sb){ costos = {}; if(despues) despues(); return; }
     pidiendoCostos = true;
     (async function(){
