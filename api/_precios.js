@@ -75,6 +75,20 @@ function regionDe(p) {
   return 'Otra región';
 }
 
+/* La dirección de la ficha en Kinguin lleva el número del producto delante
+   del nombre: /category/122709/cuphead-...  Sin el número contesta con un
+   redirección a su página de 404, que es lo que salía al darle a "Comprar".
+   La ficha abre ya con la oferta más barata de ese producto seleccionada,
+   que es justo la que se usó para calcular el precio. */
+function urlDeKinguin(p) {
+  const a = p.attributes || {};
+  const id = p.externalId;
+  const nombre = a.urlKey || '';
+  if (id && nombre) return 'https://www.kinguin.net/category/' + id + '/' + nombre;
+  if (id) return 'https://www.kinguin.net/category/' + id;
+  return 'https://www.kinguin.net/listing?phrase=' + encodeURIComponent(p.name || '') + '&platforms=10,20&hideUnavailable=1&active=1';
+}
+
 async function json(url) {
   const r = await fetch(url, { headers: { 'user-agent': UA, accept: 'application/json' } });
   if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -133,7 +147,7 @@ function agrupar(crudos, tipoCambio) {
       mapa.set(slug, {
         slug, titulo, edicion, costoBase, ofertas: 1,
         region: regionDe(p),
-        url: 'https://www.kinguin.net/category/' + (a.urlKey || ''),
+        url: urlDeKinguin(p),
         plataforma: ((a.platforms || []).indexOf('20') >= 0 && (a.platforms || []).indexOf('10') >= 0)
           ? 'Xbox One / Series' : (a.platform === 20 ? 'Xbox Series' : 'Xbox One'),
         portada: p.coverImageUrl || p.hiImageUrl || p.imageUrl || '',
@@ -143,7 +157,7 @@ function agrupar(crudos, tipoCambio) {
       if (costoBase < previo.costoBase) {
         previo.costoBase = costoBase;
         previo.region = regionDe(p);
-        previo.url = 'https://www.kinguin.net/category/' + (a.urlKey || '');
+        previo.url = urlDeKinguin(p);
       }
     }
   }
