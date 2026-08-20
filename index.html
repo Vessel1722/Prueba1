@@ -15555,7 +15555,25 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   }
   window.renderXboxAdminGames=function(message){var box=$('#vgXboxAdminList'); if(!box)return; var msg=$('#vgXboxAdminMessage'); if(msg)msg.textContent=message||''; if(!state.games.length){box.innerHTML='<div class="vg-admin-note">Aún no hay juegos cargados.</div>';return;} /* FASE 90 · Con el catálogo importado son más de mil filas: pintarlas todas deja el panel pegado. Se enseñan las primeras 100 y el resto se busca desde la ventana pública. */ var tope=state.games.slice(0,100); box.innerHTML=(state.games.length>tope.length?'<div class="vg-admin-note">Mostrando '+tope.length+' de '+state.games.length+' juegos del catálogo.</div>':'')+tope.map(function(g){return '<div class="vg-xbox-admin-row"><img src="'+esc(g.image||'portada.png')+'" onerror="this.src=\'portada.png\'" alt=""><div><b>'+esc(g.title)+'</b><small>'+esc(g.platform)+(g.edicion?' · '+esc(g.edicion):'')+' · '+(Number(g.price)>0?money(g.price):'Cotizar')+(Number(g.precio_lista)>0?' (Store '+money(g.precio_lista)+')':'')+' · '+esc(g.status||'active')+'</small></div><div class="vg-xbox-admin-actions"><button class="vg-admin-btn" onclick="editXboxAdminGame(\''+esc(g.id)+'\')">Editar</button><button class="vg-admin-btn danger" onclick="deleteXboxAdminGame(\''+esc(g.id)+'\')">Borrar</button></div></div>'}).join('');};
   window.clearXboxAdminForm=function(){state.selectedEditId=null; ['vgXboxAdminTitle','vgXboxAdminEdicion','vgXboxAdminPrice','vgXboxAdminLista','vgXboxAdminImage'].forEach(function(id){var el=$('#'+id); if(el)el.value=''}); var p=$('#vgXboxAdminPlatform'); if(p)p.value='Xbox Series'; var st=$('#vgXboxAdminStatus'); if(st)st.value='active'};
-  window.editXboxAdminGame=function(id){var g=state.games.find(function(x){return String(x.id)===String(id)}); if(!g)return; state.selectedEditId=id; $('#vgXboxAdminTitle').value=g.title||''; var ed=$('#vgXboxAdminEdicion'); if(ed)ed.value=g.edicion||''; $('#vgXboxAdminPlatform').value=g.platform||'Xbox Series'; $('#vgXboxAdminPrice').value=Number(g.price||0); var li=$('#vgXboxAdminLista'); if(li)li.value=Number(g.precio_lista||0)||''; $('#vgXboxAdminImage').value=g.image||''; $('#vgXboxAdminStatus').value=g.status||'active'; activateAdminTab('xboxcurrent')};
+  window.editXboxAdminGame=function(id){var g=state.games.find(function(x){return String(x.id)===String(id)}); if(!g)return; state.selectedEditId=id; $('#vgXboxAdminTitle').value=g.title||''; var ed=$('#vgXboxAdminEdicion'); if(ed)ed.value=g.edicion||''; $('#vgXboxAdminPlatform').value=g.platform||'Xbox Series'; $('#vgXboxAdminPrice').value=Number(g.price||0); var li=$('#vgXboxAdminLista'); if(li)li.value=Number(g.precio_lista||0)||''; $('#vgXboxAdminImage').value=g.image||''; $('#vgXboxAdminStatus').value=g.status||'active'; activateAdminTab('xboxcurrent');
+    /* FASE 97 · Editar sí funcionaba: llenaba el formulario. Lo que pasa es
+       que el formulario está arriba del todo y con novecientos juegos en la
+       lista queda a pantallas de distancia, así que parecía que el botón no
+       hacía nada. Ahora se sube solo, se marca un momento y el cursor cae en
+       el nombre. */
+    var caja=document.querySelector('.vg-xbox-admin-form');
+    if(caja){
+      /* Sin 'smooth' a propósito: con animación, en el panel hay navegadores
+         donde no se mueve nada y el botón vuelve a parecer muerto. */
+      try{ caja.scrollIntoView({block:'center'}); }catch(e){ caja.scrollIntoView(); }
+      caja.classList.remove('vg-x97-marcado');
+      void caja.offsetWidth;
+      caja.classList.add('vg-x97-marcado');
+      setTimeout(function(){ caja.classList.remove('vg-x97-marcado'); }, 2200);
+    }
+    var nombre=$('#vgXboxAdminTitle');
+    if(nombre) setTimeout(function(){ try{ nombre.focus({preventScroll:true}); }catch(e){ nombre.focus(); } }, 350);
+  };
   window.saveXboxAdminGame=async function(){var title=String($('#vgXboxAdminTitle').value||'').trim(); if(!title){alert('Escribe el nombre del juego.');return;} var game={title:title,platform:$('#vgXboxAdminPlatform').value||'Xbox Series',price:Number($('#vgXboxAdminPrice').value||0),image:String($('#vgXboxAdminImage').value||'').trim(),status:$('#vgXboxAdminStatus').value||'active',updated_at:new Date().toISOString()}; var ed=$('#vgXboxAdminEdicion'), li=$('#vgXboxAdminLista'); if(ed)game.edicion=String(ed.value||'').trim(); if(li)game.precio_lista=Number(li.value||0)||null; var client=getSB(); if(client){var id=state.selectedEditId; var guarda=function(datos){return id?client.from(XBOX_TABLE).update(datos).eq('id',id):client.from(XBOX_TABLE).insert(datos)}; var res=await guarda(game); /* FASE 90 · Si todavía no corriste el SQL de la fase 90, la base no tiene edicion ni precio_lista: se guarda sin ellas en vez de tronar. */ if(res.error&&/edicion|precio_lista/i.test(String(res.error.message||''))){var basico=Object.assign({},game); delete basico.edicion; delete basico.precio_lista; res=await guarda(basico);} if(res.error){alert('No se pudo guardar en Supabase: '+res.error.message); return;}} else {var arr=localGames(); if(state.selectedEditId){arr=arr.map(function(x){return String(x.id)===String(state.selectedEditId)?Object.assign({},x,game):x})}else{game.id='local_'+Date.now();game.created_at=new Date().toISOString();arr.unshift(game)} saveLocalGames(arr)} clearXboxAdminForm(); await loadXboxGames();};
   window.deleteXboxAdminGame=async function(id){if(!confirm('¿Borrar este juego del catálogo Xbox One / Series?'))return; var client=getSB(); if(client){var res=await client.from(XBOX_TABLE).delete().eq('id',id); if(res.error){alert('No se pudo borrar: '+res.error.message); return;}} else {saveLocalGames(localGames().filter(function(x){return String(x.id)!==String(id)}))} await loadXboxGames();};
   window.loadXboxGames=loadXboxGames;
@@ -44605,6 +44623,15 @@ button.vg119-incompleto{
   .vg-x92-gana{ color:#7fd6a0; }
   .vg-x92-region{ border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:1px 6px; }
   .vg-x92-sincosto{ color:#7a7f8d; font-style:italic; }
+  /* El formulario se enciende un momento al darle a Editar, para que se vea
+     que el botón hizo algo (fase 97). */
+  .vg-xbox-admin-form.vg-x97-marcado{
+    outline:2px solid rgba(25,230,193,.75);
+    outline-offset:6px;
+    border-radius:18px;
+    transition:outline-color .4s ease;
+  }
+
   .vg-x95-caro{
     margin-top:5px; display:inline-block;
     background:rgba(255,90,90,.12); border:1px solid rgba(255,90,90,.45);

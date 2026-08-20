@@ -11,9 +11,14 @@
 const CFG = {
   cuota: 0.16,                  // cuota de servicio de Kinguin (medida: 15.5%)
   gananciaMinima: 100,
+  /* En los juegos de dos pesos los extras se acumulaban y salía un precio que
+     espantaba: uno de $35 de costo terminaba en $220. Debajo de este costo se
+     gana una cantidad fija y no se le suma nada, así que sale en $165. */
+  bandaBarata: { hasta: 150, ganancia: 130 },
   escalones: [[200, 100], [400, 140], [700, 190], [1200, 260], [Infinity, 340]],
   extraDemanda: [[8, 80], [4, 40]],
   extraAAA: [[1500, 60], [900, 30]],
+  extrasAlLleno: 400,           // por debajo de este costo, los extras entran a medias
   pisoPorcentual: 0.15,
   topeVenta: 5000,
   debajoDeStore: 0.90,
@@ -26,11 +31,19 @@ const LIB = 'https://www.kinguin.net/services/library/api/v1/products/search?';
 const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/128.0 Safari/537.36';
 
 function ganancia(costo, ofertas, listaMXN) {
+  if (CFG.bandaBarata && costo <= CFG.bandaBarata.hasta) return CFG.bandaBarata.ganancia;
+
   let base = CFG.escalones[CFG.escalones.length - 1][1];
   for (const [tope, v] of CFG.escalones) if (costo <= tope) { base = v; break; }
-  for (const [min, extra] of CFG.extraDemanda) if ((ofertas || 0) >= min) { base += extra; break; }
-  for (const [min, extra] of CFG.extraAAA) if ((listaMXN || 0) >= min) { base += extra; break; }
-  return Math.max(base, costo * CFG.pisoPorcentual, CFG.gananciaMinima);
+
+  /* Los extras entran poco a poco: si no, un juego de $151 saltaba de $280 a
+     $335 por un peso más de costo. */
+  const factor = Math.min(1, costo / CFG.extrasAlLleno);
+  let extra = 0;
+  for (const [min, v] of CFG.extraDemanda) if ((ofertas || 0) >= min) { extra += v; break; }
+  for (const [min, v] of CFG.extraAAA) if ((listaMXN || 0) >= min) { extra += v; break; }
+
+  return Math.max(base + extra * factor, costo * CFG.pisoPorcentual, CFG.gananciaMinima);
 }
 
 const redondear = (n) => Math.ceil(n / 5) * 5;
