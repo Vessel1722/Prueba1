@@ -43336,7 +43336,18 @@ button.vg119-incompleto{
      estrecha el panel no cabe y, al estar centrado, se desborda por
      los DOS lados: la × se iba fuera y no se podia cerrar. En movil
      ocupa la pantalla entera y se acabo el centrado. */
-  #vgAdminModal#vgAdminModal{
+  /* FASE 100 · Este display:block iba sin condición, y con !important le
+     ganaba al display:none de la regla base. Resultado: en cualquier
+     pantalla de 900px o menos el panel de administración se veía nada más
+     entrar, sin sesión y sin cuenta —con el botón de descargar el respaldo
+     de ventas, clientes y chats a la vista—. La intención era solo que en
+     móvil ocupara la pantalla entera en vez de ir centrado; eso se queda,
+     pero únicamente cuando el panel está abierto, que es lo que marca la
+     clase .active y lo que hace el resto de la hoja. */
+  #vgAdminModal#vgAdminModal:not(.active){
+    display:none!important;
+  }
+  #vgAdminModal#vgAdminModal.active{
     display:block!important;
     padding:0!important;
     align-items:stretch!important;
