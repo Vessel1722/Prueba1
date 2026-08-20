@@ -207,18 +207,35 @@ function supa(ruta, opciones) {
 async function esAdmin(req) {
   const auth = req.headers.authorization || '';
   const token = auth.replace(/^Bearer\s+/i, '').trim();
-  if (!token) return false;
-  const anon = process.env.SUPABASE_ANON_KEY || '';
+  if (!token) {
+    return { ok: false, motivo: 'El navegador no mandó tu sesión. Sal del panel y vuelve a entrar.' };
+  }
+
+  /* La llave del portero. Antes solo se miraba SUPABASE_ANON_KEY, y si esa
+     variable faltaba en Vercel, Supabase rechazaba la llamada y la función
+     te tomaba por desconocido aunque tu sesión fuera buena. Sirve igual la
+     service_role: quien decide el rol es el token de arriba, no ésta. */
+  const clave = process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY || '';
+  if (!clave) {
+    return { ok: false, motivo: 'A Vercel le faltan SUPABASE_ANON_KEY y SUPABASE_SERVICE_KEY.' };
+  }
+
   const url = String(process.env.SUPABASE_URL || '').replace(/\/+$/, '') + '/rest/v1/rpc/is_admin';
   try {
     const r = await fetch(url, {
       method: 'POST',
-      headers: { apikey: anon, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
+      headers: { apikey: clave, Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
       body: '{}',
     });
-    if (!r.ok) return false;
-    return (await r.json()) === true;
-  } catch (e) { return false; }
+    if (!r.ok) {
+      const detalle = (await r.text()).slice(0, 120);
+      return { ok: false, motivo: 'Supabase rechazó la sesión (' + r.status + '). ' + detalle };
+    }
+    if ((await r.json()) === true) return { ok: true };
+    return { ok: false, motivo: 'Tu usuario existe pero no tiene is_admin en vg_users.' };
+  } catch (e) {
+    return { ok: false, motivo: 'No se pudo hablar con Supabase: ' + String(e.message).slice(0, 90) };
+  }
 }
 
 module.exports = {

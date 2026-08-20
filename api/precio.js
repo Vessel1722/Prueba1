@@ -15,8 +15,9 @@ module.exports = async (req, res) => {
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
     return res.status(500).json({ error: 'Faltan las variables de entorno de Supabase en Vercel.' });
   }
-  if (!(await P.esAdmin(req))) {
-    return res.status(403).json({ error: 'Solo el administrador.' });
+  const quien = await P.esAdmin(req);
+  if (!quien.ok) {
+    return res.status(403).json({ error: 'Solo el administrador. ' + quien.motivo });
   }
 
   const slug = String(req.query.slug || '').trim();

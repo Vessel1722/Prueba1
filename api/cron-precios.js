@@ -31,8 +31,11 @@ module.exports = async (req, res) => {
   const secreto = process.env.CRON_SECRET || '';
   const auth = req.headers.authorization || '';
   const esCron = secreto && auth === 'Bearer ' + secreto;
-  if (!esCron && !(await P.esAdmin(req))) {
-    return res.status(403).json({ error: 'Solo el administrador o el cron.' });
+  if (!esCron) {
+    const quien = await P.esAdmin(req);
+    if (!quien.ok) {
+      return res.status(403).json({ error: 'Solo el administrador o el cron. ' + quien.motivo });
+    }
   }
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_SERVICE_KEY) {
     return res.status(500).json({ error: 'Faltan las variables de entorno de Supabase en Vercel.' });
