@@ -28,7 +28,7 @@ module.exports = async (req, res) => {
     // Lo que hay guardado, para comparar contra lo de ahora.
     let fila = null;
     if (slug) {
-      const r = await P.supa('vg_xbox_games?select=slug,title,edicion,price,precio_lista,status&slug=eq.' + encodeURIComponent(slug));
+      const r = await P.supa('vg_xbox_games?select=slug,title,edicion,price,precio_lista,ms_id,status&slug=eq.' + encodeURIComponent(slug));
       fila = (r && r[0]) || null;
     }
 
@@ -62,11 +62,20 @@ module.exports = async (req, res) => {
     }
 
     const costo = Math.round(oferta.costoBase * (1 + P.CFG.cuota));
-    const listaMXN = fila ? Number(fila.precio_lista || 0) : 0;
+
+    /* El precio de Xbox se pregunta ahora, no se lee el guardado: sus rebajas
+       duran días y es justo contra ese número contra el que compites. */
+    let listaMXN = fila ? Number(fila.precio_lista || 0) : 0;
+    if (fila && fila.ms_id) {
+      const vivos = await P.preciosDeMicrosoft([fila.ms_id]);
+      if (vivos[fila.ms_id]) listaMXN = vivos[fila.ms_id];
+    }
+
     const sugerido = P.precioDeVenta(costo, oferta.ofertas, listaMXN);
     const tuPrecio = fila ? Number(fila.price || 0) : 0;
     const ganas = tuPrecio ? tuPrecio - costo : null;
     const margen = (tuPrecio && costo) ? Math.round((tuPrecio - costo) / costo * 100) : null;
+    const masCaroQueXbox = !!(tuPrecio && listaMXN && tuPrecio >= listaMXN);
 
     res.json({
       encontrado: true,
@@ -81,10 +90,14 @@ module.exports = async (req, res) => {
       margen,
       precioSugerido: sugerido.venta,
       motivoSinPrecio: sugerido.motivo || null,
-      // La señal que de verdad importa: ¿este pedido te deja dinero?
-      alerta: (ganas !== null && ganas < P.CFG.gananciaMinima)
-        ? (ganas <= 0 ? 'PIERDES dinero a tu precio actual' : 'Ganas menos de $' + P.CFG.gananciaMinima)
-        : null,
+      precioXbox: listaMXN || null,
+      masCaroQueXbox,
+      // Las dos señales que importan: ¿te deja dinero? ¿le ganas a Xbox?
+      alerta: masCaroQueXbox
+        ? 'MÁS CARO que en la tienda de Xbox ($' + listaMXN.toLocaleString('es-MX') + ')'
+        : (ganas !== null && ganas < P.CFG.gananciaMinima)
+          ? (ganas <= 0 ? 'PIERDES dinero a tu precio actual' : 'Ganas menos de $' + P.CFG.gananciaMinima)
+          : null,
       enlace: oferta.url,
       enlaceBusqueda: 'https://www.kinguin.net/listing?phrase=' + encodeURIComponent(oferta.titulo) + '&platforms=10,20&hideUnavailable=1&active=1',
     });

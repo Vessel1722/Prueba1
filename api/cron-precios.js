@@ -53,17 +53,25 @@ module.exports = async (req, res) => {
     const filas = [];
     let desde = 0;
     while (true) {
-      const lote = await P.supa('vg_xbox_games?select=slug,title,price,precio_lista,status&slug=not.is.null&order=slug.asc&limit=1000&offset=' + desde);
+      const lote = await P.supa('vg_xbox_games?select=slug,title,price,precio_lista,ms_id,status&slug=not.is.null&order=slug.asc&limit=1000&offset=' + desde);
       filas.push.apply(filas, lote);
       if (lote.length < 1000) break;
       desde += 1000;
     }
 
-    const cambios = { sube: [], baja: [], oculta: [], revive: [], igual: 0, sinCambio: 0 };
+    /* El precio de la tienda de Xbox se relee cada vez. Guardarlo y no volver
+       a mirarlo era el fallo que dejaba publicar un juego más caro que en la
+       propia tienda: las rebajas de Microsoft duran días. */
+    const preciosMS = await P.preciosDeMicrosoft(filas.map((f) => f.ms_id));
+    const cambios = { sube: [], baja: [], oculta: [], revive: [], igual: 0, sinCambio: 0, store: [] };
 
     for (const f of filas) {
       const o = kinguin.get(f.slug);
-      const listaMXN = Number(f.precio_lista || 0);
+      const guardado = Number(f.precio_lista || 0);
+      const listaMXN = (f.ms_id && preciosMS[f.ms_id]) ? preciosMS[f.ms_id] : guardado;
+      if (listaMXN && listaMXN !== guardado) {
+        cambios.store.push({ slug: f.slug, title: f.title, antes: guardado, ahora: listaMXN });
+      }
 
       if (!o) {
         if (f.status !== 'hidden') cambios.oculta.push({ slug: f.slug, title: f.title, motivo: 'ya no está en Kinguin' });
@@ -81,11 +89,17 @@ module.exports = async (req, res) => {
       }
 
       const antes = Number(f.price || 0);
+      const store = listaMXN || null;
       if (f.status === 'hidden') {
-        cambios.revive.push({ slug: f.slug, title: f.title, precio: r.venta, costo, region: o.region, url: o.url });
+        cambios.revive.push({ slug: f.slug, title: f.title, ahora: r.venta, costo, region: o.region, url: o.url, store });
       } else if (r.venta !== antes) {
         (r.venta > antes ? cambios.sube : cambios.baja)
-          .push({ slug: f.slug, title: f.title, antes, ahora: r.venta, costo, region: o.region, url: o.url });
+          .push({ slug: f.slug, title: f.title, antes, ahora: r.venta, costo, region: o.region, url: o.url, store });
+      } else if (listaMXN && listaMXN !== guardado) {
+        /* El precio nuestro no cambia pero el de Xbox sí: hay que guardarlo
+           igual, que es el tachado que ve el cliente y el que decide mañana
+           si el juego sigue conviniendo. */
+        cambios.baja.push({ slug: f.slug, title: f.title, antes, ahora: r.venta, costo, region: o.region, url: o.url, store });
       } else {
         cambios.igual++;
       }
@@ -99,6 +113,7 @@ module.exports = async (req, res) => {
       seEsconden: cambios.oculta.length,
       vuelven: cambios.revive.length,
       sinCambio: cambios.igual,
+      preciosDeXboxQueCambiaron: cambios.store.length,
       tipoCambio: Number(tipoCambio.toFixed(4)),
       masSuben: cambios.sube.slice().sort((a, b) => (b.ahora - b.antes) - (a.ahora - a.antes)).slice(0, 8),
       seEscondieron: cambios.oculta.slice(0, 8),
@@ -112,9 +127,11 @@ module.exports = async (req, res) => {
     // ── Escribir ──
     const aTocar = cambios.sube.concat(cambios.baja, cambios.revive).slice(0, TOPE_ESCRITURAS);
     await P.enTanda(aTocar, 8, async (c) => {
+      const cuerpo = { price: c.ahora, status: 'active', updated_at: new Date().toISOString() };
+      if (c.store) cuerpo.precio_lista = c.store;
       await P.supa('vg_xbox_games?slug=eq.' + encodeURIComponent(c.slug), {
         method: 'PATCH',
-        body: JSON.stringify({ price: c.ahora || c.precio, status: 'active', updated_at: new Date().toISOString() }),
+        body: JSON.stringify(cuerpo),
       });
       await P.supa('vg_xbox_costos', {
         method: 'POST',

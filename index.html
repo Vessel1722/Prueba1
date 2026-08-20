@@ -44026,6 +44026,7 @@ button.vg119-incompleto{
       } else {
         var t = 'hoy te cuesta ' + pesos(d.costoAhora);
         if(d.ganas != null) t += ' · ganarías ' + pesos(d.ganas) + ' (' + d.margen + '%)';
+        if(d.precioXbox) t += ' · Xbox lo vende a ' + pesos(d.precioXbox);
         if(d.precioSugerido && d.precioSugerido !== d.tuPrecio) t += ' · sugerido ' + pesos(d.precioSugerido);
         if(d.alerta) t += ' · ' + d.alerta;
         hueco.className = 'vg-x92-vivo ' + (d.alerta ? 'vg-x92-mal' : 'vg-x92-bien');
@@ -44125,7 +44126,11 @@ button.vg119-incompleto{
       '<div><b>' + esc(g.title) + '</b><small>' + esc(g.platform) +
         (g.edicion ? ' · ' + esc(g.edicion) : '') +
         ' · ' + esc(g.status||'active') +
-        (Number(g.precio_lista)>0 ? ' · Store ' + pesos(g.precio_lista) : '') + '</small>' +
+        (Number(g.precio_lista)>0 ? ' · Xbox ' + pesos(g.precio_lista) : '') + '</small>' +
+        /* FASE 95 · El aviso que faltaba: si tu precio le empata o le gana al
+           de la tienda de Xbox, el cliente se va a comprarlo con Microsoft. */
+        (Number(g.precio_lista)>0 && Number(g.price) >= Number(g.precio_lista)
+          ? '<div class="vg-x95-caro">Más caro que en Xbox (' + pesos(g.precio_lista) + ') — no lo vendas así</div>' : '') +
         '<div class="vg-x92-cuentas">' +
           '<span class="vg-x92-venta">' + pesos(g.price) + '</span>' +
           (costo ? '<span>te cuesta <b>' + pesos(costo) + '</b></span>' +
@@ -44348,6 +44353,66 @@ button.vg119-incompleto{
     }
   }
 
+  /* FASE 95 · Los juegos de Xbox no viven en SERVICES, así que el buscador de
+     arriba no los encontraba: buscabas "forza" y la tienda contestaba que no
+     hay nada, teniendo ochocientos juegos. Ahora, cuando hay búsqueda y estás
+     en otra sección, debajo del catálogo normal sale lo que coincide del
+     catálogo de Xbox, con su enlace para ver el resto. */
+  function limpiarExtra(){
+    var previo = document.getElementById('vgX95Extra');
+    if(previo && previo.parentNode) previo.parentNode.removeChild(previo);
+  }
+
+  function pintarExtraBusqueda(){
+    limpiarExtra();
+    var grid = document.getElementById('productsGrid'); if(!grid) return;
+    if(typeof activeCategory !== 'undefined' && activeCategory === 'xbox') return;
+
+    var caja = document.getElementById('globalSearch');
+    var q = String(caja && caja.value || '').trim().toLowerCase();
+    if(q.length < 2) return;
+
+    var hits = juegos().filter(function(j){
+      return [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(q) >= 0;
+    });
+
+    if(!hits.length){
+      /* Si el catálogo todavía no está en memoria se pide, y al llegar se
+         vuelve a pintar: la siguiente tecla ya encuentra. */
+      if(typeof window.vgXboxCargado === 'function' && !window.vgXboxCargado() &&
+         !pidiendo && typeof window.loadXboxGames === 'function'){
+        pidiendo = true;
+        Promise.resolve(window.loadXboxGames()).then(function(){ pidiendo = false; pintarExtraBusqueda(); });
+      }
+      return;
+    }
+
+    hits.sort(function(a,b){ return Number(a.orden||0) - Number(b.orden||0); });
+
+    var extra = document.createElement('section');
+    extra.id = 'vgX95Extra';
+    extra.className = 'vg-x95-extra';
+    extra.innerHTML =
+      '<div class="vg-x95-cabeza">' +
+        '<h3>Juegos de Xbox One / Series</h3>' +
+        '<button class="vg-x95-ir" type="button">Ver los ' + hits.length + ' que coinciden →</button>' +
+      '</div><div class="grid vg-x95-grid"></div>';
+
+    if(grid.parentNode) grid.parentNode.insertBefore(extra, grid.nextSibling);
+
+    var rejilla = extra.querySelector('.vg-x95-grid');
+    if(rejilla && typeof window.vgXboxTarjeta === 'function'){
+      rejilla.innerHTML = hits.slice(0, 12).map(window.vgXboxTarjeta).join('');
+    }
+    var boton = extra.querySelector('.vg-x95-ir');
+    if(boton) boton.onclick = function(){ if(typeof window.showSection === 'function') window.showSection('xbox'); };
+
+    /* Si el catálogo normal no encontró nada pero aquí sí, el cartel de "no
+       hay productos" sobra: sí hay, y están justo debajo. */
+    var vacio = document.getElementById('emptyState');
+    if(vacio) vacio.style.display = 'none';
+  }
+
   function envolver(){
     if(typeof window.showSection === 'function' && !window.showSection.__vg91){
       var orig = window.showSection;
@@ -44365,9 +44430,11 @@ button.vg119-incompleto{
     if(typeof window.renderProducts === 'function' && !window.renderProducts.__vg91){
       var origR = window.renderProducts;
       var nuevaR = function(){
-        if(typeof activeCategory !== 'undefined' && activeCategory === 'xbox'){ pintar(); return; }
+        if(typeof activeCategory !== 'undefined' && activeCategory === 'xbox'){ pintar(); limpiarExtra(); return; }
         esconderPie();
-        return origR.apply(this, arguments);
+        var r = origR.apply(this, arguments);
+        pintarExtraBusqueda();
+        return r;
       };
       nuevaR.__vg91 = true;
       window.renderProducts = nuevaR;
@@ -44496,6 +44563,28 @@ button.vg119-incompleto{
     background:#0b0d16;
   }
 
+  /* Los juegos de Xbox que salen al buscar desde otra sección (fase 95). */
+  .vg-x95-extra{
+    max-width:1480px; margin:26px auto 10px; padding:0 22px;
+  }
+  .vg-x95-cabeza{
+    display:flex; align-items:center; justify-content:space-between;
+    gap:14px; flex-wrap:wrap; margin-bottom:12px;
+    border-top:1px solid rgba(255,255,255,.08); padding-top:18px;
+  }
+  .vg-x95-cabeza h3{ margin:0; font-size:17px; }
+  .vg-x95-ir{
+    background:rgba(25,230,193,.10);
+    border:1px solid rgba(25,230,193,.38);
+    color:#19e6c1; border-radius:999px;
+    padding:8px 16px; font-size:13px; font-weight:700; cursor:pointer;
+  }
+  .vg-x95-ir:hover{ background:rgba(25,230,193,.18); }
+  @media(max-width:560px){
+    .vg-x95-extra{ padding:0 10px; margin-top:18px; }
+    .vg-x95-ir{ width:100%; }
+  }
+
   /* Panel de administración del catálogo (fase 92). */
   .vg-x92-barra{
     display:flex; align-items:center; gap:12px; flex-wrap:wrap;
@@ -44516,6 +44605,12 @@ button.vg119-incompleto{
   .vg-x92-gana{ color:#7fd6a0; }
   .vg-x92-region{ border:1px solid rgba(255,255,255,.14); border-radius:6px; padding:1px 6px; }
   .vg-x92-sincosto{ color:#7a7f8d; font-style:italic; }
+  .vg-x95-caro{
+    margin-top:5px; display:inline-block;
+    background:rgba(255,90,90,.12); border:1px solid rgba(255,90,90,.45);
+    color:#ff9a9a; border-radius:8px; padding:3px 9px;
+    font-size:11px; font-weight:700;
+  }
   .vg-x92-vivo{ }
   .vg-x92-bien{ color:#7fd6a0; }
   .vg-x92-mal{ color:#ff9a9a; font-weight:700; }

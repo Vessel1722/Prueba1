@@ -179,6 +179,42 @@ async function bajarCatalogo(paginas, concurrencia) {
   return crudos;
 }
 
+/* ───────── Microsoft: lo que cuesta HOY en la tienda de Xbox México ─────────
+ *
+ * Devuelve el precio que de verdad se paga, no el de lista. Microsoft manda
+ * los dos: MSRP es el tachado y ListPrice el vigente. Battlefield 6 Phantom
+ * estaba a 1,999 de lista y 1,299 por rebaja, y mirar el de lista dejaba
+ * publicarlo a 1,390 —más caro que la propia tienda de Xbox—.
+ *
+ * Las rebajas de Microsoft duran días, así que esto se relee en cada repaso:
+ * un juego que hoy no conviene puede convenir la semana que viene, y al revés.
+ */
+const MS_CATALOGO = 'https://displaycatalog.mp.microsoft.com/v7.0/';
+
+async function preciosDeMicrosoft(ids) {
+  const precios = {};
+  const limpios = [...new Set((ids || []).filter(Boolean))];
+  const bloques = [];
+  for (let i = 0; i < limpios.length; i += 20) bloques.push(limpios.slice(i, i + 20));
+
+  await enTanda(bloques, 8, async (bloque) => {
+    const r = await json(`${MS_CATALOGO}products?bigIds=${bloque.join(',')}&market=MX&languages=es-MX&MS-CV=DGU1mcuYo0WMMp%2BF.1`);
+    for (const prod of r.Products || []) {
+      let ahora = 0;
+      for (const s of prod.DisplaySkuAvailabilities || []) {
+        for (const av of s.Availabilities || []) {
+          const p = av.OrderManagementData && av.OrderManagementData.Price;
+          if (!p || p.CurrencyCode !== 'MXN') continue;
+          const efectivo = p.ListPrice || p.MSRP || 0;
+          if (efectivo > 0 && (ahora === 0 || efectivo < ahora)) ahora = efectivo;
+        }
+      }
+      if (ahora > 0) precios[prod.ProductId] = Math.round(ahora);
+    }
+  });
+  return precios;
+}
+
 /* Busca un juego suelto por nombre. Para el botón de "precio de ahora". */
 async function buscarUno(frase) {
   const j = await json(LIB + 'phrase=' + encodeURIComponent(frase) + '&platforms=10,20&size=100');
@@ -264,5 +300,5 @@ async function esAdmin(req) {
 module.exports = {
   CFG, ganancia, redondear, precioDeVenta, slugDe,
   tipoDeCambio, agrupar, bajarCatalogo, buscarUno, enTanda,
-  supa, esAdmin,
+  preciosDeMicrosoft, supa, esAdmin,
 };
