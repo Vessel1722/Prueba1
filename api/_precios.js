@@ -177,18 +177,50 @@ function agrupar(crudos, tipoCambio) {
   return mapa;
 }
 
-/* Baja el catálogo Xbox entero de Kinguin. paginas=50 son 5,000 por plataforma,
-   que es todo lo que la API deja ver. */
-async function bajarCatalogo(paginas, concurrencia) {
+/* Baja el catálogo Xbox entero de Kinguin.
+ *
+ * Kinguin no devuelve más de 10,000 productos por consulta y su catálogo de
+ * Xbox tiene unos 26,000: pidiendo "todo lo de Xbox One" se veía el 38% y
+ * faltaban juegos tan normales como el GTA Trilogy. Partiendo por bandas de
+ * precio ninguna llega al tope. Los números van en céntimos de euro. */
+const BANDAS = [
+  [0, 200], [200, 400], [400, 700], [700, 1200],
+  [1200, 2000], [2000, 3500], [3500, 6000], [6000, 999999],
+];
+
+async function bajarCatalogo(concurrencia) {
+  const vistos = new Set();
   const crudos = [];
-  for (const plat of [10, 20]) {
-    const pags = Array.from({ length: paginas }, (_, p) => p);
-    const lotes = await enTanda(pags, concurrencia, async (page) => {
-      const j = await json(LIB + 'platforms=' + plat + '&size=100&page=' + page);
+
+  function guardar(lote) {
+    for (const p of lote || []) {
+      if (!p || vistos.has(p.id)) continue;   // el mismo producto sale en las dos plataformas
+      vistos.add(p.id);
+      crudos.push(p);
+    }
+  }
+
+  const trabajos = [];
+  for (const plat of [10, 20]) for (const b of BANDAS) trabajos.push({ plat, desde: b[0], hasta: b[1] });
+
+  await enTanda(trabajos, 4, async (t) => {
+    const base = LIB + 'platforms=' + t.plat + '&size=100&priceFrom=' + t.desde + '&priceTo=' + t.hasta;
+    let total = 0;
+    try {
+      const primera = await json(base + '&page=0');
+      total = (primera.page && primera.page.totalElements) || 0;
+      guardar(primera._embedded && primera._embedded.products);
+    } catch (e) { return; }
+
+    const paginas = Math.min(Math.ceil(total / 100), 100) - 1;
+    if (paginas <= 0) return;
+    const lotes = await enTanda(Array.from({ length: paginas }, (_, i) => i + 1), concurrencia, async (p) => {
+      const j = await json(base + '&page=' + p);
       return (j._embedded && j._embedded.products) || [];
     });
-    for (const l of lotes) if (l) crudos.push(...l);
-  }
+    for (const l of lotes) guardar(l);
+  });
+
   return crudos;
 }
 

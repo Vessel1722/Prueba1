@@ -18,7 +18,7 @@
 const P = require('./_precios');
 
 const TOPE_ESCRITURAS = 300;   // por corrida, para no pasarse del tiempo
-const PAGINAS = 50;
+const CONCURRENCIA_PAGINAS = 10;
 const CONCURRENCIA = 12;
 
 module.exports = async (req, res) => {
@@ -45,7 +45,7 @@ module.exports = async (req, res) => {
   try {
     const [tipoCambio, crudos] = await Promise.all([
       P.tipoDeCambio(),
-      P.bajarCatalogo(PAGINAS, CONCURRENCIA),
+      P.bajarCatalogo(CONCURRENCIA_PAGINAS),
     ]);
     const kinguin = P.agrupar(crudos, tipoCambio);
 
