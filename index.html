@@ -15551,7 +15551,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     if(!$('.vg-admin-tab[data-tab="analytics"]',tabs)){var a=document.createElement('button');a.className='vg-admin-tab';a.dataset.tab='analytics';a.textContent='Analítica';a.onclick=function(){activateAdminTab('analytics')};tabs.appendChild(a)}
     if(!$('#vgAdminAnalytics',content)){var sec=document.createElement('section');sec.className='vg-admin-section';sec.id='vgAdminAnalytics';sec.innerHTML='<div class="vg-admin-tools"><button class="vg-admin-btn primary" onclick="loadAnalyticsAdmin()">Actualizar analítica</button><button class="vg-admin-btn danger vg-danger-reset" onclick="resetAnalyticsAdmin()">Reiniciar analítica</button></div><div class="vg-admin-note vg-admin-ok">Este panel muestra datos internos guardados en Supabase: visitas, productos vistos, scroll y ciudad aproximada. Google Analytics real sigue disponible en GA4.</div><div id="vgAdminAnalyticsBody"></div>';content.appendChild(sec)}
     if(!$('.vg-admin-tab[data-tab="xboxcurrent"]',tabs)){var x=document.createElement('button');x.className='vg-admin-tab';x.dataset.tab='xboxcurrent';x.textContent='Xbox One / Series';x.onclick=function(){activateAdminTab('xboxcurrent')};tabs.appendChild(x)}
-    if(!$('#vgAdminXboxcurrent',content)){var xs=document.createElement('section');xs.className='vg-admin-section';xs.id='vgAdminXboxcurrent';xs.innerHTML='<div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox One / Series:</b> agrega aquí los juegos que tienes disponibles. Se muestran en la nueva ventana pública de Xbox One / Series.</div><div class="vg-xbox-admin-form"><input id="vgXboxAdminTitle" placeholder="Nombre del juego"><input id="vgXboxAdminEdicion" placeholder="Edición (Standard, Deluxe, Gold...)"><select id="vgXboxAdminPlatform"><option>Xbox Series</option><option>Xbox One</option><option>Xbox One / Series</option></select><input id="vgXboxAdminPrice" type="number" min="0" placeholder="Tu precio MXN"><input id="vgXboxAdminLista" type="number" min="0" placeholder="Precio Microsoft Store (para tachar)"><input id="vgXboxAdminImage" placeholder="URL de portada"><select id="vgXboxAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="saveXboxAdminGame()">Guardar</button></div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="clearXboxAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="loadXboxGames()">Recargar juegos</button></div><div id="vgXboxAdminMessage" class="vg-analytics-muted"></div><div class="vg-xbox-admin-list" id="vgXboxAdminList"></div>';content.appendChild(xs)}
+    if(!$('#vgAdminXboxcurrent',content)){var xs=document.createElement('section');xs.className='vg-admin-section';xs.id='vgAdminXboxcurrent';xs.innerHTML='<div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox One / Series:</b> agrega aquí los juegos que tienes disponibles. Se muestran en la nueva ventana pública de Xbox One / Series.</div><div class="vg-xbox-admin-form"><input id="vgXboxAdminTitle" placeholder="Nombre del juego"><input id="vgXboxAdminEdicion" placeholder="Edición: Standard, Deluxe…"><select id="vgXboxAdminPlatform"><option>Xbox Series</option><option>Xbox One</option><option>Xbox One / Series</option></select><input id="vgXboxAdminPrice" type="number" min="0" placeholder="Tu precio MXN"><input id="vgXboxAdminLista" type="number" min="0" placeholder="Precio en Xbox (tachado)"><input id="vgXboxAdminImage" placeholder="URL de portada"><select id="vgXboxAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="saveXboxAdminGame()">Guardar</button></div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="clearXboxAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="loadXboxGames()">Recargar juegos</button></div><div id="vgXboxAdminMessage" class="vg-analytics-muted"></div><div class="vg-xbox-admin-list" id="vgXboxAdminList"></div>';content.appendChild(xs)}
   }
   window.renderXboxAdminGames=function(message){var box=$('#vgXboxAdminList'); if(!box)return; var msg=$('#vgXboxAdminMessage'); if(msg)msg.textContent=message||''; if(!state.games.length){box.innerHTML='<div class="vg-admin-note">Aún no hay juegos cargados.</div>';return;} /* FASE 90 · Con el catálogo importado son más de mil filas: pintarlas todas deja el panel pegado. Se enseñan las primeras 100 y el resto se busca desde la ventana pública. */ var tope=state.games.slice(0,100); box.innerHTML=(state.games.length>tope.length?'<div class="vg-admin-note">Mostrando '+tope.length+' de '+state.games.length+' juegos del catálogo.</div>':'')+tope.map(function(g){return '<div class="vg-xbox-admin-row"><img src="'+esc(g.image||'portada.png')+'" onerror="this.src=\'portada.png\'" alt=""><div><b>'+esc(g.title)+'</b><small>'+esc(g.platform)+(g.edicion?' · '+esc(g.edicion):'')+' · '+(Number(g.price)>0?money(g.price):'Cotizar')+(Number(g.precio_lista)>0?' (Store '+money(g.precio_lista)+')':'')+' · '+esc(g.status||'active')+'</small></div><div class="vg-xbox-admin-actions"><button class="vg-admin-btn" onclick="editXboxAdminGame(\''+esc(g.id)+'\')">Editar</button><button class="vg-admin-btn danger" onclick="deleteXboxAdminGame(\''+esc(g.id)+'\')">Borrar</button></div></div>'}).join('');};
   window.clearXboxAdminForm=function(){state.selectedEditId=null; ['vgXboxAdminTitle','vgXboxAdminEdicion','vgXboxAdminPrice','vgXboxAdminLista','vgXboxAdminImage'].forEach(function(id){var el=$('#'+id); if(el)el.value=''}); var p=$('#vgXboxAdminPlatform'); if(p)p.value='Xbox Series'; var st=$('#vgXboxAdminStatus'); if(st)st.value='active'};
@@ -44761,6 +44761,55 @@ button.vg119-incompleto{
   @media(max-width:560px){
     .vg-x95-extra{ padding:0 10px; margin-top:18px; }
     .vg-x95-ir{ width:100%; }
+  }
+
+  /* FASE 99 · El formulario de alta manual, ordenado.
+
+     Su rejilla estaba escrita a mano para los seis campos que tenía:
+     1.4fr 160px 130px 1fr 140px auto. En la fase 92 le añadí dos campos
+     —edición y precio de la Store— y el botón de subir foto se cuela como
+     una celda más por cada campo de imagen. Once elementos en seis columnas
+     colocados a dedo: de ahí las cajas gigantes y descuadradas.
+
+     Se cambia por columnas que se reparten solas, así da igual cuántos
+     campos tenga mañana. */
+  .vg-xbox-admin-form{
+    grid-template-columns:repeat(auto-fit,minmax(190px,1fr));
+    gap:10px;
+    align-items:start;
+  }
+  .vg-xbox-admin-form input,
+  .vg-xbox-admin-form select{
+    width:100%;
+    padding:10px 12px;
+    border-radius:12px;
+    font-size:13.5px;
+  }
+  .vg-xbox-admin-form > button{
+    align-self:stretch;
+    min-height:42px;
+  }
+
+  /* El botón de subir foto, compacto: dentro de este formulario la frase
+     "Desde tu galería o la cámara" duplicaba el alto de la fila. */
+  .vg-xbox-admin-form .vgsf{
+    margin-top:0;
+    gap:6px;
+    align-items:center;
+  }
+  .vg-xbox-admin-form .vgsf-mini{ width:38px; height:38px; border-radius:10px; }
+  .vg-xbox-admin-form .vgsf-msg{ display:none; }
+
+  /* Y el botón solo tiene sentido junto al campo de la portada. Al de
+     nombre y al de edición se les cuela porque el detector mira el texto
+     de alrededor, no el campo. */
+  .vg-xbox-admin-form #vgXboxAdminTitle + .vgsf,
+  .vg-xbox-admin-form #vgXboxAdminEdicion + .vgsf,
+  .vg-xbox-admin-form #vgXboxAdminPrice + .vgsf,
+  .vg-xbox-admin-form #vgXboxAdminLista + .vgsf{ display:none; }
+
+  @media(max-width:560px){
+    .vg-xbox-admin-form{ grid-template-columns:1fr; }
   }
 
   /* Panel de administración del catálogo (fase 92). */
