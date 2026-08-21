@@ -87,7 +87,13 @@ function esFotoDelAlmacen(url) {
          /^\/storage\/v1\/object\/public\/(catalogo|productos)\//.test(url.pathname);
 }
 
-async function fotoDeCache(req) {
+/* Recibe el evento, y no solo la petición, para poder pasarle el
+   guardado a ev.waitUntil(). Sin eso el navegador puede dar por
+   terminado el service worker en cuanto la foto llega a la pantalla y
+   matarlo a media escritura: la portada se vería, pero no se quedaría
+   guardada, y la siguiente visita volvería a bajarla — que es
+   justamente lo que este bloque viene a evitar. */
+async function fotoDeCache(ev, req) {
   const cache = await caches.open(CACHE_FOTOS);
 
   const guardada = await cache.match(req);
@@ -103,9 +109,11 @@ async function fotoDeCache(req) {
     const resp = await fetch(req.url, { mode: 'cors', credentials: 'omit' });
     if (resp && resp.ok) {
       const copia = resp.clone();
-      cache.put(req, copia)
-        .then(() => podarFotos(cache))
-        .catch(() => {});
+      ev.waitUntil(
+        cache.put(req, copia)
+          .then(() => podarFotos(cache))
+          .catch(() => {})
+      );
     }
     return resp;
   } catch (e) {
@@ -134,7 +142,7 @@ self.addEventListener('fetch', (ev) => {
 
   /* ── Portadas del almacén: caché primero ── */
   if (esFotoDelAlmacen(url)) {
-    ev.respondWith(fotoDeCache(req));
+    ev.respondWith(fotoDeCache(ev, req));
     return;
   }
 
