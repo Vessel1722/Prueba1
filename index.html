@@ -15497,7 +15497,12 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
       (g.edicion&&!/^standard$/i.test(g.edicion)?'<span class="vg-x90-edicion">'+esc(g.edicion)+'</span>':'')+'</div>'+
       '<div class="vg-x90-precios"><span class="vg-xbox-price">'+(precio>0?money(precio):'Cotizar')+'</span>'+
       (lista>precio&&precio>0?'<s class="vg-x90-lista">'+money(lista)+'</s>':'')+'</div>'+
-      '<button class="primary whatsapp" type="button" onclick="buyXboxCurrentGame(\''+esc(g.id)+'\')">'+(precio>0?'Comprar':'Cotizar')+'</button>'+
+      '<div class="vg-x113-acciones">'+
+        '<button class="primary whatsapp" type="button" onclick="buyXboxCurrentGame(\''+esc(g.id)+'\')">'+(precio>0?'Comprar':'Cotizar')+'</button>'+
+        /* FASE 113 · El enlace de este juego, para mandarlo por WhatsApp.
+           Estaba solo en el panel y ahí no lo encontraba nadie. */
+        (g.slug ? '<button class="vg-x113-enlace" type="button" title="Copiar el enlace de este juego" aria-label="Copiar el enlace de este juego" onclick="event.stopPropagation();window.vgCopiarEnlaceJuego(this,\''+esc(g.slug)+'\')">🔗</button>' : '')+
+      '</div>'+
       '</div></article>';
   }
   function pieXbox(total,visibles){
@@ -44108,8 +44113,7 @@ button.vg119-incompleto{
       '</div>';
 
     function abrir(){
-      var caja = document.getElementById('globalSearch');
-      if(caja) caja.value = g.title || '';
+      if(g.slug && typeof window.vgXboxFijar === 'function'){ window.vgXboxFijar(g.slug); return; }
       if(typeof window.showSection === 'function') window.showSection('xbox');
       if(typeof window.renderProducts === 'function') setTimeout(window.renderProducts, 60);
     }
@@ -44209,10 +44213,10 @@ button.vg119-incompleto{
      escrito deja ese juego y solo ese. Es lo mismo que hace el buscador
      cuando pulsas un resultado. */
   function abrir(juego){
-    var caja = document.getElementById('globalSearch');
-    if(caja) caja.value = juego.title || '';
-    if(typeof window.showSection === 'function') window.showSection('xbox');
-    if(typeof window.renderProducts === 'function') setTimeout(window.renderProducts, 60);
+    /* Se fija el juego en vez de escribirle el nombre al buscador: así la
+       caja de arriba queda limpia desde el primer momento. */
+    if(juego.slug && typeof window.vgXboxFijar === 'function'){ window.vgXboxFijar(juego.slug); }
+    else if(typeof window.showSection === 'function'){ window.showSection('xbox'); }
 
     var precio = Number(juego.price||0);
     document.title = juego.title + (precio ? ' — $' + precio.toLocaleString('es-MX') + ' MXN' : '') + ' | Vessel Games';
@@ -44244,6 +44248,30 @@ button.vg119-incompleto{
   };
 
   window.vgRestaurarTitulo = function(){ document.title = TITULO_ORIGINAL; };
+
+  /* FASE 113 · Copiar el enlace de un juego desde su propia ficha. El mismo
+     trabajo que hace el botón del panel, pero al alcance de la mano: es lo
+     que se manda por WhatsApp cuando alguien pregunta por un juego. */
+  window.vgCopiarEnlaceJuego = function(boton, slug){
+    var url = window.vgEnlaceDeJuego(slug);
+    if(!url) return;
+    var listo = function(){
+      var antes = boton.textContent;
+      boton.textContent = '✓';
+      boton.classList.add('vg-x113-copiado');
+      setTimeout(function(){ boton.textContent = antes; boton.classList.remove('vg-x113-copiado'); }, 1500);
+    };
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(url).then(listo, function(){ prompt('Copia el enlace:', url); });
+    }else{
+      /* El portapapeles moderno solo va en https. */
+      var t = document.createElement('textarea');
+      t.value = url; t.style.position = 'fixed'; t.style.opacity = '0';
+      document.body.appendChild(t); t.select();
+      try{ document.execCommand('copy'); listo(); }catch(e){ prompt('Copia el enlace:', url); }
+      t.remove();
+    }
+  };
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', probar, {once:true});
   else probar();
@@ -44460,6 +44488,17 @@ button.vg119-incompleto{
     window.vgExtraSearchIndex = nueva;
   }
 
+  /* Vacía la caja de arriba y cierra el desplegable. El bloque del buscador
+     cierra su panel dentro de su propia función, y nosotros interceptamos
+     antes de llamarla, así que se quedaba abierto tapando justo lo que el
+     cliente acababa de elegir. */
+  function cerrarBuscador(){
+    var caja = document.getElementById('globalSearch');
+    if(caja){ caja.value = ''; caja.blur(); }
+    var panel = document.getElementById('searchResultsPanel');
+    if(panel){ panel.classList.remove('active'); panel.innerHTML = ''; }
+  }
+
   function envolverApertura(){
     if(typeof window.openSearchResultProduct !== 'function' || window.openSearchResultProduct.__vg98) return;
     var original = window.openSearchResultProduct;
@@ -44469,13 +44508,15 @@ button.vg119-incompleto{
 
       /* Xbox One / Series */
       if(n >= BASE_XBOX){
-        var caja = document.getElementById('globalSearch');
         var juego = juegosXbox()[n - BASE_XBOX - 1];
-        /* El nombre se queda escrito: la sección lo usa de filtro y el
-           cliente aterriza en el juego que pulsó, no en los novecientos. */
-        if(caja){
-          caja.value = (n === BASE_XBOX || !juego) ? '' : (juego.title || '');
-          caja.blur();
+        /* FASE 113 · El buscador se limpia y se cierra: el juego elegido se
+           fija aparte, así que ya no hace falta dejarle el nombre escrito
+           para filtrar. Antes el texto se quedaba y había que borrarlo a
+           mano para poder ver otra sección. */
+        cerrarBuscador();
+        if(juego && juego.slug && typeof window.vgXboxFijar === 'function'){
+          window.vgXboxFijar(juego.slug);
+          return;
         }
         if(typeof window.showSection === 'function') window.showSection('xbox');
         if(typeof window.renderProducts === 'function') setTimeout(window.renderProducts, 60);
@@ -44484,8 +44525,7 @@ button.vg119-incompleto{
 
       /* Xbox Retro: a la sección, y con la ficha del juego abierta */
       if(n >= BASE_RETRO && n < BASE_FORTNITE){
-        var cajaR = document.getElementById('globalSearch');
-        if(cajaR){ cajaR.value = ''; cajaR.blur(); }
+        cerrarBuscador();
         if(typeof window.showSection === 'function') window.showSection('retro');
         var g = (n === BASE_RETRO) ? null : retroPorIndice(n - BASE_RETRO - 1);
         if(g && typeof window.vgxrVer === 'function'){
@@ -44895,6 +44935,25 @@ button.vg119-incompleto{
      nada a mano. */
   var generoActivo = 'todos';
 
+  /* FASE 113 · El juego fijado.
+
+     Hasta ahora, para dejar un solo juego en pantalla se le escribía el
+     nombre al buscador de arriba. Funcionaba, pero traía dos molestias que
+     se notan al usarlo: el texto se quedaba escrito y había que borrarlo a
+     mano para ver otra sección, y el desplegable del buscador se quedaba
+     abierto tapando justo lo que acababas de elegir.
+
+     Ahora el juego elegido se guarda aparte, así que el buscador se puede
+     limpiar y cerrar sin perder el filtro. Y como no es evidente que hay un
+     juego fijado, se avisa con una etiqueta que se quita de un toque. */
+  var fijado = '';
+
+  window.vgXboxFijar = function(slug){
+    fijado = String(slug || '');
+    if(typeof window.showSection === 'function') window.showSection('xbox');
+    setTimeout(function(){ pintar(); }, 40);
+  };
+
 
   function generosDelCatalogo(){
     var cuenta = {};
@@ -44929,6 +44988,15 @@ button.vg119-incompleto{
     var caja = document.getElementById('globalSearch');
     var q = String(caja && caja.value || '').trim().toLowerCase();
     var tope = topeDePrecio();
+
+    /* Un juego fijado manda sobre todo lo demás: es lo que pidió el cliente
+       al abrir un enlace o al pulsar un resultado. */
+    if(fijado){
+      var uno = juegos().filter(function(j){ return String(j.slug||'') === fijado; });
+      if(uno.length) return uno;
+      fijado = '';   // ya no está en el catálogo
+    }
+
     var lista = juegos().filter(function(j){
       if(q && [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(q) < 0) return false;
       if(generoActivo !== 'todos' && String(j.generos || '').indexOf(generoActivo) < 0) return false;
@@ -45016,7 +45084,7 @@ button.vg119-incompleto{
     };
 
     Array.prototype.forEach.call(caja.querySelectorAll('[data-gen]'), function(b){
-      b.onclick = function(){ generoActivo = b.getAttribute('data-gen'); pintar(); };
+      b.onclick = function(){ generoActivo = b.getAttribute('data-gen'); fijado = ''; pintar(); };
     });
   }
 
@@ -45028,8 +45096,29 @@ button.vg119-incompleto{
   }
 
   function quitarFiltros(){
+    var f = document.getElementById('vgX113Fijado');
+    if(f && f.parentNode) f.parentNode.removeChild(f);
     var caja = document.getElementById('vgX103Filtros');
     if(caja && caja.parentNode) caja.parentNode.removeChild(caja);
+  }
+
+  /* El aviso de que hay un juego fijado, con su ✕ para volver al catálogo. */
+  function marcarFijado(){
+    var caja = document.getElementById('vgX103Filtros');
+    var previo = document.getElementById('vgX113Fijado');
+    if(previo && previo.parentNode) previo.parentNode.removeChild(previo);
+    if(!fijado || !caja) return;
+
+    var juego = juegos().filter(function(j){ return String(j.slug||'') === fijado; })[0];
+    if(!juego) return;
+
+    var eti = document.createElement('div');
+    eti.id = 'vgX113Fijado';
+    eti.className = 'vg-x113-fijado';
+    eti.innerHTML = '<span>Mostrando solo <b></b></span><button type="button">Ver todo el catálogo ✕</button>';
+    eti.querySelector('b').textContent = juego.title || '';
+    eti.querySelector('button').onclick = function(){ fijado = ''; pintar(); };
+    caja.parentNode.insertBefore(eti, caja);
   }
 
   function pintar(mantener){
@@ -45037,6 +45126,7 @@ button.vg119-incompleto{
     if(!mantener) mostrados = POR_TANDA;
     asegurarFiltros();
     marcarFiltros();
+    marcarFijado();
 
     var lista = ordenados();
     var vacio = document.getElementById('emptyState');
@@ -45156,7 +45246,7 @@ button.vg119-incompleto{
       var orig = window.showSection;
       var nueva = function(cat){
         var r = orig.apply(this, arguments);
-        if(cat === 'xbox') entrar(); else { esconderPie(); quitarFiltros(); }
+        if(cat === 'xbox') entrar(); else { esconderPie(); quitarFiltros(); fijado = ''; }
         return r;
       };
       nueva.__vg91 = true;
@@ -45465,6 +45555,38 @@ button.vg119-incompleto{
       grid-area:boton; align-self:center;
       padding:9px 14px !important; font-size:12.5px !important;
     }
+  }
+
+  /* El juego fijado y su botón de enlace (fase 113). */
+  .vg-x113-fijado{
+    max-width:1480px; margin:0 auto 10px; padding:0 22px;
+    display:flex; align-items:center; gap:12px; flex-wrap:wrap;
+    color:#c9cfdd; font-size:13px;
+  }
+  .vg-x113-fijado b{ color:#19e6c1; }
+  .vg-x113-fijado button{
+    background:rgba(255,255,255,.06); border:1px solid rgba(255,255,255,.16);
+    color:#c9cfdd; border-radius:999px; padding:6px 14px;
+    font-size:12.5px; font-weight:700; cursor:pointer;
+  }
+  .vg-x113-fijado button:hover{ background:rgba(255,255,255,.12); }
+
+  .vg-x113-acciones{ display:flex; gap:8px; align-items:stretch; }
+  .vg-x113-acciones .primary{ flex:1 1 auto; }
+  .vg-x113-enlace{
+    flex:0 0 auto;
+    background:rgba(255,255,255,.06);
+    border:1px solid rgba(255,255,255,.16);
+    color:#c9cfdd; border-radius:9px;
+    padding:0 12px; font-size:15px; line-height:1; cursor:pointer;
+  }
+  .vg-x113-enlace:hover{ background:rgba(255,255,255,.13); }
+  .vg-x113-enlace.vg-x113-copiado{
+    background:rgba(25,230,193,.18); border-color:rgba(25,230,193,.5); color:#19e6c1;
+  }
+  @media(max-width:560px){
+    .vg-x113-fijado{ padding:0 10px; }
+    .vg-x113-enlace{ padding:0 10px; font-size:14px; }
   }
 
   /* Filtros por género y precio de la sección de Xbox (fase 103). */
