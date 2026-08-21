@@ -73,14 +73,73 @@ function esEstatico(url) {
   return /\.(png|jpg|jpeg|webp|gif|svg|ico|woff2?)$/i.test(url.pathname);
 }
 
+/* Portadas de juegos del almacén de Supabase. Viven en dos cubos por
+   razones históricas: 'catalogo' (la migración de imgur) y 'productos'
+   (el botón de subir foto del formulario).
+
+   Se nombran uno por uno en vez de aceptar todo /public/ porque en ese
+   mismo almacén están los COMPROBANTES DE PAGO. Guardarlos aquí llenaría
+   el teléfono del administrador de capturas de pago de sus clientes,
+   durante meses y sin que nadie lo pidiera. Además no haría falta: cada
+   comprobante se mira una vez. */
+function esFotoDelAlmacen(url) {
+  return /\.supabase\.co$/i.test(url.hostname) &&
+         /^\/storage\/v1\/object\/public\/(catalogo|productos)\//.test(url.pathname);
+}
+
+async function fotoDeCache(req) {
+  const cache = await caches.open(CACHE_FOTOS);
+
+  const guardada = await cache.match(req);
+  if (guardada) return guardada;
+
+  try {
+    /* Se pide en modo cors A PROPÓSITO. La etiqueta <img> pide en
+       no-cors y devuelve una respuesta opaca, de la que no se puede
+       saber si trae la foto o un 404 — y guardar un 404 con caché de un
+       año dejaría ese hueco en blanco para siempre. El bucket manda
+       Access-Control-Allow-Origin: *, así que cors funciona y sí se
+       puede mirar el estado antes de guardar. */
+    const resp = await fetch(req.url, { mode: 'cors', credentials: 'omit' });
+    if (resp && resp.ok) {
+      const copia = resp.clone();
+      cache.put(req, copia)
+        .then(() => podarFotos(cache))
+        .catch(() => {});
+    }
+    return resp;
+  } catch (e) {
+    /* Sin señal y sin copia: se deja fallar para que el onerror de la
+       tarjeta ponga portada.png, igual que hacía antes. */
+    return Response.error();
+  }
+}
+
+/* Las claves salen en orden de llegada, así que las primeras son las
+   más viejas. */
+async function podarFotos(cache) {
+  const claves = await cache.keys();
+  if (claves.length <= MAX_FOTOS) return;
+  const sobran = claves.slice(0, claves.length - MAX_FOTOS);
+  await Promise.all(sobran.map((k) => cache.delete(k)));
+}
+
 self.addEventListener('fetch', (ev) => {
   const req = ev.request;
 
-  /* Solo GET del mismo sitio. Todo lo demás (Supabase, imgur, bing,
-     y cualquier POST) pasa de largo sin que el service worker opine. */
+  /* Solo GET. Todo POST pasa de largo sin que el service worker opine. */
   if (req.method !== 'GET') return;
   let url;
   try { url = new URL(req.url); } catch (e) { return; }
+
+  /* ── Portadas del almacén: caché primero ── */
+  if (esFotoDelAlmacen(url)) {
+    ev.respondWith(fotoDeCache(req));
+    return;
+  }
+
+  /* El resto de dominios ajenos (imgur, bing, la API de Supabase) no se
+     toca: los pedidos, el chat y los precios tienen que ir en vivo. */
   if (url.origin !== self.location.origin) return;
 
   /* ── La página: red primero ── */
