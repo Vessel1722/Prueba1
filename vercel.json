@@ -85,5 +85,11 @@
         }
       ]
     }
+  ],
+  "rewrites": [
+    {
+      "source": "/sitemap-juegos.xml",
+      "destination": "/api/sitemap-juegos"
+    }
   ]
 }

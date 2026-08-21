@@ -44054,6 +44054,198 @@ button.vg119-incompleto{
 })();
 </script>
 
+<!-- FASE 112 · Los juegos de Xbox, en el carrusel de la portada.
+
+     El carrusel se llenaba solo con SERVICES, así que la sección más grande
+     de la tienda —2,735 juegos— no aparecía por ninguna parte hasta que el
+     cliente entraba a buscarla. Ahora entran mezclados con el resto, no de
+     golpe: unos pocos repartidos entre lo demás, distintos en cada visita.
+
+     Se pintan con la misma tarjeta del carrusel para que no desentonen, y
+     al pulsarlos abren la sección con ese juego, igual que un enlace. -->
+<script id="vg-carrusel-xbox-fase112-js">
+(function(){
+  'use strict';
+
+  var CUANTOS = 8;
+
+  function esc(s){
+    return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
+      .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+  }
+  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX') + ' MXN'; }
+
+  function juegos(){
+    var lista = (typeof window.vgXboxJuegos === 'function') ? (window.vgXboxJuegos() || []) : [];
+    /* Solo los que tienen portada y precio: una tarjeta del carrusel sin
+       foto se ve peor que no estar. */
+    return lista.filter(function(g){ return g.image && Number(g.price) > 0; });
+  }
+
+  function alAzar(lista, n){
+    var copia = lista.slice(), salida = [];
+    while(copia.length && salida.length < n){
+      salida.push(copia.splice(Math.floor(Math.random() * copia.length), 1)[0]);
+    }
+    return salida;
+  }
+
+  function tarjeta(g){
+    var art = document.createElement('article');
+    art.className = 'service-carousel-card vg-x112-card';
+    art.setAttribute('role', 'button');
+    art.setAttribute('tabindex', '0');
+    art.setAttribute('title', g.title || '');
+    art.setAttribute('aria-label', 'Ver ' + (g.title || ''));
+    art.innerHTML =
+      '<img decoding="async" loading="lazy" width="640" height="360" src="' + esc(g.image) + '" ' +
+      'alt="' + esc(g.title) + '" referrerpolicy="no-referrer" onerror="this.src=\'portada.png\'">' +
+      '<div class="service-carousel-info">' +
+        '<span class="tag">Xbox One / Series</span>' +
+        '<b>' + esc(g.title) + '</b>' +
+        '<small>' + esc([g.edicion, g.platform].filter(Boolean).join(' · ') || 'Entrega por código') + '</small>' +
+        '<div class="service-carousel-price">' + pesos(g.price) + '</div>' +
+      '</div>';
+
+    function abrir(){
+      var caja = document.getElementById('globalSearch');
+      if(caja) caja.value = g.title || '';
+      if(typeof window.showSection === 'function') window.showSection('xbox');
+      if(typeof window.renderProducts === 'function') setTimeout(window.renderProducts, 60);
+    }
+    art.onclick = abrir;
+    art.onkeydown = function(e){
+      if(e.key === 'Enter' || e.key === ' '){ e.preventDefault(); abrir(); }
+    };
+    return art;
+  }
+
+  var pidiendo = false;
+
+  function meter(){
+    var carrusel = document.getElementById('homeTiles');
+    if(!carrusel) return;
+    if(carrusel.querySelector('.vg-x112-card')) return;   // ya están
+
+    var lista = juegos();
+    if(!lista.length){
+      /* El catálogo llega unos segundos después de abrir la página. Se pide
+         una vez y se vuelve a intentar cuando esté. */
+      if(!pidiendo && typeof window.vgXboxCargado === 'function' && !window.vgXboxCargado() &&
+         typeof window.loadXboxGames === 'function'){
+        pidiendo = true;
+        Promise.resolve(window.loadXboxGames()).then(function(){ pidiendo = false; meter(); });
+      }
+      return;
+    }
+
+    var elegidos = alAzar(lista, CUANTOS);
+    var hijos = carrusel.children.length;
+    if(!hijos){ elegidos.forEach(function(g){ carrusel.appendChild(tarjeta(g)); }); return; }
+
+    /* Repartidos, no en bloque: uno cada tantos, para que el carrusel se
+       sienta mezclado y no "primero lo de siempre y luego los juegos". */
+    var paso = Math.max(1, Math.floor(hijos / elegidos.length));
+    elegidos.forEach(function(g, i){
+      var pos = Math.min(carrusel.children.length, (i + 1) * paso + i);
+      carrusel.insertBefore(tarjeta(g), carrusel.children[pos] || null);
+    });
+  }
+
+  function arrancar(){
+    if(document.body.dataset.vg112) return;
+    document.body.dataset.vg112 = '1';
+    meter();
+    /* renderHome rehace el carrusel entero, así que hay que volver a
+       entrar. Igual que hace el bloque que pone la tarjeta de la sección. */
+    setTimeout(meter, 700);
+    setTimeout(meter, 1800);
+    setTimeout(meter, 3500);
+    var carrusel = document.getElementById('homeTiles');
+    if(carrusel){
+      new MutationObserver(function(){
+        if(!carrusel.querySelector('.vg-x112-card')) setTimeout(meter, 60);
+      }).observe(carrusel, {childList:true});
+    }
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
+<!-- FASE 111 · Un enlace por juego.
+
+     Hasta ahora la tienda solo entendía ?seccion=. Con 2,735 juegos eso
+     significaba dos cosas malas:
+
+     · Cuando alguien pregunta por WhatsApp "¿tienes Hogwarts Legacy?", lo
+       único que se le podía mandar era la sección entera para que buscara.
+     · Y el sitemap tenía siete direcciones para toda la tienda, así que
+       Google no tiene ninguna página que ofrecer a quien busca un juego
+       por su nombre.
+
+     Con ?juego=<slug> la tienda abre la sección con ese juego y solo ese, y
+     el título de la pestaña pasa a ser el del juego con su precio. -->
+<script id="vg-enlace-juego-fase111-js">
+(function(){
+  'use strict';
+
+  var TITULO_ORIGINAL = document.title;
+
+  function slugPedido(){
+    try{
+      return String(new URLSearchParams(location.search || '').get('juego') || '').trim();
+    }catch(e){ return ''; }
+  }
+
+  function buscarPorSlug(slug){
+    var lista = (typeof window.vgXboxTodos === 'function') ? (window.vgXboxTodos() || []) : [];
+    for(var i=0;i<lista.length;i++) if(String(lista[i].slug||'') === slug) return lista[i];
+    return null;
+  }
+
+  /* La sección filtra por el buscador de arriba, así que dejarle el nombre
+     escrito deja ese juego y solo ese. Es lo mismo que hace el buscador
+     cuando pulsas un resultado. */
+  function abrir(juego){
+    var caja = document.getElementById('globalSearch');
+    if(caja) caja.value = juego.title || '';
+    if(typeof window.showSection === 'function') window.showSection('xbox');
+    if(typeof window.renderProducts === 'function') setTimeout(window.renderProducts, 60);
+
+    var precio = Number(juego.price||0);
+    document.title = juego.title + (precio ? ' — $' + precio.toLocaleString('es-MX') + ' MXN' : '') + ' | Vessel Games';
+  }
+
+  var intentos = 0;
+  function probar(){
+    var slug = slugPedido();
+    if(!slug) return;
+
+    var juego = buscarPorSlug(slug);
+    if(juego){ abrir(juego); return; }
+
+    /* El catálogo tarda en llegar; se pide y se reintenta. */
+    if(intentos === 0 && typeof window.loadXboxGames === 'function'){
+      try{ window.loadXboxGames(); }catch(e){}
+    }
+    if(++intentos < 40) setTimeout(probar, 250);
+  }
+
+  /* Para copiar el enlace de un juego desde el panel. */
+  window.vgEnlaceDeJuego = function(slug){
+    var base = (typeof window.vgBaseUrl === 'function') ? window.vgBaseUrl() : location.origin;
+    return base.replace(/\/+$/, '') + '/?juego=' + encodeURIComponent(slug || '');
+  };
+
+  window.vgRestaurarTitulo = function(){ document.title = TITULO_ORIGINAL; };
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', probar, {once:true});
+  else probar();
+})();
+</script>
+
 <!-- FASE 104 · El enlace de compra, dentro del pedido.
 
      Hasta ahora, cuando entraba una venta de Xbox había que ir al catálogo,
@@ -44542,6 +44734,8 @@ button.vg119-incompleto{
       '</div>' +
       '<div class="vg-xbox-admin-actions vg-x92-acciones">' +
         (g.slug ? '<button class="vg-admin-btn vg-x92-ahora" type="button" data-slug="' + esc(g.slug) + '">Precio de hoy ↻</button>' : '') +
+        /* FASE 111 · El enlace que se le manda al cliente por WhatsApp. */
+        (g.slug ? '<button class="vg-admin-btn vg-x111-enlace" type="button" data-slug="' + esc(g.slug) + '">Copiar enlace</button>' : '') +
         '<a class="vg-admin-btn vg-x92-comprar" href="' + esc(enlace) + '" target="_blank" rel="noopener">Comprar ↗</a>' +
         (c && c.url_proveedor ? '<a class="vg-admin-btn" href="' + esc(buscarEnKinguin(g.title)) + '" target="_blank" rel="noopener">Buscar ↗</a>' : '') +
         '<button class="vg-admin-btn" onclick="editXboxAdminGame(\'' + esc(g.id) + '\')">Editar</button>' +
@@ -44584,6 +44778,30 @@ button.vg119-incompleto{
 
     Array.prototype.forEach.call(box.querySelectorAll('.vg-x92-ahora'), function(b){
       b.onclick = function(){ precioDeHoy(b); };
+    });
+
+    Array.prototype.forEach.call(box.querySelectorAll('.vg-x111-enlace'), function(b){
+      b.onclick = function(){
+        var url = (typeof window.vgEnlaceDeJuego === 'function')
+          ? window.vgEnlaceDeJuego(b.getAttribute('data-slug')) : '';
+        if(!url) return;
+        var listo = function(){
+          var antes = b.textContent;
+          b.textContent = '¡Copiado!';
+          setTimeout(function(){ b.textContent = antes; }, 1600);
+        };
+        /* El portapapeles moderno solo va en https; en local o en un
+           navegador viejo se cae al truco de siempre. */
+        if(navigator.clipboard && navigator.clipboard.writeText){
+          navigator.clipboard.writeText(url).then(listo, function(){ prompt('Copia el enlace:', url); });
+        }else{
+          var t = document.createElement('textarea');
+          t.value = url; t.style.position='fixed'; t.style.opacity='0';
+          document.body.appendChild(t); t.select();
+          try{ document.execCommand('copy'); listo(); }catch(e){ prompt('Copia el enlace:', url); }
+          t.remove();
+        }
+      };
     });
 
     var cuenta = document.getElementById('vgX92Cuenta');

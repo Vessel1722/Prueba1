@@ -14,3 +14,4 @@ Disallow: /?panel=1
 Disallow: /promo-whatsapp.html
 
 Sitemap: https://www.vesselgames.xyz/sitemap.xml
+Sitemap: https://www.vesselgames.xyz/sitemap-juegos.xml
