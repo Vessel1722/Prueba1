@@ -14,16 +14,31 @@
    · Los iconos y las imágenes fijas sí van de caché primero: no
      cambian y ahorran datos.
 
-   · Supabase, imgur, bing y cualquier otro dominio NO se tocan. Los
-     pedidos, el chat y los precios tienen que ser siempre en vivo.
+   · FASE 81: las PORTADAS del almacén de Supabase también van de caché
+     primero. Antes se dejaban pasar por la regla de "ningún otro
+     dominio", y el resultado fue que cada cliente se rebajaba el
+     catálogo entero una y otra vez: 63 MB de fotos generando 8 GB de
+     tráfico al mes contra un plan gratuito de 5 GB. Guardarlas aquí es
+     seguro porque sus direcciones llevan ?v=<fecha>: si el dueño cambia
+     una portada, cambia la dirección y esta caché ni se entera de la
+     vieja.
+
+   · Los datos de Supabase (pedidos, chat, precios) siguen sin tocarse:
+     solo se intercepta /storage/v1/object/public/, que son archivos.
 
    Para forzar que todos los clientes reciban una versión nueva del
    propio service worker, sube el número de VERSION.
    ═══════════════════════════════════════════════════════════════════ */
 
-const VERSION = 'vg-v2';   /* fase 77: sube al cambiar este archivo */
+const VERSION = 'vg-v3';   /* fase 81: sube al cambiar este archivo */
 const CACHE_PAGINA  = VERSION + '-pagina';
 const CACHE_ESTATIC = VERSION + '-estaticos';
+const CACHE_FOTOS   = VERSION + '-portadas';
+
+/* Tope de portadas guardadas. Un catálogo grande más los retro no pasa
+   de unos cientos; el límite existe para que la caché no crezca sin
+   freno en un teléfono que lleve meses con la tienda abierta. */
+const MAX_FOTOS = 300;
 
 /* Lo mínimo para que la app abra sin señal */
 const BASICOS = [

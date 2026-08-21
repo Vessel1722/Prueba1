@@ -15472,7 +15472,17 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     if(res.error){state.games=localGames();state.loaded=true;renderXboxCurrentGames();renderXboxAdminGames('No se pudo leer la tabla '+XBOX_TABLE+'. Crea la tabla en Supabase para publicar juegos a todos los clientes.');return;}
     state.games=(res.data||[]).map(normalizeGame); state.loaded=true; renderXboxCurrentGames(); renderXboxAdminGames();
   }
-  function normalizeGame(g){return {id:g.id||('local_'+Date.now()),title:g.title||g.name||'Juego Xbox',platform:g.platform||'Xbox One / Series',price:Number(g.price||0),image:g.image||g.cover_url||'',status:g.status||'active',created_at:g.created_at||new Date().toISOString(),edicion:g.edicion||'',precio_lista:Number(g.precio_lista||0),orden:Number(g.orden||0),slug:g.slug||'',generos:String(g.generos||'')}}
+  /* FASE 114 · Una portada que diga "undefined" no es una portada. Cuatro
+     juegos quedaron guardados con "https:undefined?w=480…" porque Microsoft
+     devolvió su ficha sin imagen; el navegador lo toma por una dirección
+     relativa y le pide /undefined al propio sitio, que contesta 404. Se
+     descartan aquí para que ni se pidan: la tarjeta ya sabe caer en
+     portada.png cuando no hay imagen. */
+  function portadaBuena(v){
+    var s = String(v || '');
+    return (!s || s.indexOf('undefined') >= 0 || s.indexOf('null') === 0) ? '' : s;
+  }
+  function normalizeGame(g){return {id:g.id||('local_'+Date.now()),title:g.title||g.name||'Juego Xbox',platform:g.platform||'Xbox One / Series',price:Number(g.price||0),image:portadaBuena(g.image||g.cover_url),status:g.status||'active',created_at:g.created_at||new Date().toISOString(),edicion:g.edicion||'',precio_lista:Number(g.precio_lista||0),orden:Number(g.orden||0),slug:g.slug||'',generos:String(g.generos||'')}}
   function activeGames(){return (state.games||[]).filter(function(g){return String(g.status||'active')==='active'})}
 
   /* FASE 90 · El catálogo dejó de ser un puñado de juegos cargados a mano y
@@ -23102,6 +23112,163 @@ else init();
 <div class="vg17-panel" id="vg17Admin"></div>
 <div id="vg17Alert"></div>
 
+<script id="vg-imagenes-ligeras-v81">
+/* ═══════════════════════════════════════════════════════════════════
+   VESSEL GAMES · FASE 81 — Portadas ligeras y con caché larga
+
+   El problema que arregla este bloque, en números: el bucket 'catalogo'
+   guardaba 63 MB de portadas y generaba 8 GB de tráfico al mes contra
+   un plan gratis de 5 GB. Cada foto se estaba sirviendo unas 128 veces.
+
+   Tres causas, las tres aquí:
+
+   1. La migración de imgur (renderMigracion) copiaba el archivo TAL
+      CUAL venía: medio mega por portada para una tarjeta que se ve a
+      400×560 px. Ahora todo pasa por comprimirImagen().
+
+   2. Al subir sin 'cacheControl', Supabase pone 1 hora. El cliente que
+      entraba dos veces en la tarde se bajaba el catálogo entero dos
+      veces. Ahora se sube con un año (CACHE_LARGO).
+
+   3. Con caché de un año, cambiar una portada no se vería nunca: el
+      archivo se sobrescribe con el mismo nombre (upsert). Por eso
+      subirImagenLigera() devuelve la URL con ?v=<fecha>: el navegador
+      la ve como otra dirección y la vuelve a pedir solo cuando de
+      verdad cambió.
+   ═══════════════════════════════════════════════════════════════════ */
+window.VG = window.VG || {};
+
+/* Un año en segundos. Es seguro justamente porque toda URL que sale de
+   aquí lleva su ?v=: no hay forma de que un cliente se quede clavado
+   con una foto vieja. */
+window.VG.CACHE_LARGO = '31536000';
+
+/* Se comprueba una sola vez y se recuerda: en Safari viejo toBlob con
+   'image/webp' devuelve un PNG sin avisar, y un PNG de 800 px pesa MÁS
+   que el JPG original. Si no hay webp, se usa JPEG. */
+var vgWebpOk = null;
+function vgSoportaWebp(){
+  if(vgWebpOk !== null) return vgWebpOk;
+  try{
+    var c = document.createElement('canvas');
+    c.width = c.height = 1;
+    vgWebpOk = c.toDataURL('image/webp').indexOf('data:image/webp') === 0;
+  }catch(e){ vgWebpOk = false; }
+  return vgWebpOk;
+}
+
+/* Recibe un File o un Blob y devuelve una promesa con:
+     { blob, tipo, ext, ancho, alto, antes, despues, mejorado }
+
+   'mejorado' es false cuando el resultado no vale la pena (pesa igual
+   o más), y entonces 'blob' es el original sin tocar. Quien llama debe
+   mirarlo: recomprimir un JPG ya pequeño solo lo degrada. */
+window.VG.comprimirImagen = function(fuente, opciones){
+  var o = opciones || {};
+  var maxLado = o.maxLado || 800;
+  var calidad = o.calidad || 0.72;
+
+  return new Promise(function(resolver, rechazar){
+    if(!fuente) return rechazar(new Error('No hay imagen que comprimir.'));
+
+    var tipoOriginal = String(fuente.type || '');
+
+    /* Los GIF se dejan en paz: el canvas solo copiaría el primer
+       fotograma y la animación se perdería sin avisar. */
+    if(/gif/i.test(tipoOriginal)){
+      return resolver({
+        blob: fuente, tipo: tipoOriginal, ext: 'gif',
+        ancho: 0, alto: 0,
+        antes: fuente.size || 0, despues: fuente.size || 0,
+        mejorado: false
+      });
+    }
+
+    var url = URL.createObjectURL(fuente);
+    var img = new Image();
+
+    img.onload = function(){
+      var w = img.naturalWidth || img.width;
+      var h = img.naturalHeight || img.height;
+      URL.revokeObjectURL(url);
+
+      if(!w || !h) return rechazar(new Error('La imagen no tiene un tamaño legible.'));
+
+      try{
+        var escala  = Math.min(1, maxLado / Math.max(w, h));
+        var lienzo  = document.createElement('canvas');
+        lienzo.width  = Math.max(1, Math.round(w * escala));
+        lienzo.height = Math.max(1, Math.round(h * escala));
+
+        var ctx = lienzo.getContext('2d');
+        /* Sin esto, al reducir a menos de la mitad el navegador tira de
+           vecino más cercano y las portadas salen con los bordes rotos. */
+        ctx.imageSmoothingEnabled = true;
+        if('imageSmoothingQuality' in ctx) ctx.imageSmoothingQuality = 'high';
+        ctx.drawImage(img, 0, 0, lienzo.width, lienzo.height);
+
+        var tipo = vgSoportaWebp() ? 'image/webp' : 'image/jpeg';
+        var ext  = (tipo === 'image/webp') ? 'webp' : 'jpg';
+
+        lienzo.toBlob(function(salida){
+          if(!salida) return rechazar(new Error('El navegador no pudo convertir la imagen.'));
+          var antes = fuente.size || 0;
+          resolver({
+            blob:     (antes && salida.size >= antes) ? fuente : salida,
+            tipo:     (antes && salida.size >= antes) ? (tipoOriginal || tipo) : tipo,
+            ext:      (antes && salida.size >= antes) ? 'jpg' : ext,
+            ancho:    lienzo.width,
+            alto:     lienzo.height,
+            antes:    antes,
+            despues:  (antes && salida.size >= antes) ? antes : salida.size,
+            mejorado: !(antes && salida.size >= antes)
+          });
+        }, tipo, calidad);
+      }catch(e){ rechazar(e); }
+    };
+
+    img.onerror = function(){
+      URL.revokeObjectURL(url);
+      rechazar(new Error('No se pudo leer la imagen. Puede estar dañada.'));
+    };
+
+    img.src = url;
+  });
+};
+
+/* Sube al bucket con la caché larga puesta y devuelve la URL pública
+   ya versionada. Todo lo que escriba portadas debería pasar por aquí:
+   es lo único que garantiza que no se vuelva a colar un archivo con
+   caché de una hora. */
+window.VG.subirImagenLigera = function(cliente, bucket, ruta, blob){
+  return cliente.storage.from(bucket).upload(ruta, blob, {
+    upsert:       true,
+    contentType:  blob.type || 'image/webp',
+    cacheControl: window.VG.CACHE_LARGO
+  }).then(function(sub){
+    if(sub && sub.error) throw sub.error;
+    var pub  = cliente.storage.from(bucket).getPublicUrl(ruta);
+    var base = (pub && pub.data && pub.data.publicUrl) || '';
+    if(!base) throw new Error('Supabase no devolvió la dirección pública.');
+    return base + (base.indexOf('?') >= 0 ? '&' : '?') + 'v=' + Date.now();
+  });
+};
+
+/* Para los registros de la herramienta: 573440 → "560 KB" */
+window.VG.enKB = function(bytes){
+  var n = Number(bytes || 0);
+  if(n >= 1048576) return (n / 1048576).toFixed(2) + ' MB';
+  return Math.round(n / 1024) + ' KB';
+};
+
+/* ¿Esta dirección apunta a una foto de nuestro propio almacén? Se usa
+   para decidir qué hay que aligerar y qué es de un tercero (imgur,
+   bing) que no gasta nuestra cuota. */
+window.VG.esImagenPropia = function(u){
+  return /\/\/[a-z0-9-]+\.supabase\.co\/storage\/v1\/object\/public\//i.test(String(u || ''));
+};
+</script>
+
 <script id="vg-fase17-js">
 (function(){
 'use strict';
@@ -24319,7 +24486,24 @@ function renderAdminTokens(cont){
    ═══════════════════════════════════════════════════════════════ */
 function renderMigracion(cont){
   cont.innerHTML=
+    /* FASE 81 · Esta caja va primero a propósito: el consumo de tráfico
+       es el problema que aprieta, la dependencia de imgur ya se resolvió. */
     '<div class="vg17-box">'+
+      '<span>Peso de las portadas</span>'+
+      '<p style="margin:6px 0 12px;color:#8593b5;font-size:0.75rem;line-height:1.55">'+
+        'Las fotos que ya están en tu Supabase se subieron con el tamaño original y con una '+
+        'caché de <b>una sola hora</b>: cada cliente se las vuelve a bajar casi en cada visita, '+
+        'y eso es lo que consume la cuota gratuita de tráfico.<br>'+
+        'Esta herramienta las reduce a 800 px en formato webp y las vuelve a subir con caché de '+
+        '<b>un año</b>. No borra nada: sobrescribe cada portada y actualiza el catálogo.</p>'+
+      '<div class="vg17-quick">'+
+        '<button id="mgMedir">Medir cuánto pesan</button>'+
+        '<button id="mgAligerar" style="background:linear-gradient(135deg,#19e6c1,#8b5cf6);color:#06121a;border-color:transparent">Aligerar portadas</button>'+
+      '</div>'+
+      '<div class="vg17-ok" id="mgPeso"></div>'+
+    '</div>'+
+
+    '<div class="vg17-box" style="margin-top:14px">'+
       '<span>Imágenes del catálogo</span>'+
       '<p style="margin:6px 0 12px;color:#8593b5;font-size:0.75rem;line-height:1.55">'+
         'Copia las fotos que hoy están en <b>imgur</b> a tu propio almacenamiento de Supabase. '+
@@ -24330,6 +24514,10 @@ function renderMigracion(cont){
         '<button id="mgMigrar" style="background:linear-gradient(135deg,#8b5cf6,#19e6c1);color:#06121a;border-color:transparent">Migrar imágenes de imgur</button>'+
       '</div>'+
       '<div class="vg17-ok" id="mgEstado"></div>'+
+    '</div>'+
+
+    '<div class="vg17-box" style="margin-top:14px">'+
+      '<span>Avance</span>'+
       '<div id="mgBarra" style="display:none;height:8px;border-radius:6px;background:rgba(255,255,255,.09);overflow:hidden;margin:10px 0">'+
         '<div id="mgProgreso" style="height:100%;width:0;background:linear-gradient(90deg,#8b5cf6,#19e6c1);transition:width .25s"></div></div>'+
       '<textarea id="mgLog" readonly style="width:100%;min-height:230px;margin-top:10px;border:1px solid rgba(255,255,255,.12);background:#0a0d16;color:#c8d2e8;border-radius:12px;padding:11px;font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.75rem" placeholder="Aquí se mostrará el avance..."></textarea>'+
@@ -24340,6 +24528,153 @@ function renderMigracion(cont){
     ta.value=(ta.value?ta.value+'\n':'')+t;
     ta.scrollTop=ta.scrollHeight;
   }
+
+  /* ── FASE 81 · Aligerar lo que ya está subido ──────────────────
+
+     Una portada puede estar referenciada desde dos tablas a la vez
+     (products y products_admin apuntan al mismo archivo). Se agrupa
+     por dirección para bajar y comprimir cada foto UNA vez, y luego
+     actualizar todas las filas que la usaban. */
+
+  function partesDeUrl(u){
+    var m = String(u||'').split('?')[0]
+              .match(/\/storage\/v1\/object\/public\/([^/]+)\/(.+)$/);
+    if(!m) return null;
+    var ruta = m[2];
+    try{ ruta = decodeURIComponent(ruta); }catch(e){}
+    return { bucket:m[1], ruta:ruta };
+  }
+
+  async function portadasPropias(c){
+    var porUrl = {};
+
+    function anotar(url, tabla, clave, id){
+      if(!window.VG.esImagenPropia(url)) return;
+      var partes = partesDeUrl(url);
+      /* Las portadas viven en dos almacenes por razones históricas:
+         'catalogo' (la migración de imgur) y 'productos' (el botón de
+         subir foto del formulario). Los comprobantes de pago quedan
+         fuera a propósito: son privados y de un solo uso, nadie los ve
+         más de una vez y no mueven la aguja del tráfico. */
+      if(!partes || (partes.bucket !== 'catalogo' && partes.bucket !== 'productos')) return;
+      var limpia = String(url).split('?')[0];
+      if(!porUrl[limpia]) porUrl[limpia] = { url:limpia, partes:partes, filas:[] };
+      porUrl[limpia].filas.push({ tabla:tabla, clave:clave, id:id });
+    }
+
+    var r1 = await c.from('products').select('id,title,image').limit(1000);
+    if(r1.error) throw r1.error;
+    (r1.data||[]).forEach(function(p){ anotar(p.image, 'products', 'id', p.id); });
+
+    /* products_admin puede no existir todavía o estar cerrada por RLS:
+       si falla, se sigue con lo que haya en products. */
+    var r2 = await c.from('products_admin').select('product_id,title,image').limit(1000);
+    if(r2 && !r2.error){
+      (r2.data||[]).forEach(function(p){ anotar(p.image, 'products_admin', 'product_id', p.product_id); });
+    }
+
+    return Object.keys(porUrl).map(function(k){ return porUrl[k]; });
+  }
+
+  qs('#mgMedir').onclick=async function(){
+    var c=SB(); if(!c){ log('Sin conexión.'); return; }
+    var btn=this; btn.disabled=true;
+    try{
+      log('\nMidiendo las portadas que están en tu Supabase...');
+      var lista = await portadasPropias(c);
+      if(!lista.length){
+        log('Ninguna portada vive en tu almacén todavía.');
+        qs('#mgPeso').textContent='No hay nada que aligerar.';
+        return;
+      }
+
+      var total=0, sinMedir=0, cachePobre=0;
+      for(var i=0;i<lista.length;i++){
+        try{
+          /* HEAD y no GET: queremos las cabeceras, no la foto. Medir no
+             debe gastar la misma cuota que estamos intentando salvar. */
+          var h = await fetch(lista[i].url, {method:'HEAD', mode:'cors', cache:'no-store'});
+          var largo = Number(h.headers.get('content-length')||0);
+          if(largo) total += largo; else sinMedir++;
+          var cc = String(h.headers.get('cache-control')||'');
+          var seg = Number((cc.match(/max-age=(\d+)/)||[])[1]||0);
+          if(seg < 86400) cachePobre++;
+        }catch(e){ sinMedir++; }
+      }
+
+      log(lista.length+' portada(s) en tu almacén.');
+      log('Pesan '+window.VG.enKB(total)+' en total'+(sinMedir?' ('+sinMedir+' no se pudieron medir)':'')+'.');
+      log(cachePobre+' con caché corta: se rebajan cada pocas horas.');
+      log('Con 1000 recorridos al catálogo eso son ~'+(total*1000/1073741824).toFixed(1)+' GB de tráfico.');
+      qs('#mgPeso').textContent = lista.length+' portada(s), '+window.VG.enKB(total)+' en total.';
+    }catch(e){
+      log('Error al medir: '+(e.message||e));
+    }finally{ btn.disabled=false; }
+  };
+
+  qs('#mgAligerar').onclick=async function(){
+    var btn=this, c=SB();
+    if(!c){ log('Sin conexión.'); return; }
+    if(!confirm('Se volverán a subir las portadas comprimidas y se actualizará el catálogo.\n\nLas fotos originales NO se borran, pero las tarjetas pasarán a usar la versión ligera.\n\n¿Continuar?')) return;
+
+    btn.disabled=true; btn.textContent='Aligerando...';
+    qs('#mgBarra').style.display='block';
+    try{
+      var lista = await portadasPropias(c);
+      if(!lista.length){ log('No hay portadas propias que aligerar.'); return; }
+
+      log('\nAligerando '+lista.length+' portada(s)...\n');
+      var ok=0, fallos=0, antes=0, despues=0;
+
+      for(var i=0;i<lista.length;i++){
+        var item = lista[i];
+        qs('#mgProgreso').style.width=Math.round((i/lista.length)*100)+'%';
+        var nombre = item.partes.ruta.split('/').pop();
+        try{
+          var resp = await fetch(item.url, {mode:'cors', cache:'no-store'});
+          if(!resp.ok) throw new Error('HTTP '+resp.status);
+          var blob = await resp.blob();
+
+          var lig = await window.VG.comprimirImagen(blob, {maxLado:800, calidad:0.72});
+          /* Mismo archivo, nueva extensión. Sobrescribir en su sitio
+             evita dejar el almacén sembrado de copias sueltas. */
+          var ruta  = item.partes.ruta.replace(/\.[a-z0-9]+$/i,'') + '.' + lig.ext;
+          var nueva = await window.VG.subirImagenLigera(c, item.partes.bucket, ruta, lig.blob);
+
+          /* Aunque el archivo ya fuera pequeño, la fila se actualiza:
+             la ganancia grande no es el recorte, es la caché de un año
+             que solo se aplica al volver a subirlo. */
+          for(var f=0; f<item.filas.length; f++){
+            var fila = item.filas[f];
+            var udp = await c.from(fila.tabla).update({image:nueva}).eq(fila.clave, fila.id);
+            if(udp.error) throw udp.error;
+          }
+
+          ok++; antes += lig.antes; despues += lig.despues;
+          log('OK  '+(i+1)+'/'+lista.length+'  '+nombre.slice(0,32)+
+              '  '+window.VG.enKB(lig.antes)+' → '+window.VG.enKB(lig.despues)+
+              (lig.mejorado ? '' : '  (ya estaba al mínimo)'));
+        }catch(e){
+          fallos++;
+          log('ERR '+(i+1)+'/'+lista.length+'  '+nombre.slice(0,32)+' → '+(e.message||e));
+        }
+      }
+
+      qs('#mgProgreso').style.width='100%';
+      log('\n──────────────────────────────');
+      log('Terminado: '+ok+' aligerada(s), '+fallos+' con error.');
+      if(antes){
+        var pct = Math.round((1 - despues/antes) * 100);
+        log('El catálogo pasó de '+window.VG.enKB(antes)+' a '+window.VG.enKB(despues)+' ('+pct+'% menos).');
+      }
+      log('Además ahora se sirven con caché de un año: quien vuelva a la tienda ya no las rebaja.');
+      qs('#mgPeso').textContent='Listo: '+ok+' aligerada(s), '+fallos+' con error.';
+    }catch(e){
+      log('Error: '+(e.message||e));
+    }finally{
+      btn.disabled=false; btn.textContent='Aligerar portadas';
+    }
+  };
 
   qs('#mgAnalizar').onclick=async function(){
     var c=SB(); if(!c){ log('Sin conexión.'); return; }
@@ -24371,7 +24706,7 @@ function renderMigracion(cont){
       var lista=(r.data||[]).filter(function(p){ return /imgur\.com/i.test(p.image||''); });
       if(!lista.length){ log('No hay imágenes de imgur por migrar.'); return; }
       log('Migrando '+lista.length+' imagen(es)...\n');
-      var ok=0, fallos=0;
+      var ok=0, fallos=0, ahorro=0;
       for(var i=0;i<lista.length;i++){
         var p=lista[i];
         qs('#mgProgreso').style.width=Math.round((i/lista.length)*100)+'%';
@@ -24381,15 +24716,21 @@ function renderMigracion(cont){
           var resp=await fetch(p.image,{mode:'cors'});
           if(!resp.ok) throw new Error('HTTP '+resp.status);
           var blob=await resp.blob();
-          var ext=(blob.type.split('/')[1]||'jpg').replace('jpeg','jpg');
-          var ruta='productos/'+p.id+'.'+ext;
-          var up=await c.storage.from('catalogo').upload(ruta,blob,{upsert:true,contentType:blob.type});
-          if(up.error) throw up.error;
-          var pub=c.storage.from('catalogo').getPublicUrl(ruta);
-          var udp=await c.from('products').update({image:pub.data.publicUrl}).eq('id',p.id);
+
+          /* FASE 81 · Antes se subía el archivo de imgur tal cual, y de
+             ahí salió la factura: medio mega por portada, servido a
+             cada visita. Se reduce a 800 px y se pasa a webp ANTES de
+             que toque nuestro almacén. */
+          var lig = await window.VG.comprimirImagen(blob, {maxLado:800, calidad:0.72});
+          var ruta = 'productos/'+p.id+'.'+lig.ext;
+          var nueva = await window.VG.subirImagenLigera(c, 'catalogo', ruta, lig.blob);
+
+          var udp=await c.from('products').update({image:nueva}).eq('id',p.id);
           if(udp.error) throw udp.error;
           ok++;
-          log('OK  '+(i+1)+'/'+lista.length+'  '+(p.title||p.id).slice(0,38)+'  ('+Math.round(blob.size/1024)+' KB)');
+          ahorro += Math.max(0, lig.antes - lig.despues);
+          log('OK  '+(i+1)+'/'+lista.length+'  '+(p.title||p.id).slice(0,38)+
+              '  ('+window.VG.enKB(lig.antes)+' → '+window.VG.enKB(lig.despues)+')');
         }catch(e){
           fallos++;
           log('ERR '+(i+1)+'/'+lista.length+'  '+(p.title||p.id).slice(0,38)+' → '+(e.message||e));
@@ -24398,6 +24739,7 @@ function renderMigracion(cont){
       qs('#mgProgreso').style.width='100%';
       log('\n──────────────────────────────');
       log('Terminado: '+ok+' migrada(s), '+fallos+' con error.');
+      if(ahorro) log('Se recortaron '+window.VG.enKB(ahorro)+' por cada vuelta completa al catálogo.');
       if(ok) log('Recarga la tienda para ver las imágenes desde tu Supabase.');
       qs('#mgEstado').textContent='Listo: '+ok+' migrada(s), '+fallos+' con error.';
     }catch(e){
@@ -30160,8 +30502,26 @@ html body #vgAdminModal .vg-admin-content{
     var c = cli();
     if(!c) throw new Error('No hay conexión con el servidor.');
     var ext = (String(file.name||'').split('.').pop()||'bin').toLowerCase().replace(/[^a-z0-9]/g,'');
+    var datos = file;
+
+    /* FASE 81 · Todo lo que entre al almacén entra ya comprimido. Sin
+       esto, cada foto nueva vuelve a meter medio mega en la cuota de
+       tráfico y en un mes estamos igual que antes. El vídeo de portada
+       pasa de largo: el canvas no sabe comprimirlo. */
+    if(/^image\//i.test(file.type||'')){
+      try{
+        /* 1280 y no 800 como las portadas del catálogo: esta función
+           también sube el fondo de la portada, que se ve a pantalla
+           completa y a 800 px se vería lavado. */
+        var lig = await window.VG.comprimirImagen(file, {maxLado:1280, calidad:0.75});
+        if(lig.mejorado){ datos = lig.blob; ext = lig.ext; }
+      }catch(e){ /* Si el navegador no puede, se sube el original. */ }
+    }
+
     var ruta = carpeta+'/'+Date.now()+'-'+Math.random().toString(36).slice(2,8)+'.'+(ext||'bin');
-    var up = await c.storage.from('catalogo').upload(ruta, file, {upsert:true, contentType:file.type||undefined});
+    /* El nombre lleva la fecha y un azar, así que nunca se repite: la
+       caché de un año aquí no puede dejar a nadie con una foto vieja. */
+    var up = await c.storage.from('catalogo').upload(ruta, datos, {upsert:true, contentType:datos.type||file.type||undefined, cacheControl:'31536000'});
     if(up.error){
       /* El error de tipo o tamaño de Supabase es críptico; se traduce. */
       var m = String(up.error.message||up.error);
@@ -36159,8 +36519,8 @@ html body > main *{
   if(window.__VG89__) return; window.__VG89__ = true;
 
   var ALMACEN = 'productos';
-  var ANCHO_MAX = 1200;      /* de sobra: en la tienda se ve a 400 */
-  var CALIDAD = 0.82;
+  var ANCHO_MAX = 800;       /* en la tienda se ve a 400: 800 cubre pantallas del doble */
+  var CALIDAD = 0.72;
 
   function cli(){ return (typeof window.vgGetSB==='function') ? window.vgGetSB() : null; }
 
@@ -36195,24 +36555,15 @@ html body > main *{
   }
 
   /* Encoger sin deformar. Si ya es pequeña se deja como está. */
+  /* FASE 81 · Antes esto encogía a 1200 px en JPG, y además dejaba
+     pasar sin tocar cualquier foto de menos de 400 KB. Trescientos
+     kilos por portada, multiplicados por cada visita, son los que se
+     comieron la cuota de tráfico. Ahora tira del compresor común: 800
+     px y webp, sin excepciones por tamaño. */
   function encoger(file){
-    return new Promise(function(ok, mal){
-      if(!/^image\//.test(file.type)) return mal(new Error('Eso no es una imagen'));
-      var url = URL.createObjectURL(file);
-      var img = new Image();
-      img.onload = function(){
-        URL.revokeObjectURL(url);
-        var w = img.naturalWidth, h = img.naturalHeight;
-        if(w <= ANCHO_MAX && file.size < 400000) return ok(file);
-        var f = Math.min(1, ANCHO_MAX / w);
-        var cv = document.createElement('canvas');
-        cv.width = Math.round(w * f); cv.height = Math.round(h * f);
-        cv.getContext('2d').drawImage(img, 0, 0, cv.width, cv.height);
-        cv.toBlob(function(b){ ok(b || file); }, 'image/jpeg', CALIDAD);
-      };
-      img.onerror = function(){ URL.revokeObjectURL(url); mal(new Error('No pude leer la imagen')); };
-      img.src = url;
-    });
+    if(!/^image\//.test(file.type)) return Promise.reject(new Error('Eso no es una imagen'));
+    return window.VG.comprimirImagen(file, {maxLado:ANCHO_MAX, calidad:CALIDAD})
+      .then(function(lig){ return lig.blob; });
   }
 
   function kb(n){ return Math.round(n/1024) + ' KB'; }
@@ -36268,15 +36619,20 @@ html body > main *{
 
         /* Nombre con fecha para que subir otra no pise a la anterior:
            si algo sale mal, la de antes sigue ahí. */
-        var ext  = (chico.type === 'image/jpeg') ? 'jpg'
-                 : (f.name.split('.').pop() || 'jpg').toLowerCase().slice(0,4);
+        /* La extensión sale del blob que de verdad se sube, no del
+           nombre del archivo original: el compresor devuelve webp y
+           antes se guardaba un ".png" que por dentro era otra cosa. */
+        var ext  = (String(chico.type||'').split('/')[1] || 'jpg')
+                     .replace('jpeg','jpg').replace(/[^a-z0-9]/g,'').slice(0,4);
         var nom  = Date.now() + '-' +
                    (f.name || 'foto').toLowerCase()
                      .replace(/\.[^.]+$/,'').replace(/[^a-z0-9]+/g,'-').slice(0,40) +
                    '.' + ext;
 
+        /* Caché de un año: el nombre lleva la fecha, así que subir otra
+           foto crea otra dirección y nadie se queda con la vieja. */
         var sub = await c.storage.from(ALMACEN)
-          .upload(nom, chico, {contentType: chico.type || f.type, upsert:false});
+          .upload(nom, chico, {contentType: chico.type || f.type, upsert:false, cacheControl:'31536000'});
 
         if(sub.error) throw sub.error;
 
