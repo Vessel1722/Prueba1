@@ -62,7 +62,7 @@ module.exports = async (req, res) => {
   for (const f of filas) {
     if (!f.slug) continue;
     const fecha = f.updated_at ? String(f.updated_at).slice(0, 10) : hoy;
-    partes.push('<url><loc>' + esc(BASE + '/?juego=' + encodeURIComponent(f.slug)) + '</loc>' +
+    partes.push('<url><loc>' + esc(BASE + '/juego/' + encodeURIComponent(f.slug)) + '</loc>' +
       '<lastmod>' + esc(fecha) + '</lastmod>' +
       '<changefreq>weekly</changefreq><priority>0.6</priority></url>');
   }

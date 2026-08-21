@@ -88,6 +88,10 @@
   ],
   "rewrites": [
     {
+      "source": "/juego/:slug",
+      "destination": "/api/juego?slug=:slug"
+    },
+    {
       "source": "/sitemap-juegos.xml",
       "destination": "/api/sitemap-juegos"
     }

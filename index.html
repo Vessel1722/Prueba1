@@ -44236,7 +44236,11 @@ button.vg119-incompleto{
   /* Para copiar el enlace de un juego desde el panel. */
   window.vgEnlaceDeJuego = function(slug){
     var base = (typeof window.vgBaseUrl === 'function') ? window.vgBaseUrl() : location.origin;
-    return base.replace(/\/+$/, '') + '/?juego=' + encodeURIComponent(slug || '');
+    /* Se comparte /juego/<slug> y no ?juego=<slug>: esa dirección la sirve
+       una función que le pone al enlace la portada, el nombre y el precio
+       del juego, que es lo que WhatsApp enseña en la vista previa. Al abrirla
+       manda a la tienda, así que para el cliente es lo mismo. */
+    return base.replace(/\/+$/, '') + '/juego/' + encodeURIComponent(slug || '');
   };
 
   window.vgRestaurarTitulo = function(){ document.title = TITULO_ORIGINAL; };
