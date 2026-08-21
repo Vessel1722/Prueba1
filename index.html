@@ -45159,6 +45159,92 @@ button.vg119-incompleto{
     .vg-x104-btn{ margin-left:0; width:100%; text-align:center; }
   }
 
+  /* FASE 110 · El botón de ver en lista no hacía nada, en ninguna sección.
+
+     La regla que lo aplica existe y es correcta:
+       #productsGrid.vg-list-view{ grid-template-columns:1fr !important }
+     pero más abajo en la hoja hay otra con la MISMA especificidad (un id y
+     una clase) y también !important:
+       #productsGrid.grid, #featuredGrid.grid{ ...minmax(216px,1fr) !important }
+     A igualdad de peso gana la última, así que la rejilla se quedaba en
+     cuatro columnas y el botón parecía muerto. Se marcaba el botón, se
+     guardaba la preferencia, y no se veía nada.
+
+     Se sube el peso con las dos clases juntas: un id y dos clases le gana a
+     un id y una, venga donde venga. */
+  #productsGrid.grid.vg-list-view,
+  #productsGrid.vg-list-view.vg-list-view{
+    grid-template-columns:1fr !important;
+  }
+
+  /* Y las tarjetas de Xbox también se acuestan. Las reglas de lista que ya
+     existían visten .card, .imgbox y .info, que son las del catálogo normal;
+     las de Xbox son otras y se quedaban cuadradas y enormes en una sola
+     columna, que es peor que la rejilla. */
+  #productsGrid.vg-list-view .vg-xbox-game-card{
+    flex-direction:row !important;
+    height:112px !important;
+    align-items:stretch;
+  }
+  #productsGrid.vg-list-view .vg-xbox-game-cover{
+    width:112px !important;
+    height:112px !important;
+    aspect-ratio:auto !important;
+    flex:0 0 112px !important;
+  }
+  #productsGrid.vg-list-view .vg-xbox-game-info{
+    flex-direction:row !important;
+    align-items:center !important;
+    gap:14px;
+    padding:10px 14px !important;
+    flex:1 1 auto;
+    min-width:0;
+  }
+  /* El min-width:0 es lo que deja al título encogerse: sin él, un flex item
+     no baja de lo que mide su contenido y empuja al botón fuera de la
+     tarjeta. Con títulos como "Hogwarts Legacy" no se notaba; con los
+     largos, el botón se salía. */
+  #productsGrid.vg-list-view .vg-xbox-game-info h4{
+    flex:1 1 auto !important;
+    min-width:0 !important;
+    min-height:0 !important;
+    margin:0 !important;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
+  }
+  #productsGrid.vg-list-view .vg-xbox-game-meta{ display:none !important; }
+  #productsGrid.vg-list-view .vg-x90-precios{ margin:0 !important; flex:0 0 auto; }
+  /* El !important también en el flex: sin él, otra regla dejaba el botón en
+     flex-shrink:1 y la fila lo encogía hasta partirle la palabra. */
+  #productsGrid.vg-list-view .vg-xbox-game-info button{
+    flex:0 0 auto !important;
+    width:auto !important;
+    min-width:max-content !important;
+    padding:9px 18px !important;
+    white-space:nowrap !important;
+  }
+  /* En el teléfono los cuatro trozos no caben en una línea: portada 96 +
+     título + precio 82 + botón 110 + huecos se pasa por ocho píxeles y el
+     botón se salía. Se pone el título encima del precio y el botón al lado,
+     ocupando los dos renglones. */
+  @media(max-width:560px){
+    #productsGrid.vg-list-view .vg-xbox-game-card{ height:96px !important; }
+    #productsGrid.vg-list-view .vg-xbox-game-cover{ width:96px !important; height:96px !important; flex-basis:96px !important; }
+    #productsGrid.vg-list-view .vg-xbox-game-info{
+      display:grid !important;
+      grid-template-columns:minmax(0,1fr) auto;
+      grid-template-areas:"titulo boton" "precio boton";
+      align-items:center;
+      column-gap:8px; row-gap:2px;
+      padding:8px 10px !important;
+    }
+    #productsGrid.vg-list-view .vg-xbox-game-info h4{ grid-area:titulo; white-space:normal; }
+    #productsGrid.vg-list-view .vg-x90-precios{ grid-area:precio; }
+    #productsGrid.vg-list-view .vg-xbox-game-info button{
+      grid-area:boton; align-self:center;
+      padding:9px 14px !important; font-size:12.5px !important;
+    }
+  }
+
   /* Filtros por género y precio de la sección de Xbox (fase 103). */
   .vg-x103-filtros{
     max-width:1480px; margin:0 auto 6px; padding:0 22px;
