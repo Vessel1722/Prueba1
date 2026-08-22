@@ -160,6 +160,34 @@ create trigger on_auth_user_created
   for each row execute function public.handle_new_user();
 
 
+-- ── 2b · Quién puede usar las herramientas de abajo ─────────────────
+--
+-- Las tres funciones que siguen son solo para el dueño. El guardia
+-- obvio sería 'if not public.is_admin()', pero is_admin() se apoya en
+-- auth.uid(), y auth.uid() sale NULL cuando no hay sesión web — que es
+-- justo el caso del SQL Editor de Supabase. Con ese guardia, las tres
+-- fallaban precisamente en el sitio donde se van a usar.
+--
+-- Así que se permite el paso en dos casos: cuando quien llama es un
+-- administrador identificado, o cuando no hay ninguna sesión web
+-- detrás (SQL Editor o clave de servicio). El segundo caso es seguro
+-- porque a estas funciones se les quita el permiso a 'anon' y solo se
+-- les da a 'authenticated': por la web no hay manera de llegar aquí
+-- sin sesión.
+create or replace function public.vg_es_el_dueno()
+returns boolean
+language sql
+security definer
+stable
+set search_path = public
+as $$
+  select auth.uid() is null or public.is_admin();
+$$;
+
+revoke all on function public.vg_es_el_dueno() from public, anon;
+grant execute on function public.vg_es_el_dueno() to authenticated;
+
+
 -- ── 3 · Reparar una cuenta que ya se registró sin enlazar ───────────
 --
 -- Las cuentas creadas antes de este archivo tienen referred_by en
@@ -188,7 +216,7 @@ declare
   v_actual  uuid;
   v_tel     text;
 begin
-  if not public.is_admin() then
+  if not public.vg_es_el_dueno() then
     raise exception 'Solo el administrador puede reparar un referido.';
   end if;
 
@@ -261,7 +289,7 @@ declare
   v_tel      text;
   v_saldo    numeric;
 begin
-  if not public.is_admin() then
+  if not public.vg_es_el_dueno() then
     raise exception 'Solo el administrador puede pagar un referido a mano.';
   end if;
 
@@ -336,7 +364,7 @@ security definer
 set search_path = public
 as $$
 begin
-  if not public.is_admin() then
+  if not public.vg_es_el_dueno() then
     raise exception 'Solo el administrador puede ver el diagnóstico.';
   end if;
 
