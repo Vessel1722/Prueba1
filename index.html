@@ -24573,6 +24573,16 @@ function renderMigracion(cont){
       (r2.data||[]).forEach(function(p){ anotar(p.image, 'products_admin', 'product_id', p.product_id); });
     }
 
+    /* La oferta destacada de la portada. Se quedó fuera de la primera
+       versión y fue la única foto que sobrevivió sin aligerar a la
+       primera pasada: no está en el catálogo, vive en su propia tabla.
+       Y es la que MÁS se pide, porque sale en la página de inicio a
+       todo el que entra, haya buscado un juego o no. */
+    var r3 = await c.from('hero_offer').select('id,title,image').limit(50);
+    if(r3 && !r3.error){
+      (r3.data||[]).forEach(function(p){ anotar(p.image, 'hero_offer', 'id', p.id); });
+    }
+
     return Object.keys(porUrl).map(function(k){ return porUrl[k]; });
   }
 
