@@ -419,10 +419,14 @@ begin
             where tgname = 'vg_tokens_entrega_trg' and not tgisinternal
          ) then 'SÍ' else 'NO — corre supabase_fase23_TOKENS.sql' end;
 
+  -- Ojo con el alias 'cfg': esta función devuelve una columna llamada
+  -- 'valor' y vg_token_config tiene otra columna 'valor'. Sin calificar
+  -- la tabla, Postgres no sabe a cuál nos referimos y falla con
+  -- 42702 "column reference valor is ambiguous".
   return query
   select 'Se paga por referido'::text,
-         coalesce((select valor::text from public.vg_token_config
-                    where clave = 'por_referido'), '1.00 (por defecto)');
+         coalesce((select cfg.valor::text from public.vg_token_config cfg
+                    where cfg.clave = 'por_referido'), '1.00 (por defecto)');
 end;
 $$;
 
