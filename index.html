@@ -20820,6 +20820,13 @@ async function loadProfileAndSaveSession(user){
   var c = SB();
   var prof = null, wallet = null;
   if(c && user){
+    /* FASE 81 · Segunda oportunidad para el referido.
+       Si el alta no dejó sesión abierta (Supabase con confirmación por
+       correo), el enlace del padrino no se pudo confirmar entonces. Se
+       pasa por aquí en cuanto el cliente entra de verdad, que es el
+       primer momento en que hay permisos para hacerlo. Si ya estaba
+       enlazado o no había código pendiente, no hace nada. */
+    try{ await vgRefAsegurar(c, user.id); }catch(e){}
     try{
       var pr = await c.from('vg_users').select('id,name,phone,email,referral_code,total_purchases').eq('id', user.id).maybeSingle();
       prof = pr && pr.data;
@@ -21037,6 +21044,70 @@ function goAfterAuth(){
   }
 }
 
+/* ── Referidos: leer, confirmar y no perder el código ────────────────
+   FASE 81. Por la página conviven tres capturas del mismo ?ref= y
+   dejan el valor en dos claves distintas, cada una normalizada de una
+   manera: una cruda, otra en mayúsculas, otra recortada por una
+   expresión regular. Se leen las tres y se normaliza aquí, para que dé
+   igual cuál de ellas escribió el valor. */
+function vgRefPendiente(){
+  try{
+    var v = sessionStorage.getItem('vg_incoming_ref')
+         || localStorage.getItem('vg_pending_ref')
+         || '';
+    v = String(v || '').trim().toUpperCase();
+    return v || null;
+  }catch(e){ return null; }
+}
+
+function vgRefLimpiar(){
+  try{ localStorage.removeItem('vg_pending_ref'); }catch(e){}
+  try{ sessionStorage.removeItem('vg_incoming_ref'); }catch(e){}
+}
+
+/* Comprueba que el padrino quedó apuntado de verdad y, si no, lo
+   reintenta. Devuelve true solo cuando se puede confirmar.
+
+   Por qué hace falta confirmar en vez de escribir y confiar: el UPDATE
+   contra vg_users solo lo acepta la base si hay sesión iniciada, y
+   cuando NO la hay PostgREST no devuelve error — responde que todo bien
+   y no toca ninguna fila. Sin leer después, es imposible distinguir
+   "se guardó" de "no se guardó". */
+async function vgRefAsegurar(c, userId){
+  var code = vgRefPendiente();
+  if(!c || !userId || !code) return false;
+  try{
+    var cur = await c.from('vg_users').select('referred_by').eq('id', userId).maybeSingle();
+
+    /* Sin sesión no se puede ni leer la ficha. Se deja el código
+       guardado para reintentarlo en el próximo inicio de sesión. */
+    if(cur.error || !cur.data) return false;
+
+    if(cur.data.referred_by){ vgRefLimpiar(); return true; }
+
+    /* La ficha existe pero salió sin padrino: o la cuenta es anterior
+       a la fase 81, o el código no correspondía a nadie. */
+    var rf = await c.rpc('find_referrer', { code: code });
+    if(rf.error || !rf.data){
+      /* Ese código no es de nadie. Guardarlo no sirve de nada. */
+      vgRefLimpiar();
+      return false;
+    }
+    if(String(rf.data) === String(userId)){ vgRefLimpiar(); return false; }
+
+    var up = await c.from('vg_users')
+                    .update({ referred_by: rf.data })
+                    .eq('id', userId)
+                    .select('referred_by');
+
+    if(!up.error && up.data && up.data.length && up.data[0].referred_by){
+      vgRefLimpiar();
+      return true;
+    }
+    return false;   /* se conserva el código para reintentar */
+  }catch(e){ return false; }
+}
+
 /* ── Registro ── */
 async function doRegister(){
   var btn = qs('#vg10RegBtn');
@@ -21078,9 +21149,26 @@ async function doRegister(){
       }
     }catch(e){ /* si no se puede comprobar, se deja continuar */ }
 
+    /* FASE 81 · El código de referido viaja EN EL ALTA.
+       Antes se intentaba pegar después, con un UPDATE desde aquí, y
+       ese UPDATE se caía sin avisar: si Supabase pide confirmar el
+       correo, signUp() no deja sesión, el navegador sigue siendo
+       "anon", y la política de vg_users solo deja escribir a los
+       autenticados. PostgREST responde que todo bien y no cambia
+       nada. Resultado: el padrino nunca quedaba apuntado y el token
+       no llegaba jamás.
+       Mandándolo aquí, lo graba el disparador handle_new_user dentro
+       de la propia base, en la misma operación que crea la ficha. Ni
+       depende de la sesión, ni de los permisos, ni de que el cliente
+       deje la pestaña abierta. */
+    var refAlta = vgRefPendiente();
+
     var r = await c.auth.signUp({
       email: email, password: pass,
-      options: { data: { name: name.trim(), phone: phone, phone_cc: cc } }
+      options: { data: {
+        name: name.trim(), phone: phone, phone_cc: cc,
+        ref: refAlta || ''
+      } }
     });
     if(r.error){
       var m0 = r.error.message || '';
@@ -21098,15 +21186,16 @@ async function doRegister(){
       }
       return;
     }
-    /* referido pendiente (si vino por un link ?ref=) */
-    try{
-      var pendingRef = sessionStorage.getItem('vg_incoming_ref') || localStorage.getItem('vg_pending_ref');
-      if(pendingRef && r.data && r.data.user){
-        var rf = await c.rpc('find_referrer', { code: pendingRef });
-        if(rf && rf.data){ await c.from('vg_users').update({ referred_by: rf.data }).eq('id', r.data.user.id); }
-        localStorage.removeItem('vg_pending_ref');
-      }
-    }catch(e){}
+    /* El referido ya lo grabó el disparador al crear la ficha. Esto
+       solo comprueba que de verdad quedó puesto, y si no, lo reintenta.
+       Ojo con lo que NO hace: no borra el código guardado salvo que se
+       confirme que quedó enlazado. Antes se borraba siempre, así que
+       cuando el enlace fallaba —el caso de la confirmación por correo,
+       donde el cliente vuelve a entrar más tarde— el referido se perdía
+       para siempre y no había segundo intento. */
+    if(refAlta && r.data && r.data.user){
+      await vgRefAsegurar(c, r.data.user.id);
+    }
 
     if(r.data && r.data.session){
       /* Confirmación de correo desactivada → sesión lista */
