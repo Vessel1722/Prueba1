@@ -46285,5 +46285,54 @@ button.vg119-incompleto{
   }
 </style>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 136 — En Redes no salía ni un solo paquete
+
+     Los precios sí llegaban: renderOptions() pintaba los 7 divs de
+     "TikTok Likes" dentro de #modalOptions. Lo que fallaba era el
+     alto: la caja medía 0 px, así que la lista existía pero no se veía.
+
+     .modal-body es una columna flex. Todos sus hijos pueden encogerse,
+     pero los de texto tienen un mínimo automático —su propio
+     contenido— y no bajan de ahí. #modalOptions no: al tener scroll
+     propio su mínimo automático es 0, y encima la fase 105 le puso
+     min-height:0 !important. Resultado: cuando el contenido de la
+     columna pasa del alto disponible, TODO el recorte cae sobre la
+     lista de paquetes, y desaparece entera.
+
+     Lo que colmó la columna fue ir sumando cosas encima y debajo: la
+     nota de entrega, la caja de garantía (fase 49) y el carrusel de
+     "También te puede interesar". En una pantalla de 1280x720 el resto
+     del modal ya se come los 660 px del cuerpo, así que a la lista le
+     tocaban 0. Medido en producción antes de este arreglo: las 52
+     fichas que abren ventana de producto tenían la lista colapsada,
+     no solo las de Redes.
+
+     Este mismo fallo ya se había arreglado en móvil (fase 12, v110),
+     pero solo dentro de @media(max-width:900px). En escritorio nunca
+     se puso la red, y ahí es donde se veía.
+
+     Arreglo: la lista de paquetes no cede su alto (flex-shrink:0) y se
+     pinta completa. Quien desplaza es .modal-body, que ya tenía
+     overflow-y:auto justo para esto. Se quita también el tope de 46vh
+     que puso la fase 105: con el cuerpo desplazándose, ese tope solo
+     servía para meter una segunda barra de scroll dentro de la
+     primera. Los botones de compra son sticky, así que siguen pegados
+     abajo, y la "×" está anclada a .modal-card —no al cuerpo—, así que
+     tampoco se va con el desplazamiento.
+
+     La ficha de Actas tiene sus propias reglas, más específicas, y se
+     queda como estaba.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-opciones-lista-no-colapsa-v136">
+#productModal #modalOptions{
+  flex:0 0 auto !important;    /* nunca cede su alto al resto de la columna */
+  min-height:0 !important;
+  max-height:none !important;
+  overflow-y:auto !important;  /* inofensivo: el alto ya es el del contenido */
+  overflow-x:hidden !important;
+}
+</style>
+
 </body>
 </html>
