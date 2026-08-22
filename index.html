@@ -46334,5 +46334,90 @@ button.vg119-incompleto{
 }
 </style>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 137 — En pantallas bajas la lista salía, pero casi sin sitio
+
+     La fase 136 arregló que los paquetes desaparecieran. Quedaba el
+     otro lado del problema: en un portátil de 1280x720 solo asomaba
+     un paquete y medio antes de los botones de compra, así que había
+     que desplazar para ver el segundo precio.
+
+     No era culpa de la lista sino de lo que lleva encima. Medido a
+     1280x720: desde el borde del cuerpo hasta la primera opción había
+     427 px, y los botones —que son sticky— se plantan a 122 px del
+     fondo. De 660 px de cuerpo quedaban 83 para la lista.
+
+     Reparto de esos 427 px: 28 de relleno, 17 de etiqueta, 39 de
+     título, 26 de descripción, 64 de nota de entrega, 107 de la caja
+     de garantía, 23 del "Selecciona una opción", 15 del aviso de
+     stock... y 136 px repartidos en márgenes entre unos y otros. Ahí
+     estaba el sitio.
+
+     Se aprieta esa mitad de arriba SOLO cuando hace falta: pantallas
+     de escritorio de 880 px de alto o menos. Por encima de eso la
+     ficha ya cabía holgada (a 1080 se ven los siete paquetes de golpe)
+     y se queda con el aire de siempre.
+
+     Qué se toca, y nada de esconder texto:
+       · la tarjeta pasa de 92vh a 96vh, y el modal de 18 px de marco
+         a 10 — son 16 px más de cuerpo;
+       · relleno del cuerpo 28 → 18 arriba y 16 abajo;
+       · título de 2.4rem a 1.9rem, con su interlineado;
+       · nota de entrega y caja de garantía a 13 px con menos relleno;
+       · márgenes entre bloques recortados a la mitad.
+
+     Resultado medido en las 52 fichas a 1280x720: el hueco visible
+     para la lista pasa de 83 px a 205 px en TikTok Likes —de 1.5 a
+     3.7 paquetes a la vista— y ninguna ficha baja de 117 px. A 800 px
+     de alto pasa de 2.9 a 5.1 paquetes; a 600, de ninguno (la lista
+     empezaba por debajo de los botones) a 1.7.
+
+     Comprobado que el título y la etiqueta no llegan a tocar la "×"
+     en ninguna de las 52 fichas. La ventana de Actas tiene su propia
+     rejilla y queda excluida a propósito; en móvil no entra nada de
+     esto.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-modal-aprieta-arriba-v137">
+@media (min-width:901px) and (max-height:880px){
+
+  /* Más caja para el mismo contenido */
+  #productModal:not(.vg-actas-pro-modal){ padding:10px !important; }
+  #productModal:not(.vg-actas-pro-modal) .modal-card{ max-height:96vh !important; }
+  #productModal:not(.vg-actas-pro-modal) .modal-body{ padding:18px 24px 16px !important; }
+  #productModal:not(.vg-actas-pro-modal) .modal-body > .x{ top:10px !important; right:10px !important; }
+
+  /* Cabecera */
+  #productModal:not(.vg-actas-pro-modal) #modalCat{ margin-bottom:8px !important; }
+  #productModal:not(.vg-actas-pro-modal) #modalTitle{
+    font-size:1.9rem !important;
+    line-height:1.05 !important;
+    margin-top:4px !important;
+    margin-bottom:6px !important;
+  }
+
+  /* Las dos cajas de texto: mismo contenido, menos aire */
+  #productModal:not(.vg-actas-pro-modal) .modal-delivery-note{
+    font-size:0.8125rem !important;
+    line-height:1.35 !important;
+    padding:8px 12px !important;
+    margin:6px 0 8px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .vg-garantia{
+    font-size:0.8125rem !important;
+    line-height:1.35 !important;
+    padding:9px 12px !important;
+    margin:6px 0 4px !important;
+    gap:9px !important;
+  }
+
+  /* El rótulo de la lista y el aviso de stock */
+  #productModal:not(.vg-actas-pro-modal) .modal-body > h3{
+    font-size:1.0625rem !important;
+    margin:6px 0 !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) #vgStockBadge{ margin:2px 0 6px !important; }
+}
+</style>
+
 </body>
 </html>
