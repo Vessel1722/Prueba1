@@ -334,7 +334,13 @@ module.exports = async (req, res) => {
        de todo lo demás, y de paso el número de ficha recién encontrado. */
     const yaEscritos = new Set(aTocar.map((c) => c.slug));
     const listaPendiente = cambios.store.filter((c) => !yaEscritos.has(c.slug));
-    const aGuardarLista = listaPendiente.slice(0, TOPE_LISTA);
+    /* Vercel corta la función al minuto. Esta etapa es la última y la que
+       menos prisa tiene -lo que no quepa hoy entra mañana-, así que se
+       ajusta a lo que quede de minuto en vez de arriesgarse a que el corte
+       pille a medias el guardado y no se sepa qué quedó escrito. */
+    const quedanMs = 52000 - (Date.now() - t0);
+    const cabenAhora = Math.max(0, Math.min(TOPE_LISTA, Math.floor(quedanMs / 15)));
+    const aGuardarLista = listaPendiente.slice(0, cabenAhora);
     await P.enTanda(aGuardarLista, 10, async (c) => {
       const cuerpo = {};
       if (c.ahora) cuerpo.precio_lista = c.ahora;
