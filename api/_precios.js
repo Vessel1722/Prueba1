@@ -112,6 +112,19 @@ function tituloLimpio(nombre) {
   let t = String(nombre);
   t = t.replace(/\s*[-–]?\s*(XBOX|Xbox)\s*(One|Series)[^]*$/i, ' ');
   t = t.replace(/\b(CD Key|Digital Download|Key|Account|PRE-?ORDER|Pre-?purchase)\b/gi, ' ');
+
+  /* Kinguin marca así los códigos que hay que canjear con VPN:
+     "Far Cry 6 AR VPN Activated XBOX One CD Key". La línea de los paréntesis
+     de abajo solo lo quita cuando viene entre ellos, así que suelto se
+     colaba al título de la tienda: llegó a haber 22 fichas publicadas que
+     decían "VPN Activated". Eso no puede salir —la región y el VPN son
+     información interna, van en vg_xbox_costos— y además partía el catálogo
+     en dos: el mismo juego competía consigo mismo y ganaba el peor.
+     La MISMA regla está en vessel-precios/nucleo.mjs. Si se cambia una hay
+     que cambiar la otra: este cron y esa herramienta hacen el mismo trabajo
+     sobre la misma base, y el que corra después manda. */
+  t = t.replace(/\bVPN\s*(Activated|Required|Needed|Only)?\b/gi, ' ');
+
   t = t.replace(new RegExp('\\s+\\b(' + REG + ')\\b\\s*', 'g'), ' ');
   t = t.replace(/\s*\(.*?(key|region|vpn).*?\)\s*/gi, ' ');
   t = t.replace(/^Copy of\s+/i, '');
