@@ -10529,6 +10529,14 @@ window.vgProofPick=function(fuente){
       if(panel) panel.classList.remove('active');
       const sub=document.getElementById('productsSubtitle');
       if(sub && SUBTITULO_CATALOGO) sub.textContent=SUBTITULO_CATALOGO;
+
+      /* Fortnite y Xbox no se pintan desde SERVICES: son módulos aparte con
+         su propio buscador y sus propios chips. Vaciar #globalSearch no les
+         hace nada, así que cada uno se apunta aquí para limpiar lo suyo.
+         Sin esto, el juego fijado en Xbox y el texto del buscador de
+         Fortnite seguían puestos al volver a la sección. */
+      const propios=window.vgLimpiadoresDeSeccion;
+      if(Array.isArray(propios)) propios.forEach(function(f){ try{ f(); }catch(e){} });
     }
     function showHome(){ limpiarBusqueda(); activeCategory='all'; window.activeCategory=activeCategory; homeView.classList.add('active'); marketView.classList.remove('active'); renderNav(); window.scrollTo(0,0); }
     /* Cuentas y Streaming se juntaron en una sola sección. Los enlaces
@@ -33502,6 +33510,28 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     busqueda = t;
   }
 
+  /* Al salir de la sección se vacía su buscador propio.
+
+     Este es el que peor se notaba: el texto vive en el value de
+     #vgfnBuscar y en la variable busqueda, y no lo tocaba nadie. Escribías
+     "pavos", te ibas y al volver la tienda de Fortnite seguía en 4
+     artículos de 23, por cualquier camino -otra sección o el logo-. Y
+     aquí no hay etiqueta que lo avise: la caja está arriba del mosaico y
+     desaparece de la vista en cuanto bajas.
+
+     Las funciones que mandan a Fortnite con una pieza ya buscada
+     (abrirFortnite y compañía) escriben en el buscador con un setTimeout
+     DESPUÉS de showSection, así que siguen funcionando: esto limpia antes
+     y ellas escriben después. */
+  window.vgFortniteLimpiarFiltros = function(){
+    busqueda = '';
+    filtro = 'todo';
+    var caja = document.getElementById('vgfnBuscar');
+    if(caja) caja.value = '';
+  };
+  (window.vgLimpiadoresDeSeccion = window.vgLimpiadoresDeSeccion || [])
+    .push(window.vgFortniteLimpiarFiltros);
+
   function envolver(){
     if(typeof window.showSection === 'function' && !window.showSection.__vg62){
       var orig = window.showSection;
@@ -45449,10 +45479,31 @@ button.vg119-incompleto{
   var fijado = '';
 
   window.vgXboxFijar = function(slug){
-    fijado = String(slug || '');
+    /* El orden importa: showSection limpia los filtros de la sección al
+       entrar, así que el juego se fija DESPUÉS de llegar. Al revés se
+       borraba solo y el cliente aterrizaba en el catálogo entero. */
     if(typeof window.showSection === 'function') window.showSection('xbox');
+    fijado = String(slug || '');
     setTimeout(function(){ pintar(); }, 40);
   };
+
+  /* Al salir de la sección se tira todo lo que el cliente había filtrado.
+
+     Antes solo se limpiaba 'fijado', y solo en la rama else del envoltorio
+     de showSection. Eso dejaba dos agujeros: por el logo se sale con
+     showHome(), que no pasa por ese envoltorio -así que el juego fijado
+     seguía puesto al volver, y la etiqueta 'Mostrando solo…' se quedaba
+     colgada hasta en la portada- y 'generoActivo' no estaba en esa rama,
+     así que el chip de género sobrevivía por cualquier camino. */
+  window.vgXboxLimpiarFiltros = function(){
+    fijado = '';
+    generoActivo = 'todos';
+    mostrados = POR_TANDA;
+    esconderPie();
+    quitarFiltros();
+  };
+  (window.vgLimpiadoresDeSeccion = window.vgLimpiadoresDeSeccion || [])
+    .push(window.vgXboxLimpiarFiltros);
 
 
   function generosDelCatalogo(){
@@ -46660,6 +46711,16 @@ button.vg119-incompleto{
   if(window.__VG_ACTAS_138__) return; window.__VG_ACTAS_138__ = true;
 
   var grupoActivo = 'todos';
+
+  /* Al salir de la sección se sueltan sus chips de grupo.
+
+     El envoltorio de showSection ya lo hacía en su rama "cat !== actas",
+     pero por el logo se sale con showHome(), que no pasa por ahí: dejabas
+     Actas filtrada en "IMSS", volvías desde la portada y seguían saliendo
+     solo los del IMSS. */
+  window.vgActasLimpiarFiltros = function(){ grupoActivo = 'todos'; };
+  (window.vgLimpiadoresDeSeccion = window.vgLimpiadoresDeSeccion || [])
+    .push(window.vgActasLimpiarFiltros);
 
   function esc(s){
     return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
