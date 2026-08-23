@@ -19,6 +19,11 @@ const P = require('./_precios');
 
 const TOPE_ESCRITURAS = 300;   // cambios de precio por corrida, para no pasarse del minuto
 const TOPE_ALTAS = 200;        // altas por corrida; el resto entra al día siguiente
+/* La corrida diaria comparte el minuto que da Vercel con los precios, así
+   que ahí se reparan de poco en poco. Pidiendo solo portadas no compite con
+   nada y caben todas de una: hoy hay 538 por arreglar. */
+const TOPE_PORTADAS = 250;
+const TOPE_PORTADAS_SOLAS = 800;
 const CONCURRENCIA_PAGINAS = 10;
 const CONCURRENCIA = 12;
 
@@ -26,6 +31,10 @@ module.exports = async (req, res) => {
   res.setHeader('Cache-Control', 'no-store');
 
   const ensayo = String(req.query.ensayo || '') === '1';
+  /* Con ?soloPortadas=1 se repara la imagen y no se toca ni un precio.
+     Sirve para arreglar el catálogo hoy sin esperar al repaso de mañana y
+     sin mover nada de lo que el cliente ya vio anunciado. */
+  const soloPortadas = String(req.query.soloPortadas || '') === '1';
 
   /* Vercel manda el CRON_SECRET en la cabecera. A mano, lo puede mandar el
      administrador con su sesión. Cualquier otro se queda fuera. */
@@ -54,7 +63,7 @@ module.exports = async (req, res) => {
     const filas = [];
     let desde = 0;
     while (true) {
-      const lote = await P.supa('vg_xbox_games?select=slug,title,price,precio_lista,ms_id,status&slug=not.is.null&order=slug.asc&limit=1000&offset=' + desde);
+      const lote = await P.supa('vg_xbox_games?select=slug,title,price,precio_lista,ms_id,status,image&slug=not.is.null&order=slug.asc&limit=1000&offset=' + desde);
       filas.push.apply(filas, lote);
       if (lote.length < 1000) break;
       desde += 1000;
@@ -64,7 +73,45 @@ module.exports = async (req, res) => {
        a mirarlo era el fallo que dejaba publicar un juego más caro que en la
        propia tienda: las rebajas de Microsoft duran días. */
     const preciosMS = await P.preciosDeMicrosoft(filas.map((f) => f.ms_id));
-    const cambios = { sube: [], baja: [], oculta: [], revive: [], alta: [], igual: 0, sinCambio: 0, store: [] };
+
+    /* ── Carátulas cruzadas ──
+
+       Se vendía "Call of Duty: Advanced Warfare Gold Edition" con la
+       portada de "Call of Duty: WWII". No era una ficha suelta: 328 de
+       2.744 juegos (el 12%) enseñaban la carátula de otro juego, en 110
+       montones donde una sola imagen valía para siete títulos distintos.
+       Vendiendo por foto, eso es dinero: el cliente compra lo que ve.
+
+       De dónde venían. Esta función pone la portada de Kinguin, que es
+       de cada producto, y solo al dar de alta. La herramienta de la PC
+       (vessel-precios) las reescribe con las de la tienda de Microsoft, y
+       ésas las empareja por nombre: toda la saga acababa con la misma.
+       Los números lo dicen solos: de los 186 montones que compartían
+       imagen, 184 eran direcciones de Microsoft y ninguna de las 325
+       portadas de Kinguin estaba repartida entre juegos distintos.
+
+       Qué se repara. Solo lo demostrablemente ambiguo: una portada que
+       usan DOS O MÁS juegos de la tienda. A ésas se les devuelve la de
+       Kinguin de ese juego exacto. Una portada que solo usa un juego no
+       se toca, aunque no coincida: no hay motivo para pensar que esté
+       mal y no vale la pena arriesgar una buena.
+
+       Dos juegos que de verdad son el mismo (la versión japonesa y la de
+       aquí) comparten portada con razón. No hay que distinguirlos a mano:
+       Kinguin les da la misma imagen a los dos, así que se quedan igual. */
+    const slugsPorImagen = new Map();
+    for (const f of filas) {
+      const img = String(f.image || '');
+      if (!img) continue;
+      if (!slugsPorImagen.has(img)) slugsPorImagen.set(img, new Set());
+      slugsPorImagen.get(img).add(f.slug);
+    }
+    const portadaCompartida = (img) => {
+      const s = slugsPorImagen.get(String(img || ''));
+      return !!s && s.size > 1;
+    };
+
+    const cambios = { sube: [], baja: [], oculta: [], revive: [], alta: [], portada: [], igual: 0, sinCambio: 0, store: [] };
 
     for (const f of filas) {
       const o = kinguin.get(f.slug);
@@ -78,6 +125,12 @@ module.exports = async (req, res) => {
         if (f.status !== 'hidden') cambios.oculta.push({ slug: f.slug, title: f.title, motivo: 'ya no está en Kinguin' });
         else cambios.igual++;
         continue;
+      }
+
+      /* La portada se revisa aunque el juego acabe escondido: si mañana
+         vuelve, vuelve con la suya. */
+      if (o.portada && o.portada !== f.image && portadaCompartida(f.image)) {
+        cambios.portada.push({ slug: f.slug, title: f.title, antes: f.image, ahora: o.portada });
       }
 
       const costo = Math.round(o.costoBase * (1 + P.CFG.cuota));
@@ -137,6 +190,8 @@ module.exports = async (req, res) => {
       sinCambio: cambios.igual,
       preciosDeXboxQueCambiaron: cambios.store.length,
       altasNuevas: cambios.alta.length,
+      portadasCruzadas: cambios.portada.length,
+      ejemplosPortadas: cambios.portada.slice(0, 6).map(function (c) { return c.title; }),
       primerasAltas: cambios.alta.slice(0, 6).map(function (a) { return a.title + ' a ' + a.ahora; }),
       tipoCambio: Number(tipoCambio.toFixed(4)),
       masSuben: cambios.sube.slice().sort((a, b) => (b.ahora - b.antes) - (a.ahora - a.antes)).slice(0, 8),
@@ -149,6 +204,27 @@ module.exports = async (req, res) => {
     }
 
     // ── Escribir ──
+
+    /* Las portadas van primero y aparte del tope de precios: son el fallo
+       que se ve en la tarjeta, y no compiten por el mismo cupo. */
+    const topePortadas = soloPortadas ? TOPE_PORTADAS_SOLAS : TOPE_PORTADAS;
+    const aRepintar = cambios.portada.slice(0, topePortadas);
+    await P.enTanda(aRepintar, 8, async (c) => {
+      await P.supa('vg_xbox_games?slug=eq.' + encodeURIComponent(c.slug), {
+        method: 'PATCH',
+        body: JSON.stringify({ image: c.ahora, updated_at: new Date().toISOString() }),
+      });
+    });
+    resumen.portadasArregladas = aRepintar.length;
+    resumen.portadasPendientes = Math.max(0, cambios.portada.length - aRepintar.length);
+
+    /* Con ?soloPortadas=1 se acaba aquí: ni precios, ni altas, ni bajas. */
+    if (soloPortadas) {
+      resumen.soloPortadas = true;
+      resumen.segundos = Math.round((Date.now() - t0) / 1000);
+      return res.json(resumen);
+    }
+
     const aTocar = cambios.sube.concat(cambios.baja, cambios.revive).slice(0, TOPE_ESCRITURAS);
     await P.enTanda(aTocar, 8, async (c) => {
       const cuerpo = { price: c.ahora, status: 'active', updated_at: new Date().toISOString() };

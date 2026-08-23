@@ -45205,6 +45205,41 @@ button.vg119-incompleto{
     boton.disabled = false;
   }
 
+  /* FASE 115 · Arreglar las carátulas cruzadas.
+
+     Había juegos anunciados con la portada de otro: "Advanced Warfare
+     Gold" salía con la carátula de "WWII". Vendiendo por foto eso es
+     dinero perdido, y además el cliente que abre el pedido cree que le
+     mandaron otro juego. Esto le devuelve a cada ficha la portada que
+     Kinguin tiene de ESE juego, y no toca ningún precio. */
+  async function portadas(){
+    var caja = document.getElementById('vgX92Informe'); if(!caja) return;
+    caja.textContent = 'Comparando las carátulas con las de Kinguin. Tarda medio minuto.';
+    try{
+      var d = await api('/api/cron-precios?soloPortadas=1');
+      if(d.error){ caja.textContent = 'Error: ' + d.error; return; }
+      var l = [];
+      l.push('Revisados ' + d.revisados + ' juegos en ' + d.segundos + 's');
+      if(!d.portadasCruzadas){
+        l.push('');
+        l.push('Ninguna ficha enseña la carátula de otro juego. Todo en orden.');
+      } else {
+        l.push('Fichas con la carátula de otro juego: ' + d.portadasCruzadas);
+        l.push('Arregladas ahora: ' + d.portadasArregladas +
+               (d.portadasPendientes ? ' · quedan ' + d.portadasPendientes + ', vuelve a pulsar' : ''));
+        if(d.ejemplosPortadas && d.ejemplosPortadas.length){
+          l.push('');
+          l.push('Por ejemplo:');
+          d.ejemplosPortadas.forEach(function(t){ l.push('   ' + t); });
+        }
+      }
+      caja.textContent = l.join(String.fromCharCode(10));
+      if(typeof window.loadXboxGames === 'function'){ costos = null; window.loadXboxGames(); }
+    }catch(e){
+      caja.textContent = 'No se pudo: ' + String((e && e.message) || e);
+    }
+  }
+
   async function repaso(aplicar){
     var caja = document.getElementById('vgX92Informe'); if(!caja) return;
     caja.textContent = 'Preguntándole a Kinguin por los ' + ((typeof window.vgXboxTodos === 'function') ? window.vgXboxTodos().length : '') + ' juegos. Tarda medio minuto.';
@@ -45270,6 +45305,7 @@ button.vg119-incompleto{
     caja.innerHTML = '<input id="vgX92Buscar" type="search" placeholder="Buscar juego en el catálogo…">' +
       '<button class="vg-admin-btn" id="vgX92Ensayo" type="button">Revisar precios de hoy</button>' +
       '<button class="vg-admin-btn primary" id="vgX92Aplicar" type="button">Aplicar cambios</button>' +
+      '<button class="vg-admin-btn" id="vgX92Portadas" type="button">Arreglar carátulas</button>' +
       '<span id="vgX92Cuenta"></span>' +
       '<pre class="vg-x92-informe" id="vgX92Informe"></pre>';
     lista.parentNode.insertBefore(caja, lista);
@@ -45277,6 +45313,11 @@ button.vg119-incompleto{
     caja.querySelector('#vgX92Ensayo').onclick = function(){ repaso(false); };
     caja.querySelector('#vgX92Aplicar').onclick = function(){
       if(confirm('Se van a cambiar los precios de la tienda con los de Kinguin de hoy. ¿Le entramos?')) repaso(true);
+    };
+    /* Las carátulas van por su lado y no tocan ni un precio: es un arreglo
+       que se puede correr sin miedo en cualquier momento. */
+    caja.querySelector('#vgX92Portadas').onclick = function(){
+      if(confirm('Se van a devolver a Kinguin las carátulas de los juegos que hoy enseñan la de otro. No se toca ningún precio. ¿Le entramos?')) portadas();
     };
   }
 
