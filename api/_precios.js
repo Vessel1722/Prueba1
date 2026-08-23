@@ -417,9 +417,22 @@ const EDICION_CARA = /\b(deluxe|ultimate|premium|gold|complete|completa|definiti
 function edicionQueNoEs(nuestroTitulo, nuestraEdicion, suyo) {
   const ed = norm(nuestraEdicion || '');
   const somosNormales = !ed || ed === 'standard' || ed === 'estandar';
-  if (!somosNormales) return false;
-  if (EDICION_CARA.test(norm(nuestroTitulo))) return false;
-  return EDICION_CARA.test(norm(suyo));
+  const suyoNorm = norm(suyo);
+  if (somosNormales) {
+    if (EDICION_CARA.test(norm(nuestroTitulo))) return false;
+    return EDICION_CARA.test(suyoNorm);
+  }
+  /* Y al revés. "NBA 2K25: Tournament Edition" emparejaba con la "NBA 2K25
+     Edición Estándar" de Microsoft, que cuesta menos: sinEdicion() quita la
+     palabra de los dos lados y para mismoJuego() eran iguales. Comparar una
+     edición cara contra el precio de la normal la obliga a bajar de un
+     precio que no es el suyo, y acaba escondida sin motivo. Cuando la suya
+     dice "estándar" con todas las letras, no es la nuestra.
+
+     Solo se mira esa palabra, no la ausencia de la nuestra: Microsoft
+     nombra las ediciones especiales de mil maneras —"Ultimate" es "Edición
+     digital definitiva"— y exigir la palabra exacta tiraría aciertos. */
+  return /\b(estandar|standard)\b/.test(suyoNorm);
 }
 
 /* El buscador de Microsoft es caprichoso: "Battlefield" devuelve diez juegos
