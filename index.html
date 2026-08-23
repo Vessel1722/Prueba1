@@ -11356,16 +11356,39 @@ window.vgProofPick=function(fuente){
   function serviceText(s){
     return [s.title,s.displayTitle,s.description,s.categoryName,(s.options||[]).map(o=>o.name).join(' ')].join(' ').toLowerCase();
   }
+  /* Lo mismo, pero partido en dos para vgBuscar: el título pesa más que
+     el resto de la ficha a la hora de ordenar los resultados. */
+  function campos(s){
+    return {
+      titulo: s.title,
+      texto: [s.displayTitle,s.description,s.categoryName,(s.options||[]).map(o=>o.name).join(' ')].join(' ')
+    };
+  }
   window.__vesselExpandedQuery = expandQuery;
   if(typeof window.filteredServices === 'function' && !window.__vesselSynonymSearchInstalled){
     const original = window.filteredServices;
     window.filteredServices = function(){
       const input=document.getElementById('globalSearch');
-      const q=(input?.value||'').trim().toLowerCase();
+      const q=(input?.value||'').trim();
       if(!q) return original();
-      const expanded=expandQuery(q);
       let list = window.SERVICES ? window.SERVICES.filter(s => (window.activeCategory === 'all' || s.category === window.activeCategory)) : original();
-      list = list.filter(s => serviceText(s).includes(q) || serviceText(s).split(/\s+/).some(word => expanded.includes(word)) || expanded.split(/\s+/).some(word => serviceText(s).includes(word)));
+      /* FASE 139 · Aquí estaba el fallo gordo del buscador.
+
+         El filtro decía: pasa si ALGUNA palabra de la ficha cabe dentro de
+         lo escrito. Y "de" cabe dentro de "resiDEnt evil", igual que "en",
+         "y", o el "of" de "call of duty" -que por eso traía Office 365-.
+         Con las descripciones en español, ese "de" lo tiene casi todo:
+         buscar "resident evil" contestaba Servicio de SMS, Kaspersky y
+         Actas Gob, y ni una sola cosa de lo que se pedía.
+
+         Ahora manda vgBuscar: pide TODAS las palabras, cada una al
+         principio de una palabra de la ficha, y devuelve lo que más se
+         parece primero. Los sinónimos siguen puestos, pero detrás de lo
+         que coincide de verdad, que es su sitio: nadie tiene "pelis"
+         escrito en la ficha y aun así hay que contestar Netflix. */
+      list = window.vgBuscar
+        ? window.vgBuscar.buscar(list, q, campos, expandQuery(q.toLowerCase()))
+        : list.filter(s => serviceText(s).includes(q.toLowerCase()));
       const sort=document.getElementById('sortSelect')?.value||'default';
       if(typeof window.minPrice === 'function'){
         if(sort==='priceAsc') list.sort((a,b)=>window.minPrice(a)-window.minPrice(b));
@@ -11476,10 +11499,29 @@ window.vgProofPick=function(fuente){
     return score;
   }
 
+  /* De dónde salen el título y el resto del texto de cada resultado. */
+  function camposDe(p){
+    return {
+      titulo: p.title,
+      texto: [p.displayTitle, p.description, p.categoryName, (p.options || []).map(o => o.name).join(' ')].join(' ')
+    };
+  }
+
   function searchAllProducts(rawQuery){
     const q = sinAcentos(String(rawQuery || '').trim());
     if(!q) return [];
     const expanded = sinAcentos(expandedSearch(q));
+
+    /* FASE 139 · El desplegable tenía el mismo vicio que la rejilla, más
+       flojo: bastaba con que UNA palabra de lo escrito estuviera en la
+       ficha, así que "call of duty" enseñaba Office 365 por el "of" de
+       "software". Ahora contesta lo mismo que el catálogo de abajo, que
+       es lo que espera cualquiera: las dos listas de la misma búsqueda
+       no pueden decir cosas distintas. */
+    if(window.vgBuscar){
+      return window.vgBuscar.buscar(getAllServices(), rawQuery, camposDe, expandedSearch(String(rawQuery || '').trim().toLowerCase())).slice(0, 8);
+    }
+
     return getAllServices()
       .map(p => ({ p, score: scoreProduct(p, q, expanded) }))
       .filter(x => x.score > 0)
@@ -45497,6 +45539,25 @@ button.vg119-incompleto{
     return (typeof window.vgXboxJuegos === 'function') ? (window.vgXboxJuegos() || []) : [];
   }
 
+  /* FASE 139 · Las cuentas del buscador, en un solo sitio: esta sección
+     busca en dos pantallas -su propia rejilla y la tira que sale debajo
+     de las otras secciones- y las dos tienen que contestar lo mismo, o el
+     botón de "ver los 29 que coinciden" lleva a un número distinto.
+
+     El indexOf de antes era literal: "resident evil 4" no encontraba
+     "Resident Evil 4 (2023)" y "pokemon" no encontraba ningún "Pokémon". */
+  function campos(j){
+    return { titulo: j.title || '', texto: [j.edicion, j.platform].filter(Boolean).join(' ') };
+  }
+  function coincide(j, q){
+    if(window.vgBuscar) return window.vgBuscar.coincide([j.title, j.edicion, j.platform].join(' '), q);
+    return [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(String(q||'').toLowerCase()) >= 0;
+  }
+  function puntos(j, q){
+    var c = campos(j);
+    return window.vgBuscar ? window.vgBuscar.puntos(q, c.titulo, c.texto) : 0;
+  }
+
   /* FASE 103 · Filtros por género y por precio.
 
      Con dos mil y pico juegos, buscar por nombre solo sirve si ya sabes qué
@@ -45578,7 +45639,7 @@ button.vg119-incompleto{
 
   function ordenados(){
     var caja = document.getElementById('globalSearch');
-    var q = String(caja && caja.value || '').trim().toLowerCase();
+    var q = String(caja && caja.value || '').trim();
     var tope = topeDePrecio();
 
     /* Un juego fijado manda sobre todo lo demás: es lo que pidió el cliente
@@ -45590,17 +45651,27 @@ button.vg119-incompleto{
     }
 
     var lista = juegos().filter(function(j){
-      if(q && [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(q) < 0) return false;
       if(generoActivo !== 'todos' && String(j.generos || '').indexOf(generoActivo) < 0) return false;
       if(Number(j.price || 0) > tope) return false;
       return true;
     });
+
+    /* FASE 139 · La búsqueda se aplica aparte porque además ORDENA: lo que
+       más se parece a lo escrito, primero. Con 2,744 juegos, buscar
+       "resident evil" y que el orden lo siguiera mandando el catálogo
+       dejaba el que se llama justo así a mitad de la lista. */
+    if(q) lista = window.vgBuscar
+      ? window.vgBuscar.buscar(lista, q, campos)
+      : lista.filter(function(j){ return coincide(j, q); });
+
     var sel = document.getElementById('sortSelect');
     var orden = String(sel && sel.value || 'default');
     if(orden === 'priceAsc')       lista.sort(function(a,b){ return Number(a.price||0)-Number(b.price||0) });
     else if(orden === 'priceDesc') lista.sort(function(a,b){ return Number(b.price||0)-Number(a.price||0) });
     else if(orden === 'name')      lista.sort(function(a,b){ return String(a.title||'').localeCompare(String(b.title||''),'es') });
-    else lista.sort(function(a,b){
+    else if(!q) lista.sort(function(a,b){
+      /* Sin búsqueda manda el orden del catálogo; con búsqueda ya viene
+         ordenado por parecido y volver a tocarlo lo estropearía. */
       return (Number(a.orden||0)-Number(b.orden||0)) || String(a.title||'').localeCompare(String(b.title||''),'es');
     });
     return lista;
@@ -45713,12 +45784,25 @@ button.vg119-incompleto{
     caja.parentNode.insertBefore(eti, caja);
   }
 
+  /* El encabezado dice qué se está viendo. Con una búsqueda puesta,
+     "Juegos de Xbox One / Series" a secas hace pensar que están todos
+     -y quien llega desde "ver los 29 que coinciden" ve 29-. */
+  function tituloDeSeccion(){
+    var t = document.getElementById('productsTitle'); if(!t) return;
+    var caja = document.getElementById('globalSearch');
+    var q = String(caja && caja.value || '').trim();
+    t.textContent = q
+      ? 'Juegos de Xbox One / Series con "' + q + '"'
+      : 'Juegos de Xbox One / Series';
+  }
+
   function pintar(mantener){
     var grid = document.getElementById('productsGrid'); if(!grid) return;
     if(!mantener) mostrados = POR_TANDA;
     asegurarFiltros();
     marcarFiltros();
     marcarFijado();
+    tituloDeSeccion();
 
     var lista = ordenados();
     var vacio = document.getElementById('emptyState');
@@ -45783,17 +45867,48 @@ button.vg119-incompleto{
     if(previo && previo.parentNode) previo.parentNode.removeChild(previo);
   }
 
+  /* FASE 139 · "Ver los 29 que coinciden" llevaba a la sección con los
+     2,744.
+
+     showSection vacía el buscador al entrar, y con razón: si no, una
+     búsqueda vieja dejaba la sección nueva medio vacía sin que nada en
+     pantalla lo explicara. Pero justo aquí es lo contrario -lo que se ha
+     pedido es ver ESOS resultados-, así que el texto se lee ANTES de
+     cambiar de sección y se devuelve DESPUÉS, igual que hace el "Ver
+     todos" del desplegable de arriba. */
+  function irALaSeccion(texto){
+    if(typeof window.showSection !== 'function') return;
+    window.showSection('xbox');
+    var caja = document.getElementById('globalSearch');
+    if(caja && texto) caja.value = texto;
+    if(typeof window.renderProducts === 'function') window.renderProducts();
+    else pintar();
+  }
+
   function pintarExtraBusqueda(){
     limpiarExtra();
     var grid = document.getElementById('productsGrid'); if(!grid) return;
     if(typeof activeCategory !== 'undefined' && activeCategory === 'xbox') return;
 
     var caja = document.getElementById('globalSearch');
-    var q = String(caja && caja.value || '').trim().toLowerCase();
+    var q = String(caja && caja.value || '').trim();
     if(q.length < 2) return;
 
+    /* FASE 139 · Con el mismo buscador que el resto de la tienda: sin
+       acentos y por palabras, así "resident evil 4" encuentra "Resident
+       Evil 4 (2023)" y "pokemon" encuentra los "Pokémon".
+
+       Aquí se piden TODAS las palabras y no se afloja a "alguna": esta
+       tira sale colgada debajo de OTRA sección, y quien busca "cuenta
+       completa" en Streaming no tiene por qué encontrarse cuatro juegos
+       que solo comparten la palabra "completa".
+
+       Y el tope de precio de la barra de arriba también manda aquí: sin
+       eso, la tira anunciaba 29 juegos con "Hasta $100" puesto y la
+       sección, que sí lo respeta, enseñaba cuatro. */
+    var tope = topeDePrecio();
     var hits = juegos().filter(function(j){
-      return [j.title, j.edicion, j.platform].join(' ').toLowerCase().indexOf(q) >= 0;
+      return Number(j.price || 0) <= tope && coincide(j, q);
     });
 
     if(!hits.length){
@@ -45807,7 +45922,12 @@ button.vg119-incompleto{
       return;
     }
 
-    hits.sort(function(a,b){ return Number(a.orden||0) - Number(b.orden||0); });
+    /* Primero lo que más se parece a lo escrito; entre iguales, el orden
+       de siempre del catálogo. Antes solo miraba el orden, y con 29
+       "Resident Evil" el que se llama justo así podía quedar el último. */
+    hits.sort(function(a,b){
+      return puntos(b, q) - puntos(a, q) || Number(a.orden||0) - Number(b.orden||0);
+    });
 
     var extra = document.createElement('section');
     extra.id = 'vgX95Extra';
@@ -45815,7 +45935,9 @@ button.vg119-incompleto{
     extra.innerHTML =
       '<div class="vg-x95-cabeza">' +
         '<h3>Juegos de Xbox One / Series</h3>' +
-        '<button class="vg-x95-ir" type="button">Ver los ' + hits.length + ' que coinciden →</button>' +
+        '<button class="vg-x95-ir" type="button">' +
+          (hits.length === 1 ? 'Ver el que coincide' : 'Ver los ' + hits.length + ' que coinciden') +
+        ' →</button>' +
       '</div><div class="grid vg-x95-grid"></div>';
 
     if(grid.parentNode) grid.parentNode.insertBefore(extra, grid.nextSibling);
@@ -45825,7 +45947,7 @@ button.vg119-incompleto{
       rejilla.innerHTML = hits.slice(0, 12).map(window.vgXboxTarjeta).join('');
     }
     var boton = extra.querySelector('.vg-x95-ir');
-    if(boton) boton.onclick = function(){ if(typeof window.showSection === 'function') window.showSection('xbox'); };
+    if(boton) boton.onclick = function(){ irALaSeccion(q); };
 
     /* Si el catálogo normal no encontró nada pero aquí sí, el cartel de "no
        hay productos" sobra: sí hay, y están justo debajo. */
@@ -47088,6 +47210,211 @@ button.vg119-incompleto{
 
   if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
   else arrancar();
+})();
+</script>
+
+<!-- FASE 139 · El buscador contestaba cualquier cosa menos lo que le pedías.
+
+     Buscabas "resident evil" -teniendo 29 en el catálogo- y la tienda
+     enseñaba el Servicio de SMS, Kaspersky y Actas Gob. No era casualidad:
+     el filtro de la fase 10 dejaba pasar una ficha si ALGUNA de SUS
+     palabras cabía dentro de lo escrito, y "de" cabe dentro de
+     "resiDEnt evil", igual que "en", "y" o el "of" de "call of duty"
+     -que por eso traía Office 365-. Con descripciones en español, ese
+     "de" lo tiene casi todo: el buscador era una lotería.
+
+     Aquí vive el buscador que usan ahora los cuatro sitios donde se busca
+     -la rejilla del catálogo, el desplegable de arriba, la sección de Xbox
+     y la tira de juegos que sale colgada de las otras secciones-, para que
+     los cuatro contesten lo mismo a la misma pregunta:
+
+       · sin acentos ni signos, que nadie escribe "Pokémon" con tilde;
+       · TODAS las palabras de la búsqueda tienen que estar en la ficha, y
+         cada una al principio de una palabra, no en mitad de otra;
+       · el resultado sale ordenado por lo que más se parece, no por el
+         orden en que estaban guardados;
+       · los sinónimos ("pelis" -> Netflix) van detrás de lo que coincide
+         de verdad, nunca por delante;
+       · y si no aparece nada de nada, se afloja a "alguna palabra", para
+         que un dedazo no deje la pantalla vacía habiendo algo que ofrecer.
+
+     No pinta nada ni toca el DOM: solo son las cuentas. Cada bloque sigue
+     pintando lo suyo. -->
+<script id="vg-buscador-relevante-fase139-js">
+(function(){
+  'use strict';
+
+  /* Los acentos van por código y no con el carácter de verdad: son
+     invisibles y cualquier editor se los come sin avisar. */
+  var ACENTOS = new RegExp('[\\u0300-\\u036f]', 'g');
+  var SIGNOS  = new RegExp('[^a-z0-9]+', 'g');
+
+  /* Aplanar un texto cuesta lo suyo, y en la sección de Xbox hay que
+     hacerlo 2,744 veces por cada tecla que se pulsa. Los títulos son
+     siempre los mismos, así que se guarda el resultado. */
+  var memoria = new Map();
+
+  function llano(s){
+    s = (s == null) ? '' : String(s);
+    if(!s) return '';
+    var v = memoria.get(s);
+    if(v !== undefined) return v;
+    v = s.toLowerCase().normalize('NFD').replace(ACENTOS, '').replace(SIGNOS, ' ').trim();
+    if(memoria.size > 20000) memoria.clear();
+    memoria.set(s, v);
+    return v;
+  }
+
+  /* Palabras que no dicen nada de lo que se busca. Son justo las que
+     rompían el buscador: por cortas, caben dentro de cualquier cosa. */
+  var VACIAS = {
+    de:1, del:1, la:1, el:1, los:1, las:1, un:1, una:1, unos:1, unas:1,
+    y:1, o:1, u:1, a:1, al:1, en:1, con:1, para:1, por:1, se:1, su:1,
+    lo:1, mi:1, the:1, of:1, and:1, for:1, to:1, in:1, on:1
+  };
+
+  function esNumero(p){ return /^[0-9]+$/.test(p); }
+
+  /* Las palabras que de verdad hay que buscar. Se tiran las vacías y las
+     de una letra, salvo que sean números -el "4" de "resident evil 4"
+     manda tanto como el resto-. Si no queda ninguna (alguien escribió
+     solo "de"), se devuelven todas: mejor buscar algo que nada. */
+  function trozos(consulta){
+    var brutas = llano(consulta).split(' ').filter(Boolean);
+    var buenas = brutas.filter(function(p){
+      if(VACIAS[p]) return false;
+      return p.length > 1 || esNumero(p);
+    });
+    return buenas.length ? buenas : brutas;
+  }
+
+  /* La palabra tiene que empezar una palabra de la ficha. Sin esto,
+     buscar "as" encontraría "KAspersky", "cASo" y media tienda. Al
+     revés sí vale: "resid" encuentra "Resident", que es lo que hace
+     falta mientras el cliente todavía está escribiendo. */
+  function empieza(texto, palabra){
+    if(!palabra) return true;
+    var i = texto.indexOf(palabra);
+    while(i >= 0){
+      if(i === 0 || texto.charAt(i - 1) === ' ') return true;
+      i = texto.indexOf(palabra, i + 1);
+    }
+    return false;
+  }
+
+  function todas(texto, palabras){
+    for(var i = 0; i < palabras.length; i++) if(!empieza(texto, palabras[i])) return false;
+    return true;
+  }
+
+  function alguna(texto, palabras){
+    for(var i = 0; i < palabras.length; i++) if(empieza(texto, palabras[i])) return true;
+    return false;
+  }
+
+  /* Cuánto se parece. Manda el título: quien escribe "resident evil"
+     quiere el juego que se llama así, no uno cuya descripción lo
+     menciona de pasada. */
+  function puntosLlanos(frase, palabras, titulo, texto){
+    var p = 0;
+    if(frase){
+      if(titulo === frase)                 p += 2000;   // es justo ese
+      else if(titulo.indexOf(frase) === 0) p += 1200;   // empieza por ahí
+      else if(empieza(titulo, frase))      p += 700;    // lo lleva dentro
+      else if(empieza(texto, frase))       p += 200;    // está en la ficha
+    }
+    for(var i = 0; i < palabras.length; i++){
+      if(empieza(titulo, palabras[i]))     p += 90;
+      else if(empieza(texto, palabras[i])) p += 25;
+    }
+    /* A igualdad, primero el nombre más corto: "Resident Evil 4" antes
+       que "Resident Evil 4 Deluxe Weapon Bundle DLC". */
+    return p - Math.min(titulo.length, 80) / 20;
+  }
+
+  /* El buscador entero, para una lista cualquiera.
+
+     'campos' dice de dónde sacar el título y el resto del texto de cada
+     artículo, que es lo único que cambia entre el catálogo, los juegos y
+     los trámites. 'sinonimos' es la traducción ampliada de lo escrito
+     ("pelis" -> netflix disney max...) y es opcional: las listas de juegos
+     no la pasan, porque ahí la palabra escrita es el nombre del juego. */
+  function buscar(lista, consulta, campos, sinonimos){
+    lista = lista || [];
+    var palabras = trozos(consulta);
+    if(!palabras.length) return lista.slice();
+
+    var fichas = [];
+    for(var i = 0; i < lista.length; i++){
+      var c = campos(lista[i]) || {};
+      var t = llano(c.titulo);
+      fichas.push({ dato: lista[i], t: t, x: t + ' ' + llano(c.texto) });
+    }
+
+    var frase = llano(consulta);
+
+    /* 1. Lo que lleva TODAS las palabras. Esto es encontrar; lo demás es
+          consolar al que no encontró. */
+    var duros = [];
+    fichas.forEach(function(f){
+      if(todas(f.x, palabras)){ f.duro = true; duros.push(f); }
+    });
+    ordenar(duros, frase, palabras);
+
+    /* 2. Los sinónimos, SIEMPRE detrás y sin repetir lo de arriba.
+          Detrás y no en lugar de: ninguna ficha dice "pelis", pero quien
+          escribe "musica" quiere Spotify aunque en el catálogo de Xbox
+          exista un juego llamado "Bufonada musical". */
+    var otros = [];
+    if(sinonimos){
+      var sueltas = trozos(sinonimos).filter(function(p){ return palabras.indexOf(p) < 0; });
+      if(sueltas.length){
+        otros = fichas.filter(function(f){ return !f.duro && alguna(f.x, sueltas); });
+        ordenar(otros, '', sueltas);
+      }
+    }
+
+    /* 3. Y si no hay nada de nada, se afloja a "alguna palabra": un dedazo
+          o una búsqueda de más ("gears of war 9") no tiene por qué dejar
+          la pantalla vacía habiendo algo parecido que enseñar. */
+    if(!duros.length && !otros.length && palabras.length > 1){
+      /* Solo con las palabras que dicen algo. Los números sueltos no
+         entran: con ellos, "gears of war 9" acababa enseñando Netflix
+         por el "$90" de su descripción. */
+      var largas = palabras.filter(function(p){ return p.length > 2 && !esNumero(p); });
+      if(largas.length){
+        duros = fichas.filter(function(f){ return alguna(f.x, largas); });
+        ordenar(duros, frase, largas);
+      }
+    }
+
+    return duros.concat(otros).map(function(f){ return f.dato; });
+  }
+
+  function ordenar(fichas, frase, palabras){
+    fichas.forEach(function(f){ f.p = puntosLlanos(frase, palabras, f.t, f.x); });
+    fichas.sort(function(a, b){ return (b.p - a.p) || a.t.localeCompare(b.t, 'es'); });
+  }
+
+  window.vgBuscar = {
+    llano: llano,
+    trozos: trozos,
+    /* ¿Están TODAS las palabras de la búsqueda en este texto? */
+    coincide: function(texto, consulta){
+      var p = trozos(consulta);
+      return p.length ? todas(llano(texto), p) : true;
+    },
+    /* ¿Está ALGUNA? (la red de abajo, para cuando no hay nada mejor) */
+    parecido: function(texto, consulta){
+      var p = trozos(consulta);
+      return p.length ? alguna(llano(texto), p) : true;
+    },
+    puntos: function(consulta, titulo, texto){
+      var t = llano(titulo);
+      return puntosLlanos(llano(consulta), trozos(consulta), t, t + ' ' + llano(texto));
+    },
+    buscar: buscar
+  };
 })();
 </script>
 
