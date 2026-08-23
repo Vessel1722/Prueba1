@@ -23567,9 +23567,29 @@ function sinResenas(filas){
   });
 }
 
+/* Las columnas que el panel del cliente enseña de verdad, una por una.
+
+   Antes esto era select('*'), y en la tabla orders vive proof_data_url:
+   el comprobante de pago metido dentro de la fila como imagen en base64.
+   Cada uno pesa entre 100 y 300 KB (se guarda a 1280 px y JPEG 0.78),
+   así que un cliente con diez compras se bajaba dos o tres megas para
+   ver una lista de tarjetas con el nombre, la fecha y el precio. Por eso
+   "Mis compras" tardaba en abrir, y tardaba otra vez cada vez que se
+   cambiaba de pestaña o entraba un mensaje del soporte, que vuelven a
+   llamar aquí.
+
+   Y el comprobante no se llega a usar: renderClientDetail() enseña el
+   pedido, el avance y el chat. La foto del pago solo sale en el panel de
+   administración, que va por allOrders(). Aquí no pinta nada.
+
+   Si algún día el cliente tiene que ver su comprobante, no vale con
+   añadirlo a esta lista: hay que pedirlo suelto para el pedido que abra,
+   no para los diez. */
+var CAMPOS_CLIENTE = 'id,status,total,product_title,product_option,items,created_at,unread_client,chat_unlocked,source';
+
 async function myOrders(){
   var c=SB(); if(!c) throw new Error('Sin conexión con el servidor.');
-  var r=await c.from('orders').select('*').order('created_at',{ascending:false}).limit(300);
+  var r=await c.from('orders').select(CAMPOS_CLIENTE).order('created_at',{ascending:false}).limit(300);
   if(r.error) throw r.error;
   return sinResenas(r.data);   /* RLS ya filtra: el cliente solo recibe los suyos */
 }
@@ -23579,13 +23599,55 @@ async function allOrders(){
   if(r.error) throw r.error;
   return sinResenas(r.data);
 }
-async function fetchMsgs(ref){
+/* El chat en dos tirones: primero el texto, luego las imágenes.
+
+   Los adjuntos se guardan como la imagen entera dentro de la columna
+   attachment_url, en base64 (misma función que los comprobantes: 1280 px
+   y JPEG 0.78, entre 100 y 300 KB cada una). Pidiéndolo todo de golpe, un
+   pedido con tres capturas no enseñaba ni el "hola" hasta que llegaba el
+   último byte de la tercera.
+
+   Ahora salen las dos consultas a la vez. La del texto llega enseguida y
+   se pinta; la de las imágenes tarda lo que tardaba, pero ya no bloquea
+   la lectura, y al llegar se repinta la lista COMPLETA con la misma
+   función de siempre. El resultado final es idéntico al de antes.
+
+   loading="lazy" en el <img> no servía aquí: una imagen en base64 ya
+   viene dentro de la respuesta, no hay nada que aplazar. */
+var CAMPOS_CHAT = 'id,thread_ref,sender_role,sender_name,message,is_delivery,created_at,read_by_client,read_by_admin';
+
+async function fetchMsgs(ref, alLlegarElTexto){
   var c=SB(); if(!c||!ref) return [];
-  var r=await c.from('vg_live_chat_messages').select('*')
-        .eq('thread_type','order').eq('thread_ref',String(ref))
-        .order('created_at',{ascending:true}).limit(400);
+  /* Promise.resolve() lanza la consulta UNA vez y deja una promesa de
+     verdad. Los constructores de supabase-js se ejecutan en su primer
+     .then(), así que encadenar y esperar el mismo objeto la mandaría dos
+     veces. */
+  var pTexto = Promise.resolve(
+    c.from('vg_live_chat_messages').select(CAMPOS_CHAT)
+      .eq('thread_type','order').eq('thread_ref',String(ref))
+      .order('created_at',{ascending:true}).limit(400));
+  var pFotos = Promise.resolve(
+    c.from('vg_live_chat_messages').select('id,attachment_url')
+      .eq('thread_type','order').eq('thread_ref',String(ref))
+      .not('attachment_url','is',null)
+      .order('created_at',{ascending:true}).limit(400));
+
+  if(typeof alLlegarElTexto==='function'){
+    pTexto.then(function(r){ if(!r.error && r.data) alLlegarElTexto(r.data); })
+          .catch(function(){});
+  }
+
+  var r = await pTexto;
   if(r.error) return [];
-  return r.data||[];
+  var lista = r.data||[];
+
+  var f = await pFotos.catch(function(){ return { error:true }; });
+  if(!f.error && f.data && f.data.length){
+    var porId = {};
+    f.data.forEach(function(x){ porId[String(x.id)] = x.attachment_url; });
+    lista.forEach(function(m){ if(porId[String(m.id)]) m.attachment_url = porId[String(m.id)]; });
+  }
+  return lista;
 }
 async function sendMsg(ref, role, text, isDelivery, adjunto){
   var c=SB(); if(!c) throw new Error('Sin conexión.');
@@ -23949,8 +24011,16 @@ async function renderClientDetail(o){
           'puedes seguir el estado de tu pedido arriba.</div>')+
     '</div>';
   markSeen(oid(o));   /* al abrir el pedido, su aviso de "nuevo" se apaga */
-  var list=await fetchMsgs(oid(o));
-  var box=qs('#vg17CMsgs'); if(box){ box.innerHTML=renderMsgs(list); box.scrollTop=box.scrollHeight; }
+  /* Se comprueba que el pedido siga siendo el abierto: si el cliente ya
+     picó otro, esta respuesta llega tarde y pintaría el chat equivocado
+     encima del bueno. */
+  var pinta=function(l){
+    if(String(C.ref)!==oid(o)) return;
+    var b=qs('#vg17CMsgs'); if(!b) return;
+    b.innerHTML=renderMsgs(l); b.scrollTop=b.scrollHeight;
+  };
+  var list=await fetchMsgs(oid(o), pinta);
+  pinta(list);
   if(unlocked){
     wireCompose('vg17C');
     var ta=qs('#vg17CInput'), btn=qs('#vg17CSend'), err=qs('#vg17CErr');
