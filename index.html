@@ -10509,13 +10509,34 @@ window.vgProofPick=function(fuente){
         vgAnimateScrollLeft(homeTiles,target,450);
       },2600);
     }
-    function showHome(){ activeCategory='all'; window.activeCategory=activeCategory; homeView.classList.add('active'); marketView.classList.remove('active'); renderNav(); window.scrollTo(0,0); }
+    /* Texto original del subtítulo. Se guarda al arrancar porque el
+       buscador lo reescribe con "Resultados encontrados..." y hay que
+       poder devolverlo a lo que decía. */
+    const SUBTITULO_CATALOGO = (document.getElementById('productsSubtitle')||{}).textContent || '';
+
+    /* Al cambiar de sección se vacía el buscador.
+
+       Antes el texto se quedaba escrito: buscabas algo, entrabas al
+       producto, te ibas a otra sección y al volver seguía saliendo solo
+       ese producto. Nada en pantalla explicaba por qué faltaba el resto
+       -la caja de búsqueda queda arriba del todo, fuera de la vista en
+       cuanto bajas- así que la sección parecía tener un único artículo. */
+    function limpiarBusqueda(){
+      const input=document.getElementById('globalSearch');
+      if(input && input.value) input.value='';
+      /* La lista desplegable de resultados se queda flotando si no. */
+      const panel=document.getElementById('searchResultsPanel');
+      if(panel) panel.classList.remove('active');
+      const sub=document.getElementById('productsSubtitle');
+      if(sub && SUBTITULO_CATALOGO) sub.textContent=SUBTITULO_CATALOGO;
+    }
+    function showHome(){ limpiarBusqueda(); activeCategory='all'; window.activeCategory=activeCategory; homeView.classList.add('active'); marketView.classList.remove('active'); renderNav(); window.scrollTo(0,0); }
     /* Cuentas y Streaming se juntaron en una sola sección. Los enlaces
        viejos (?seccion=cuentas, #catalogo/cuentas, un WhatsApp de hace
        meses) siguen llegando, y sin esto abrían una sección que ya no
        existe: título "Todos" y la rejilla vacía. Se traduce aquí, que es
        por donde pasan todos los que cambian de sección. */
-    function showSection(cat){ if(cat==='cuentas') cat='streaming'; activeCategory=cat; window.activeCategory=activeCategory; homeView.classList.remove('active'); marketView.classList.add('active'); const c=catInfo(cat); sectionBadge.textContent='Sección'; sectionTitle.innerHTML=`${c.icon} ${c.label}`; sectionDesc.textContent=c.desc; sectionHero.style.setProperty('--section-bg', c.bg); productsTitle.textContent=cat==='all'?'Catálogo completo':`Productos de ${c.label}`; renderNav(); renderProducts(); window.scrollTo(0,0); }
+    function showSection(cat){ if(cat==='cuentas') cat='streaming'; limpiarBusqueda(); activeCategory=cat; window.activeCategory=activeCategory; homeView.classList.remove('active'); marketView.classList.add('active'); const c=catInfo(cat); sectionBadge.textContent='Sección'; sectionTitle.innerHTML=`${c.icon} ${c.label}`; sectionDesc.textContent=c.desc; sectionHero.style.setProperty('--section-bg', c.bg); productsTitle.textContent=cat==='all'?'Catálogo completo':`Productos de ${c.label}`; renderNav(); renderProducts(); window.scrollTo(0,0); }
     function filteredServices(){
       const q=(globalSearch.value||'').trim().toLowerCase(); let list=SERVICES.filter(s=>activeCategory==='all'||s.category===activeCategory);
       if(q) list=list.filter(s=>[s.title,s.displayTitle,s.description,s.categoryName,(s.options||[]).map(o=>o.name).join(' ')].join(' ').toLowerCase().includes(q));
@@ -11474,9 +11495,14 @@ window.vgProofPick=function(fuente){
   }
 
   function openAllResults(){
-    if(typeof window.showSection === 'function') window.showSection('all');
-    if(typeof window.renderProducts === 'function') window.renderProducts();
+    /* El texto se lee ANTES de cambiar de sección: showSection vacía el
+       buscador, y aquí es el único sitio donde tiene que sobrevivir,
+       porque lo que se pidió es ver justo esos resultados. */
     const q = document.getElementById('globalSearch')?.value || '';
+    if(typeof window.showSection === 'function') window.showSection('all');
+    const input = document.getElementById('globalSearch');
+    if(input && q) input.value = q;
+    if(typeof window.renderProducts === 'function') window.renderProducts();
     setTimeout(() => {
       const title = document.getElementById('productsTitle');
       const subtitle = document.getElementById('productsSubtitle');
