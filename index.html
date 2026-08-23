@@ -47312,6 +47312,28 @@ button.vg119-incompleto{
     return false;
   }
 
+  /* La palabra completa, ni más ni menos. Es lo que necesitan los
+     sinónimos: esas palabras no las escribe el cliente -salen de una
+     tabla nuestra-, así que no hay que adivinar lo que iba a terminar de
+     escribir. Con el principio de palabra valía, "call of duty" traía el
+     Servicio de SMS y el Game Pass, porque su sinónimo "cod" cabe al
+     principio de "CÓDigos de verificación" y de "CÓDigo MX". */
+  function entera(texto, palabra){
+    var i = texto.indexOf(palabra);
+    while(i >= 0){
+      var antes   = (i === 0) || texto.charAt(i - 1) === ' ';
+      var despues = (i + palabra.length === texto.length) || texto.charAt(i + palabra.length) === ' ';
+      if(antes && despues) return true;
+      i = texto.indexOf(palabra, i + 1);
+    }
+    return false;
+  }
+
+  function algunaEntera(texto, palabras){
+    for(var i = 0; i < palabras.length; i++) if(entera(texto, palabras[i])) return true;
+    return false;
+  }
+
   /* Cuánto se parece. Manda el título: quien escribe "resident evil"
      quiere el juego que se llama así, no uno cuya descripción lo
      menciona de pasada. */
@@ -47369,7 +47391,7 @@ button.vg119-incompleto{
     if(sinonimos){
       var sueltas = trozos(sinonimos).filter(function(p){ return palabras.indexOf(p) < 0; });
       if(sueltas.length){
-        otros = fichas.filter(function(f){ return !f.duro && alguna(f.x, sueltas); });
+        otros = fichas.filter(function(f){ return !f.duro && algunaEntera(f.x, sueltas); });
         ordenar(otros, '', sueltas);
       }
     }
