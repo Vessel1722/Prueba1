@@ -20752,7 +20752,12 @@ if(!window.__VG_POLL_VISIBILIDAD__){
    y del mensaje solo lo que se enseña en el aviso. */
 var refsPedidos = null, refsPedidosTs = 0;
 async function refsDePedidos(){
-  if(refsPedidos && (Date.now() - refsPedidosTs) < 300000) return refsPedidos;
+  /* Un minuto, y la lista vacía no se guarda. Si se guardara, al cliente
+     que acaba de hacer su PRIMERA compra no le llegaría el aviso de la
+     entrega hasta que caducara: justo el momento en que está esperando
+     pegado a la pantalla. Preguntar por cuatro columnas cada minuto no
+     cuesta nada; lo que costaba era traerse los comprobantes. */
+  if(refsPedidos && refsPedidos.length && (Date.now() - refsPedidosTs) < 60000) return refsPedidos;
   var c=sb(); if(!c) return refsPedidos || [];
   var s=session(); if(!s) return [];
   var r=await c.from('orders').select('id,user_id,customer_phone,client_phone')
