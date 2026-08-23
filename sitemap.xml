@@ -3,7 +3,8 @@
   Vessel Games · mapa del sitio
   Fase 77 — no existía ninguno.
 
-  Lleva la portada y las seis secciones del catálogo, que son las
+  Lleva la portada y las cinco secciones del catálogo (Cuentas se fundió
+  con Streaming: sus productos ahora son opciones dentro de la misma ficha), que son las
   direcciones que la propia tienda genera (?seccion=...) desde la
   fase 35 y que se pueden compartir tal cual.
 
@@ -34,12 +35,6 @@
 
   <url>
     <loc>https://www.vesselgames.xyz/?seccion=streaming</loc>
-    <changefreq>daily</changefreq>
-    <priority>0.8</priority>
-  </url>
-
-  <url>
-    <loc>https://www.vesselgames.xyz/?seccion=cuentas</loc>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
