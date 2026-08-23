@@ -403,6 +403,25 @@ function mismoJuego(nuestro, suyo) {
   return A.join('') === B.join('');
 }
 
+/* Una edición cara no vale por la normal. "TopSpin 2K25" a secas emparejó
+   con la "Edición Deluxe" de Microsoft, que cuesta más: sinEdicion() quita
+   la palabra de los dos lados, así que para mismoJuego() eran el mismo. El
+   daño es doble —enseñas un precio oficial que no es el de tu juego, y como
+   es más alto, la regla que impide vender por encima de la tienda se relaja
+   justo donde debería apretar—. Si lo nuestro es la normal, la suya también
+   tiene que serlo. Al revés no se mira: cuando sí vendemos una edición
+   especial, Microsoft la nombra de mil maneras ("Ultimate" es "Edición
+   digital definitiva") y exigir la palabra exacta dejaría fuera aciertos. */
+const EDICION_CARA = /\b(deluxe|ultimate|premium|gold|complete|completa|definitive|definitiva|collector|coleccionista|goty|legendary|legendaria|anniversary|aniversario)\b/;
+
+function edicionQueNoEs(nuestroTitulo, nuestraEdicion, suyo) {
+  const ed = norm(nuestraEdicion || '');
+  const somosNormales = !ed || ed === 'standard' || ed === 'estandar';
+  if (!somosNormales) return false;
+  if (EDICION_CARA.test(norm(nuestroTitulo))) return false;
+  return EDICION_CARA.test(norm(suyo));
+}
+
 /* El buscador de Microsoft es caprichoso: "Battlefield" devuelve diez juegos
    pero "Battlefield 6" devuelve cero. Se prueba de lo más preciso a lo más
    general y se elige el que más se parezca. */
@@ -422,6 +441,7 @@ async function buscarEnMicrosoft(titulo, edicion) {
       for (const grupo of r.Results || []) {
         for (const c of grupo.Products || []) {
           if (!mismoJuego(titulo, c.Title)) continue;
+          if (edicionQueNoEs(titulo, edicion, c.Title)) continue;
           let s = parecido(titulo, c.Title);
           /* Entre "Diablo IV Deluxe" y "Diablo IV Standard" hay que quedarse
              con la que estamos vendiendo, que es la que cuesta lo mismo. */
