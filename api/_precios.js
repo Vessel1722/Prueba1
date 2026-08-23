@@ -299,8 +299,23 @@ async function preciosDeMicrosoft(ids) {
   const bloques = [];
   for (let i = 0; i < limpios.length; i += 20) bloques.push(limpios.slice(i, i + 20));
 
+  /* Se reintenta lo que falle. enTanda se traga los errores, y estas
+     consultas van de veinte en veinte: cuando una se caía, esos veinte
+     juegos se quedaban sin precio de la Store y pasaban sin comprobar que no
+     salieran más caros que Microsoft. Una auditoría encontró 23 publicados
+     por encima del precio oficial justo por esto, uno a $4,065 contra $999. */
+  let fallidos = 0;
   await enTanda(bloques, 8, async (bloque) => {
-    const r = await json(`${MS_CATALOGO}products?bigIds=${bloque.join(',')}&market=MX&languages=es-MX&MS-CV=DGU1mcuYo0WMMp%2BF.1`);
+    let r = null;
+    for (let intento = 0; intento < 3 && !r; intento++) {
+      try {
+        r = await json(`${MS_CATALOGO}products?bigIds=${bloque.join(',')}&market=MX&languages=es-MX&MS-CV=DGU1mcuYo0WMMp%2BF.1`);
+      } catch (e) {
+        if (intento === 2) { fallidos++; return; }
+        await new Promise((ok) => setTimeout(ok, 400 * (intento + 1)));
+      }
+    }
+    if (!r) { fallidos++; return; }
     for (const prod of r.Products || []) {
       let ahora = 0;
       for (const s of prod.DisplaySkuAvailabilities || []) {
@@ -314,7 +329,112 @@ async function preciosDeMicrosoft(ids) {
       if (ahora > 0) precios[prod.ProductId] = Math.round(ahora);
     }
   });
+  /* Se avisa de lo que se perdió: un precio que falta no es un precio
+     bueno, y el resumen del panel debe poder decirlo. */
+  if (fallidos) precios.__fallidos = fallidos;
   return precios;
+}
+
+/* ───────── Encontrar la ficha de Microsoft por el nombre ─────────
+
+   El panel enseña el precio de la Xbox Store leyendo ms_id, y 390 juegos de
+   la tienda no tienen ninguno: a ésos el panel no les enseñaba precio y no
+   había forma de saber si estaban por debajo de la tienda oficial o no.
+   Aquí se busca la ficha en el momento, igual que hace la herramienta de la
+   PC (vessel-precios/nucleo.mjs). Las reglas de abajo son LAS MISMAS que las
+   de ese archivo: si cambias una, cambia la otra, o cada uno emparejará los
+   juegos con una ficha distinta.
+
+   Lo que NO hace: tocar la portada. Emparejar por nombre fue lo que cruzó
+   328 carátulas entre juegos de la misma saga. De aquí solo sale el número
+   de la ficha y el precio; la foto se queda como está. */
+const EDICIONES = /\b(standard|deluxe|gold|ultimate|premium|complete|legendary|definitive|goty|game of the year|digital|collector'?s?|anniversary|special|enhanced|vault|legend|tournament|super deluxe|year \d|edici[oó]n|est[aá]ndar|completa?|definitiva|mejorada|especial|coleccionista)\b/gi;
+const sinEdicion = (t) => String(t).replace(EDICIONES, ' ').replace(/\bedition\b/gi, ' ').replace(/[-–:+]\s*$/, '').replace(/\s{2,}/g, ' ').trim();
+const norm = (s) => String(s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+  .replace(/[^a-z0-9 ]/g, ' ').replace(/\s+/g, ' ').trim();
+
+function parecido(a, b) {
+  const A = new Set(norm(a).split(' ')), B = new Set(norm(b).split(' '));
+  let inter = 0;
+  for (const w of A) if (B.has(w)) inter++;
+  return inter / Math.max(A.size, B.size);
+}
+
+/* Palabras que NO distinguen un juego de otro dentro de una misma saga. */
+const RELLENO = new Set([
+  'the', 'of', 'and', 'a', 'an', 'for', 'de', 'del', 'la', 'el', 'y', 'para',
+  'game', 'games', 'xbox', 'one', 'series', 'pc', 'windows',
+  'bundle', 'pack', 'lote', 'edition', 'ed', 'remaster', 'remastered', 'hd',
+  'cross', 'gen', 'crossgen', 'multigeneracion', 'plus', 'contiene',
+  'vpn', 'activated', 'required', 'needed', 'only',
+]);
+
+const NUMEROS = {
+  one: '1', two: '2', three: '3', four: '4', five: '5',
+  six: '6', seven: '7', eight: '8', nine: '9', ten: '10',
+  dos: '2', tres: '3', cuatro: '4', cinco: '5',
+};
+
+/* La 'x' NO está aquí a propósito: "Mega Man X" y "Mega Man 10" son dos
+   juegos distintos, y convertirla los haría iguales. */
+const ROMANOS = {
+  i: '1', ii: '2', iii: '3', iv: '4', v: '5', vi: '6', vii: '7',
+  viii: '8', ix: '9', xi: '11', xii: '12', xiii: '13',
+};
+
+function fichas(t) {
+  return norm(sinEdicion(t)).split(' ')
+    .map((w) => NUMEROS[w] || w)
+    .filter((w) => w && !RELLENO.has(w))
+    .map((w) => ROMANOS[w] || w);
+}
+
+/* Microsoft mezcla el juego con sus añadidos, y colarse en un DLC trae el
+   precio de lista del DLC, que es el que decide si el juego se puede
+   publicar. */
+const NO_ES_EL_JUEGO = /\b(dlc|contenido extra|mejora|complemento|pase de temporada|season pass|add-?on|upgrade|demo|trial|prueba)\b/i;
+
+function mismoJuego(nuestro, suyo) {
+  if (NO_ES_EL_JUEGO.test(suyo) && !NO_ES_EL_JUEGO.test(nuestro)) return false;
+  const A = fichas(nuestro), B = fichas(suyo);
+  if (!A.length || !B.length) return false;
+  if (A.slice().sort().join(' ') === B.slice().sort().join(' ')) return true;
+  /* "Far Cry 6" y "FARCRY 6": las mismas letras, distinto espaciado. */
+  return A.join('') === B.join('');
+}
+
+/* El buscador de Microsoft es caprichoso: "Battlefield" devuelve diez juegos
+   pero "Battlefield 6" devuelve cero. Se prueba de lo más preciso a lo más
+   general y se elige el que más se parezca. */
+function consultas(titulo) {
+  const base = sinEdicion(titulo);
+  const palabras = base.split(/\s+/).filter(Boolean);
+  const salida = [titulo, base, palabras.slice(0, 2).join(' '), palabras[0]];
+  return salida.filter((v, i, a) => v && v.length >= 3 && a.indexOf(v) === i);
+}
+
+async function buscarEnMicrosoft(titulo, edicion) {
+  if (!titulo) return null;
+  let mejor = null, score = 0;
+  for (const intento of consultas(titulo)) {
+    try {
+      const r = await json(MS_CATALOGO + 'productFamilies/autosuggest?market=MX&languages=es-MX&productFamilyNames=Games&query=' + encodeURIComponent(intento.slice(0, 60)));
+      for (const grupo of r.Results || []) {
+        for (const c of grupo.Products || []) {
+          if (!mismoJuego(titulo, c.Title)) continue;
+          let s = parecido(titulo, c.Title);
+          /* Entre "Diablo IV Deluxe" y "Diablo IV Standard" hay que quedarse
+             con la que estamos vendiendo, que es la que cuesta lo mismo. */
+          const ed = String(edicion || '').toLowerCase();
+          if (ed && ed !== 'standard' && norm(c.Title).includes(norm(ed))) s += 0.15;
+          if (s > score) { score = s; mejor = c; }
+        }
+      }
+      if (score >= 0.75) break;
+    } catch (e) { /* se prueba la siguiente */ }
+  }
+  if (!mejor || score < 0.45) return null;
+  return { id: mejor.ProductId, titulo: mejor.Title, parecido: Number(score.toFixed(2)) };
 }
 
 /* Busca un juego suelto por nombre. Para el botón de "precio de ahora". */
@@ -402,5 +522,5 @@ async function esAdmin(req) {
 module.exports = {
   CFG, ganancia, redondear, precioDeVenta, slugDe,
   tipoDeCambio, agrupar, bajarCatalogo, buscarUno, enTanda,
-  preciosDeMicrosoft, supa, esAdmin,
+  preciosDeMicrosoft, buscarEnMicrosoft, supa, esAdmin,
 };

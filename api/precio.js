@@ -66,9 +66,39 @@ module.exports = async (req, res) => {
     /* El precio de Xbox se pregunta ahora, no se lee el guardado: sus rebajas
        duran días y es justo contra ese número contra el que compites. */
     let listaMXN = fila ? Number(fila.precio_lista || 0) : 0;
-    if (fila && fila.ms_id) {
-      const vivos = await P.preciosDeMicrosoft([fila.ms_id]);
-      if (vivos[fila.ms_id]) listaMXN = vivos[fila.ms_id];
+    let fichaNueva = null;
+    let msId = (fila && fila.ms_id) || '';
+
+    /* Sin ms_id el panel se quedaba en blanco: 390 juegos de la tienda no
+       tenían ficha de Microsoft guardada y no había manera de saber si su
+       precio estaba por debajo del oficial. Ahora se busca en el momento por
+       el nombre. Lo que se encuentra se guarda, así que cada juego se busca
+       una sola vez y a partir de ahí el repaso diario ya lo compara solo. */
+    if (!msId) {
+      const encontrada = await P.buscarEnMicrosoft(oferta.titulo || (fila && fila.title), (fila && fila.edicion) || oferta.edicion);
+      if (encontrada) { msId = encontrada.id; fichaNueva = encontrada.titulo; }
+    }
+
+    if (msId) {
+      const vivos = await P.preciosDeMicrosoft([msId]);
+      if (vivos[msId]) listaMXN = vivos[msId];
+    }
+
+    /* Se guarda lo aprendido: el número de ficha nuevo y el precio de hoy.
+       No se toca ni el precio de venta ni la portada: el precio lo decides tú
+       o el repaso diario, y las portadas emparejadas por nombre fueron las
+       que cruzaron 328 carátulas entre juegos de la misma saga. */
+    if (fila && (fichaNueva || (listaMXN && listaMXN !== Number(fila.precio_lista || 0)))) {
+      const guardar = {};
+      if (fichaNueva) guardar.ms_id = msId;
+      if (listaMXN) guardar.precio_lista = listaMXN;
+      try {
+        await P.supa('vg_xbox_games?slug=eq.' + encodeURIComponent(fila.slug), {
+          method: 'PATCH',
+          headers: { Prefer: 'return=minimal' },
+          body: JSON.stringify(guardar),
+        });
+      } catch (e) { /* si no se puede guardar, el informe sale igual */ }
     }
 
     const sugerido = P.precioDeVenta(costo, oferta.ofertas, listaMXN);
@@ -91,6 +121,7 @@ module.exports = async (req, res) => {
       precioSugerido: sugerido.venta,
       motivoSinPrecio: sugerido.motivo || null,
       precioXbox: listaMXN || null,
+      fichaDeXboxEncontrada: fichaNueva,
       masCaroQueXbox,
       // Las dos señales que importan: ¿te deja dinero? ¿le ganas a Xbox?
       alerta: masCaroQueXbox

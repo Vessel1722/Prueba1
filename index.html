@@ -45235,6 +45235,12 @@ button.vg119-incompleto{
         var t = 'hoy te cuesta ' + pesos(d.costoAhora);
         if(d.ganas != null) t += ' · ganarías ' + pesos(d.ganas) + ' (' + d.margen + '%)';
         if(d.precioXbox) t += ' · Xbox lo vende a ' + pesos(d.precioXbox);
+        /* Los juegos sin ficha de Microsoft guardada no enseñaban precio de
+           Xbox: no era que no lo tuvieran, era que nadie lo había buscado.
+           Ahora se busca al vuelo y se guarda, así que la próxima vez sale
+           solo, y el repaso diario ya puede comparar contra la tienda. */
+        else if(!d.fichaDeXboxEncontrada) t += ' · Xbox no lo vende en México';
+        if(d.fichaDeXboxEncontrada) t += ' · ficha de Xbox encontrada y guardada (' + d.fichaDeXboxEncontrada + ')';
         if(d.precioSugerido && d.precioSugerido !== d.tuPrecio) t += ' · sugerido ' + pesos(d.precioSugerido);
         if(d.alerta) t += ' · ' + d.alerta;
         hueco.className = 'vg-x92-vivo ' + (d.alerta ? 'vg-x92-mal' : 'vg-x92-bien');
@@ -45292,6 +45298,12 @@ button.vg119-incompleto{
       l.push('Revisados ' + d.revisados + ' juegos en ' + d.segundos + 's · 1 EUR = ' + d.tipoCambio + ' MXN');
       l.push('Suben ' + d.suben + ' · bajan ' + d.bajan + ' · se esconden ' + d.seEsconden + ' · vuelven ' + d.vuelven + ' · sin cambio ' + d.sinCambio);
       if(aplicar) l.push('Aplicados: ' + d.escritos + ' precios y ' + d.escondidos + ' escondidos' + (d.pendientes ? ' · quedan ' + d.pendientes + ' para la próxima corrida' : ''));
+      /* Lo de la tienda de Xbox va aparte porque es lo que decide si un
+         juego se puede publicar. Si Microsoft dejó consultas sin contestar
+         hay juegos que pasaron sin comparar, y eso hay que verlo. */
+      if(d.preciosDeXboxQueCambiaron) l.push('Precios de la tienda de Xbox al día: ' + d.preciosDeXboxQueCambiaron + (aplicar ? ' · guardados ' + d.preciosDeXboxGuardados + (d.preciosDeXboxPorGuardar ? ' · quedan ' + d.preciosDeXboxPorGuardar : '') : ''));
+      if(d.fichasDeXboxEncontradas) l.push('Fichas de Xbox encontradas para juegos que no la tenían: ' + d.fichasDeXboxEncontradas);
+      if(d.bloquesDeXboxSinRespuesta) l.push('OJO: Microsoft dejó ' + d.bloquesDeXboxSinRespuesta + ' consultas sin contestar; hasta ' + (d.bloquesDeXboxSinRespuesta * 20) + ' juegos pasaron sin comparar contra su tienda.');
       if(d.masSuben && d.masSuben.length){
         l.push('');
         l.push('Los que más suben:');

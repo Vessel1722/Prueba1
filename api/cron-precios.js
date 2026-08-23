@@ -24,6 +24,17 @@ const TOPE_ALTAS = 200;        // altas por corrida; el resto entra al día sigu
    nada y caben todas de una: hoy hay 538 por arreglar. */
 const TOPE_PORTADAS = 250;
 const TOPE_PORTADAS_SOLAS = 800;
+/* 390 juegos de la tienda no tienen ficha de Microsoft guardada, y sin ella
+   no hay contra qué comparar: se publican sin la red que impide venderlos más
+   caros que la tienda oficial. Se buscan de poco en poco, que buscar un
+   título son hasta cuatro consultas y el minuto de Vercel es para todos. */
+const TOPE_FICHAS = 60;
+/* El precio oficial solo se guardaba cuando el juego cambiaba de precio.
+   Los que no cambiaban se quedaban con el hueco vacío para siempre, y ése
+   es justo el número que decide si el juego se puede publicar: 29 se
+   estaban vendiendo por encima de la tienda de Xbox por esto. Ahora se
+   guarda aunque no cambie nada más. */
+const TOPE_LISTA = 500;
 const CONCURRENCIA_PAGINAS = 10;
 const CONCURRENCIA = 12;
 
@@ -74,6 +85,32 @@ module.exports = async (req, res) => {
        propia tienda: las rebajas de Microsoft duran días. */
     const preciosMS = await P.preciosDeMicrosoft(filas.map((f) => f.ms_id));
 
+    /* ── Fichas de Microsoft que faltan ──
+
+       Sin ms_id no hay precio oficial, y sin precio oficial precioDeVenta()
+       no puede comprobar que el juego quede por debajo de la tienda de Xbox:
+       se publica a lo que salga. Así se colaron 29 juegos más caros que la
+       tienda, uno a $4,065 contra los $999 que cobra Microsoft.
+
+       Se buscan de TOPE_FICHAS en TOPE_FICHAS por corrida, empezando por los
+       más caros, que son los que más dinero cuestan si el precio está mal.
+       En una semana quedan todos. Solo se guarda el número de la ficha: la
+       portada NO se toca, que emparejar por nombre fue lo que cruzó 328
+       carátulas entre juegos de la misma saga. */
+    const sinFicha = filas.filter((f) => !f.ms_id && f.status !== 'hidden')
+      .sort((a, b) => Number(b.price || 0) - Number(a.price || 0))
+      .slice(0, TOPE_FICHAS);
+    const fichasNuevas = new Map();
+    await P.enTanda(sinFicha, 8, async (f) => {
+      const m = await P.buscarEnMicrosoft(f.title, f.edicion);
+      if (m) fichasNuevas.set(f.slug, m.id);
+    });
+    if (fichasNuevas.size) {
+      const masPrecios = await P.preciosDeMicrosoft([...fichasNuevas.values()]);
+      for (const k of Object.keys(masPrecios)) if (k !== '__fallidos') preciosMS[k] = masPrecios[k];
+    }
+    const fichaDe = (f) => f.ms_id || fichasNuevas.get(f.slug) || '';
+
     /* ── Carátulas cruzadas ──
 
        Se vendía "Call of Duty: Advanced Warfare Gold Edition" con la
@@ -116,9 +153,14 @@ module.exports = async (req, res) => {
     for (const f of filas) {
       const o = kinguin.get(f.slug);
       const guardado = Number(f.precio_lista || 0);
-      const listaMXN = (f.ms_id && preciosMS[f.ms_id]) ? preciosMS[f.ms_id] : guardado;
+      const idMS = fichaDe(f);
+      const listaMXN = (idMS && preciosMS[idMS]) ? preciosMS[idMS] : guardado;
       if (listaMXN && listaMXN !== guardado) {
-        cambios.store.push({ slug: f.slug, title: f.title, antes: guardado, ahora: listaMXN });
+        cambios.store.push({ slug: f.slug, title: f.title, antes: guardado, ahora: listaMXN, ficha: fichasNuevas.get(f.slug) || null });
+      } else if (fichasNuevas.has(f.slug)) {
+        /* Se encontró la ficha aunque hoy no dé precio: se guarda igual para
+           no volver a buscarla mañana. */
+        cambios.store.push({ slug: f.slug, title: f.title, antes: guardado, ahora: 0, ficha: fichasNuevas.get(f.slug) });
       }
 
       if (!o) {
@@ -194,6 +236,10 @@ module.exports = async (req, res) => {
       ejemplosPortadas: cambios.portada.slice(0, 6).map(function (c) { return c.title; }),
       primerasAltas: cambios.alta.slice(0, 6).map(function (a) { return a.title + ' a ' + a.ahora; }),
       tipoCambio: Number(tipoCambio.toFixed(4)),
+      /* Si Microsoft dejó bloques sin contestar, hay juegos que pasaron el
+         repaso sin comparar contra la tienda oficial. Sale en el informe
+         para que no se lea como "todo revisado" cuando no lo fue. */
+      bloquesDeXboxSinRespuesta: preciosMS.__fallidos || 0,
       masSuben: cambios.sube.slice().sort((a, b) => (b.ahora - b.antes) - (a.ahora - a.antes)).slice(0, 8),
       seEscondieron: cambios.oculta.slice(0, 8),
     };
@@ -278,9 +324,34 @@ module.exports = async (req, res) => {
       });
     });
 
+    /* ── Guardar el precio oficial de Xbox ──
+
+       Antes esto solo se escribía de rebote, cuando el juego cambiaba de
+       precio o se revivía. Un juego estable no lo guardaba nunca, y uno que
+       acababa escondido tampoco: la casilla se quedaba vacía, el panel no
+       tenía qué enseñar y la comprobación contra la tienda oficial se hacía
+       contra un cero, o sea que no se hacía. Ahora se guarda siempre, aparte
+       de todo lo demás, y de paso el número de ficha recién encontrado. */
+    const yaEscritos = new Set(aTocar.map((c) => c.slug));
+    const listaPendiente = cambios.store.filter((c) => !yaEscritos.has(c.slug));
+    const aGuardarLista = listaPendiente.slice(0, TOPE_LISTA);
+    await P.enTanda(aGuardarLista, 10, async (c) => {
+      const cuerpo = {};
+      if (c.ahora) cuerpo.precio_lista = c.ahora;
+      if (c.ficha) cuerpo.ms_id = c.ficha;
+      if (!Object.keys(cuerpo).length) return;
+      await P.supa('vg_xbox_games?slug=eq.' + encodeURIComponent(c.slug), {
+        method: 'PATCH',
+        body: JSON.stringify(cuerpo),
+      });
+    });
+
     resumen.escritos = aTocar.length;
     resumen.dadosDeAlta = aDarDeAlta.length;
     resumen.escondidos = aEsconder.length;
+    resumen.fichasDeXboxEncontradas = fichasNuevas.size;
+    resumen.preciosDeXboxGuardados = aGuardarLista.length;
+    resumen.preciosDeXboxPorGuardar = listaPendiente.length - aGuardarLista.length;
     resumen.pendientes = Math.max(0,
       (cambios.sube.length + cambios.baja.length + cambios.revive.length - aTocar.length) +
       (cambios.oculta.length - aEsconder.length));
