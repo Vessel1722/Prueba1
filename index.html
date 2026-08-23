@@ -46470,5 +46470,479 @@ button.vg119-incompleto{
 }
 </style>
 
+<!-- ════════════════════════════════════════════════════════════════
+     FASE 138 — Actas Gob deja de ser una ficha y pasa a ser una sección
+
+     Hasta ahora la sección "Actas Gob" tenía UNA tarjeta. Había que
+     abrirla para enterarse de que dentro hay 31 trámites, y encima se
+     abrían dentro de una ventana con su propio scroll. El que entra a
+     la sección quiere ver qué se hace ahí, no una tarjeta que le pide
+     un clic más para contárselo.
+
+     Mismo camino que ya hizo Xbox One / Series en la fase 91: la
+     ventana pasa a ser una sección de la tienda y los trámites se
+     pintan directos en la rejilla, con el buscador y el ordenador de
+     arriba funcionando sobre ellos.
+
+     De dónde salen los 31: son las opciones del producto de categoría
+     "actas", las mismas que ya vendía la ventana. No hay catálogo
+     nuevo ni tabla nueva — si el administrador cambia un precio desde
+     el panel, cambia aquí, porque se lee del mismo sitio.
+
+     Los grupos (Actas, SAT y RFC, IMSS…) se sacan del nombre de cada
+     trámite con unas cuantas palabras clave, no de una lista escrita a
+     mano. Así, el día que se agregue un trámite nuevo, aparece igual:
+     si no encaja en ningún grupo cae en "Otros" en vez de perderse.
+
+     Comprar y agregar al carrito hacen exactamente lo mismo que hacía
+     la ventana: al carrito se empuja el mismo objeto que arma
+     addSelectedToCart (con product_id y option_index, que es lo que
+     mira el pedido después), y comprar llama a openPaymentModal con el
+     mismo formato que usa buyXboxCurrentGame.
+
+     Y la tarjeta suelta sigue existiendo en "Todos" y en las búsquedas
+     —es donde la gente la encuentra— pero ya no abre la ventana: lleva
+     a la sección. Igual que hizo Xbox con la suya.
+
+     Prefijo vg-a138- en todo: en esta hoja hay más de sesenta bloques
+     encimados y una clase genérica se la come cualquiera de los que
+     vienen antes.
+     ════════════════════════════════════════════════════════════════ -->
+<style id="vg-actas-seccion-css-v138">
+  /* La rejilla normal está pensada para tarjetas con foto. Estos
+     trámites no tienen imagen propia: son nombre, precio y dos
+     botones, así que caben en columnas bastante más estrechas. */
+  #productsGrid.vg-a138-grid{
+    display:grid !important;
+    grid-template-columns:repeat(auto-fill,minmax(288px,1fr)) !important;
+    gap:14px !important;
+    align-items:stretch !important;
+  }
+
+  .vg-a138-card{
+    display:flex;
+    flex-direction:column;
+    gap:11px;
+    padding:16px 17px;
+    border-radius:20px;
+    border:1px solid rgba(255,255,255,.10);
+    background:linear-gradient(180deg,rgba(20,26,45,.92),rgba(12,16,30,.92));
+    box-shadow:0 10px 26px rgba(3,6,16,.35);
+    transition:transform .18s ease, border-color .18s ease;
+  }
+  .vg-a138-card:hover{ transform:translateY(-2px); border-color:rgba(25,230,193,.34); }
+
+  .vg-a138-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
+  .vg-a138-nombre{
+    font-weight:900; font-size:0.9375rem; line-height:1.28;
+    color:#e9eefc; letter-spacing:.005em; margin:0;
+  }
+  .vg-a138-precio{ font-weight:900; font-size:1.0625rem; color:#19e6c1; white-space:nowrap; }
+
+  .vg-a138-tags{ display:flex; gap:6px; flex-wrap:wrap; }
+  .vg-a138-tag{
+    font-size:0.6875rem; font-weight:800; text-transform:uppercase; letter-spacing:.06em;
+    padding:3px 9px; border-radius:999px;
+    border:1px solid rgba(255,255,255,.14); color:#a9b6d6;
+  }
+  /* Las opciones marcadas CLON no son documento oficial y eso hay que
+     poder leerlo antes de pagar, no en la letra chica de la sección. */
+  .vg-a138-tag.vg-a138-clon{
+    border-color:rgba(255,196,84,.42); color:#ffcf7a; background:rgba(255,196,84,.09);
+  }
+
+  .vg-a138-acciones{ display:flex; gap:8px; margin-top:auto; }
+  .vg-a138-acciones button{
+    flex:1 1 auto; height:40px; padding:0 12px;
+    border-radius:12px; border:0; cursor:pointer;
+    font-family:inherit; font-weight:900; font-size:0.8125rem;
+    transition:filter .16s ease;
+  }
+  .vg-a138-acciones button:hover{ filter:brightness(1.09); }
+  .vg-a138-add{ background:rgba(255,255,255,.075); color:#dfe7ff; border:1px solid rgba(255,255,255,.15) !important; }
+  .vg-a138-buy{ background:linear-gradient(135deg,#7c5cff,#19e6c1); color:#06111a; }
+
+  /* Aviso de entrega y validación, arriba de todo */
+  .vg-a138-nota{
+    margin:0 0 14px;
+    padding:12px 14px;
+    border-radius:16px;
+    border:1px solid rgba(25,230,193,.24);
+    background:rgba(25,230,193,.07);
+    color:#cfe7e2; font-size:0.8125rem; line-height:1.45;
+  }
+  .vg-a138-nota b{ color:#19e6c1; }
+  .vg-a138-nota span{ display:block; margin-top:4px; color:#9fb0c9; }
+
+  /* Chips de grupo */
+  .vg-a138-filtros{ display:flex; flex-wrap:wrap; gap:8px; margin:0 0 14px; }
+  .vg-a138-chip{
+    padding:7px 13px; border-radius:999px; cursor:pointer;
+    border:1px solid rgba(255,255,255,.13);
+    background:rgba(255,255,255,.04); color:#c3cee6;
+    font-family:inherit; font-weight:800; font-size:0.8125rem;
+  }
+  .vg-a138-chip span{ opacity:.55; margin-left:5px; font-weight:700; }
+  .vg-a138-chip:hover{ border-color:rgba(25,230,193,.34); color:#e8f6f2; }
+  .vg-a138-chip.vg-a138-on{
+    background:rgba(25,230,193,.15); border-color:rgba(25,230,193,.5); color:#19e6c1;
+  }
+
+  .vg-a138-cuenta{ margin:16px 0 0; color:#8b93b0; font-size:0.8125rem; font-weight:700; }
+
+  @media(max-width:560px){
+    #productsGrid.vg-a138-grid{ grid-template-columns:1fr !important; }
+    .vg-a138-card{ padding:14px; border-radius:16px; }
+    .vg-a138-nombre{ font-size:0.875rem; }
+  }
+
+  body.vg-light .vg-a138-card{
+    background:#fff !important;
+    border:1px solid rgba(0,0,0,.09) !important;
+    box-shadow:0 8px 20px rgba(15,23,42,.07) !important;
+  }
+  body.vg-light .vg-a138-nombre{ color:#111827 !important; }
+  body.vg-light .vg-a138-tag{ color:#5b6577 !important; border-color:rgba(0,0,0,.12) !important; }
+  body.vg-light .vg-a138-add{ background:rgba(0,0,0,.04) !important; color:#1f2937 !important; border-color:rgba(0,0,0,.12) !important; }
+  body.vg-light .vg-a138-chip{ background:rgba(0,0,0,.03) !important; border-color:rgba(0,0,0,.11) !important; color:#374151 !important; }
+  body.vg-light .vg-a138-nota{ color:#166b5c !important; }
+  body.vg-light .vg-a138-nota span{ color:#6b7280 !important; }
+</style>
+
+<script id="vg-actas-seccion-js-v138">
+(function(){
+  'use strict';
+  if(window.__VG_ACTAS_138__) return; window.__VG_ACTAS_138__ = true;
+
+  var grupoActivo = 'todos';
+
+  function esc(s){
+    return String(s == null ? '' : s).replace(/[&<>"']/g, function(c){
+      return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c];
+    });
+  }
+  function precio(n){
+    n = Number(n || 0);
+    return n > 0 ? (typeof fmt === 'function' ? fmt(n) : '$' + n + ' MXN') : 'Cotizar';
+  }
+
+  /* El producto de Actas: se busca por categoría, no por id, para que
+     siga funcionando si algún día cambia de número. */
+  function producto(){
+    var lista = (typeof services === 'function') ? services()
+              : (typeof SERVICES !== 'undefined' ? SERVICES : []);
+    for(var i = 0; i < lista.length; i++){
+      if(String(lista[i].category) === 'actas') return lista[i];
+    }
+    return null;
+  }
+  function esActas(p){ return !!p && String(p.category) === 'actas'; }
+
+  var GRUPOS = [
+    { id:'actas',      label:'Actas',             re:/^\s*ACTA DE /i },
+    { id:'constancias',label:'Constancias',       re:/ANTECEDENTES|CONSTANCIA|CERTIFICADO/i },
+    { id:'sat',        label:'SAT y RFC',         re:/\bRFC\b|\bCSF\b|IDCIF|OPINI[ÓO]N DE CUMPLIMIENTO/i },
+    { id:'imss',       label:'IMSS',              re:/\bIMSS\b|SEMANAS COTIZADAS|\bNSS\b|RECETA/i },
+    { id:'infonavit',  label:'Infonavit y Afore', re:/INFONAVIT|AFORE|SINDOS/i },
+    { id:'vehicular',  label:'Vehicular',         re:/TENENCIA|REPUVE|PLACAS|CIRCULAR/i }
+  ];
+
+  function grupoDe(nombre){
+    for(var i = 0; i < GRUPOS.length; i++){
+      if(GRUPOS[i].re.test(nombre)) return GRUPOS[i];
+    }
+    return { id:'otros', label:'Otros' };
+  }
+
+  /* Cada opción del producto, con su índice original: es el que hay que
+     guardar en el pedido, así que no se puede perder al ordenar ni al
+     filtrar. */
+  function tramites(){
+    var p = producto();
+    if(!p) return [];
+    return (p.options || []).map(function(o, i){
+      var nombre = String(o.name || '');
+      var g = grupoDe(nombre);
+      return {
+        i: i,
+        nombre: nombre,
+        precio: Number(o.price || 0),
+        grupo: g.id,
+        grupoLabel: g.label,
+        clon: /\bCLON\b/i.test(nombre)
+      };
+    });
+  }
+
+  function conteoPorGrupo(lista){
+    var c = {};
+    lista.forEach(function(t){ c[t.grupo] = (c[t.grupo] || 0) + 1; });
+    return c;
+  }
+
+  function ordenados(){
+    var caja = document.getElementById('globalSearch');
+    var q = String(caja && caja.value || '').trim().toLowerCase();
+
+    var lista = tramites().filter(function(t){
+      if(grupoActivo !== 'todos' && t.grupo !== grupoActivo) return false;
+      if(q && t.nombre.toLowerCase().indexOf(q) < 0 && t.grupoLabel.toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+
+    var sel = document.getElementById('sortSelect');
+    var orden = String(sel && sel.value || 'default');
+    if(orden === 'priceAsc')       lista.sort(function(a,b){ return a.precio - b.precio; });
+    else if(orden === 'priceDesc') lista.sort(function(a,b){ return b.precio - a.precio; });
+    else if(orden === 'name')      lista.sort(function(a,b){ return a.nombre.localeCompare(b.nombre,'es'); });
+    return lista;
+  }
+
+  function tarjeta(t){
+    return '<article class="vg-a138-card">' +
+      '<div class="vg-a138-top">' +
+        '<h3 class="vg-a138-nombre">' + esc(t.nombre) + '</h3>' +
+        '<span class="vg-a138-precio">' + esc(precio(t.precio)) + '</span>' +
+      '</div>' +
+      '<div class="vg-a138-tags">' +
+        '<span class="vg-a138-tag">' + esc(t.grupoLabel) + '</span>' +
+        (t.clon ? '<span class="vg-a138-tag vg-a138-clon">No oficial</span>' : '') +
+      '</div>' +
+      '<div class="vg-a138-acciones">' +
+        '<button class="vg-a138-add" type="button" onclick="vgActasAlCarrito(' + t.i + ')">Agregar</button>' +
+        '<button class="vg-a138-buy" type="button" onclick="vgActasComprar(' + t.i + ')">' +
+          (t.precio > 0 ? 'Comprar' : 'Cotizar') + '</button>' +
+      '</div>' +
+    '</article>';
+  }
+
+  /* ── Comprar y agregar ───────────────────────────────────────────
+     Mismo objeto que arma addSelectedToCart y mismo formato de orden
+     que usa buyXboxCurrentGame. No se toca el modal: aquí no hay. */
+  window.vgActasAlCarrito = function(i){
+    var p = producto(); if(!p) return;
+    var o = (p.options || [])[i]; if(!o) return;
+    try{
+      cart.push({
+        title: p.title, option: o.name, price: Number(o.price || 0),
+        image: p.image, product_id: p.id, option_index: i
+      });
+      if(typeof updateCartCount === 'function') updateCartCount();
+      if(typeof showToast === 'function') showToast('Trámite agregado', o.name + ' se agregó al carrito.');
+    }catch(e){}
+  };
+
+  window.vgActasComprar = function(i){
+    var p = producto(); if(!p) return;
+    var o = (p.options || [])[i]; if(!o) return;
+    if(typeof window.openPaymentModal !== 'function') return;
+    window.openPaymentModal({
+      items: [{
+        title: p.title, option: o.name, price: Number(o.price || 0),
+        image: p.image, product_id: p.id, option_index: i
+      }],
+      total: Number(o.price || 0),
+      source: 'producto'
+    });
+  };
+
+  /* ── Pintado ─────────────────────────────────────────────────── */
+  function quitarExtras(){
+    ['vgA138Nota','vgA138Filtros','vgA138Cuenta'].forEach(function(id){
+      var el = document.getElementById(id);
+      if(el && el.parentNode) el.parentNode.removeChild(el);
+    });
+    var grid = document.getElementById('productsGrid');
+    if(grid) grid.classList.remove('vg-a138-grid');
+  }
+
+  function nota(){
+    var grid = document.getElementById('productsGrid'); if(!grid) return;
+    if(document.getElementById('vgA138Nota')) return;
+    var caja = document.createElement('div');
+    caja.id = 'vgA138Nota';
+    caja.className = 'vg-a138-nota';
+    caja.innerHTML =
+      '<b>Entrega estimada: 3 a 8 horas.</b> Trámites sujetos a validación · sin reembolso una vez iniciado.' +
+      '<span>Los trámites marcados como <b>No oficial</b> (CLON) no sirven como documento oficial.</span>';
+    grid.parentNode.insertBefore(caja, grid);
+  }
+
+  function filtros(lista){
+    var grid = document.getElementById('productsGrid'); if(!grid) return;
+    var previo = document.getElementById('vgA138Filtros');
+    if(previo && previo.parentNode) previo.parentNode.removeChild(previo);
+
+    var todos = tramites();
+    if(!todos.length) return;
+    var cuenta = conteoPorGrupo(todos);
+
+    var caja = document.createElement('div');
+    caja.id = 'vgA138Filtros';
+    caja.className = 'vg-a138-filtros';
+
+    var html = '<button class="vg-a138-chip" data-g="todos" type="button">Todos <span>' + todos.length + '</span></button>';
+    GRUPOS.concat([{id:'otros', label:'Otros'}]).forEach(function(g){
+      if(!cuenta[g.id]) return;
+      html += '<button class="vg-a138-chip" data-g="' + esc(g.id) + '" type="button">' +
+              esc(g.label) + ' <span>' + cuenta[g.id] + '</span></button>';
+    });
+    caja.innerHTML = html;
+    grid.parentNode.insertBefore(caja, grid);
+
+    Array.prototype.forEach.call(caja.querySelectorAll('[data-g]'), function(b){
+      b.classList.toggle('vg-a138-on', b.getAttribute('data-g') === grupoActivo);
+      b.onclick = function(){ grupoActivo = b.getAttribute('data-g'); pintar(); };
+    });
+  }
+
+  function cuentaPie(n, total){
+    var grid = document.getElementById('productsGrid'); if(!grid) return;
+    var pie = document.getElementById('vgA138Cuenta');
+    if(!pie){
+      pie = document.createElement('p');
+      pie.id = 'vgA138Cuenta';
+      pie.className = 'vg-a138-cuenta';
+      grid.parentNode.insertBefore(pie, grid.nextSibling);
+    }
+    pie.textContent = n === total
+      ? ('Mostrando los ' + total + ' trámites disponibles')
+      : ('Mostrando ' + n + ' de ' + total + ' trámites');
+    pie.style.display = total ? '' : 'none';
+  }
+
+  function pintar(){
+    var grid = document.getElementById('productsGrid'); if(!grid) return;
+    grid.classList.add('vg-a138-grid');
+    nota();
+
+    var lista = ordenados();
+    var total = tramites().length;
+    filtros(lista);
+
+    var vacio = document.getElementById('emptyState');
+    if(!lista.length){
+      grid.innerHTML = '';
+      if(vacio) vacio.style.display = 'block';
+      cuentaPie(0, total);
+      return;
+    }
+    if(vacio) vacio.style.display = 'none';
+    grid.innerHTML = lista.map(tarjeta).join('');
+    cuentaPie(lista.length, total);
+  }
+
+  function entrar(){
+    var titulo = document.getElementById('productsTitle');
+    if(titulo) titulo.textContent = 'Trámites de actas y servicios GOB';
+    pintar();
+  }
+
+  /* ── Enganches ───────────────────────────────────────────────── */
+  function envolver(){
+    if(typeof window.showSection === 'function' && !window.showSection.__vg138){
+      var origS = window.showSection;
+      var nuevaS = function(cat){
+        if(cat !== 'actas') grupoActivo = 'todos';
+        var r = origS.apply(this, arguments);
+        if(cat === 'actas') entrar(); else quitarExtras();
+        return r;
+      };
+      nuevaS.__vg138 = true;
+      window.showSection = nuevaS;
+    }
+
+    /* El buscador y el ordenador llaman a renderProducts, que
+       repintaría el catálogo normal encima del nuestro. */
+    if(typeof window.renderProducts === 'function' && !window.renderProducts.__vg138){
+      var origR = window.renderProducts;
+      var nuevaR = function(){
+        if(typeof activeCategory !== 'undefined' && activeCategory === 'actas'){ pintar(); return; }
+        quitarExtras();
+        return origR.apply(this, arguments);
+      };
+      nuevaR.__vg138 = true;
+      window.renderProducts = nuevaR;
+    }
+
+    /* La tarjeta suelta ya no abre la ventana: lleva a la sección.
+       Vale para la rejilla, para la portada y para los enlaces
+       #servicio/54/... , porque todos pasan por aquí. */
+    if(typeof window.openProduct === 'function' && !window.openProduct.__vg138){
+      var origP = window.openProduct;
+      var nuevaP = function(id){
+        var lista = (typeof services === 'function') ? services()
+                  : (typeof SERVICES !== 'undefined' ? SERVICES : []);
+        var p = null;
+        for(var i = 0; i < lista.length; i++){ if(String(lista[i].id) === String(id)){ p = lista[i]; break; } }
+        if(esActas(p) && typeof window.showSection === 'function'){
+          window.showSection('actas');
+          /* Cinturón: si algún otro módulo llegó a abrir la ventana por
+             su cuenta, se cierra. Sin esto quedaba tapando la sección. */
+          var pm = document.getElementById('productModal');
+          if(pm) pm.classList.remove('active');
+          return;
+        }
+        return origP.apply(this, arguments);
+      };
+      nuevaP.__vg138 = true;
+      window.openProduct = nuevaP;
+    }
+
+    /* En la barra lateral cada categoría lleva cuántos productos
+       tiene. Actas decía "1" —la ficha— cuando lo que hay dentro son
+       31 trámites. */
+    if(typeof window.renderNav === 'function' && !window.renderNav.__vg138){
+      var origN = window.renderNav;
+      var nuevaN = function(){
+        var r = origN.apply(this, arguments);
+        try{
+          var n = tramites().length;
+          if(n) document.querySelectorAll('.side-item').forEach(function(b){
+            if(!/actas gob/i.test(b.textContent)) return;
+            var s = b.querySelector('span');
+            if(s) s.textContent = n;
+          });
+        }catch(e){}
+        return r;
+      };
+      nuevaN.__vg138 = true;
+      window.renderNav = nuevaN;
+    }
+  }
+
+  /* OJO con el momento de envolver.
+
+     Aquí no vale esperar a DOMContentLoaded, que es lo que hacen casi
+     todos los bloques de este archivo. El router de enlaces directos
+     (routeFromHash, el de #servicio/54/...) llama a openProduct DE
+     GOLPE dentro de su propio DOMContentLoaded, sin timeout, y su
+     script va antes que este: su oyente corre primero. Si esperáramos,
+     ese enlace abriría la ventana antes de que exista la envoltura y
+     el cliente aterrizaría en la sección con el modal encima.
+
+     Este script va al final del <body>, así que al ejecutarse ya
+     existen openProduct, showSection y renderProducts —son
+     declaraciones de función de un script muy anterior—. Se envuelve
+     ya mismo y las repeticiones de después son solo por si algún otro
+     bloque vuelve a envolver más tarde. */
+  envolver();
+
+  function arrancar(){
+    envolver();
+    setTimeout(envolver, 900);
+    setTimeout(envolver, 2400);
+    /* Si alguien llega con la sección ya abierta (enlace directo), se
+       pinta sin esperar a que la cambie. */
+    setTimeout(function(){
+      if(typeof activeCategory !== 'undefined' && activeCategory === 'actas') entrar();
+    }, 300);
+  }
+
+  if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancar, {once:true});
+  else arrancar();
+})();
+</script>
+
 </body>
 </html>
