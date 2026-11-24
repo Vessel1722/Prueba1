@@ -47756,5 +47756,174 @@ button.vg119-incompleto{
   img{max-width:100% !important}
 </style>
 
+<style id="vg-redesign-kinguin-v2">
+  /* ============================================================
+     Vessel Games v2 — compacto estilo Kinguin, identidad Vessel
+     Solo visual (CSS). No toca datos, precios ni lógica de compra.
+     Lógica Kinguin: tarjeta pequeña y uniforme, imagen en una sola
+     proporción, solo título + precio + 1 botón, sin descripción
+     en la tarjeta (la descripción vive en el modal).
+     Identidad Vessel: fondo azul marino, morado #8b5cf6 y menta
+     #19e6c1, botón "Ver opciones" / compra por WhatsApp.
+     ============================================================ */
+
+  /* --- Rejilla: 2 cols móvil, 4 tablet, 6 PC, 7 PC ancha --- */
+  .grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important}
+  @media(min-width:760px){.grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important;gap:12px !important}}
+  @media(min-width:1024px){.grid{grid-template-columns:repeat(5,minmax(0,1fr)) !important;gap:14px !important}}
+  @media(min-width:1280px){.grid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}}
+  @media(min-width:1600px){.grid{grid-template-columns:repeat(7,minmax(0,1fr)) !important;gap:14px !important}}
+
+  /* --- Tarjeta compacta: imagen cuadrada, texto mínimo --- */
+  .card{border-radius:14px !important;box-shadow:0 8px 24px rgba(0,0,0,.22) !important}
+  .card:hover{transform:translateY(-3px) !important;border-color:rgba(139,92,246,.55) !important}
+  .imgbox{aspect-ratio:1/1 !important;height:auto !important}
+  .imgbox img{object-fit:cover !important}
+  .card-badge{font-size:.65rem !important;padding:4px 7px !important;top:8px !important;left:8px !important}
+  .vg-fav-btn{top:8px !important;right:8px !important;width:30px !important;height:30px !important}
+  .vg-quickview-btn{display:none !important}
+
+  /* La descripción y el conteo de opciones salen de la tarjeta.
+     Siguen existiendo en el modal del producto, donde se compra. */
+  .card .desc{display:none !important}
+  .card .option-count{display:none !important}
+  .card .meta{margin-bottom:0 !important}
+  .card .tag{font-size:.62rem !important;letter-spacing:.08em !important;padding:4px 7px !important}
+  .info{padding:10px !important;gap:6px !important}
+  .card h3{font-size:.85rem !important;line-height:1.2 !important;min-height:2.4em !important}
+  .price-line{display:flex !important;align-items:baseline !important;gap:6px !important;margin-top:auto !important}
+  .price-line .from{font-size:.62rem !important}
+  .price{font-size:1.05rem !important;color:#19e6c1 !important}
+  .premium-actions{margin-top:8px !important}
+  .premium-actions .detail-btn{min-height:40px !important;padding:9px 10px !important;font-size:.82rem !important;border-radius:12px !important}
+  .premium-actions .quick-add-btn{display:none !important}
+
+  @media(min-width:1024px){
+    .info{padding:12px !important}
+    .card h3{font-size:.95rem !important}
+    .price{font-size:1.15rem !important}
+    .imgbox{aspect-ratio:4/3 !important}
+  }
+
+  /* --- Hero compacto: el video de fondo sigue animado, como antes --- */
+  .hero{min-height:0 !important}
+  .hero-inner{padding:44px 16px 30px !important;gap:16px !important}
+  .hero h1{font-size:clamp(1.9rem,6vw,3.2rem) !important;line-height:1.02 !important;margin:8px 0 10px !important}
+  .hero .lead{font-size:.95rem !important;line-height:1.5 !important;max-width:560px !important;display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;overflow:hidden !important}
+  .hero-actions{display:flex !important;gap:10px !important;flex-wrap:wrap !important}
+  .hero-actions .primary,.hero-actions .secondary{min-height:44px !important;padding:11px 18px !important;font-size:.9rem !important}
+  .hero-panel{display:none !important}
+  @media(min-width:1024px){
+    .hero-inner{padding:64px 22px 44px !important}
+    .hero .lead{-webkit-line-clamp:3 !important}
+  }
+
+  /* --- Categorías: pastillas pequeñas con scroll, sin ocupar 2 filas --- */
+  .category-row{flex-wrap:nowrap !important;overflow-x:auto !important;gap:8px !important;padding:8px 12px !important;scrollbar-width:none !important}
+  .category-row::-webkit-scrollbar{display:none !important}
+  .category-row .pill,.category-nav .pill{white-space:nowrap !important;padding:8px 12px !important;font-size:.8rem !important}
+
+  /* --- Títulos de sección y espacios entre secciones --- */
+  .market-head{margin:18px 0 12px !important}
+  .market-head h2{font-size:clamp(1.3rem,3.5vw,2rem) !important}
+  .wrap{padding-top:16px !important}
+  .promo-strip,.home-compact-info{margin-top:18px !important;gap:10px !important}
+  .promo-card,.home-compact-card{padding:14px !important}
+
+  /* --- Catálogo por categoría (.vgcat-card): también compacto --- */
+  .vgcat-card{padding:10px !important;gap:6px !important;border-radius:14px !important}
+  .vgcat-card img{height:96px !important}
+  .vgcat-card b{font-size:.85rem !important}
+  .vgcat-card small{font-size:.72rem !important}
+
+  /* --- Xbox One / Series: portada vertical 3:4 como Kinguin, 2 cols móvil / 6 PC --- */
+  .vg-xbox-current-grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important}
+  @media(min-width:760px){.vg-xbox-current-grid{grid-template-columns:repeat(3,minmax(0,1fr)) !important}}
+  @media(min-width:1024px){.vg-xbox-current-grid{grid-template-columns:repeat(5,minmax(0,1fr)) !important;gap:12px !important}}
+  @media(min-width:1280px){.vg-xbox-current-grid{grid-template-columns:repeat(6,minmax(0,1fr)) !important}}
+  .vg-xbox-game-cover{aspect-ratio:3/4 !important;height:auto !important}
+  .vg-xbox-game-info{padding:10px !important;gap:6px !important}
+  .vg-xbox-game-info h4{font-size:.85rem !important}
+  .vg-x113-acciones .primary{min-height:40px !important}
+
+  /* --- Modal de producto: opciones compactas en 2 columnas en PC --- */
+  .modal-body{padding:18px !important}
+  .option{padding:10px 12px !important;margin:7px 0 !important}
+  @media(min-width:760px){
+    .modal-body .options-grid,.modal-body{--vg-opt-cols:2}
+  }
+</style>
+
+<style id="vg-redesign-kinguin-pc-v3">
+  /* ============================================================
+     Vessel Games v3 — PC estilo Kinguin, adaptado a Vessel
+     Solo aplica en PC (>=1024px). El móvil queda como en v2.
+     Solo visual (CSS). No toca datos, precios ni lógica de compra.
+     De Kinguin: contenido ancho centrado, buscador grande, fila de
+     categorías, hero corto tipo banner, 7 tarjetas por fila con
+     precio grande y botón al pasar el cursor, filtros laterales.
+     De Vessel (para distinguirse): fondo azul marino, morado
+     #8b5cf6 y menta #19e6c1, compra por WhatsApp, insignias propias.
+     ============================================================ */
+  @media(min-width:1024px){
+    /* Contenido ancho centrado, como Kinguin (~1700px) */
+    .wrap{max-width:1600px !important;padding-left:22px !important;padding-right:22px !important}
+    .nav{max-width:1600px !important;grid-template-columns:220px minmax(420px,1fr) auto !important;gap:20px !important;padding:12px 22px !important}
+    .searchbar{max-width:860px !important;margin:0 auto !important}
+    .searchbar input{height:48px !important;font-size:1rem !important}
+
+    /* Cabecera compacta y fija, como Kinguin */
+    .topbar{position:sticky !important;top:0 !important;z-index:60 !important;background:rgba(5,7,15,.92) !important;backdrop-filter:blur(12px) !important}
+
+    /* Fila de categorías: una sola fila, pastillas limpias */
+    .category-nav{position:sticky !important;top:72px !important;z-index:55 !important;background:rgba(5,7,15,.92) !important;backdrop-filter:blur(12px) !important;border-bottom:1px solid rgba(255,255,255,.06) !important}
+    .category-row{justify-content:center !important;gap:6px !important;padding:8px 16px !important}
+    .category-row .cat-btn{border:1px solid transparent !important;background:transparent !important;color:#c7cede !important;white-space:nowrap !important;padding:8px 12px !important;font-size:.85rem !important}
+    .category-row .cat-btn:hover,.category-row .cat-btn.active{color:#fff !important;background:rgba(139,92,246,.16) !important;border-color:rgba(139,92,246,.4) !important}
+
+    /* Hero corto tipo banner de Kinguin (~390px), video animado */
+    .hero{min-height:380px !important;max-height:420px !important;overflow:hidden !important}
+    .hero-inner{padding:56px 22px 64px !important;max-width:1600px !important}
+    .hero h1{font-size:clamp(2.4rem,3.5vw,3.4rem) !important}
+    .hero .lead{font-size:1.05rem !important;max-width:620px !important}
+
+    /* Las 4 tarjetas del inicio pasan a rejilla de 4, como los
+       4 paneles del hero de Kinguin, en vez de carrusel */
+    .home-sections{display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:12px !important;margin-top:-44px !important;overflow:visible !important;padding:2px 0 8px !important}
+    .service-carousel-card{height:170px !important;flex:none !important;width:auto !important}
+    .service-carousel-info b{font-size:1rem !important}
+
+    /* Catálogo: 7 tarjetas por fila, imagen uniforme, precio grande */
+    .grid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}
+    .card{border-radius:12px !important;border-color:rgba(255,255,255,.08) !important;box-shadow:0 6px 18px rgba(0,0,0,.2) !important}
+    .imgbox{aspect-ratio:4/3 !important}
+    .info{padding:12px !important}
+    .card h3{font-size:.95rem !important}
+    .price{font-size:1.35rem !important}
+    .price-line .from{font-size:.68rem !important;color:#8b93a7 !important}
+    /* Botón de agregar al carrito aparece al pasar el cursor,
+       como en Kinguin; el botón principal sigue siendo Vessel */
+    .premium-actions{grid-template-columns:1fr 44px !important}
+    .premium-actions .quick-add-btn{display:flex !important;opacity:0 !important;transition:opacity .18s !important;align-items:center !important;justify-content:center !important}
+    .card:hover .premium-actions .quick-add-btn{opacity:1 !important}
+    .premium-actions .detail-btn{background:rgba(139,92,246,.2) !important}
+    .premium-actions .detail-btn:hover{background:linear-gradient(135deg,#8b5cf6,#19e6c1) !important;color:#04110e !important}
+
+    /* Títulos de sección estilo Kinguin: grandes, con "Ver todo" */
+    .market-head h2{font-size:1.7rem !important;letter-spacing:-.02em !important}
+    .market-head .tools .pill{border:1px solid rgba(255,255,255,.14) !important;background:transparent !important}
+
+    /* Filtros laterales del catálogo, como la barra de Kinguin */
+    .layout{grid-template-columns:280px 1fr !important;gap:22px !important}
+    .sidebar{position:sticky !important;top:128px !important;border-radius:14px !important;padding:16px !important}
+    .side-title{font-size:.72rem !important;letter-spacing:.14em !important;text-transform:uppercase !important;color:#8b93a7 !important;margin-bottom:10px !important}
+    .side-item{padding:10px 12px !important;font-size:.9rem !important;border-radius:10px !important}
+  }
+  @media(min-width:1440px){
+    .grid{grid-template-columns:repeat(7,minmax(0,1fr)) !important}
+    .vg-xbox-current-grid{grid-template-columns:repeat(7,minmax(0,1fr)) !important}
+  }
+</style>
+
 </body>
 </html>
