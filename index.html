@@ -48266,10 +48266,20 @@ button.vg119-incompleto{
         var fcs = window.getComputedStyle(featFirst);
         var fbg = fcs.backgroundImage || '';
         info += ' | FEAT bg=' + (fbg === 'none' ? 'NONE' : fbg.slice(0, 50)) + ' h=' + featFirst.offsetHeight;
-        /* Prueba visual: contorno lima en los divs de Destacados y
-           rect del primero vs su .imgbox, para ver si el div pinta
-           y dónde está en pantalla. */
-        for(var k = 0; k < featDivs.length; k++){ featDivs[k].style.outline = '4px solid lime'; }
+        /* Prueba decisiva: al PRIMER div de Destacados le quito la
+           imagen de fondo y le pongo magenta sólido. Si las bandas se
+           vuelven magenta, el div SÍ pinta y el problema es la imagen;
+           si siguen azul marino, el div no pinta aunque exista. */
+        featFirst.style.backgroundImage = 'none';
+        featFirst.style.backgroundColor = 'magenta';
+        featFirst.style.filter = 'none';
+        featFirst.style.transform = 'none';
+        var fimg = featFirst.closest('.imgbox').querySelector('img');
+        if(fimg){
+          var ics = window.getComputedStyle(fimg);
+          info += ' | IMG bg=' + ics.backgroundColor + ' display=' + ics.display;
+        }
+        info += ' | DIV display=' + fcs.display + ' vis=' + fcs.visibility + ' op=' + fcs.opacity;
         var fbox = featFirst.closest('.imgbox');
         if(fbox){
           var r1 = featFirst.getBoundingClientRect(), r2 = fbox.getBoundingClientRect();
