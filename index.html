@@ -48252,12 +48252,22 @@ button.vg119-incompleto{
     function report(){
       var divs = document.querySelectorAll('.vg-blur-bg');
       var boxes = document.querySelectorAll('#featuredGrid .card .imgbox');
+      var featDivs = document.querySelectorAll('#featuredGrid .vg-blur-bg');
+      var prodDivs = document.querySelectorAll('#productsGrid .vg-blur-bg');
       var first = divs[0];
-      var info = 'BLUR divs=' + divs.length + ' imgbox=' + boxes.length;
+      var featFirst = featDivs[0];
+      var info = 'BLUR divs=' + divs.length + ' imgbox=' + boxes.length + ' featDivs=' + featDivs.length + ' prodDivs=' + prodDivs.length;
       if(first){
         var cs = window.getComputedStyle(first);
         var bg = cs.backgroundImage || '';
         info += ' | bg=' + (bg === 'none' ? 'NONE' : bg.slice(0, 60)) + ' | h=' + first.offsetHeight + ' pos=' + cs.position + ' filter=' + cs.filter + ' z=' + cs.zIndex;
+      }
+      if(featFirst){
+        var fcs = window.getComputedStyle(featFirst);
+        var fbg = fcs.backgroundImage || '';
+        info += ' | FEAT bg=' + (fbg === 'none' ? 'NONE' : fbg.slice(0, 50)) + ' h=' + featFirst.offsetHeight;
+      } else {
+        info += ' | FEAT SIN DIV';
       }
       var el = document.getElementById('vgBlurDebug');
       if(!el){
