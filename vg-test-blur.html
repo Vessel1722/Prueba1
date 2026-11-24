@@ -1,0 +1,19 @@
+<!DOCTYPE html>
+<html lang="es"><head><meta charset="utf-8"><title>Prueba blur</title>
+<style>
+body{background:#08090f;margin:0;padding:40px;font-family:sans-serif}
+#featuredGrid{display:grid;grid-template-columns:repeat(3,280px);gap:14px}
+#featuredGrid .card{border:1px solid rgba(255,255,255,.1);background:#12141d;border-radius:12px;overflow:hidden}
+@media(min-width:1024px){
+  html body #featuredGrid .card .imgbox{aspect-ratio:3/4 !important;height:auto !important;padding:0 !important;position:relative !important;overflow:hidden !important;background-color:#0d1120 !important}
+  html body #featuredGrid .card .imgbox .vg-blur-bg{position:absolute !important;inset:0 !important;background-size:cover !important;background-position:center !important;filter:blur(16px) brightness(.6) !important;transform:scale(1.2) !important;z-index:0 !important;pointer-events:none !important}
+  html body #featuredGrid .card .imgbox img{object-fit:contain !important;object-position:center !important;position:relative !important;z-index:1 !important;width:100% !important;height:100% !important;display:block !important}
+}
+.info{padding:14px;color:#fff}
+</style></head><body>
+<h2 style="color:#fff">Prueba aislada del blur (misma estructura y CSS que la tarjeta real)</h2>
+<div id="featuredGrid">
+<article class="card"><div class="imgbox"><div class="vg-blur-bg" style="background-image:url('https://i.imgur.com/9j4rD8c.jpg')"></div><img src="https://i.imgur.com/9j4rD8c.jpg" alt="Gaming"></div><div class="info"><h3>Gaming (foto Imgur)</h3><p>Si el blur funciona, arriba y abajo de la foto se ve la misma imagen desenfocada.</p></div></article>
+<article class="card"><div class="imgbox"><div class="vg-blur-bg" style="background-image:url('https://i.imgur.com/3zocDZJh.jpg')"></div><img src="https://i.imgur.com/3zocDZJh.jpg" alt="Imgur 2"></div><div class="info"><h3>Segunda imagen Imgur</h3><p>Misma prueba con otra imagen.</p></div></article>
+</div>
+</body></html>
