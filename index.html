@@ -49109,5 +49109,372 @@ button.vg119-incompleto{
   })();
 </script>
 
+<style id="vg-modal-redisenado-v1">
+/* ============================================================
+   Vessel Games — Rediseño del modal de producto v1
+   (Fase 2 · mockup aprobado 2026-11-24)
+   Solo reglas nuevas, con ámbito #productModal. Gana a los bloques
+   anteriores porque va al final del archivo y usa !important donde
+   el resto del archivo ya lo usa.
+   ============================================================ */
+
+/* --- Estructura: modal ~1080px, 2 columnas --- */
+#productModal .modal-card{
+  max-width:1080px !important;
+  grid-template-columns:minmax(360px, 440px) 1fr !important;
+}
+
+/* --- 1 · La imagen LLENA su panel (efecto Kinguin) ---
+   El ::before con blur ya existe (vg-design-pro) pero nunca se ve:
+   una regla `background:#060810 !important` tapa el background-image
+   en línea que pone openProduct. El script nuevo crea un div real
+   .vg-modal-blur-bg con la imagen en línea (patrón Fase 2). */
+#productModal .modal-img{
+  position:relative !important;
+  overflow:hidden !important;
+}
+#productModal .vg-modal-blur-bg{
+  position:absolute !important;
+  inset:0 !important;
+  background-size:cover !important;
+  background-position:center !important;
+  filter:blur(20px) brightness(.45) saturate(1.15) !important;
+  transform:scale(1.15) !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+}
+#productModal .modal-img::after{display:none !important;}
+#productModal .vg-gallery{
+  position:relative !important;
+  z-index:1 !important;
+  height:100% !important;
+}
+#productModal .modal-img img{
+  object-fit:contain !important;
+  object-position:center !important;
+  padding:14px !important;
+  position:relative !important;
+  z-index:1 !important;
+  width:100% !important;
+  height:100% !important;
+  background:transparent !important;
+}
+
+/* --- Cuerpo: aire abajo para que la barra no tape relacionados --- */
+#productModal .modal-body{
+  padding:20px 22px 28px !important;
+}
+
+/* --- 3 · Insignia pequeña, no barra --- */
+#productModal .modal-body #modalCat{
+  align-self:flex-start !important;
+  width:auto !important;
+}
+
+/* --- 3 · Precio grande en menta (lo crea el script) --- */
+#productModal .vg-modal-bigprice{
+  display:flex !important;
+  align-items:baseline !important;
+  flex-wrap:wrap !important;
+  gap:4px 8px !important;
+  margin:8px 0 2px !important;
+}
+#productModal .vg-bp-label{
+  font-size:.78rem !important;
+  font-weight:800 !important;
+  text-transform:uppercase !important;
+  letter-spacing:.09em !important;
+  color:#8b93b0 !important;
+}
+#productModal .vg-bp-value{
+  font-size:1.9rem !important;
+  font-weight:900 !important;
+  line-height:1 !important;
+  color:#19e6c1 !important;
+}
+
+/* --- 2 · Franja fina de confianza (la crea el script) ---
+   Las cajas originales solo se ocultan cuando la franja ya existe
+   (clase vg-modal-v1-on que pone el script): si el script falla,
+   el modal sigue mostrando entrega y garantía como hoy. */
+#productModal.vg-modal-v1-on .modal-delivery-note,
+#productModal.vg-modal-v1-on .vg-garantia{
+  display:none !important;
+}
+#productModal .vg-modal-trust{
+  display:flex !important;
+  flex-wrap:wrap !important;
+  gap:8px !important;
+  margin:12px 0 4px !important;
+}
+#productModal .vg-modal-trust .vg-trust-item{
+  flex:1 1 120px !important;
+  display:flex !important;
+  align-items:center !important;
+  gap:7px !important;
+  padding:8px 10px !important;
+  background:rgba(255,255,255,.04) !important;
+  border:1px solid rgba(255,255,255,.08) !important;
+  border-radius:12px !important;
+  font-size:.75rem !important;
+  font-weight:700 !important;
+  color:#c9d2ea !important;
+  white-space:nowrap !important;
+}
+#productModal .vg-modal-trust .vg-trust-item i{
+  font-style:normal !important;
+  font-size:.9rem !important;
+  flex-shrink:0 !important;
+}
+
+/* --- 4 · Opciones con estado activo claro --- */
+#productModal .option.active{
+  border-color:#19e6c1 !important;
+  border-width:2px !important;
+  background:rgba(25,230,193,.13) !important;
+  box-shadow:0 0 0 1px rgba(25,230,193,.35) !important;
+}
+#productModal .option.active::after{
+  content:"✓" !important;
+  display:grid !important;
+  place-items:center !important;
+  width:22px !important;
+  height:22px !important;
+  flex-shrink:0 !important;
+  border-radius:50% !important;
+  background:#19e6c1 !important;
+  color:#06130d !important;
+  font-size:.8rem !important;
+  font-weight:900 !important;
+}
+#productModal .option.active strong{color:#19e6c1 !important;}
+
+/* --- Relacionados: aire para que la barra no los tape --- */
+#productModal #vgRelatedSection{margin-bottom:10px !important;}
+
+/* --- 5 · Barra de compra con fondo propio ---
+   Comprar primero y a ancho completo en menta; carrito secundario
+   en contorno. Solo #productModal: el carrito y Retro no se tocan. */
+#productModal .modal-actions{
+  display:flex !important;
+  flex-direction:column !important;
+  gap:10px !important;
+  position:sticky !important;
+  bottom:0 !important;
+  z-index:5 !important;
+  margin-top:auto !important;
+  padding:14px 0 4px !important;
+  background:#0e1220 !important;
+  border-top:1px solid rgba(255,255,255,.08) !important;
+  box-shadow:0 -10px 24px rgba(0,0,0,.5) !important;
+}
+#productModal .modal-actions .primary.whatsapp{
+  order:-1 !important;
+  width:100% !important;
+  background:#19e6c1 !important;
+  color:#06130d !important;
+  box-shadow:none !important;
+}
+#productModal .modal-actions .primary:not(.whatsapp){
+  width:100% !important;
+  background:transparent !important;
+  border:1px solid rgba(139,92,246,.55) !important;
+  color:#eef0fa !important;
+  box-shadow:none !important;
+}
+
+/* --- 5 · Móvil (≤640px): una columna, imagen 16:9, botones abajo --- */
+@media (max-width:640px){
+  #productModal .modal-card{
+    grid-template-columns:1fr !important;
+  }
+  #productModal .modal-img{
+    height:auto !important;
+    min-height:0 !important;
+    aspect-ratio:16/9 !important;
+  }
+  #productModal .modal-body{
+    padding:14px 14px 20px !important;
+  }
+  #productModal .vg-bp-value{font-size:1.6rem !important;}
+  #productModal .vg-modal-trust .vg-trust-item{
+    flex:1 1 100% !important;
+  }
+}
+</style>
+
+<script id="vg-modal-redisenado-v1">
+/* ============================================================
+   Vessel Games — Rediseño del modal de producto v1
+   (Fase 2 · mockup aprobado 2026-11-24)
+   Solo AÑADE: fondo desenfocado real, precio grande y franja de
+   confianza. No edita el markup ni el JS existente: envuelve
+   openProduct/renderOptions y observa el modal. Si algo falla,
+   el modal sigue como hoy (todo en try/catch).
+   ============================================================ */
+(function(){
+  'use strict';
+  if(window.__vgModalV1__) return; window.__vgModalV1__ = true;
+
+  function el(id){ try{ return document.getElementById(id); }catch(e){ return null; } }
+  function qs(s, r){ try{ return (r || document).querySelector(s); }catch(e){ return null; } }
+
+  /* --- 1 · Fondo desenfocado real ---
+     El ::before con blur ya existe (vg-design-pro) pero nunca se ve:
+     `background:#060810 !important` tapa el background-image en línea
+     que pone openProduct en #modalImageBox. Se crea un div real
+     .vg-modal-blur-bg con la imagen en línea (patrón Fase 2). */
+  function syncBlur(){
+    try{
+      var box = el('modalImageBox'), img = el('modalImage');
+      if(!box || !img) return;
+      var src = img.getAttribute('src') || '';
+      if(!src) return;
+      var div = box.querySelector('.vg-modal-blur-bg');
+      if(!div){
+        div = document.createElement('div');
+        div.className = 'vg-modal-blur-bg';
+        box.insertBefore(div, box.firstChild);
+      }
+      var bg = 'url("' + src.replace(/"/g, '%22') + '")';
+      if(div.style.backgroundImage !== bg) div.style.backgroundImage = bg;
+    }catch(e){}
+  }
+
+  /* --- 3 · Precio grande que sigue a la opción elegida ---
+     currentProduct/selectedOptionIndex son `let` del script principal
+     (no cuelgan de window), así que el precio se lee del DOM: la
+     opción activa que ya pinta renderOptions. */
+  function selectedOption(){
+    try{
+      var opt = qs('#modalOptions .option.active');
+      if(!opt) return null;
+      var strong = opt.querySelector('strong');
+      var b = opt.querySelector('b');
+      var t = strong ? (strong.textContent || '').trim() : '';
+      var n = null;
+      if(/cotizar/i.test(t)) n = 0;
+      else { var d = parseInt(t.replace(/[^0-9]/g, ''), 10); n = isNaN(d) ? null : d; }
+      return { price:n, name:(b ? (b.textContent || '').trim() : '') };
+    }catch(e){ return null; }
+  }
+  function fmtPrice(n){
+    try{ if(typeof window.fmt === 'function') return window.fmt(n); }catch(e){}
+    return (n > 0) ? ('$' + Number(n).toLocaleString('es-MX') + ' MXN') : 'Cotizar';
+  }
+  function ensurePrice(){
+    try{
+      var desc = el('modalDesc'); if(!desc || !desc.parentNode) return;
+      var price = desc.parentNode.querySelector('.vg-modal-bigprice');
+      if(!price){
+        price = document.createElement('div');
+        price.className = 'vg-modal-bigprice';
+        price.innerHTML = '<span class="vg-bp-label">Desde</span><span class="vg-bp-value"></span>';
+        desc.parentNode.insertBefore(price, desc.nextSibling);
+      }
+      var sel = selectedOption();
+      var val = price.querySelector('.vg-bp-value');
+      var lab = price.querySelector('.vg-bp-label');
+      if(!val || !lab) return;
+      if(!sel || sel.price === null){ price.style.display = 'none'; return; }
+      price.style.display = '';
+      /* La etiqueta dice "Desde" cuando la elegida es la más barata;
+         si se elige otra opción, muestra el nombre de esa opción. */
+      var min = null;
+      var all = document.querySelectorAll('#modalOptions .option strong');
+      for(var i = 0; i < all.length; i++){
+        var d = parseInt((all[i].textContent || '').replace(/[^0-9]/g, ''), 10);
+        if(!isNaN(d) && d > 0 && (min === null || d < min)) min = d;
+      }
+      lab.textContent = (min !== null && sel.price > 0 && sel.price !== min && sel.name) ? sel.name : 'Desde';
+      val.textContent = fmtPrice(sel.price);
+    }catch(e){}
+  }
+
+  /* --- 2 · Franja fina de confianza ---
+     La entrega se lee de la nota real del modal (para actas dice
+     3 a 8 horas, no 20 min – 2 h): la franja nunca miente. */
+  function deliveryShort(){
+    try{
+      var note = qs('.modal-delivery-note');
+      var t = note ? (note.textContent || '') : '';
+      if(/3\s*a\s*8\s*horas/i.test(t)) return 'Entrega 3–8 h';
+      return 'Entrega 20 min – 2 h';
+    }catch(e){ return 'Entrega 20 min – 2 h'; }
+  }
+  function ensureTrust(){
+    try{
+      var modal = el('productModal'); if(!modal) return;
+      var body = modal.querySelector('.modal-body'); if(!body) return;
+      var strip = body.querySelector('.vg-modal-trust');
+      if(!strip){
+        strip = document.createElement('div');
+        strip.className = 'vg-modal-trust';
+        strip.innerHTML =
+          '<span class="vg-trust-item"><i>\uD83D\uDD50</i><b class="vg-trust-delivery">Entrega 20 min – 2 h</b></span>' +
+          '<span class="vg-trust-item"><i>\uD83D\uDEE1</i><b>Si algo falla, lo resolvemos</b></span>' +
+          '<span class="vg-trust-item"><i>\uD83D\uDD12</i><b>Pago seguro</b></span>';
+        var price = body.querySelector('.vg-modal-bigprice');
+        var anchor = el('modalDesc');
+        if(price && price.parentNode === body) body.insertBefore(strip, price.nextSibling);
+        else if(anchor && anchor.parentNode === body) body.insertBefore(strip, anchor.nextSibling);
+        else body.insertBefore(strip, body.firstChild);
+      }
+      var d = strip.querySelector('.vg-trust-delivery');
+      if(d) d.textContent = deliveryShort();
+      /* Solo con la franja ya puesta se ocultan las cajas originales
+         (regla CSS con esta clase): si el script falla, se ven como hoy. */
+      modal.classList.add('vg-modal-v1-on');
+    }catch(e){}
+  }
+
+  function ensureAll(){ try{ syncBlur(); ensurePrice(); ensureTrust(); }catch(e){} }
+
+  /* Cada clic en una opción repinta renderOptions: el precio grande
+     debe seguir a la elegida. */
+  try{
+    if(typeof window.renderOptions === 'function' && !window.renderOptions.__vgModalV1){
+      var origRO = window.renderOptions;
+      var nuevaRO = function(){ var r = origRO.apply(this, arguments); try{ ensurePrice(); }catch(e){} return r; };
+      nuevaRO.__vgModalV1 = true;
+      window.renderOptions = nuevaRO;
+    }
+  }catch(e){}
+
+  /* Al abrir, montar blur + precio + franja. */
+  try{
+    if(typeof window.openProduct === 'function' && !window.openProduct.__vgModalV1){
+      var origOP = window.openProduct;
+      var nuevaOP = function(){ var r = origOP.apply(this, arguments); try{ ensureAll(); }catch(e){} return r; };
+      nuevaOP.__vgModalV1 = true;
+      window.openProduct = nuevaOP;
+    }
+  }catch(e){}
+
+  /* Observador: otro módulo reescribe la nota de entrega después de
+     abrir (actas: 3 a 8 horas) y la galería cambia la foto al navegar;
+     re-sincronizar sin tocar ese código. */
+  try{
+    var modal = el('productModal');
+    if(modal && typeof MutationObserver !== 'undefined'){
+      var timer = null;
+      var obs = new MutationObserver(function(){
+        if(!modal.classList.contains('active')) return;
+        if(timer) clearTimeout(timer);
+        timer = setTimeout(function(){ try{ ensureAll(); }catch(e){} }, 120);
+      });
+      obs.observe(modal, { attributes:true, attributeFilter:['class'], subtree:true, childList:true, characterData:true });
+      var img = el('modalImage');
+      if(img){
+        var obsImg = new MutationObserver(function(){
+          try{ if(modal.classList.contains('active')) syncBlur(); }catch(e){}
+        });
+        obsImg.observe(img, { attributes:true, attributeFilter:['src'] });
+      }
+    }
+  }catch(e){}
+})();
+</script>
+
 </body>
 </html>
