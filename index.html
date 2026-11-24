@@ -10086,7 +10086,7 @@ window.vgBingSize = function(){
 <div class="wrap">
 <div class="section-hero" id="sectionHero"><div class="section-hero-content"><span class="badge" id="sectionBadge">Catálogo</span><h2 id="sectionTitle">Catálogo</h2><p id="sectionDesc">Explora los servicios disponibles.</p></div></div>
 <div class="market-head"><div><h2 id="productsTitle">Productos</h2><p id="productsSubtitle">Cada tarjeta conserva foto, nombre, opciones y precios de tu catálogo original.</p></div><div class="tools"><select id="sortSelect" onchange="renderProducts()"><option value="default">Orden recomendado</option><option value="priceAsc">Precio menor</option><option value="priceDesc">Precio mayor</option><option value="name">Nombre A-Z</option></select></div></div>
-<div class="layout"><aside class="sidebar"><div class="side-title">Secciones</div><div class="side-list" id="sideList"></div></aside><div><div class="grid" id="productsGrid"></div><div class="empty" id="emptyState" style="display:none">No encontré productos con esa búsqueda.</div></div></div>
+<div class="layout"><aside class="sidebar"><div class="side-title">Secciones</div><div class="side-list" id="sideList"></div><div class="vg-paso2-filtros"><div class="side-title">Precio</div><div class="vg-paso2-rango"><label>Desde $<input type="number" id="vgPrecioMin" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="Precio mínimo en pesos"></label><label>Hasta $<input type="number" id="vgPrecioMax" min="0" step="1" inputmode="numeric" placeholder="Sin límite" aria-label="Precio máximo en pesos"></label></div><div class="vg-paso2-chips" role="group" aria-label="Rangos de precio rápidos"><button type="button" class="vg-paso2-chip" data-min="" data-max="99">Menos de $100</button><button type="button" class="vg-paso2-chip" data-min="100" data-max="300">$100 – $300</button><button type="button" class="vg-paso2-chip" data-min="300" data-max="500">$300 – $500</button><button type="button" class="vg-paso2-chip" data-min="501" data-max="">Más de $500</button></div><button type="button" class="vg-paso2-limpiar" id="vgLimpiarFiltros">Limpiar filtros</button></div></aside><div><div class="grid" id="productsGrid"></div><div class="empty" id="emptyState" style="display:none">No encontré productos con esa búsqueda.</div></div></div>
 </div>
 </section>
 </main>
@@ -10464,7 +10464,30 @@ window.vgProofPick=function(fuente){
     function renderNav(){
       const html=CATEGORIES.map(c=>`<button class="cat-btn ${activeCategory===c.id?'active':''}" onclick="showSection('${c.id}')">${c.icon} ${c.label}</button>`).join('');
       catRow.innerHTML=html;
-      sideList.innerHTML=CATEGORIES.map(c=>`<button class="side-item ${activeCategory===c.id?'active':''}" onclick="showSection('${c.id}')">${c.icon} ${c.label} <span style="float:right;color:var(--soft)">${c.id==='all'?SERVICES.length:SERVICES.filter(s=>s.category===c.id).length}</span></button>`).join('');
+      sideList.innerHTML=CATEGORIES.map(c=>`<button class="side-item ${activeCategory===c.id?'active':''}" onclick="showSection('${c.id}')">${c.icon} ${c.label} <span style="float:right;color:var(--soft)">${c.id==='all'?SERVICES.length:SERVICES.filter(s=>s.category===c.id).length}</span></button>`).join('') + vgPaso2SideExtra();
+    }
+    /* FASE 2 · PASO 2 — entradas del sidebar que no viven en SERVICES:
+       Xbox One / Series y Juegos Retro abren sus modales ya existentes.
+       Fortnite NO se añade aquí: su módulo ya mete 'fortnite' en
+       CATEGORIES (meterCategoria, vg-fortnite-js-v62) y actualiza su
+       conteo en vivo desde tienda.articulos. Los conteos de abajo son
+       vivos cuando el módulo ya cargó; si no, usan la constante
+       verificada que indica cada comentario. */
+    function vgPaso2SideExtra(){
+      var nX = 3008; /* 3,008 juegos en estado active en vg_xbox_games (Supabase), verificado 2026-11-23 */
+      var nR = 315; /* RETRO_DATA y retroGamesRaw tienen 315 juegos (xretro-0…xretro-314), contados en el archivo 2026-11-24 */
+      try{
+        if(typeof window.vgXboxCargado==='function' && window.vgXboxCargado() && typeof window.vgXboxJuegos==='function'){
+          var vivos=(window.vgXboxJuegos()||[]).length;
+          if(vivos>0) nX=vivos;
+        }
+      }catch(e){}
+      try{
+        if(window.RETRO_GAMES_DATA && window.RETRO_GAMES_DATA.length>0) nR=window.RETRO_GAMES_DATA.length;
+        else if(typeof RETRO_DATA!=='undefined' && RETRO_DATA && RETRO_DATA.length>0) nR=RETRO_DATA.length;
+      }catch(e){}
+      return '<button class="side-item vg-paso2-side" onclick="if(window.openXboxCurrentModal)window.openXboxCurrentModal()">🎮 Xbox One / Series <span style="float:right;color:var(--soft)">'+nX.toLocaleString('es-MX')+'</span></button>'
+        + '<button class="side-item vg-paso2-side" onclick="if(window.openRetroModal)window.openRetroModal()">🕹️ Juegos Retro <span style="float:right;color:var(--soft)">'+nR.toLocaleString('es-MX')+'</span></button>';
     }
     function shuffleServices(list){
       const copy=[...list];
@@ -10545,9 +10568,22 @@ window.vgProofPick=function(fuente){
        existe: título "Todos" y la rejilla vacía. Se traduce aquí, que es
        por donde pasan todos los que cambian de sección. */
     function showSection(cat){ if(cat==='cuentas') cat='streaming'; limpiarBusqueda(); activeCategory=cat; window.activeCategory=activeCategory; homeView.classList.remove('active'); marketView.classList.add('active'); const c=catInfo(cat); sectionBadge.textContent='Sección'; sectionTitle.innerHTML=`${c.icon} ${c.label}`; sectionDesc.textContent=c.desc; sectionHero.style.setProperty('--section-bg', c.bg); productsTitle.textContent=cat==='all'?'Catálogo completo':`Productos de ${c.label}`; renderNav(); renderProducts(); window.scrollTo(0,0); }
+    /* FASE 2 · PASO 2 — filtro de precio del sidebar (solo Prueba1).
+       null = sin límite. Lo escriben los inputs/chips del sidebar
+       (vg-fase2-paso2.js) y lo lee filteredServices(). */
+    let vgPriceMin = null;
+    let vgPriceMax = null;
     function filteredServices(){
       const q=(globalSearch.value||'').trim().toLowerCase(); let list=SERVICES.filter(s=>activeCategory==='all'||s.category===activeCategory);
       if(q) list=list.filter(s=>[s.title,s.displayTitle,s.description,s.categoryName,(s.options||[]).map(o=>o.name).join(' ')].join(' ').toLowerCase().includes(q));
+      /* FASE 2 · PASO 2 — rango de precio por minPrice(p). Si hay algún
+         límite, los "Cotizar" (minPrice 0, sin precio) quedan fuera
+         porque no hay precio que comparar; sin límites se muestran
+         como siempre. El filtro se mantiene al cambiar de sección y
+         al buscar, porque filteredServices() corre en cada repintado. */
+      if(vgPriceMin!==null||vgPriceMax!==null){
+        list=list.filter(s=>{ const mp=minPrice(s); if(mp===0) return false; if(vgPriceMin!==null&&mp<vgPriceMin) return false; if(vgPriceMax!==null&&mp>vgPriceMax) return false; return true; });
+      }
       const sort=sortSelect?.value||'default';
       if(sort==='priceAsc') list.sort((a,b)=>minPrice(a)-minPrice(b)); if(sort==='priceDesc') list.sort((a,b)=>minPrice(b)-minPrice(a)); if(sort==='name') list.sort((a,b)=>a.title.localeCompare(b.title));
       return list;
@@ -48099,6 +48135,33 @@ button.vg119-incompleto{
   }
 </style>
 
+<style id="vg-fase2-paso2">
+  /* ============================================================
+     Vessel Games Fase 2, Paso 2 — Filtros laterales reales
+     (solo Prueba1). Estilo Kinguin del sidebar: filtro de precio
+     (inputs, chips de rango, limpiar) + entradas Xbox One /
+     Series y Juegos Retro (ver vg-fase2-paso2.js).
+     No toca datos, precios, carrito, modal, hero ni banners.
+     En móvil (<=980px) el sidebar se apila encima de la rejilla
+     y el filtro queda arriba, usable; en la sección Fortnite el
+     sidebar ya se oculta por regla propia (vgfn-activo).
+     Sin !important: los selectores van con .sidebar por delante
+     y ganan a las reglas genéricas input/button del archivo.
+     ============================================================ */
+  .sidebar .vg-paso2-filtros{margin-top:16px;padding-top:14px;border-top:1px solid var(--line)}
+  .sidebar .vg-paso2-filtros .side-title{margin-top:0}
+  .sidebar .vg-paso2-rango{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:0 8px 10px}
+  .sidebar .vg-paso2-rango label{display:block;font-size:.75rem;font-weight:900;color:var(--muted)}
+  .sidebar .vg-paso2-rango input{width:100%;height:44px;margin-top:6px;border:1px solid rgba(255,255,255,.14);border-radius:12px;background:#0d1120;color:#fff;padding:0 12px;font-size:.875rem;outline:none}
+  .sidebar .vg-paso2-rango input:focus{border-color:#19e6c1}
+  .sidebar .vg-paso2-chips{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin:0 8px 10px}
+  .sidebar .vg-paso2-chip{border:1px solid rgba(255,255,255,.12);background:rgba(255,255,255,.04);color:var(--muted);border-radius:999px;padding:8px 10px;font-size:.8rem;font-weight:900;cursor:pointer;text-align:center}
+  .sidebar .vg-paso2-chip:hover{color:var(--text);border-color:rgba(139,92,246,.55)}
+  .sidebar .vg-paso2-chip.active{background:rgba(25,230,193,.14);border-color:#19e6c1;color:#19e6c1}
+  .sidebar .vg-paso2-limpiar{width:calc(100% - 16px);margin:0 8px;border:1px solid rgba(139,92,246,.5);background:rgba(139,92,246,.12);color:#c4b5fd;border-radius:12px;padding:10px;font-weight:900;cursor:pointer}
+  .sidebar .vg-paso2-limpiar:hover{background:rgba(139,92,246,.22)}
+</style>
+
 <script id="vg-fase2-hero">
   /* ============================================================
      Vessel Games Fase 2, Paso 3 — Hero en 4 banners (solo PC)
@@ -48298,6 +48361,95 @@ button.vg119-incompleto{
     } else {
       start();
     }
+  })();
+</script>
+
+<script id="vg-fase2-paso2">
+  /* ============================================================
+     Vessel Games Fase 2, Paso 2 — cableado del filtro de precio
+     del sidebar (solo Prueba1). Lee y escribe vgPriceMin /
+     vgPriceMax, declaradas con let en el script principal justo
+     antes de filteredServices(), que es quien aplica el rango.
+     También: botón Limpiar filtros y un repintado del nav cuando
+     el catálogo Xbox termina de cargar, para dejar su conteo vivo.
+     No toca datos, precios, carrito, modal, hero ni banners.
+     ============================================================ */
+  (function(){
+    'use strict';
+    var inputMin = document.getElementById('vgPrecioMin');
+    var inputMax = document.getElementById('vgPrecioMax');
+    var chips = Array.prototype.slice.call(document.querySelectorAll('.vg-paso2-chip'));
+    var btnLimpiar = document.getElementById('vgLimpiarFiltros');
+    if(!inputMin || !inputMax) return;
+
+    /* Vacío o inválido = sin límite. Los precios del catálogo son
+       enteros en MXN, así que se baja a entero. */
+    function leerNumero(input){
+      var s = (input.value || '').trim();
+      if(s === '') return null;
+      var v = Number(s);
+      if(!isFinite(v) || v < 0) return null;
+      return Math.floor(v);
+    }
+    function marcarChip(){
+      chips.forEach(function(ch){
+        var cMin = ch.getAttribute('data-min') === '' ? null : Number(ch.getAttribute('data-min'));
+        var cMax = ch.getAttribute('data-max') === '' ? null : Number(ch.getAttribute('data-max'));
+        ch.classList.toggle('active', vgPriceMin === cMin && vgPriceMax === cMax);
+      });
+    }
+    function aplicar(){
+      var mn = leerNumero(inputMin), mx = leerNumero(inputMax);
+      /* Si el mínimo supera al máximo se intercambian y se refleja
+         en los inputs, en vez de dejar la rejilla vacía sin explicar. */
+      if(mn !== null && mx !== null && mn > mx){ var t = mn; mn = mx; mx = t; inputMin.value = mn; inputMax.value = mx; }
+      vgPriceMin = mn; vgPriceMax = mx;
+      marcarChip();
+      if(typeof renderProducts === 'function') renderProducts();
+    }
+    function ponerRango(mn, mx){
+      inputMin.value = mn === null ? '' : mn;
+      inputMax.value = mx === null ? '' : mx;
+      aplicar();
+    }
+    chips.forEach(function(ch){
+      ch.addEventListener('click', function(){
+        var mn = ch.getAttribute('data-min') === '' ? null : Number(ch.getAttribute('data-min'));
+        var mx = ch.getAttribute('data-max') === '' ? null : Number(ch.getAttribute('data-max'));
+        /* Tocar el chip activo lo apaga y quita el rango. */
+        if(ch.classList.contains('active')){ ponerRango(null, null); }
+        else { ponerRango(mn, mx); }
+      });
+    });
+    inputMin.addEventListener('input', aplicar);
+    inputMax.addEventListener('input', aplicar);
+
+    /* Limpiar filtros: resetea precio (inputs y variables), quita la
+       marca de los chips y vuelve a "Todos" con showSection('all'),
+       que ya re-renderiza la rejilla. */
+    window.vgLimpiarFiltros = function(){
+      inputMin.value = ''; inputMax.value = '';
+      vgPriceMin = null; vgPriceMax = null;
+      marcarChip();
+      if(typeof showSection === 'function') showSection('all');
+      else if(typeof renderProducts === 'function') renderProducts();
+    };
+    if(btnLimpiar) btnLimpiar.addEventListener('click', window.vgLimpiarFiltros);
+
+    /* El conteo de Xbox solo es vivo cuando su módulo ya descargó el
+       catálogo (~1 s después del arranque). Un repintado del nav en
+       ese momento deja el conteo real; si no carga en 20 s, se deja
+       el verificado (3,008) y no se insiste. */
+    var intentos = 0;
+    var t = setInterval(function(){
+      intentos++;
+      try{
+        if(typeof window.vgXboxCargado === 'function' && window.vgXboxCargado()){
+          if(typeof renderNav === 'function') renderNav();
+          clearInterval(t);
+        } else if(intentos >= 20){ clearInterval(t); }
+      }catch(e){ clearInterval(t); }
+    }, 1000);
   })();
 </script>
 
