@@ -49625,5 +49625,429 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
 })();
 </script>
 
+
+<style id="vg-retro-tr-v1">
+/* Sección Cuenta Nueva (vg-retro-tr-v1).
+   Solo pinta lo nuevo: distintivo de cuenta nueva, precio de México
+   tachado, y la barra del pedido mínimo de 300 TRY (siempre en pesos).
+   Las tarjetas reutilizan las clases del modal Retro, así que heredan
+   el blur estilo Kinguin y el resto del diseño. */
+#retroModal .vg-tr-badge{
+  display:inline-block; margin-top:6px; padding:2px 8px; border-radius:999px;
+  background:#19e6c1; color:#052e26; font-size:.68rem; font-weight:800;
+  letter-spacing:.06em; text-transform:uppercase;
+}
+#retroModal .vg-tr-mx{
+  color:var(--muted,#8b93a7); text-decoration:line-through;
+  font-size:.82rem; margin-left:6px; white-space:nowrap;
+}
+#retroModal .vg-retro-game.vg-tr-360,
+#retroModal .vg-retro-game.vg-tr-clasico{
+  outline:2px solid rgba(25,230,193,.55); outline-offset:-2px;
+}
+#retroModal .vg-tr-progress{
+  margin:10px 0 0; padding:10px 12px; border-radius:12px;
+  background:rgba(124,77,255,.12); border:1px solid rgba(124,77,255,.35);
+  font-size:.86rem; line-height:1.45;
+}
+#retroModal .vg-tr-progress.vg-tr-ok{
+  background:rgba(25,230,193,.12); border-color:rgba(25,230,193,.45);
+}
+#retroModal .vg-tr-bar{
+  height:8px; border-radius:999px; background:rgba(255,255,255,.14);
+  margin-top:8px; overflow:hidden;
+}
+#retroModal .vg-tr-bar > i{
+  display:block; height:100%; border-radius:999px;
+  background:linear-gradient(90deg,#7c4dff,#19e6c1);
+  transition:width .25s ease;
+}
+#retroModal .vg-tr-note{
+  font-size:.8rem; color:var(--muted,#8b93a7); margin:8px 2px 0; line-height:1.45;
+}
+#retroModal .vg-tr-buy[disabled]{
+  opacity:.55; cursor:not-allowed;
+}
+</style>
+<script id="vg-retro-tr-v1">
+/* Sección Cuenta Nueva (vg-retro-tr-v1).
+ *
+ * Toma el control del modal Xbox Retro cuando el catálogo TR está listo:
+ * juegos de Turquía más baratos que en México, venta al 70% del precio
+ * MX, ganancia mínima $15, todo como cuenta nueva.
+ *
+ * Reglas que aplica (las mismas que api/_precios-tr.js y crear-tabla-tr.sql):
+ *   · Al cliente solo se le muestran pesos. La lira (`tr`) solo vive en
+ *     memoria para sumar el pedido mínimo y nunca se pinta.
+ *   · Pedido mínimo 300 TRY: si lo seleccionado suma menos, no se puede
+ *     comprar ni agregar al carrito. El avance se muestra en pesos.
+ *   · Sin descuento extra del 10%: el precio TR ya es el precio final.
+ *   · Antes de abrir el pago se revalida con /api/validar-tr: si un juego
+ *     cambió de precio o ya no deja ganancia, no se vende al precio viejo.
+ *   · Si el catálogo TR no carga, todo delega al modal Retro de siempre.
+ */
+(function () {
+  'use strict';
+
+  var MINIMO_TRY = 300;
+  var state = { listo: false, juegos: [], tc: 0.38, minimoMxn: 115, fuente: '' };
+  var sel = []; /* slugs seleccionados */
+
+  function $(s, r) { return (r || document).querySelector(s); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>'"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c];
+    });
+  }
+  function money(n) { return '$' + Number(n || 0).toLocaleString('es-MX') + ' MXN'; }
+  function bySlug(slug) {
+    for (var i = 0; i < state.juegos.length; i++) if (state.juegos[i].slug === slug) return state.juegos[i];
+    return null;
+  }
+  function tryDe(lista) {
+    var t = 0;
+    for (var i = 0; i < lista.length; i++) t += Number((bySlug(lista[i]) || {}).tr || 0);
+    return t;
+  }
+  function totalDe(lista) {
+    var t = 0;
+    for (var i = 0; i < lista.length; i++) t += Number((bySlug(lista[i]) || {}).venta_mxn || 0);
+    return t;
+  }
+  function toast(titulo, msg) {
+    try {
+      if (typeof window.showToast === 'function') window.showToast(titulo, msg);
+      else alert(titulo + ': ' + msg);
+    } catch (e) { alert(titulo + ': ' + msg); }
+  }
+
+  /* ── Carga del catálogo ── */
+  function cargar() {
+    return fetch('/api/catalogo-retro-tr', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.juegos) || !d.juegos.length) throw new Error('catálogo vacío');
+        state.juegos = d.juegos;
+        state.tc = Number(d.tipo_cambio || 0.38);
+        state.minimoMxn = Number(d.minimo_mxn || Math.ceil(MINIMO_TRY * state.tc));
+        state.fuente = d.fuente || '';
+        state.listo = true;
+        asegurarOpcionesPlataforma();
+        actualizarContadorSidebar();
+      })
+      .catch(function () { state.listo = false; });
+  }
+
+  function asegurarOpcionesPlataforma() {
+    var selEl = document.getElementById('retroPlatform');
+    if (!selEl) return;
+    var faltan = [['Xbox One', 'Xbox One'], ['Xbox Series', 'Xbox Series'], ['Xbox One / Series', 'Xbox One / Series']];
+    var tiene = {};
+    for (var i = 0; i < selEl.options.length; i++) tiene[selEl.options[i].value] = true;
+    faltan.forEach(function (par) {
+      if (!tiene[par[0]]) {
+        var o = document.createElement('option');
+        o.value = par[0]; o.textContent = par[1];
+        selEl.appendChild(o);
+      }
+    });
+  }
+
+  function actualizarContadorSidebar() {
+    try {
+      var n = state.juegos.length;
+      var nodos = document.querySelectorAll('a, button, li, span, div');
+      for (var i = 0; i < nodos.length; i++) {
+        var el = nodos[i];
+        if (el.children.length) continue;
+        var t = (el.textContent || '').trim();
+        if (/^Xbox Retro\s*\d+/.test(t)) {
+          el.textContent = t.replace(/\d+.*$/, String(n));
+          return;
+        }
+      }
+    } catch (e) { /* el contador es un detalle, no rompe nada */ }
+  }
+
+  /* ── Filtro y orden: 360 y Clásico primero ── */
+  var ORDEN_PLAT = { 'Xbox 360': 0, 'Clásico': 1, 'Xbox One': 2, 'Xbox One / Series': 3, 'Xbox Series': 4 };
+  function plataformaDe(valor) {
+    var v = String(valor || 'all');
+    if (v === 'all') return 'all';
+    if (v === '360') return 'Xbox 360';
+    if (/cl/i.test(v)) return 'Clásico';
+    return v;
+  }
+  function filtrados() {
+    var q = ((document.getElementById('retroSearch') || {}).value || '').trim().toLowerCase();
+    var plat = plataformaDe((document.getElementById('retroPlatform') || {}).value || 'all');
+    var list = state.juegos.filter(function (g) {
+      return (plat === 'all' || g.platform === plat) && (!q || String(g.title).toLowerCase().indexOf(q) >= 0);
+    });
+    if (plat === 'all') {
+      list.sort(function (a, b) {
+        var pa = ORDEN_PLAT[a.platform] == null ? 9 : ORDEN_PLAT[a.platform];
+        var pb = ORDEN_PLAT[b.platform] == null ? 9 : ORDEN_PLAT[b.platform];
+        if (pa !== pb) return pa - pb;
+        return String(a.title).localeCompare(String(b.title), 'es');
+      });
+    } else {
+      list.sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'es'); });
+    }
+    return list;
+  }
+
+  /* ── Pintado del grid ── */
+  function imagenDe(g) {
+    if (g.image) return g.image;
+    try {
+      var p = null;
+      if (typeof window.retroFallbackImage === 'function') p = window.retroFallbackImage();
+      return p || 'portada.png';
+    } catch (e) { return 'portada.png'; }
+  }
+  function clasePlat(g) {
+    if (g.platform === 'Xbox 360') return ' vg-tr-360';
+    if (g.platform === 'Clásico') return ' vg-tr-clasico';
+    return '';
+  }
+  function pintarGrid() {
+    var box = document.getElementById('retroGridContainer');
+    if (!box) return;
+    var list = filtrados();
+    if (!list.length) {
+      box.innerHTML = '<div class="vg-retro-empty">No encontré juegos con esa búsqueda. Borra el texto o selecciona “Todas las plataformas”.</div>';
+      actualizarTotales();
+      return;
+    }
+    box.innerHTML = list.map(function (g) {
+      var active = sel.indexOf(g.slug) >= 0;
+      var img = imagenDe(g);
+      return '<article class="vg-retro-game' + (active ? ' active' : '') + clasePlat(g) + '" role="button" tabindex="0" aria-pressed="' + (active ? 'true' : 'false') + '" onclick="toggleRetroGame(\'' + esc(g.slug) + '\')" onkeydown="if(event.key===\'Enter\'||event.key===\' \'){event.preventDefault();toggleRetroGame(\'' + esc(g.slug) + '\')}">' +
+        '<div class="vg-retro-cover">' +
+          '<div class="vg-retro-cover-bg" style="background-image:url(\'' + esc(img) + '\')"></div>' +
+          '<img decoding="async" class="vg-retro-cover-img" loading="lazy" src="' + esc(img) + '" alt="' + esc(g.title) + '" referrerpolicy="no-referrer" onerror="this.onerror=null;this.src=\'portada.png\';if(this.previousElementSibling){this.previousElementSibling.style.backgroundImage=\'none\';}">' +
+        '</div>' +
+        '<div class="vg-retro-info"><h4>' + esc(g.title) + '</h4>' +
+          '<div class="vg-retro-meta"><span class="vg-retro-platform">' + esc(g.platform) + '</span>' +
+          '<span class="vg-retro-price">' + money(g.venta_mxn) + '<span class="vg-tr-mx">' + money(g.mx) + '</span></span></div>' +
+          '<span class="vg-tr-badge">Cuenta nueva</span>' +
+        '</div></article>';
+    }).join('');
+    actualizarTotales();
+  }
+
+  /* ── Totales y pedido mínimo (todo en pesos) ── */
+  function actualizarTotales() {
+    var countEl = document.getElementById('retroCount');
+    var subEl = document.getElementById('retroSubtotal');
+    var discEl = document.getElementById('retroDiscount');
+    var totalEl = document.getElementById('retroTotal');
+    var subtotal = totalDe(sel);
+    var tryTotal = tryDe(sel);
+    if (countEl) countEl.textContent = sel.length;
+    if (subEl) subEl.textContent = money(subtotal);
+    if (discEl) discEl.textContent = '-' + money(0);
+    if (totalEl) totalEl.textContent = money(subtotal);
+    var btn = $('#retroModal .retro-footer .modal-actions .primary.whatsapp');
+    var faltaTry = Math.max(0, MINIMO_TRY - tryTotal);
+    var faltaMxn = Math.ceil(faltaTry * state.tc);
+    if (btn) {
+      if (!sel.length) {
+        btn.textContent = 'Selecciona juegos para comprar';
+        btn.disabled = true;
+        btn.classList.add('vg-tr-buy');
+      } else if (faltaTry > 0) {
+        btn.textContent = 'Te faltan ' + money(faltaMxn) + ' para completar tu pedido';
+        btn.disabled = true;
+        btn.classList.add('vg-tr-buy');
+      } else {
+        btn.textContent = 'Comprar ' + sel.length + ' juego' + (sel.length === 1 ? '' : 's') + ' · ' + money(subtotal);
+        btn.disabled = false;
+        btn.classList.add('vg-tr-buy');
+      }
+    }
+    var barra = $('#retroModal .vg-tr-progress');
+    if (!barra) {
+      var footer = $('#retroModal .retro-footer');
+      if (footer) {
+        barra = document.createElement('div');
+        barra.className = 'vg-tr-progress';
+        var acciones = $('.modal-actions', footer);
+        if (acciones) footer.insertBefore(barra, acciones);
+        else footer.appendChild(barra);
+      }
+    }
+    if (barra) {
+      var pct = Math.min(100, Math.round((tryTotal / MINIMO_TRY) * 100));
+      barra.classList.toggle('vg-tr-ok', faltaTry <= 0 && sel.length > 0);
+      barra.innerHTML = (sel.length && faltaTry <= 0
+        ? '<b>Pedido mínimo completo.</b> Todos los juegos son para cuenta nueva.'
+        : '<b>Pedido mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva.</b>' +
+          (sel.length
+            ? ' Te faltan ' + money(faltaMxn) + ' en juegos para completar tu pedido.'
+            : ' Elige juegos: los de menos de 300 liras solo se venden en paquete.')) +
+        '<div class="vg-tr-bar"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="vg-tr-note">Juegos para cuenta nueva. El precio que ves ya incluye la ganancia y es menor que en la tienda de México.</div>';
+    }
+  }
+
+  function faltaMinimo() {
+    var tryTotal = tryDe(sel);
+    if (tryTotal >= MINIMO_TRY) return null;
+    return Math.ceil((MINIMO_TRY - tryTotal) * state.tc);
+  }
+
+  function armarPedido() {
+    var total = totalDe(sel);
+    var nombres = sel.map(function (s) {
+      var g = bySlug(s);
+      return g ? g.title + ' (' + money(g.venta_mxn) + ')' : s;
+    }).join(', ');
+    var img = sel.length ? imagenDe(bySlug(sel[0])) : null;
+    return {
+      items: [{ title: 'Colección Xbox Retro — Cuenta Nueva', option: nombres, price: total, image: img, tr_slugs: sel.slice(), vg_tr: true }],
+      total: total, source: 'retro', vg_tr: true, tr_slugs: sel.slice(),
+    };
+  }
+
+  /* ── Revalidación antes de pagar ── */
+  function validarPedido(order) {
+    var slugs = [];
+    (order.items || []).forEach(function (it) {
+      if (Array.isArray(it.tr_slugs)) slugs.push.apply(slugs, it.tr_slugs);
+    });
+    if (Array.isArray(order.tr_slugs)) slugs.push.apply(slugs, order.tr_slugs);
+    slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
+    if (!slugs.length) return Promise.resolve(order);
+    return fetch('/api/validar-tr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slugs: slugs }),
+    })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        if (!d || d.ok !== true) {
+          var malos = (d && d.juegos ? d.juegos.filter(function (j) { return !j.ok; }) : []);
+          var msg = 'No se pudo confirmar el precio actual de ' +
+            (malos.length ? malos.length + ' juego(s) de tu pedido' : 'tu pedido') +
+            '. Vuelve a elegirlos; el precio pudo cambiar en la tienda.';
+          if (d && d.try_ok === false) {
+            msg = 'Tu pedido ya no llega al mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva. Agrega más juegos.';
+          }
+          throw new Error(msg);
+        }
+        var mapa = {};
+        (d.juegos || []).forEach(function (j) { mapa[j.slug] = j; });
+        var cambio = false;
+        (order.items || []).forEach(function (it) {
+          if (!Array.isArray(it.tr_slugs)) return;
+          var nuevo = 0;
+          it.tr_slugs.forEach(function (s) { nuevo += Number((mapa[s] || {}).venta_mxn || 0); });
+          if (nuevo && nuevo !== Number(it.price)) { it.price = nuevo; cambio = true; }
+        });
+        var nuevoTotal = (order.items || []).reduce(function (s, it) { return s + Number(it.price || 0); }, 0);
+        if (nuevoTotal !== Number(order.total)) { order.total = nuevoTotal; cambio = true; }
+        if (cambio) toast('Precio actualizado', 'El precio se actualizó al momento de pagar. Total: ' + money(order.total));
+        return order;
+      });
+  }
+
+  /* ── Overrides: si el catálogo TR no está, manda el modal de siempre ── */
+  var orig = {
+    open: window.openRetroModal,
+    render: window.renderRetroGrid,
+    toggle: window.toggleRetroGame,
+    add: window.addRetroToCart,
+    buy: window.buyRetroNow,
+    pay: window.openPaymentModal,
+  };
+
+  window.openRetroModal = function () {
+    if (!state.listo) return orig.open ? orig.open() : undefined;
+    sel = [];
+    var s = document.getElementById('retroSearch');
+    var p = document.getElementById('retroPlatform');
+    if (s) s.value = '';
+    if (p) p.value = 'all';
+    var modal = document.getElementById('retroModal');
+    if (modal) modal.classList.add('active');
+    setTimeout(pintarGrid, 0);
+  };
+
+  window.renderRetroGrid = function () {
+    if (!state.listo) return orig.render ? orig.render() : undefined;
+    pintarGrid();
+  };
+
+  window.toggleRetroGame = function (id) {
+    if (!state.listo) return orig.toggle ? orig.toggle(id) : undefined;
+    var g = bySlug(id);
+    if (!g) return;
+    var i = sel.indexOf(id);
+    if (i >= 0) sel.splice(i, 1);
+    else sel.push(id);
+    pintarGrid();
+  };
+
+  window.addRetroToCart = function () {
+    if (!state.listo) return orig.add ? orig.add() : undefined;
+    if (!sel.length) { alert('Selecciona al menos un juego.'); return; }
+    var falta = faltaMinimo();
+    if (falta != null) {
+      alert('Te faltan ' + money(falta) + ' en juegos Cuenta Nueva para completar tu pedido. Agrega más juegos.');
+      return;
+    }
+    var order = armarPedido();
+    if (Array.isArray(window.cart)) {
+      window.cart.push(order.items[0]);
+      if (typeof window.updateCartCount === 'function') window.updateCartCount();
+      sel = [];
+      pintarGrid();
+      if (typeof window.closeRetroModal === 'function') window.closeRetroModal();
+      toast('Juegos agregados', 'Colección Xbox Retro — Cuenta Nueva se agregó al carrito.');
+      if (typeof window.openCart === 'function') window.openCart();
+    }
+  };
+
+  window.buyRetroNow = function () {
+    if (!state.listo) return orig.buy ? orig.buy() : undefined;
+    if (!sel.length) { alert('Selecciona al menos un juego.'); return; }
+    var falta = faltaMinimo();
+    if (falta != null) {
+      alert('Te faltan ' + money(falta) + ' en juegos Cuenta Nueva para completar tu pedido. Agrega más juegos.');
+      return;
+    }
+    var order = armarPedido();
+    sel = [];
+    pintarGrid();
+    if (typeof window.closeRetroModal === 'function') window.closeRetroModal();
+    window.openPaymentModal(order);
+  };
+
+  /* El pago de un pedido Cuenta Nueva pasa por la revalidación. Los demás
+     pedidos siguen su camino sin tocarlos. */
+  window.openPaymentModal = function (order) {
+    var esTR = !!order && (order.vg_tr || (order.items || []).some(function (it) { return it && it.vg_tr; }));
+    if (!esTR) return orig.pay ? orig.pay(order) : undefined;
+    validarPedido(order)
+      .then(function (ok) { if (orig.pay) orig.pay(ok); })
+      .catch(function (e) { toast('No se puede pagar aún', e && e.message ? e.message : 'No se pudo verificar el precio actual.'); });
+  };
+
+  window.vgTR = {
+    state: state,
+    recargar: cargar,
+    seleccion: function () { return sel.slice(); },
+    tryTotal: function () { return tryDe(sel); },
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', cargar);
+  } else {
+    cargar();
+  }
+})();
+</script>
 </body>
 </html>
