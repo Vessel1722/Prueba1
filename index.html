@@ -47705,7 +47705,7 @@ button.vg119-incompleto{
      Consolida las tarjetas: misma altura, imagen con proporción fija, título a 2 líneas,
      precio y botón anclados abajo. Va al final para ganar a los parches anteriores. -->
 <style id="vg-redesign-mockup-v1">
-  .wrap{max-width:1280px !important;margin-left:auto !important;margin-right:auto !important}
+  .wrap{max-width:1480px !important;margin-left:auto !important;margin-right:auto !important}
   /* Rejilla del catálogo: 2 columnas compactas en móvil, 4 en tablet, 5 en PC */
   .grid{grid-template-columns:repeat(2,minmax(0,1fr)) !important;gap:10px !important;align-items:stretch !important}
   @media(min-width:860px){.grid{grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:15px !important}}
@@ -47717,7 +47717,7 @@ button.vg119-incompleto{
   .info{display:flex !important;flex-direction:column !important;flex:1 1 auto !important;padding:10px !important;gap:8px !important;min-width:0 !important}
   .card h3{font-size:.875rem !important;line-height:1.25 !important;min-height:2.5em !important;margin:0 !important;display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;overflow:hidden !important}
   .desc{display:none !important}
-  .price{font-size:1rem !important;margin-top:auto !important}
+  .price{font-size:1rem !important;margin-top:0 !important}
   .premium-actions{display:grid !important;grid-template-columns:1fr !important;gap:8px !important;margin-top:auto !important}
   .premium-actions .detail-btn,.detail-btn{min-height:44px !important;width:100% !important;font-size:.875rem !important;padding:10px !important}
   .quick-add-btn{display:none !important}
@@ -47727,6 +47727,7 @@ button.vg119-incompleto{
     .info{padding:14px !important}
     .card h3{font-size:1rem !important}
     .price{font-size:1.125rem !important}
+    .desc{display:block !important;min-height:54px !important;font-size:.875rem !important;line-height:1.4 !important}
   }
   /* Hero compacto en móvil, para que el catálogo suba */
   @media(max-width:760px){
@@ -47735,7 +47736,7 @@ button.vg119-incompleto{
     .wrap{padding-left:12px !important;padding-right:12px !important}
   }
   /* Tarjetas de secciones: más chicas, 148-160px de alto */
-  .service-carousel-card{height:160px !important;flex:0 0 min(280px,82vw) !important}
+  .service-carousel-card{height:160px !important;flex:0 0 min(200px,46vw) !important}
   .home-sections{padding:4px 12px 16px !important}
   @media(min-width:860px){.service-carousel-card{height:178px !important;flex-basis:365px !important}}
   /* Xbox One / Series: rejilla compacta y tarjetas alineadas, portada cuadrada */
@@ -47746,11 +47747,12 @@ button.vg119-incompleto{
   .vg-xbox-game-cover{height:auto !important;aspect-ratio:1/1 !important;flex-shrink:0 !important}
   .vg-xbox-game-info{display:flex !important;flex-direction:column !important;flex:1 1 auto !important;padding:10px !important;gap:6px !important;min-width:0 !important}
   .vg-xbox-game-info h4{font-size:.875rem !important;line-height:1.25 !important;min-height:2.5em !important;display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;overflow:hidden !important}
-  .vg-x90-precios{margin-top:auto !important}
+  .vg-x90-precios{margin-top:0 !important}
   .vg-x113-acciones{display:flex !important;gap:8px !important;margin-top:auto !important}
   .vg-x113-acciones .primary{min-height:44px !important;flex:1 !important}
-  /* Sin scroll horizontal por culpa de las tarjetas */
-  html,body{overflow-x:hidden !important}
+  /* Sin scroll horizontal por culpa de las tarjetas; clip (no hidden)
+     para no romper los elementos sticky de la cabecera y los filtros. */
+  body{overflow-x:clip !important}
   img{max-width:100% !important}
 </style>
 
