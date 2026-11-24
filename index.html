@@ -47925,5 +47925,72 @@ button.vg119-incompleto{
   }
 </style>
 
+<style id="vg-fase1-v1">
+  /* ============================================================
+     Vessel Games Fase 1 — Prueba1 solamente
+     Un solo bloque al final, con selectores de alta especificidad
+     (html body + ID donde ya hay reglas ID), para ganar a los
+     121 bloques y 8,060 !important del archivo.
+     No toca JS, datos, precios ni lógica de compra.
+     Hero: video quitado por decisión del dueño; imagen propia
+     vg-hero-vessel.jpg (logo Vessel, fondo neón) con animación
+     Ken Burns ligera. Sin video = sin "Unable to play media".
+     ============================================================ */
+
+  /* 1. Banda negra: quitar el padding-top de 176px y cabecera sticky */
+  html body{padding-top:0 !important}
+  html body header.topbar{position:sticky !important;top:0 !important;z-index:60 !important}
+  html{scroll-padding-top:90px !important}
+
+  /* 2. Buscador ancho en PC: columna central flexible, acciones compactas */
+  @media(min-width:1024px){
+    html body header.topbar .nav{grid-template-columns:minmax(180px,240px) minmax(0,1fr) auto !important;max-width:1600px !important}
+    html body header.topbar .nav .searchbar{width:100% !important;max-width:none !important;min-width:0 !important}
+    html body header.topbar .nav-actions .pill{padding:10px 10px !important;font-size:.82rem !important}
+    html body header.topbar .nav-actions{gap:8px !important}
+  }
+
+  /* 3. Fila de categorías: sin sticky inventado, sin solape con el badge */
+  html body header.topbar .category-nav{position:static !important;top:auto !important}
+  html body header.topbar .category-row{padding-right:16px !important}
+  html body #vgAdminCornerBtn{position:fixed !important;top:auto !important;bottom:86px !important;right:12px !important}
+
+  /* 4. Inicio: carrusel flex (no rejilla), sin hueco ni solape con el hero */
+  html body #homeTiles::before,html body #homeTiles::after{display:none !important;content:none !important}
+  html body #homeTiles{display:flex !important;margin-top:0 !important;overflow-x:auto !important}
+  html body #homeTiles .service-carousel-card{flex:0 0 min(320px,84vw) !important}
+
+  /* 5. Tarjetas unificadas por plantilla (no .card genérico) */
+  html body #featuredGrid .card,html body #productsGrid .card{border-radius:12px !important}
+  html body #featuredGrid .card .imgbox,html body #productsGrid .card .imgbox{aspect-ratio:4/3 !important;height:auto !important}
+  html body #featuredGrid .card h3,html body #productsGrid .card h3{font-size:.95rem !important}
+  @media(min-width:1024px){
+    html body #featuredGrid,html body #productsGrid{grid-template-columns:repeat(6,minmax(0,1fr)) !important}
+  }
+  @media(min-width:1440px){
+    html body #featuredGrid,html body #productsGrid{grid-template-columns:repeat(7,minmax(0,1fr)) !important}
+  }
+
+  /* 6. Botón Agregar al carrito visible sin hover en PC */
+  html body #featuredGrid .card .premium-actions,html body #productsGrid .card .premium-actions{grid-template-columns:1fr 44px !important}
+  html body #featuredGrid .card .premium-actions .quick-add-btn,html body #productsGrid .card .premium-actions .quick-add-btn{display:grid !important;opacity:1 !important}
+
+  /* 7. Hero con la imagen del dueño, animación ligera, sin video */
+  html body #vgHeroVideo{display:none !important}
+  html body #homeView .hero .hero-bg{display:none !important}
+  html body #homeView .hero{position:relative !important;overflow:hidden !important;background:#070912 !important}
+  html body #homeView .hero::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:url('vg-hero-vessel.jpg') !important;background-size:cover !important;background-position:center 30% !important;animation:vgKenBurns 18s ease-in-out infinite alternate !important}
+  html body #homeView .hero::after{content:"" !important;position:absolute !important;inset:0 !important;background:linear-gradient(90deg,rgba(5,7,15,.82),rgba(5,7,15,.45) 55%,rgba(5,7,15,.25)) !important}
+  html body #homeView .hero-inner{position:relative !important;z-index:2 !important}
+  @keyframes vgKenBurns{from{transform:scale(1)}to{transform:scale(1.08)}}
+
+  /* 8. Hero compacto en PC */
+  @media(min-width:1024px){
+    html body #homeView .hero{min-height:380px !important;max-height:420px !important}
+    html body #homeView .hero-inner{padding:56px 22px 48px !important}
+    html body #homeView .hero h1{font-size:clamp(2rem,4vw,3.2rem) !important}
+  }
+</style>
+
 </body>
 </html>
