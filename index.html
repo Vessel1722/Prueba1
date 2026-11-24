@@ -7238,536 +7238,7 @@ body{margin:0;background:#070912;color:#fff;font-family:system-ui,-apple-system,
   #vgAdminAnalyticsBody .vg-analytics-row strong{font-variant-numeric:tabular-nums}
   @media(max-width:820px){#vgAdminAnalyticsBody .vg-admin-analytics-grid{grid-template-columns:repeat(2,minmax(0,1fr))!important}#vgAdminAnalyticsBody .vg-analytics-layout{grid-template-columns:1fr!important}}
 
-<style id="vg-admin-clean-v1">
-/* ============================================================
-   vg-admin-clean-v1 · Rediseño visual del panel admin
-   ------------------------------------------------------------
-   SOLO PRESENTACIÓN. No toca lógica JS, textos, botones, precios,
-   costos, Supabase, RLS ni el orden de las secciones. No cambia
-   ningún id ni clase que use el JS.
-   Gana a las 5+ capas viejas porque va al final del primer bloque
-   de estilos y usa #vgAdminModal + !important, la misma convención
-   que ya usan esas capas (por eso el h2 llegó a medir 3.1rem y
-   los números de stats 2.6rem: cada capa subía la apuesta).
-   Ritmo único: 8 / 12 / 16 / 20 / 24 px · radios 12–16 px ·
-   morado #8b5cf6 y menta #19e6c1 SOLO como acento, nunca como
-   fondo saturado. Una jerarquía por pantalla:
-   título > resumen > filtros > lista.
-   ============================================================ */
 
-/* ── 1 · Panel y cabecera: se acabó el grito ── */
-#vgAdminModal{
-  background:rgba(0,0,0,.88) !important;
-}
-#vgAdminModal .vg-admin-panel{
-  background:linear-gradient(180deg,#0b0e1a,#070a12) !important;
-  border:0 !important;
-  border-radius:0 !important;
-}
-#vgAdminModal .vg-admin-head{
-  min-height:0 !important;
-  padding:16px 24px !important;
-  background:transparent !important;
-  border-bottom:1px solid rgba(255,255,255,.08) !important;
-}
-#vgAdminModal .vg-admin-head::after{display:none !important}
-#vgAdminModal .vg-admin-head h2{
-  font-size:1.35rem !important;
-  line-height:1.2 !important;
-  letter-spacing:-.02em !important;
-  margin:0 !important;
-}
-#vgAdminModal .vg-admin-head p{
-  font-size:0.85rem !important;
-  line-height:1.4 !important;
-  max-width:none !important;
-  color:#8e9cba !important;
-  margin:2px 0 0 !important;
-}
-#vgAdminModal .vg-admin-x{
-  position:static !important;
-  width:40px !important;
-  height:40px !important;
-  flex:none !important;
-  border-radius:12px !important;
-  font-size:1.1rem !important;
-}
-
-/* ── 2 · Pestañas: una fila ordenada, activo discreto ── */
-#vgAdminModal .vg-admin-tabs{
-  padding:10px 24px !important;
-  gap:8px !important;
-  flex-wrap:wrap !important;
-  overflow-x:visible !important;
-  background:transparent !important;
-  border-bottom:1px solid rgba(255,255,255,.08) !important;
-}
-#vgAdminModal .vg-admin-tab,
-#vgAdminModal .vg-admin-tab-x{
-  padding:8px 13px !important;
-  min-height:0 !important;
-  font-size:0.8rem !important;
-  font-weight:700 !important;
-  letter-spacing:0 !important;
-  border-radius:999px !important;
-  border:1px solid rgba(255,255,255,.10) !important;
-  background:rgba(255,255,255,.03) !important;
-  color:#c4cee6 !important;
-  white-space:nowrap !important;
-}
-#vgAdminModal .vg-admin-tab:hover,
-#vgAdminModal .vg-admin-tab-x:hover{
-  background:rgba(255,255,255,.06) !important;
-  border-color:rgba(255,255,255,.16) !important;
-}
-#vgAdminModal .vg-admin-tab.active,
-#vgAdminModal .vg-admin-tab-x.active{
-  background:rgba(25,230,193,.12) !important;
-  border-color:rgba(25,230,193,.40) !important;
-  color:#8ff5e3 !important;
-}
-#vgAdminModal .vg17-dot{
-  min-width:16px !important;
-  height:16px !important;
-  font-size:0.65rem !important;
-  top:-4px !important;
-  right:-4px !important;
-}
-
-/* ── 3 · Contenido: un solo ritmo de aire ── */
-#vgAdminModal .vg-admin-content{
-  padding:20px 24px 28px !important;
-}
-#vgAdminModal .vg-admin-section > h3,
-#vgAdminModal .vg-admin-section > h4{
-  margin:0 0 12px !important;
-  font-size:0.95rem !important;
-}
-#vgAdminModal .vg-admin-note{
-  padding:11px 14px !important;
-  margin-bottom:14px !important;
-  border-radius:12px !important;
-  font-size:0.85rem !important;
-  line-height:1.5 !important;
-}
-
-/* ── 4 · Stats: 4 tarjetas iguales, números tranquilos ── */
-#vgAdminModal #vgAdminStats,
-#vgAdminModal .vg-admin-stats,
-#vgAdminModal #vgAdminPedidos .vg17-cards,
-#vgAdminModal #vgAdminSoporte .vg17-cards{
-  display:grid !important;
-  grid-template-columns:repeat(4,minmax(0,1fr)) !important;
-  gap:12px !important;
-  margin-bottom:16px !important;
-}
-#vgAdminModal #vgAdminStats .vg-admin-stat,
-#vgAdminModal .vg-admin-stat,
-#vgAdminModal .vg17-stat{
-  min-height:0 !important;
-  padding:14px 16px !important;
-  border-radius:14px !important;
-  background:rgba(255,255,255,.03) !important;
-  border:1px solid rgba(255,255,255,.08) !important;
-}
-#vgAdminModal #vgAdminStats .vg-admin-stat b,
-#vgAdminModal .vg-admin-stat b,
-#vgAdminModal .vg17-stat b{
-  font-size:1.4rem !important;
-  line-height:1.1 !important;
-  margin:2px 0 0 !important;
-  font-variant-numeric:tabular-nums !important;
-}
-#vgAdminModal #vgAdminStats .vg-admin-stat span,
-#vgAdminModal .vg-admin-stat span,
-#vgAdminModal .vg17-stat span{
-  font-size:0.7rem !important;
-  letter-spacing:.08em !important;
-  text-transform:uppercase !important;
-  color:#8e9cba !important;
-}
-
-/* ── 5 · Herramientas: buscador y filtros en una sola fila ── */
-#vgAdminModal .vg-admin-tools{
-  display:flex !important;
-  flex-wrap:wrap !important;
-  align-items:center !important;
-  gap:10px !important;
-  margin-bottom:16px !important;
-}
-#vgAdminModal .vg-admin-tools .vg-admin-input{
-  flex:1 1 240px !important;
-  min-width:0 !important;
-  width:auto !important;
-}
-#vgAdminModal .vg-admin-tools .vg-admin-select{
-  flex:none !important;
-}
-#vgAdminModal .vg-admin-input,
-#vgAdminModal .vg-admin-select,
-#vgAdminModal .vg-admin-textarea{
-  min-height:40px !important;
-  padding:10px 12px !important;
-  border-radius:10px !important;
-  font-size:0.875rem !important;
-}
-#vgAdminModal .vg-admin-btn{
-  min-height:40px !important;
-  padding:10px 14px !important;
-  border-radius:10px !important;
-  font-size:0.85rem !important;
-}
-#vgAdminModal .vg-admin-btn.primary{
-  background:#19e6c1 !important;
-  color:#04211b !important;
-  border-color:transparent !important;
-}
-
-/* ── 6 · Tarjetas y cajas: mismo peso, etiquetas mudas ── */
-#vgAdminModal .vg-admin-card,
-#vgAdminModal .vg17-box,
-#vgAdminModal .vg-product-admin-card,
-#vgAdminModal .vg-setting-card{
-  padding:14px !important;
-  border-radius:14px !important;
-  margin-bottom:10px !important;
-  background:rgba(255,255,255,.03) !important;
-  border:1px solid rgba(255,255,255,.08) !important;
-}
-#vgAdminModal .vg17-box > span,
-#vgAdminModal .vg17-box > span:first-child{
-  font-size:0.68rem !important;
-  letter-spacing:.08em !important;
-  color:#8e9cba !important;
-  margin-bottom:4px !important;
-}
-#vgAdminModal .vg17-box > b{
-  font-size:0.875rem !important;
-  line-height:1.45 !important;
-  font-weight:600 !important;
-}
-#vgAdminModal .vg17-grid2{
-  gap:10px !important;
-}
-
-/* ── 7 · PEDIDOS (el foco): 3 columnas con jerarquía ── */
-#vgAdminModal #vgAdminPedidos .vgA-grid{
-  grid-template-columns:300px minmax(0,1fr) 340px !important;
-  gap:16px !important;
-  height:calc(100vh - 240px) !important;
-  min-height:420px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-col{
-  background:rgba(255,255,255,.02) !important;
-  border:1px solid rgba(255,255,255,.08) !important;
-  border-radius:16px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-colhead{
-  min-height:44px !important;
-  padding:0 16px !important;
-  font-size:0.7rem !important;
-  letter-spacing:.1em !important;
-  text-transform:uppercase !important;
-  color:#8e9cba !important;
-  background:transparent !important;
-  border-bottom:1px solid rgba(255,255,255,.08) !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-colhead b{
-  color:#e6ebf7 !important;
-  font-size:0.75rem !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-scroll{
-  padding:10px !important;
-}
-
-/* Fila de pedido: título + total arriba, cliente en gris,
-   y UN solo distintivo de estado. El cupón queda como texto
-   discreto, no como segundo chip. */
-#vgAdminModal #vgAdminPedidos .vgA-row{
-  padding:12px !important;
-  margin-bottom:8px !important;
-  border-radius:12px !important;
-  background:rgba(255,255,255,.03) !important;
-  border:1px solid transparent !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-row:hover{
-  background:rgba(255,255,255,.05) !important;
-  border-color:rgba(255,255,255,.10) !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-row.active{
-  background:rgba(139,92,246,.10) !important;
-  border-color:rgba(139,92,246,.45) !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-rowtop{margin-bottom:2px !important}
-#vgAdminModal #vgAdminPedidos .vgA-rowtop b{
-  font-size:0.875rem !important;
-  font-weight:700 !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-amt{
-  font-size:0.85rem !important;
-  font-weight:800 !important;
-  color:#19e6c1 !important;
-  font-variant-numeric:tabular-nums !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-rowsub{
-  font-size:0.75rem !important;
-  color:#8e9cba !important;
-  margin:2px 0 0 !important;
-  white-space:nowrap !important;
-  overflow:hidden !important;
-  text-overflow:ellipsis !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-rowfoot{
-  margin-top:8px !important;
-  gap:8px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-rowfoot time{
-  font-size:0.7rem !important;
-  color:#68789c !important;
-  margin-left:auto !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-row:has(.vgA-new){
-  padding-right:24px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-new{
-  width:8px !important;
-  height:8px !important;
-  top:12px !important;
-  right:12px !important;
-}
-#vgAdminModal #vgAdminPedidos .vg17-chip{
-  min-height:22px !important;
-  padding:2px 9px !important;
-  margin-top:0 !important;
-  font-size:0.68rem !important;
-  letter-spacing:.05em !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-cup{
-  background:transparent !important;
-  border:0 !important;
-  padding:0 !important;
-  color:#8e9cba !important;
-  font-size:0.7rem !important;
-  font-weight:700 !important;
-}
-
-/* Detalle: la ficha manda, el resto baja la voz */
-#vgAdminModal #vgAdminPedidos .vgA-idcard{
-  padding:14px 16px !important;
-  margin-bottom:12px !important;
-  border-radius:14px !important;
-  background:rgba(255,255,255,.03) !important;
-  border:1px solid rgba(255,255,255,.08) !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-idtop b{
-  font-size:1.05rem !important;
-  font-weight:800 !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-amt.big{
-  font-size:1.1rem !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-idmeta{
-  font-size:0.75rem !important;
-  color:#8e9cba !important;
-  margin-top:4px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-cupgrid{
-  gap:10px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-cupgrid small{
-  font-size:0.65rem !important;
-  letter-spacing:.08em !important;
-  text-transform:uppercase !important;
-  color:#8e9cba !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-cupgrid b{
-  font-size:0.95rem !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-cupquien{
-  font-size:0.75rem !important;
-  color:#8e9cba !important;
-  margin:8px 0 0 !important;
-  line-height:1.45 !important;
-}
-#vgAdminModal #vgAdminPedidos .vg17-proof img{
-  max-height:300px !important;
-  border-radius:12px !important;
-}
-/* Estado: 4 botones en una fila, solo el activo se marca */
-#vgAdminModal #vgAdminPedidos .vg17-quick{
-  gap:8px !important;
-  margin-bottom:0 !important;
-}
-#vgAdminModal #vgAdminPedidos .vg17-quick button{
-  min-height:36px !important;
-  padding:8px 12px !important;
-  font-size:0.8rem !important;
-  border-radius:10px !important;
-  background:rgba(255,255,255,.04) !important;
-  border:1px solid rgba(255,255,255,.10) !important;
-  color:#c4cee6 !important;
-}
-#vgAdminModal #vgAdminPedidos .vg17-quick button.on{
-  background:#19e6c1 !important;
-  border-color:transparent !important;
-  color:#04211b !important;
-}
-/* Entregar: la ÚNICA acción principal del detalle */
-#vgAdminModal #vgAdminPedidos .vgA-deliver{
-  border-color:rgba(25,230,193,.30) !important;
-  background:rgba(25,230,193,.05) !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-deliver p{
-  font-size:0.8rem !important;
-  color:#8e9cba !important;
-  line-height:1.5 !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-deliver textarea{
-  min-height:76px !important;
-  font-size:0.875rem !important;
-  border-radius:10px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-deliver .vg17-btn{
-  width:100% !important;
-  min-height:44px !important;
-  margin-top:10px !important;
-  background:#19e6c1 !important;
-  color:#04211b !important;
-  border-color:transparent !important;
-  font-size:0.9rem !important;
-}
-/* Chat: mensajes arriba, escritura anclada abajo */
-#vgAdminModal #vgAdminPedidos .vgA-chat .vg17-msgs{
-  flex:1 !important;
-  min-height:0 !important;
-  max-height:none !important;
-  margin:10px 10px 0 !important;
-  border-radius:12px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-compose{
-  padding:10px !important;
-}
-#vgAdminModal #vgAdminPedidos .vgA-compose .vg17-quick{
-  max-height:64px !important;
-  overflow-y:auto !important;
-  margin-bottom:8px !important;
-}
-
-/* ── 8 · Resto de secciones: mismo ritmo, sin sorpresas ── */
-#vgAdminModal .vg-admin-table th{
-  font-size:0.68rem !important;
-  letter-spacing:.08em !important;
-  padding:0 10px 6px !important;
-}
-#vgAdminModal .vg-admin-table td{
-  padding:10px !important;
-  font-size:0.85rem !important;
-  border-radius:0 !important;
-}
-#vgAdminModal .vg-admin-table td:first-child{border-radius:12px 0 0 12px !important}
-#vgAdminModal .vg-admin-table td:last-child{border-radius:0 12px 12px 0 !important}
-#vgAdminModal #vgAdminProductsList{
-  gap:14px !important;
-}
-#vgAdminModal .vg-product-admin-head img{
-  width:64px !important;
-  height:64px !important;
-  border-radius:12px !important;
-}
-#vgAdminModal .vg-admin-login-card{
-  padding:28px !important;
-  border-radius:20px !important;
-}
-#vgAdminModal .vg-admin-login-card h3{
-  font-size:1.35rem !important;
-}
-/* El sistema clásico de pedidos (tabla / tarjeta de 6 columnas)
-   hoy no lo pinta la vista viva de Pedidos, pero si alguna vista
-   lo usa, que no vuelva a verse saturado: aire y sin degradados. */
-#vgAdminModal .vg-order-card{
-  padding:14px !important;
-  margin-bottom:10px !important;
-  border-radius:14px !important;
-  gap:12px !important;
-}
-#vgAdminModal .vg-order-card:hover,
-#vgAdminModal .vg-order-card.active{
-  background:rgba(255,255,255,.04) !important;
-  border-color:rgba(139,92,246,.35) !important;
-}
-#vgAdminModal .vg-order-col h5{
-  font-size:0.65rem !important;
-  letter-spacing:.08em !important;
-  margin-bottom:4px !important;
-}
-#vgAdminModal .vg-order-main-title{font-size:0.95rem !important}
-#vgAdminModal .vg-order-sub{font-size:0.8rem !important}
-#vgAdminModal #vgOrderPreview{
-  padding:18px !important;
-  border-radius:16px !important;
-  background:rgba(255,255,255,.03) !important;
-  border:1px solid rgba(255,255,255,.08) !important;
-}
-#vgAdminModal .vg-proof-preview-img{max-height:420px !important}
-
-/* ── 9 · Responsive: una columna, nada tapado ── */
-@media(max-width:1280px){
-  #vgAdminModal #vgAdminPedidos .vgA-grid{
-    grid-template-columns:280px minmax(0,1fr) !important;
-    grid-template-rows:minmax(0,1fr) auto !important;
-    height:calc(100vh - 230px) !important;
-  }
-  #vgAdminModal #vgAdminPedidos .vgA-chat{
-    grid-column:1 / -1 !important;
-    height:380px !important;
-  }
-  #vgAdminModal #vgAdminPedidos .vgA-chat .vg17-msgs{
-    max-height:none !important;
-  }
-}
-@media(max-width:900px){
-  #vgAdminModal .vg-admin-head{padding:14px 16px !important}
-  #vgAdminModal .vg-admin-head h2{font-size:1.2rem !important}
-  #vgAdminModal .vg-admin-tabs{
-    padding:8px 12px !important;
-    flex-wrap:nowrap !important;
-    overflow-x:auto !important;
-  }
-  #vgAdminModal .vg-admin-content{padding:16px 12px 24px !important}
-  #vgAdminModal #vgAdminStats,
-  #vgAdminModal .vg-admin-stats,
-  #vgAdminModal #vgAdminPedidos .vg17-cards,
-  #vgAdminModal #vgAdminSoporte .vg17-cards{
-    grid-template-columns:repeat(2,minmax(0,1fr)) !important;
-    gap:10px !important;
-  }
-  #vgAdminModal #vgAdminPedidos .vgA-grid{
-    grid-template-columns:1fr !important;
-    grid-template-rows:none !important;
-    grid-auto-rows:min-content !important;
-    height:auto !important;
-    min-height:0 !important;
-    gap:12px !important;
-  }
-  #vgAdminModal #vgAdminPedidos .vgA-list{max-height:320px !important}
-  #vgAdminModal #vgAdminPedidos .vgA-chat{height:420px !important}
-  #vgAdminModal #vgAdminPedidos .vgA-detail .vgA-scroll{max-height:none !important}
-  #vgAdminModal #vgAdminPedidos .vg17-grid2{grid-template-columns:1fr !important}
-  #vgAdminModal .vg-admin-tools{flex-direction:column !important;align-items:stretch !important}
-  #vgAdminModal .vg-admin-tools .vg-admin-input,
-  #vgAdminModal .vg-admin-tools .vg-admin-select,
-  #vgAdminModal .vg-admin-tools .vg-admin-btn{width:100% !important}
-  #vgAdminModal .vg-order-card{grid-template-columns:1fr !important}
-  #vgAdminModal #vgAdminProductsList{grid-template-columns:1fr !important}
-}
-@media(max-width:640px){
-  #vgAdminModal #vgAdminStats .vg-admin-stat b,
-  #vgAdminModal .vg-admin-stat b,
-  #vgAdminModal .vg17-stat b{font-size:1.2rem !important}
-  #vgAdminModal #vgAdminPedidos .vgA-rowfoot time{display:none !important}
-}
-
-</style>
 </style>
 <style id="vg-design-pro">
 /* ============================================================
@@ -49329,6 +48800,656 @@ button.vg119-incompleto{
     flex:1 1 100% !important;
   }
 }
+
+/* --- 5c · Apriete v1.2 (solo escritorio ≥981px) ---
+   Verificado en vivo 1920×919 (modal Viki): la franja salía en 2 filas
+   y los relacionados quedaban bajo la barra. Causas medidas por cascada:
+   la tarjeta mide 900px de ancho (vg-modal-css-fix) → cuerpo 460px →
+   contenido ~406px, y la franja necesita ~455px; y la columna suma
+   ~929px contra ~854px de alto máximo. Se ensancha la tarjeta a 1080px
+   (el ancho del mockup aprobado) y se recortan ~190px verticales.
+   Los selectores usan :not(.vg-actas-pro-modal) para igualar la
+   especificidad (1,2,0) del bloque vg-modal-aprieta-arriba-v137 y no
+   tocar el layout de actas. Móvil (≤640px) queda como en v1.1. */
+@media (min-width:981px){
+  /* Tarjeta 900 → 1080px: el cuerpo pasa de 460 a 640px (contenido ~596px),
+     la franja (~404px ya apretada) cabe en una fila con margen de sobra. */
+  #productModal:not(.vg-actas-pro-modal) .modal-card{
+    width:min(1080px, calc(100vw - 28px)) !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .modal-body{
+    padding:14px 22px 16px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) #modalCat{
+    padding:6px 11px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) #modalTitle{
+    font-size:1.9rem !important;
+    margin-top:6px !important;
+    margin-bottom:6px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) #modalDesc{
+    line-height:1.5 !important;
+    margin:0 0 4px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .vg-modal-bigprice{
+    margin:6px 0 2px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .vg-bp-value{
+    font-size:1.7rem !important;
+  }
+  /* Franja en una fila: fuente/padding/gap menores + etiqueta acortada
+     en el JS ("Entrega 20 min–2 h"). Ancho estimado ~404px < 596px. */
+  #productModal:not(.vg-actas-pro-modal) .vg-modal-trust{
+    gap:5px !important;
+    margin:8px 0 4px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .vg-modal-trust .vg-trust-item{
+    flex:1 1 auto !important;
+    padding:6px 8px !important;
+    font-size:.68rem !important;
+    gap:5px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .vg-modal-trust .vg-trust-item i{
+    font-size:.8rem !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .modal-body > h3{
+    margin:8px 0 6px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) #modalOptions .option{
+    padding:8px 12px !important;
+    margin:5px 0 !important;
+  }
+  /* Relacionados: más compactos para que el título + la primera fila
+     de tarjetas se vean sin desplazar a 1920×919. */
+  #productModal:not(.vg-actas-pro-modal) #vgRelatedSection{
+    margin-top:10px !important;
+    padding-top:10px !important;
+    margin-bottom:6px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) #vgRelatedSection h4{
+    margin:0 0 8px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .vg-related-chip img{
+    height:60px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .vg-related-chip-info{
+    padding:6px 8px !important;
+  }
+  /* Barra: un poco más baja; Compartir/Copiar link con altura fija. */
+  #productModal:not(.vg-actas-pro-modal) .modal-actions{
+    padding:10px 0 4px !important;
+    gap:8px !important;
+  }
+  #productModal:not(.vg-actas-pro-modal) .modal-actions .vg-share-btn,
+  #productModal:not(.vg-actas-pro-modal) .modal-actions #vgCopyProductLinkBtn{
+    flex:0 0 auto !important;
+    height:40px !important;
+    min-height:40px !important;
+    padding:8px 14px !important;
+    width:100% !important;
+    font-size:.85rem !important;
+  }
+}
+</style>
+<style id="vg-admin-v2">
+/* ================================================================
+   vg-admin-v2 · Rediseño del panel admin, segunda versión
+   ---------------------------------------------------------------
+   POR QUÉ NO SE VEÍA vg-admin-clean-v1 (verificado en el archivo):
+   - Era el bloque de estilos nº 2 de 125, en la línea 7241,
+     dentro del primer bloque de estilos. Quedaban 123 bloques DESPUÉS.
+   - Reglas posteriores con igual o mayor especificidad + !important
+     lo pisaban, por ejemplo:
+       · h2: línea 26902 "html body #vgAdminModal.active.active.active
+         .vg-admin-head h2{font-size:0.75rem!important}" (triple
+         .active) y línea 42998 "19px!important".
+       · pestaña activa: líneas 43034, 43782, 43805, 44494, 44514.
+       · panel: línea 42955 grid 232px 1fr (barra lateral v123),
+         línea 43745 background var(--l-bg), línea 44806 100vw.
+       · tema claro v127 (#F1F3F5) y carbón v130 (#16181D) redefinen
+         las variables --l-* que usa casi todo el panel.
+     Además clean-v1 suponía pestañas horizontales arriba, pero en
+     PC el panel es en realidad una BARRA LATERAL (v123, 232px).
+     Resultado: fondo oscuro casi igual que antes y títulos/tabs
+     con los valores viejos. Por eso "se mira igual".
+
+   QUÉ CAMBIA EN v2 PARA QUE SÍ GANE Y SÍ SE NOTE:
+   - Este bloque es el ÚLTIMO bloque de estilos del documento
+     (después de vg-fase2-paso2), así que en empate de
+     especificidad gana por ir después.
+   - Casi todas las reglas usan "html body #vgAdminModal#vgAdminModal"
+     (DOBLE ID) + !important, y el h2 usa triple .active con doble
+     ID, para ganar también a la regla de la línea 26902.
+   - Redefine las variables --l-* con una paleta CLARA propia, así
+     que hasta las reglas viejas que usan var(--l-bg) pintan claro.
+   - Cambio OBVIO: panel CLARO (fondo #eef1f7, tarjetas blancas),
+     barra lateral MORADA con pestaña activa blanca, título grande
+     oscuro, stats con número morado grande, Entregar en verde
+     menta a todo lo ancho. Identidad Vessel: morado #8b5cf6 /
+     #6d28d9 y menta #19e6c1.
+   SOLO PRESENTACIÓN. No toca lógica JS, textos, botones, precios,
+   costos, Supabase, RLS ni el orden de las secciones. No cambia
+   ningún id ni clase que use el JS.
+   ================================================================ */
+
+/* ── 0 · Variables: paleta clara propia ── */
+html body #vgAdminModal#vgAdminModal{
+  --l-bg:#e9edf5!important;
+  --l-surface:#ffffff!important;
+  --l-surface-2:#f4f6fb!important;
+  --l-surface-3:#e8ecf4!important;
+  --l-ink:#141a2e!important;
+  --l-ink-2:#3d465e!important;
+  --l-muted:#6b7590!important;
+  --l-faint:#8a93a8!important;
+  --l-line:#dfe4ef!important;
+  --l-line-2:#cdd4e3!important;
+  --l-accent:#6d28d9!important;
+  --l-accent-ink:#6d28d9!important;
+  --l-accent-wash:#f3efff!important;
+  --l-slate:#241b4d!important;
+  --l-ok:#0ea47a!important;
+  --l-ok-wash:#e2f8f0!important;
+  --l-warn:#b45309!important;
+  --l-warn-wash:#fef3c7!important;
+  --l-crit:#dc2626!important;
+  --l-crit-wash:#fee2e2!important;
+  --l-info-wash:#eef2ff!important;
+  --l-sobre:#ffffff!important;
+  background:rgba(13,16,38,.62)!important;
+}
+html body #vgAdminModal#vgAdminModal.active{display:flex!important;}
+
+/* ── 1 · Panel: pantalla completa, claro, sin brillos ── */
+html body #vgAdminModal#vgAdminModal .vg-admin-panel{
+  background:#ffffff!important;
+  color:#141a2e!important;
+  width:100vw!important;
+  max-width:100vw!important;
+  height:100vh!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  border-radius:0!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-panel::before,
+html body #vgAdminModal#vgAdminModal .vg-admin-panel::after{display:none!important;background:none!important;}
+
+/* ── 2 · Cabecera: blanca, con línea morada, título GRANDE ── */
+html body #vgAdminModal#vgAdminModal .vg-admin-head{
+  background:#ffffff!important;
+  border-bottom:3px solid #6d28d9!important;
+  padding:18px 28px!important;
+  min-height:78px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:16px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-head::before,
+html body #vgAdminModal#vgAdminModal .vg-admin-head::after{display:none!important;background:none!important;}
+html body #vgAdminModal#vgAdminModal.active.active.active .vg-admin-head h2,
+html body #vgAdminModal#vgAdminModal .vg-admin-head h2{
+  font-size:1.65rem!important;
+  line-height:1.15!important;
+  font-weight:900!important;
+  letter-spacing:-.02em!important;
+  color:#141a2e!important;
+  margin:0!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-head p{
+  font-size:.92rem!important;
+  line-height:1.4!important;
+  color:#6b7590!important;
+  margin:3px 0 0!important;
+  max-width:none!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-x{
+  position:static!important;
+  width:44px!important;
+  height:44px!important;
+  flex:none!important;
+  border-radius:12px!important;
+  border:2px solid #dfe4ef!important;
+  background:#ffffff!important;
+  color:#141a2e!important;
+  font-size:1.2rem!important;
+}
+
+/* ── 3 · Barra lateral morada (PC): pestañas verticales ── */
+@media(min-width:901px){
+  html body #vgAdminModal#vgAdminModal .vg-admin-panel{
+    display:grid!important;
+    grid-template-columns:248px minmax(0,1fr)!important;
+    grid-template-rows:auto minmax(0,1fr)!important;
+    grid-template-areas:"lateral cabecera" "lateral cuerpo"!important;
+    gap:0!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg-admin-head{grid-area:cabecera!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tabs{grid-area:lateral!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-content{grid-area:cuerpo!important;}
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
+  background:linear-gradient(180deg,#241b4d,#3b2a7a 55%,#241b4d)!important;
+  padding:20px 14px!important;
+  gap:4px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  border-right:0!important;
+  border-bottom:0!important;
+  flex-wrap:nowrap!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tabs::before{
+  content:"VESSEL GAMES · PANEL ADMIN"!important;
+  display:block!important;
+  color:#19e6c1!important;
+  font-size:.68rem!important;
+  font-weight:900!important;
+  letter-spacing:.14em!important;
+  padding:6px 12px 16px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tab,
+html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{
+  background:transparent!important;
+  border:0!important;
+  border-left:4px solid transparent!important;
+  border-radius:10px!important;
+  color:rgba(255,255,255,.88)!important;
+  padding:11px 14px!important;
+  min-height:44px!important;
+  font-size:.9rem!important;
+  font-weight:700!important;
+  text-align:left!important;
+  justify-content:flex-start!important;
+  white-space:normal!important;
+  letter-spacing:0!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tab:hover,
+html body #vgAdminModal#vgAdminModal .vg-admin-tab-x:hover{
+  background:rgba(255,255,255,.12)!important;
+  border-color:transparent!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tab.active,
+html body #vgAdminModal#vgAdminModal .vg-admin-tab-x.active{
+  background:#ffffff!important;
+  color:#4c1d95!important;
+  border-left-color:#19e6c1!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.28)!important;
+}
+
+/* ── 4 · Contenido: fondo claro, aire ── */
+html body #vgAdminModal#vgAdminModal .vg-admin-content{
+  background:#eef1f7!important;
+  color:#141a2e!important;
+  padding:24px 28px 32px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-section{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:#141a2e!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-login-card,
+html body #vgAdminModal#vgAdminModal .vg-admin-private-card{
+  background:#ffffff!important;
+  color:#141a2e!important;
+  border-radius:20px!important;
+  border:1px solid #dfe4ef!important;
+  box-shadow:0 20px 60px rgba(20,26,46,.18)!important;
+}
+
+/* ── 5 · Stats: 4 tarjetas blancas, número morado grande ── */
+html body #vgAdminModal#vgAdminModal #vgAdminStats,
+html body #vgAdminModal#vgAdminModal .vg-admin-stats,
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-cards,
+html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:16px!important;
+  margin-bottom:20px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-stat,
+html body #vgAdminModal#vgAdminModal .vg17-stat{
+  background:#ffffff!important;
+  border:1px solid #dfe4ef!important;
+  border-radius:16px!important;
+  padding:18px 20px!important;
+  box-shadow:0 2px 10px rgba(20,26,46,.06)!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-stat span,
+html body #vgAdminModal#vgAdminModal .vg17-stat span{
+  color:#6b7590!important;
+  font-size:.72rem!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-stat b,
+html body #vgAdminModal#vgAdminModal .vg17-stat b{
+  color:#6d28d9!important;
+  font-size:2rem!important;
+  line-height:1.1!important;
+  font-weight:900!important;
+  display:block!important;
+  margin-top:6px!important;
+}
+
+/* ── 6 · Cajas y tarjetas: blancas, un solo ritmo ── */
+html body #vgAdminModal#vgAdminModal .vg17-box,
+html body #vgAdminModal#vgAdminModal .vg17-card,
+html body #vgAdminModal#vgAdminModal .vg-admin-card{
+  background:#ffffff!important;
+  border:1px solid #dfe4ef!important;
+  border-radius:16px!important;
+  padding:18px 20px!important;
+  margin-bottom:16px!important;
+  color:#141a2e!important;
+  box-shadow:0 2px 10px rgba(20,26,46,.05)!important;
+  clip-path:none!important;
+}
+html body #vgAdminModal#vgAdminModal .vg17-box>span{
+  color:#6d28d9!important;
+  font-size:.75rem!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+}
+html body #vgAdminModal#vgAdminModal .vg17-card h4{color:#141a2e!important;font-size:1rem!important;}
+html body #vgAdminModal#vgAdminModal .vg17-box p,
+html body #vgAdminModal#vgAdminModal .vg17-card p{color:#3d465e!important;}
+html body #vgAdminModal#vgAdminModal .vg17-row b{color:#141a2e!important;}
+
+/* ── 7 · Botones e inputs: morado, legibles ── */
+html body #vgAdminModal#vgAdminModal .vg17-btn,
+html body #vgAdminModal#vgAdminModal .vg-admin-btn{
+  background:#6d28d9!important;
+  color:#ffffff!important;
+  border:0!important;
+  border-radius:12px!important;
+  padding:12px 18px!important;
+  font-weight:900!important;
+  min-height:44px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg17-btn.primary,
+html body #vgAdminModal#vgAdminModal .vg-admin-btn.primary{
+  background:linear-gradient(135deg,#6d28d9,#8b5cf6)!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal input,
+html body #vgAdminModal#vgAdminModal select,
+html body #vgAdminModal#vgAdminModal textarea{
+  background:#ffffff!important;
+  color:#141a2e!important;
+  border:1px solid #cdd4e3!important;
+  border-radius:12px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tools{
+  display:flex!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  margin-bottom:18px!important;
+  background:#ffffff!important;
+  border:1px solid #dfe4ef!important;
+  border-radius:14px!important;
+  padding:12px!important;
+}
+
+/* ── 8 · PEDIDOS: lista | detalle | chat, todo claro ── */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
+  display:grid!important;
+  grid-template-columns:320px minmax(0,1fr) 360px!important;
+  gap:16px!important;
+  height:calc(100vh - 215px)!important;
+  min-height:480px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-col{
+  background:#ffffff!important;
+  border:1px solid #dfe4ef!important;
+  border-radius:18px!important;
+  overflow:hidden!important;
+  box-shadow:0 2px 12px rgba(20,26,46,.06)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-colhead{
+  background:#241b4d!important;
+  color:#ffffff!important;
+  padding:13px 16px!important;
+  font-size:.72rem!important;
+  font-weight:900!important;
+  letter-spacing:.1em!important;
+  text-transform:uppercase!important;
+  border-bottom:0!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-colhead b{color:#19e6c1!important;font-size:.72rem!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-scroll{
+  padding:12px!important;
+  background:#ffffff!important;
+  flex:1!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row{
+  background:#f7f8fc!important;
+  border:1px solid #e6e9f2!important;
+  border-radius:14px!important;
+  padding:14px!important;
+  margin-bottom:10px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row:hover{
+  background:#ffffff!important;
+  border-color:#8b5cf6!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row.active{
+  background:#f3efff!important;
+  border:1px solid #8b5cf6!important;
+  box-shadow:0 4px 14px rgba(109,40,217,.16)!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowtop b{
+  color:#141a2e!important;
+  font-size:.95rem!important;
+  font-weight:800!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-amt{
+  color:#0a7d5e!important;
+  font-weight:900!important;
+  font-size:.9rem!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowsub{
+  color:#6b7590!important;
+  font-size:.8rem!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowfoot time{color:#6b7590!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-cup{
+  background:transparent!important;
+  color:#6d28d9!important;
+  font-weight:800!important;
+}
+/* Un solo distintivo de estado, sólido y legible */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip,
+html body #vgAdminModal#vgAdminModal .vg17-chip{
+  background:#6d28d9!important;
+  color:#ffffff!important;
+  border:0!important;
+  border-radius:999px!important;
+  padding:4px 11px!important;
+  font-size:.72rem!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.04em!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.pendiente{background:#b45309!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.proceso,
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.en_proceso{background:#6d28d9!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.entregado{background:#0ea47a!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.cancelado{background:#dc2626!important;}
+/* Detalle: ficha lila, total verde oscuro grande */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idcard{
+  background:linear-gradient(135deg,#ede9fe,#e2f8f0)!important;
+  border:1px solid #c4b5fd!important;
+  border-radius:16px!important;
+  padding:16px 18px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idtop b{
+  color:#141a2e!important;
+  font-size:1.15rem!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idmeta{color:#3d465e!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-amt.big{
+  color:#0a7d5e!important;
+  font-size:1.4rem!important;
+}
+/* Estado: píldoras blancas, solo la activa es morada */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-quick button{
+  background:#ffffff!important;
+  color:#3d465e!important;
+  border:1px solid #cdd4e3!important;
+  border-radius:999px!important;
+  padding:9px 14px!important;
+  font-weight:800!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-quick button.on{
+  background:#6d28d9!important;
+  color:#ffffff!important;
+  border-color:#6d28d9!important;
+}
+/* Entregar: LA acción principal, grande, verde menta, a todo lo ancho */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver{
+  background:#e2f8f0!important;
+  border:2px solid #0ea47a!important;
+  border-radius:16px!important;
+  padding:16px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver>span{
+  color:#0a7d5e!important;
+  font-weight:900!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver p{color:#3d465e!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver textarea{
+  background:#ffffff!important;
+  color:#141a2e!important;
+  border:1px solid #a7d8c8!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver .vg17-btn{
+  width:100%!important;
+  height:52px!important;
+  background:#0ea47a!important;
+  color:#ffffff!important;
+  font-size:1rem!important;
+  font-weight:900!important;
+  border-radius:14px!important;
+  margin-top:10px!important;
+}
+/* Chat: columna blanca, mensajes sobre gris claro */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat .vg17-msgs{
+  background:#f4f6fb!important;
+  border:1px solid #e6e9f2!important;
+  border-radius:14px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-msg{
+  background:#ffffff!important;
+  color:#141a2e!important;
+  border:1px solid #e6e9f2!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg-proof-preview-img{max-height:300px!important;}
+
+/* ── 9 · Xbox / Catálogo / resto: mismo ritmo blanco ── */
+html body #vgAdminModal#vgAdminModal #vgAdminProductsList{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(340px,1fr))!important;
+  gap:16px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminSettings .vg-settings-grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;
+  gap:16px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-order-card{
+  background:#ffffff!important;
+  border:1px solid #dfe4ef!important;
+  border-radius:16px!important;
+  padding:16px!important;
+}
+
+/* ── 10 · Pantallas medianas: chat baja, resto igual ── */
+@media(max-width:1300px) and (min-width:901px){
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
+    grid-template-columns:300px minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr) auto!important;
+    height:calc(100vh - 215px)!important;
+  }
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat{
+    grid-column:1/-1!important;
+    height:380px!important;
+  }
+}
+
+/* ── 11 · Móvil: una columna, nada tapado ── */
+@media(max-width:900px){
+  html body #vgAdminModal#vgAdminModal .vg-admin-panel{
+    display:block!important;
+    grid-template-columns:none!important;
+    grid-template-rows:none!important;
+    grid-template-areas:none!important;
+    height:auto!important;
+    min-height:100dvh!important;
+    overflow:visible!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg-admin-head{
+    padding:16px!important;
+    min-height:0!important;
+  }
+  html body #vgAdminModal#vgAdminModal.active.active.active .vg-admin-head h2,
+  html body #vgAdminModal#vgAdminModal .vg-admin-head h2{font-size:1.35rem!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    padding:10px 12px!important;
+    background:linear-gradient(90deg,#241b4d,#3b2a7a)!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg-admin-tabs::before{display:none!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tab,
+  html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{
+    flex:none!important;
+    white-space:nowrap!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg-admin-content{padding:16px 12px 28px!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminStats,
+  html body #vgAdminModal#vgAdminModal .vg-admin-stats,
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-cards,
+  html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+  }
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
+    grid-template-columns:1fr!important;
+    grid-template-rows:none!important;
+    grid-auto-rows:min-content!important;
+    height:auto!important;
+    min-height:0!important;
+    gap:14px!important;
+  }
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-list{max-height:320px!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat{height:420px!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-detail .vgA-scroll{max-height:none!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tools{flex-direction:column!important;align-items:stretch!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminProductsList{grid-template-columns:1fr!important;}
+}
 </style>
 
 <script id="vg-modal-redisenado-v1">
@@ -49427,8 +49548,8 @@ button.vg119-incompleto{
       var note = qs('.modal-delivery-note');
       var t = note ? (note.textContent || '') : '';
       if(/3\s*a\s*8\s*horas/i.test(t)) return 'Entrega 3–8 h';
-      return 'Entrega 20 min – 2 h';
-    }catch(e){ return 'Entrega 20 min – 2 h'; }
+      return 'Entrega 20 min–2 h';
+    }catch(e){ return 'Entrega 20 min–2 h'; }
   }
   function ensureTrust(){
     try{
@@ -49439,7 +49560,7 @@ button.vg119-incompleto{
         strip = document.createElement('div');
         strip.className = 'vg-modal-trust';
         strip.innerHTML =
-          '<span class="vg-trust-item"><i>\uD83D\uDD50</i><b class="vg-trust-delivery">Entrega 20 min – 2 h</b></span>' +
+          '<span class="vg-trust-item"><i>\uD83D\uDD50</i><b class="vg-trust-delivery">Entrega 20 min–2 h</b></span>' +
           '<span class="vg-trust-item"><i>\uD83D\uDEE1</i><b>Garantía incluida</b></span>' +
           '<span class="vg-trust-item"><i>\uD83D\uDD12</i><b>Pago seguro</b></span>';
         var price = body.querySelector('.vg-modal-bigprice');
