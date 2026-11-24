@@ -48024,8 +48024,14 @@ button.vg119-incompleto{
        imagen vertical 3:4, precio menta grande ===== */
     html body #featuredGrid,html body #productsGrid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}
     html body #featuredGrid .card,html body #productsGrid .card{display:flex !important;flex-direction:column !important;height:100% !important}
-    html body #featuredGrid .card .imgbox,html body #productsGrid .card .imgbox{aspect-ratio:3/4 !important;height:auto !important;padding:0 !important}
-    html body #featuredGrid .card .imgbox img,html body #productsGrid .card .imgbox img{object-fit:cover !important;object-position:center !important}
+    html body #featuredGrid .card .imgbox,html body #productsGrid .card .imgbox{aspect-ratio:3/4 !important;height:auto !important;padding:0 !important;position:relative !important;overflow:hidden !important;background:#0d1120 !important}
+    /* Efecto Kinguin: la misma imagen desenfocada de fondo, y la
+       imagen completa (contain) encima, sin recortar el texto. El
+       fondo lo pone el JS (vg-fase2-hero) copiando el src del <img>
+       a la imagen de fondo del .imgbox; el ::before la hereda. */
+    html body #featuredGrid .card .imgbox::before,html body #productsGrid .card .imgbox::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:inherit !important;background-size:cover !important;background-position:center !important;filter:blur(16px) brightness(.6) !important;transform:scale(1.2) !important;z-index:0 !important}
+    html body #featuredGrid .card .imgbox img,html body #productsGrid .card .imgbox img{object-fit:contain !important;object-position:center !important;position:relative !important;z-index:1 !important}
+    html body #featuredGrid .card .imgbox .card-badge,html body #productsGrid .card .imgbox .card-badge,html body #featuredGrid .card .imgbox .vg-fav-btn,html body #productsGrid .card .imgbox .vg-fav-btn,html body #featuredGrid .card .imgbox .vg-quickview-btn,html body #productsGrid .card .imgbox .vg-quickview-btn{z-index:2 !important}
     html body #featuredGrid .card .info,html body #productsGrid .card .info{flex:1 1 auto !important;display:flex !important;flex-direction:column !important}
     html body #featuredGrid .card .price-line .price,html body #productsGrid .card .price-line .price{font-size:1.35rem !important;color:#19e6c1 !important;font-weight:900 !important}
     html body #featuredGrid .card .premium-actions,html body #productsGrid .card .premium-actions{margin-top:auto !important}
@@ -48034,8 +48040,10 @@ button.vg119-incompleto{
        misma altura de tarjeta, precio menta ===== */
     html body .vg-xbox-current-grid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card{display:flex !important;flex-direction:column !important;height:100% !important}
-    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover{aspect-ratio:3/4 !important;height:auto !important}
-    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover img{object-fit:cover !important;object-position:center !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover{aspect-ratio:3/4 !important;height:auto !important;position:relative !important;overflow:hidden !important;background:#0d1120 !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:inherit !important;background-size:cover !important;background-position:center !important;filter:blur(16px) brightness(.6) !important;transform:scale(1.2) !important;z-index:0 !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover img{object-fit:contain !important;object-position:center !important;position:relative !important;z-index:1 !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover .vg-x90-off{z-index:2 !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-info{flex:1 1 auto !important;display:flex !important;flex-direction:column !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card .vg-x113-acciones{margin-top:auto !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-price{color:#19e6c1 !important;font-size:1.15rem !important;font-weight:900 !important}
@@ -48047,8 +48055,8 @@ button.vg119-incompleto{
     html body #retroGridContainer{display:grid !important;grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}
     html body #retroGridContainer .vg-retro-game,html body #retroGridContainer .retro-game{display:flex !important;flex-direction:column !important;height:100% !important;background:linear-gradient(180deg,rgba(25,30,47,.95),rgba(14,17,28,.96)) !important;border:1px solid rgba(255,255,255,.10) !important;border-radius:14px !important;overflow:hidden !important}
     html body #retroGridContainer .vg-retro-cover,html body #retroGridContainer .retro-cover{aspect-ratio:3/4 !important;position:relative !important;overflow:hidden !important;background:#080b14 !important}
-    html body #retroGridContainer .vg-retro-cover-bg{position:absolute !important;inset:0 !important;background-size:cover !important;background-position:center !important}
-    html body #retroGridContainer .vg-retro-cover-img,html body #retroGridContainer .retro-cover img{position:relative !important;width:100% !important;height:100% !important;object-fit:cover !important;object-position:center !important}
+    html body #retroGridContainer .vg-retro-cover-bg{position:absolute !important;inset:0 !important;background-size:cover !important;background-position:center !important;filter:blur(14px) brightness(.6) !important;transform:scale(1.15) !important}
+    html body #retroGridContainer .vg-retro-cover-img,html body #retroGridContainer .retro-cover img{position:relative !important;width:100% !important;height:100% !important;object-fit:contain !important;object-position:center !important;z-index:1 !important}
     html body #retroGridContainer .vg-retro-info,html body #retroGridContainer .retro-info{flex:1 1 auto !important;padding:10px !important}
     html body #retroGridContainer .vg-retro-price,html body #retroGridContainer .retro-price{color:#19e6c1 !important;font-weight:900 !important}
 
@@ -48225,6 +48233,51 @@ button.vg119-incompleto{
       window.addEventListener('resize', onResize);
     }
 
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', start);
+    } else {
+      start();
+    }
+  })();
+
+  /* ============================================================
+     Efecto Kinguin en las tarjetas: la misma imagen desenfocada
+     de fondo (::before, ver vg-fase2-v1) y la imagen completa
+     encima (contain), sin recortar el texto de la imagen.
+     El CSS solo activa el efecto en PC (>=1024px); este JS solo
+     copia el src del <img> a la imagen de fondo de su contenedor.
+     Las tarjetas se re-renderizan al filtrar/buscar y el modal
+     Xbox se crea al abrirlo, así que se vigila el DOM con
+     MutationObserver y se repasa a 1s y 3s por si hay carga perezosa.
+     ============================================================ */
+  (function(){
+    'use strict';
+    function applyBox(box){
+      if(!box || box.dataset.vgBlur) return;
+      var img = box.querySelector('img');
+      if(!img) return;
+      var src = img.getAttribute('src') || img.currentSrc;
+      if(!src) return;
+      box.dataset.vgBlur = '1';
+      box.style.backgroundImage = "url('" + src + "')";
+    }
+    function applyAll(){
+      var boxes = document.querySelectorAll('#featuredGrid .card .imgbox, #productsGrid .card .imgbox, .vg-xbox-game-cover');
+      for(var i = 0; i < boxes.length; i++) applyBox(boxes[i]);
+    }
+    function start(){
+      applyAll();
+      setTimeout(applyAll, 1000);
+      setTimeout(applyAll, 3000);
+      if(window.MutationObserver && document.body){
+        var t = null;
+        var ob = new MutationObserver(function(){
+          if(t) clearTimeout(t);
+          t = setTimeout(applyAll, 150);
+        });
+        ob.observe(document.body, {childList:true, subtree:true, attributes:true, attributeFilter:['src']});
+      }
+    }
     if(document.readyState === 'loading'){
       document.addEventListener('DOMContentLoaded', start);
     } else {
