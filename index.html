@@ -47978,14 +47978,17 @@ button.vg119-incompleto{
   html body #featuredGrid .card .premium-actions,html body #productsGrid .card .premium-actions{grid-template-columns:1fr 44px !important}
   html body #featuredGrid .card .premium-actions .quick-add-btn,html body #productsGrid .card .premium-actions .quick-add-btn{display:grid !important;opacity:1 !important}
 
-  /* 7. Hero con la imagen del dueño, animación ligera, sin video */
+  /* 7. Hero con la imagen del dueño, animación ligera, sin video.
+     La imagen (1200x630) NO va a cover: en un hero de 1920x400 el
+     cover recorta el texto "VESSEL GAMES" de abajo. Va a altura
+     completa, a la derecha, para que el logo se vea entero. */
   html body #vgHeroVideo{display:none !important}
   html body #homeView .hero .hero-bg{display:none !important}
   html body #homeView .hero{position:relative !important;overflow:hidden !important;background:#070912 !important}
-  html body #homeView .hero::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:url('vg-hero-vessel.jpg') !important;background-size:cover !important;background-position:center 30% !important;animation:vgKenBurns 12s ease-in-out infinite alternate !important}
+  html body #homeView .hero::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:url('vg-hero-vessel.jpg') !important;background-size:auto 108% !important;background-position:right center !important;background-repeat:no-repeat !important;animation:vgKenBurns 12s ease-in-out infinite alternate !important}
   html body #homeView .hero::after{content:"" !important;position:absolute !important;inset:0 !important;background:linear-gradient(90deg,rgba(5,7,15,.82),rgba(5,7,15,.45) 55%,rgba(5,7,15,.25)) !important}
   html body #homeView .hero-inner{position:relative !important;z-index:2 !important}
-  @keyframes vgKenBurns{from{transform:scale(1)}to{transform:scale(1.12)}}
+  @keyframes vgKenBurns{from{transform:scale(1)}to{transform:scale(1.06)}}
 
   /* 8. Hero compacto en PC */
   @media(min-width:1024px){
