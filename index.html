@@ -48026,10 +48026,12 @@ button.vg119-incompleto{
     html body #featuredGrid .card,html body #productsGrid .card{display:flex !important;flex-direction:column !important;height:100% !important}
     html body #featuredGrid .card .imgbox,html body #productsGrid .card .imgbox{aspect-ratio:3/4 !important;height:auto !important;padding:0 !important;position:relative !important;overflow:hidden !important;background-color:#0d1120 !important}
     /* Efecto Kinguin: la misma imagen desenfocada de fondo, y la
-       imagen completa (contain) encima, sin recortar el texto. El
-       fondo lo pone el JS (vg-fase2-hero) copiando el src del <img>
-       a la imagen de fondo del .imgbox; el ::before la hereda. */
-    html body #featuredGrid .card .imgbox::before,html body #productsGrid .card .imgbox::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:inherit !important;background-size:cover !important;background-position:center !important;filter:blur(16px) brightness(.6) !important;transform:scale(1.2) !important;z-index:0 !important}
+       imagen completa (contain) encima, sin recortar el texto.
+       El fondo es un <div class="vg-blur-bg"> real que pone el JS
+       (vg-fase2-hero) con el src del <img>; el ::before con
+       background-image:inherit NO funcionó en vivo, así que se
+       usa un div real, que sí se puede verificar. */
+    html body #featuredGrid .card .imgbox .vg-blur-bg,html body #productsGrid .card .imgbox .vg-blur-bg{position:absolute !important;inset:0 !important;background-size:cover !important;background-position:center !important;filter:blur(16px) brightness(.6) !important;transform:scale(1.2) !important;z-index:0 !important;pointer-events:none !important}
     html body #featuredGrid .card .imgbox img,html body #productsGrid .card .imgbox img{object-fit:contain !important;object-position:center !important;position:relative !important;z-index:1 !important}
     html body #featuredGrid .card .imgbox .card-badge,html body #productsGrid .card .imgbox .card-badge,html body #featuredGrid .card .imgbox .vg-fav-btn,html body #productsGrid .card .imgbox .vg-fav-btn,html body #featuredGrid .card .imgbox .vg-quickview-btn,html body #productsGrid .card .imgbox .vg-quickview-btn{z-index:2 !important}
     html body #featuredGrid .card .info,html body #productsGrid .card .info{flex:1 1 auto !important;display:flex !important;flex-direction:column !important}
@@ -48041,7 +48043,7 @@ button.vg119-incompleto{
     html body .vg-xbox-current-grid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card{display:flex !important;flex-direction:column !important;height:100% !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover{aspect-ratio:3/4 !important;height:auto !important;position:relative !important;overflow:hidden !important;background-color:#0d1120 !important}
-    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:inherit !important;background-size:cover !important;background-position:center !important;filter:blur(16px) brightness(.6) !important;transform:scale(1.2) !important;z-index:0 !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover .vg-blur-bg{position:absolute !important;inset:0 !important;background-size:cover !important;background-position:center !important;filter:blur(16px) brightness(.6) !important;transform:scale(1.2) !important;z-index:0 !important;pointer-events:none !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover img{object-fit:contain !important;object-position:center !important;position:relative !important;z-index:1 !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover .vg-x90-off{z-index:2 !important}
     html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-info{flex:1 1 auto !important;display:flex !important;flex-direction:column !important}
@@ -48242,24 +48244,36 @@ button.vg119-incompleto{
 
   /* ============================================================
      Efecto Kinguin en las tarjetas: la misma imagen desenfocada
-     de fondo (::before, ver vg-fase2-v1) y la imagen completa
-     encima (contain), sin recortar el texto de la imagen.
-     El CSS solo activa el efecto en PC (>=1024px); este JS solo
-     copia el src del <img> a la imagen de fondo de su contenedor.
+     de fondo (un div real .vg-blur-bg, ver vg-fase2-v1) y la
+     imagen completa encima (contain), sin recortar el texto.
+     La primera versión usaba ::before con background-image:inherit
+     y NO se vio en vivo, así que ahora el JS crea el div real.
      Las tarjetas se re-renderizan al filtrar/buscar y el modal
      Xbox se crea al abrirlo, así que se vigila el DOM con
      MutationObserver y se repasa a 1s y 3s por si hay carga perezosa.
+     No se marca como hecho un src vacío o un placeholder de 1x1:
+     solo se acepta un src real (http(s) o data:image/svg+xml largo).
      ============================================================ */
   (function(){
     'use strict';
+    function realSrc(img){
+      var src = img.getAttribute('src') || img.currentSrc || '';
+      if(!src) return '';
+      if(src.indexOf('data:image/gif') === 0) return '';
+      if(src.length < 100 && src.indexOf('data:') === 0) return '';
+      return src;
+    }
     function applyBox(box){
       if(!box || box.dataset.vgBlur) return;
       var img = box.querySelector('img');
       if(!img) return;
-      var src = img.getAttribute('src') || img.currentSrc;
+      var src = realSrc(img);
       if(!src) return;
+      var bg = document.createElement('div');
+      bg.className = 'vg-blur-bg';
+      bg.style.backgroundImage = "url('" + src + "')";
+      box.insertBefore(bg, box.firstChild);
       box.dataset.vgBlur = '1';
-      box.style.backgroundImage = "url('" + src + "')";
     }
     function applyAll(){
       var boxes = document.querySelectorAll('#featuredGrid .card .imgbox, #productsGrid .card .imgbox, .vg-xbox-game-cover');
