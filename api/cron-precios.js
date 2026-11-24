@@ -64,6 +64,12 @@ module.exports = async (req, res) => {
 
   const t0 = Date.now();
   try {
+    /* bajarCatalogo() ya no se traga los fallos de Kinguin: si la descarga
+       falla (p. ej. HTTP 403 del antibots), lanza y se cae al catch de
+       abajo, que responde 502 SIN haber escrito nada en Supabase —ni
+       esconder, ni cambiar precios—. Los juegos que no aparecen aquí es
+       porque de verdad no están en el catálogo descargado, no porque la
+       consulta fallara. */
     const [tipoCambio, crudos] = await Promise.all([
       P.tipoDeCambio(),
       P.bajarCatalogo(CONCURRENCIA_PAGINAS),
@@ -164,6 +170,9 @@ module.exports = async (req, res) => {
       }
 
       if (!o) {
+        /* Aquí el catálogo SÍ se descargó entero (si no, ya se habría
+           lanzado el error de arriba): que no aparezca es que de verdad
+           ya no está en Kinguin. */
         if (f.status !== 'hidden') cambios.oculta.push({ slug: f.slug, title: f.title, motivo: 'ya no está en Kinguin' });
         else cambios.igual++;
         continue;
@@ -231,11 +240,22 @@ module.exports = async (req, res) => {
       vuelven: cambios.revive.length,
       sinCambio: cambios.igual,
       preciosDeXboxQueCambiaron: cambios.store.length,
+      /* Totales del catálogo que sí se pueden calcular aquí (la DDL no
+         está en el repo, pero estas dos columnas vienen en las filas
+         leídas): cuántos juegos tienen precio de la tienda guardado y
+         cuántos tienen ficha de Microsoft. No confundir con el número
+         de arriba, que solo cuenta los que cambiaron HOY. */
+      conPrecioDeXbox: filas.filter((f) => Number(f.precio_lista || 0) > 0).length,
+      conFichaDeXbox: filas.filter((f) => f.ms_id).length,
       altasNuevas: cambios.alta.length,
       portadasCruzadas: cambios.portada.length,
       ejemplosPortadas: cambios.portada.slice(0, 6).map(function (c) { return c.title; }),
       primerasAltas: cambios.alta.slice(0, 6).map(function (a) { return a.title + ' a ' + a.ahora; }),
       tipoCambio: Number(tipoCambio.toFixed(4)),
+      /* Si Kinguin no dio el tipo de cambio, tipoDeCambio() devuelve el de
+         respaldo en silencio: que se vea en el informe, para no cotizar
+         con un número viejo sin que nadie lo note. */
+      tipoCambioEsRespaldo: tipoCambio === P.CFG.tipoCambioRespaldo,
       /* Si Microsoft dejó bloques sin contestar, hay juegos que pasaron el
          repaso sin comparar contra la tienda oficial. Sale en el informe
          para que no se lea como "todo revisado" cuando no lo fue. */

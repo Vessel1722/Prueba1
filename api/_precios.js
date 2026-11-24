@@ -248,6 +248,12 @@ const BANDAS = [
 async function bajarCatalogo(concurrencia) {
   const vistos = new Set();
   const crudos = [];
+  /* Si Kinguin falla, que se note: antes cada banda se tragaba su error y
+     el cron seguía con el catálogo a medias —o vacío— y escondía juegos
+     que en realidad siguen en venta. Ahora cualquier fallo de descarga
+     (también una sola página) aborta la bajada con un error distinguible,
+     y quien llama decide: el cron responde 502 sin escribir nada. */
+  const fallos = [];
 
   function guardar(lote) {
     for (const p of lote || []) {
@@ -267,7 +273,7 @@ async function bajarCatalogo(concurrencia) {
       const primera = await json(base + '&page=0');
       total = (primera.page && primera.page.totalElements) || 0;
       guardar(primera._embedded && primera._embedded.products);
-    } catch (e) { return; }
+    } catch (e) { fallos.push('banda ' + t.plat + ' ' + t.desde + '-' + t.hasta + ': ' + e.message); return; }
 
     const paginas = Math.min(Math.ceil(total / 100), 100) - 1;
     if (paginas <= 0) return;
@@ -275,8 +281,25 @@ async function bajarCatalogo(concurrencia) {
       const j = await json(base + '&page=' + p);
       return (j._embedded && j._embedded.products) || [];
     });
-    for (const l of lotes) guardar(l);
+    /* enTanda devuelve null en la página que falló: un hueco aquí son
+       juegos que luego parecerían "ya no están en Kinguin". */
+    for (const l of lotes) {
+      if (l) guardar(l);
+      else fallos.push('página sin respuesta en banda ' + t.plat + ' ' + t.desde + '-' + t.hasta);
+    }
   });
+
+  if (fallos.length) {
+    const e = new Error('No se pudo consultar Kinguin (' + fallos[0] +
+      (fallos.length > 1 ? ' · +' + (fallos.length - 1) + ' fallos más' : '') + ')');
+    e.codigo = 'kinguin_no_disponible';
+    throw e;
+  }
+  if (!crudos.length) {
+    const e = new Error('No se pudo consultar Kinguin (catálogo vacío)');
+    e.codigo = 'kinguin_no_disponible';
+    throw e;
+  }
 
   return crudos;
 }
