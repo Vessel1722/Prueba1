@@ -39118,6 +39118,9 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
       if(plataforma === '360' && p.indexOf('360') < 0) return false;
       if(plataforma === 'clasico' && p.indexOf('clasico') < 0) return false;
       if(q && llano(g.name).indexOf(q) < 0) return false;
+      /* FASE 2 · PASO 2 — rango de precio del sidebar, combinado con la
+         plataforma y la búsqueda. */
+      if(window.vgPaso2EnRango && !window.vgPaso2EnRango(Number(g.price || 0))) return false;
       return true;
     });
     var s = document.getElementById('sortSelect');
@@ -39131,6 +39134,11 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
   function cuenta(cual){
     return visibles().filter(function(g){
       var p = llano(g.platform);
+      /* FASE 2 · PASO 2 — los chips cuentan solo los juegos DENTRO del
+         rango de precio del sidebar, no el total del catálogo. Va ANTES
+         de los returns de plataforma: si no, esos returns lo saltaban
+         y los chips de 360/Clásico seguían mostrando el total. */
+      if(window.vgPaso2EnRango && !window.vgPaso2EnRango(Number(g.price || 0))) return false;
       if(cual === '360') return p.indexOf('360') >= 0;
       if(cual === 'clasico') return p.indexOf('clasico') >= 0;
       return true;
@@ -39275,7 +39283,7 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     grid.innerHTML = barra() + (l.length
       ? l.map(tarjeta).join('')
       : '<div class="vgxr-vacio"><b>No encontré juegos con ese filtro.</b>' +
-        '<p style="margin:6px 0 0">Borra la búsqueda de arriba o toca "Todos".</p></div>');
+        '<p style="margin:6px 0 0">Borra la búsqueda de arriba, toca "Todos" o quita el rango de precio del lateral.</p></div>');
 
     /* La cuenta de juegos va en los chips de la barra y no en
        #productsSubtitle: ese párrafo está oculto en toda la página. */
@@ -45936,6 +45944,9 @@ button.vg119-incompleto{
     var lista = juegos().filter(function(j){
       if(generoActivo !== 'todos' && String(j.generos || '').indexOf(generoActivo) < 0) return false;
       if(Number(j.price || 0) > tope) return false;
+      /* FASE 2 · PASO 2 — rango de precio del sidebar: se combina con el
+         tope de la barra propia y con el género. */
+      if(window.vgPaso2EnRango && !window.vgPaso2EnRango(Number(j.price || 0))) return false;
       return true;
     });
 
@@ -48378,6 +48389,23 @@ button.vg119-incompleto{
       if(!isFinite(v) || v < 0) return null;
       return Math.floor(v);
     }
+    /* ¿Este precio pasa el rango del sidebar? Lo usan también las
+       rejillas de Xbox y Retro: sus módulos llaman a este helper
+       desde sus filtros. Sin límites, todo pasa; con límites, los
+       juegos sin precio ("Cotizar", 0) quedan fuera, igual que en
+       filteredServices(). Si algo falla, no se filtra nada. */
+    window.vgPaso2EnRango = function(precio){
+      try{
+        var mn = (typeof vgPriceMin === 'number') ? vgPriceMin : null;
+        var mx = (typeof vgPriceMax === 'number') ? vgPriceMax : null;
+        if(mn === null && mx === null) return true;
+        var p = Number(precio || 0);
+        if(p === 0) return false;
+        if(mn !== null && p < mn) return false;
+        if(mx !== null && p > mx) return false;
+        return true;
+      }catch(e){ return true; }
+    };
     function marcarChip(){
       chips.forEach(function(ch){
         var cMin = ch.getAttribute('data-min') === '' ? null : Number(ch.getAttribute('data-min'));
