@@ -48266,6 +48266,15 @@ button.vg119-incompleto{
         var fcs = window.getComputedStyle(featFirst);
         var fbg = fcs.backgroundImage || '';
         info += ' | FEAT bg=' + (fbg === 'none' ? 'NONE' : fbg.slice(0, 50)) + ' h=' + featFirst.offsetHeight;
+        /* Prueba visual: contorno lima en los divs de Destacados y
+           rect del primero vs su .imgbox, para ver si el div pinta
+           y dónde está en pantalla. */
+        for(var k = 0; k < featDivs.length; k++){ featDivs[k].style.outline = '4px solid lime'; }
+        var fbox = featFirst.closest('.imgbox');
+        if(fbox){
+          var r1 = featFirst.getBoundingClientRect(), r2 = fbox.getBoundingClientRect();
+          info += ' | rect div=' + Math.round(r1.x) + ',' + Math.round(r1.y) + ' ' + Math.round(r1.width) + 'x' + Math.round(r1.height) + ' box=' + Math.round(r2.x) + ',' + Math.round(r2.y) + ' ' + Math.round(r2.width) + 'x' + Math.round(r2.height);
+        }
       } else {
         info += ' | FEAT SIN DIV';
       }
