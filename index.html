@@ -47998,5 +47998,240 @@ button.vg119-incompleto{
   }
 </style>
 
+<style id="vg-fase2-v1">
+  /* ============================================================
+     Vessel Games Fase 2, Paso 1 — Prueba1 solamente
+     Solo visual (CSS) + hero en 4 banners (el JS va en el bloque
+     vg-fase2-hero, justo después de este). No toca datos, precios,
+     carrito, modal, compra por WhatsApp ni admin.
+     Solo PC (>=1024px). En móvil todo queda como lo dejó Fase 1.
+     Selectores de alta especificidad (html body + ID) para ganar
+     a los 121 bloques y 8,060 !important del archivo.
+     ============================================================ */
+
+  /* Seguridad: si el JS dejara los banners creados al pasar a móvil,
+     nunca se ven fuera de PC. */
+  html body #homeView .hero .vg-fase2-banners{display:none !important}
+
+  /* --- Selector de ordenación: aspecto limpio (vale en todos los anchos) --- */
+  html body #sortSelect{appearance:none !important;-webkit-appearance:none !important;background:#0d1120 url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='12' height='8' viewBox='0 0 12 8'%3E%3Cpath d='M1 1l5 5 5-5' stroke='%23c7cede' stroke-width='2' fill='none' stroke-linecap='round'/%3E%3C/svg%3E") no-repeat right 12px center !important;border:1px solid rgba(255,255,255,.14) !important;color:#fff !important;border-radius:12px !important;padding:10px 36px 10px 14px !important;font-size:.9rem !important;font-weight:700 !important;cursor:pointer !important;max-width:100% !important}
+  html body #sortSelect:hover{border-color:rgba(139,92,246,.55) !important}
+  html body #sortSelect:focus{outline:2px solid rgba(25,230,193,.5) !important;outline-offset:1px !important}
+  html body #sortSelect option{background:#0d1120 !important;color:#fff !important}
+
+  @media(min-width:1024px){
+    /* ===== Paso 1a. Rejilla 6 cols PC: tarjetas de la misma altura,
+       imagen vertical 3:4, precio menta grande ===== */
+    html body #featuredGrid,html body #productsGrid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}
+    html body #featuredGrid .card,html body #productsGrid .card{display:flex !important;flex-direction:column !important;height:100% !important}
+    html body #featuredGrid .card .imgbox,html body #productsGrid .card .imgbox{aspect-ratio:3/4 !important;height:auto !important;padding:0 !important}
+    html body #featuredGrid .card .imgbox img,html body #productsGrid .card .imgbox img{object-fit:cover !important;object-position:center !important}
+    html body #featuredGrid .card .info,html body #productsGrid .card .info{flex:1 1 auto !important;display:flex !important;flex-direction:column !important}
+    html body #featuredGrid .card .price-line .price,html body #productsGrid .card .price-line .price{font-size:1.35rem !important;color:#19e6c1 !important;font-weight:900 !important}
+    html body #featuredGrid .card .premium-actions,html body #productsGrid .card .premium-actions{margin-top:auto !important}
+
+    /* ===== Paso 1b. Xbox One / Series: 6 cols PC, portada 3:4,
+       misma altura de tarjeta, precio menta ===== */
+    html body .vg-xbox-current-grid{grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card{display:flex !important;flex-direction:column !important;height:100% !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover{aspect-ratio:3/4 !important;height:auto !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-cover img{object-fit:cover !important;object-position:center !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-game-info{flex:1 1 auto !important;display:flex !important;flex-direction:column !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-x113-acciones{margin-top:auto !important}
+    html body .vg-xbox-current-grid .vg-xbox-game-card .vg-xbox-price{color:#19e6c1 !important;font-size:1.15rem !important;font-weight:900 !important}
+
+    /* ===== Paso 1c. Xbox Retro: 6 cols PC, portada 3:4, misma altura.
+       Defensivo: el contenedor #retroGridContainer no está en el
+       marcado de este archivo (renderRetroGrid sale si no existe),
+       así que estas reglas solo actúan si el contenedor existe. ===== */
+    html body #retroGridContainer{display:grid !important;grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important}
+    html body #retroGridContainer .vg-retro-game,html body #retroGridContainer .retro-game{display:flex !important;flex-direction:column !important;height:100% !important;background:linear-gradient(180deg,rgba(25,30,47,.95),rgba(14,17,28,.96)) !important;border:1px solid rgba(255,255,255,.10) !important;border-radius:14px !important;overflow:hidden !important}
+    html body #retroGridContainer .vg-retro-cover,html body #retroGridContainer .retro-cover{aspect-ratio:3/4 !important;position:relative !important;overflow:hidden !important;background:#080b14 !important}
+    html body #retroGridContainer .vg-retro-cover-bg{position:absolute !important;inset:0 !important;background-size:cover !important;background-position:center !important}
+    html body #retroGridContainer .vg-retro-cover-img,html body #retroGridContainer .retro-cover img{position:relative !important;width:100% !important;height:100% !important;object-fit:cover !important;object-position:center !important}
+    html body #retroGridContainer .vg-retro-info,html body #retroGridContainer .retro-info{flex:1 1 auto !important;padding:10px !important}
+    html body #retroGridContainer .vg-retro-price,html body #retroGridContainer .retro-price{color:#19e6c1 !important;font-weight:900 !important}
+
+    /* ===== Paso 1d. Cabecera en 2 filas: espaciados y fila de
+       categorías sin solape. La fila ya no es sticky por separado
+       (Fase 1 la dejó estática dentro de la cabecera fija), así que
+       no hay un top inventado que la haga flotar sobre el hero. ===== */
+    html body header.topbar .nav{padding-top:10px !important;padding-bottom:10px !important}
+    html body header.topbar .category-nav{position:static !important;top:auto !important;background:rgba(5,7,15,.92) !important;border-bottom:1px solid rgba(255,255,255,.06) !important}
+    html body header.topbar .category-row{padding:6px 22px !important;gap:6px !important;justify-content:flex-start !important}
+
+    /* ===== Paso 3. Hero en 4 banners (solo si el JS crea
+       .vg-fase2-banners y marca .hero con .vg-fase2-hero-on).
+       Sin JS no cambia nada: el hero sigue como lo dejó Fase 1. ===== */
+    html body #homeView .hero.vg-fase2-hero-on{min-height:390px !important;max-height:420px !important;align-items:stretch !important}
+    html body #homeView .hero.vg-fase2-hero-on::before,html body #homeView .hero.vg-fase2-hero-on::after{display:none !important}
+    html body #homeView .hero.vg-fase2-hero-on .hero-inner{display:none !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banners{position:relative !important;z-index:2 !important;display:grid !important;grid-template-columns:repeat(4,minmax(0,1fr)) !important;gap:12px !important;width:100% !important;align-self:stretch !important;padding:16px 22px !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner{position:relative !important;display:flex !important;flex-direction:column !important;overflow:hidden !important;min-width:0 !important;border:1px solid rgba(255,255,255,.10) !important;border-radius:16px !important;background:#0d1120 !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner:hover{border-color:rgba(139,92,246,.55) !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-media{flex:1 1 auto !important;min-height:0 !important;position:relative !important;background-size:cover !important;background-position:center !important;background-repeat:no-repeat !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner--logo .vg-fase2-banner-media{background-size:contain !important;background-position:center !important;background-color:#070912 !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-icon{position:absolute !important;left:50% !important;top:50% !important;transform:translate(-50%,-50%) !important;width:72px !important;height:72px !important;color:rgba(255,255,255,.35) !important;pointer-events:none !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-icon svg{width:100% !important;height:100% !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-body{padding:12px 14px 14px !important;display:flex !important;flex-direction:column !important;gap:6px !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-badge{align-self:flex-start !important;font-size:.68rem !important;font-weight:900 !important;letter-spacing:.08em !important;text-transform:uppercase !important;color:#c7fff5 !important;border:1px solid rgba(25,230,193,.35) !important;background:rgba(25,230,193,.10) !important;border-radius:999px !important;padding:5px 9px !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-body h3{margin:0 !important;font-size:1.05rem !important;line-height:1.2 !important;color:#fff !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-body p{margin:0 !important;font-size:.8rem !important;line-height:1.45 !important;color:#b8c6e8 !important;display:-webkit-box !important;-webkit-line-clamp:2 !important;-webkit-box-orient:vertical !important;overflow:hidden !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-btn{margin-top:8px !important;align-self:flex-start !important;border:0 !important;border-radius:12px !important;padding:10px 16px !important;min-height:40px !important;background:linear-gradient(135deg,#8b5cf6,#19e6c1) !important;color:#04110e !important;font-weight:900 !important;font-size:.85rem !important;cursor:pointer !important}
+    html body #homeView .hero.vg-fase2-hero-on .vg-fase2-banner-btn:hover{filter:brightness(1.1) !important}
+  }
+
+  @media(min-width:1440px){
+    /* 7 columnas en PC ancha, igual que en Fase 1 */
+    html body #featuredGrid,html body #productsGrid{grid-template-columns:repeat(7,minmax(0,1fr)) !important}
+    html body .vg-xbox-current-grid{grid-template-columns:repeat(7,minmax(0,1fr)) !important}
+    html body #retroGridContainer{grid-template-columns:repeat(7,minmax(0,1fr)) !important}
+  }
+</style>
+
+<script id="vg-fase2-hero">
+  /* ============================================================
+     Vessel Games Fase 2, Paso 3 — Hero en 4 banners (solo PC)
+     Prueba1 solamente. No toca datos, precios, carrito, modal,
+     compra por WhatsApp ni admin. No inventa textos ni imágenes:
+     usa solo CATEGORIES (label, desc, bg, icon) y la imagen propia
+     vg-hero-vessel.jpg, que ya existen en el archivo.
+     Defensivo: si falta el hero, CATEGORIES o showSection, no hace
+     nada y no rompe la página. No toca el video (Fase 1 lo oculta)
+     ni interfiere con vg-video-lazy ni con aplicarPortada().
+     En móvil (<1024px) no se construye nada: el hero queda como
+     lo dejó la Fase 1.
+     ============================================================ */
+  (function(){
+    'use strict';
+    var BUILT = false;
+
+    function isPC(){
+      try{ return window.matchMedia('(min-width:1024px)').matches; }
+      catch(e){ return window.innerWidth >= 1024; }
+    }
+
+    function findCategory(id){
+      if(typeof CATEGORIES === 'undefined' || !CATEGORIES) return null;
+      for(var i = 0; i < CATEGORIES.length; i++){
+        if(CATEGORIES[i] && CATEGORIES[i].id === id) return CATEGORIES[i];
+      }
+      return null;
+    }
+
+    function makeButton(label, catId){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vg-fase2-banner-btn';
+      btn.textContent = label;
+      btn.addEventListener('click', function(){
+        if(typeof window.showSection === 'function') window.showSection(catId);
+      });
+      return btn;
+    }
+
+    function build(){
+      if(BUILT) return;
+      var hero = document.querySelector('#homeView .hero');
+      if(!hero) return;
+      if(typeof window.showSection !== 'function') return;
+      var gaming = findCategory('gaming');
+      var streaming = findCategory('streaming');
+      var software = findCategory('software');
+      if(!gaming || !streaming || !software) return;
+
+      var wrap = document.createElement('div');
+      wrap.className = 'vg-fase2-banners';
+      wrap.setAttribute('aria-label', 'Destacados');
+
+      /* Banner 1: imagen propia del logo, título y botón actuales.
+         La imagen va en "contain" por CSS para que el logo y el
+         texto VESSEL GAMES no se recorten (como en Fase 1). */
+      var b1 = document.createElement('article');
+      b1.className = 'vg-fase2-banner vg-fase2-banner--logo';
+      var m1 = document.createElement('div');
+      m1.className = 'vg-fase2-banner-media';
+      m1.style.backgroundImage = "url('vg-hero-vessel.jpg')";
+      b1.appendChild(m1);
+      var body1 = document.createElement('div');
+      body1.className = 'vg-fase2-banner-body';
+      var badge = document.createElement('span');
+      badge.className = 'vg-fase2-banner-badge';
+      badge.textContent = 'Entrega rápida · Catálogo digital';
+      var h1 = document.createElement('h3');
+      h1.textContent = 'Tu siguiente nivel empieza aquí';
+      body1.appendChild(badge);
+      body1.appendChild(h1);
+      body1.appendChild(makeButton('Ver catálogo completo', 'all'));
+      b1.appendChild(body1);
+      wrap.appendChild(b1);
+
+      /* Banners 2-4: categorías reales de CATEGORIES, con su bg,
+         su icono, su label y su desc. El botón usa showSection,
+         la misma función que los botones de categoría. */
+      [gaming, streaming, software].forEach(function(c){
+        var art = document.createElement('article');
+        art.className = 'vg-fase2-banner';
+        var media = document.createElement('div');
+        media.className = 'vg-fase2-banner-media';
+        if(c.bg) media.style.background = c.bg;
+        if(c.icon){
+          var ic = document.createElement('span');
+          ic.className = 'vg-fase2-banner-icon';
+          ic.innerHTML = c.icon; /* SVG propio de la categoría, ya existe */
+          media.appendChild(ic);
+        }
+        art.appendChild(media);
+        var body = document.createElement('div');
+        body.className = 'vg-fase2-banner-body';
+        var h = document.createElement('h3');
+        h.textContent = c.label;
+        body.appendChild(h);
+        if(c.desc){
+          var p = document.createElement('p');
+          p.textContent = c.desc;
+          body.appendChild(p);
+        }
+        body.appendChild(makeButton('Ver ' + c.label, c.id));
+        art.appendChild(body);
+        wrap.appendChild(art);
+      });
+
+      hero.appendChild(wrap);
+      hero.classList.add('vg-fase2-hero-on');
+      BUILT = true;
+    }
+
+    function teardown(){
+      if(!BUILT) return;
+      var hero = document.querySelector('#homeView .hero');
+      if(!hero) return;
+      var wrap = hero.querySelector('.vg-fase2-banners');
+      if(wrap) wrap.remove();
+      hero.classList.remove('vg-fase2-hero-on');
+      BUILT = false;
+    }
+
+    function apply(){ if(isPC()){ build(); } else { teardown(); } }
+
+    var resizeTimer = null;
+    function onResize(){
+      if(resizeTimer) clearTimeout(resizeTimer);
+      resizeTimer = setTimeout(apply, 200);
+    }
+
+    function start(){
+      apply();
+      window.addEventListener('resize', onResize);
+    }
+
+    if(document.readyState === 'loading'){
+      document.addEventListener('DOMContentLoaded', start);
+    } else {
+      start();
+    }
+  })();
+</script>
+
 </body>
 </html>
