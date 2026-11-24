@@ -49171,6 +49171,15 @@ button.vg119-incompleto{
   width:auto !important;
 }
 
+/* --- × de cierre: fondo sólido ---
+   La × ya es absoluta (vg-modal-close-fix-v105) y no hace scroll con el
+   cuerpo; si en una pantalla corta el contenido pasa por debajo de ella,
+   con fondo sólido se ve como botón flotante y no como texto encimado. */
+#productModal .modal-body > .x{
+  background:#141a2e !important;
+  box-shadow:0 2px 10px rgba(0,0,0,.45) !important;
+}
+
 /* --- 3 · Precio grande en menta (lo crea el script) --- */
 #productModal .vg-modal-bigprice{
   display:flex !important;
@@ -49204,19 +49213,19 @@ button.vg119-incompleto{
 #productModal .vg-modal-trust{
   display:flex !important;
   flex-wrap:wrap !important;
-  gap:8px !important;
+  gap:6px !important;
   margin:12px 0 4px !important;
 }
 #productModal .vg-modal-trust .vg-trust-item{
-  flex:1 1 120px !important;
+  flex:1 1 100px !important;
   display:flex !important;
   align-items:center !important;
-  gap:7px !important;
-  padding:8px 10px !important;
+  gap:6px !important;
+  padding:7px 9px !important;
   background:rgba(255,255,255,.04) !important;
   border:1px solid rgba(255,255,255,.08) !important;
   border-radius:12px !important;
-  font-size:.75rem !important;
+  font-size:.72rem !important;
   font-weight:700 !important;
   color:#c9d2ea !important;
   white-space:nowrap !important;
@@ -49281,6 +49290,25 @@ button.vg119-incompleto{
   border:1px solid rgba(139,92,246,.55) !important;
   color:#eef0fa !important;
   box-shadow:none !important;
+}
+
+/* --- 5b · Botones con altura fija (CORRECCIÓN v1.1) ---
+   La regla vieja `.modal-actions .primary{flex:1}` (línea 20700 y
+   bloque vg-modal-fix-definitive) reparte la ALTURA de la barra entre
+   los botones cuando la barra es columna: ~230px cada uno y tapan las
+   opciones. Con flex:0 0 auto + altura explícita quedan en ~52px. */
+#productModal .modal-actions{flex:0 0 auto !important;}
+#productModal .modal-actions .primary,
+#productModal .modal-actions .secondary,
+#productModal .modal-actions .whatsapp{
+  flex:0 0 auto !important;
+  height:auto !important;
+  min-height:52px !important;
+  max-height:64px !important;
+  padding:14px 18px !important;
+  display:flex !important;
+  align-items:center !important;
+  justify-content:center !important;
 }
 
 /* --- 5 · Móvil (≤640px): una columna, imagen 16:9, botones abajo --- */
@@ -49412,7 +49440,7 @@ button.vg119-incompleto{
         strip.className = 'vg-modal-trust';
         strip.innerHTML =
           '<span class="vg-trust-item"><i>\uD83D\uDD50</i><b class="vg-trust-delivery">Entrega 20 min – 2 h</b></span>' +
-          '<span class="vg-trust-item"><i>\uD83D\uDEE1</i><b>Si algo falla, lo resolvemos</b></span>' +
+          '<span class="vg-trust-item"><i>\uD83D\uDEE1</i><b>Garantía incluida</b></span>' +
           '<span class="vg-trust-item"><i>\uD83D\uDD12</i><b>Pago seguro</b></span>';
         var price = body.querySelector('.vg-modal-bigprice');
         var anchor = el('modalDesc');
