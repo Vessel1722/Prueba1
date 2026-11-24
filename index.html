@@ -12123,8 +12123,42 @@ window.vgAdminOpen=async function(){
   await vgAdminLoadAll();
 };
 window.vgAdminClose=()=>$('#vgAdminModal')?.classList.remove('active');
-window.vgAdminSaveSupabase=function(){write(CFG,{url:$('#vgSupabaseUrl')?.value.trim()||'',anon:$('#vgSupabaseAnon')?.value.trim()||''});initSB();alert('Conexión guardada')};
-window.vgAdminLoadConfig=function(){let c=cfg(); if($('#vgSupabaseUrl'))$('#vgSupabaseUrl').value=c.url||''; if($('#vgSupabaseAnon'))$('#vgSupabaseAnon').value=c.anon||''; if($('#vgSupabaseSQL'))$('#vgSupabaseSQL').value=SQL_TEXT.trim()};
+window.vgAdminSaveSupabase=function(){
+  var campo=$('#vgSupabaseAnon');
+  var anon=campo ? campo.value.trim() : '';
+  /* Si el campo sigue mostrando la máscara, se guarda la clave completa guardada en memoria, no la máscara.
+     Si se editó la máscara a medias, no se guarda nada: hay que borrar el campo y pegar la clave completa. */
+  if(anon && anon.indexOf('…')>=0){
+    var mascara=(window.__vgAnonCompleta||'').slice(0,8)+'…'+(window.__vgAnonCompleta||'').slice(-4);
+    if(anon===mascara) anon=window.__vgAnonCompleta||'';
+    else { alert('La clave mostrada está enmascarada: borra el campo y pega la clave completa para cambiarla.'); return; }
+  }
+  write(CFG,{url:$('#vgSupabaseUrl')?.value.trim()||'',anon:anon});initSB();alert('Conexión guardada')
+};
+window.vgAdminLoadConfig=function(){let c=cfg(); if($('#vgSupabaseUrl'))$('#vgSupabaseUrl').value=c.url||'';
+  if($('#vgSupabaseAnon')){
+    /* La anon key es pública por diseño, pero no hay motivo para enseñar el JWT entero en la vista:
+       solo los primeros 8 y los últimos 4 caracteres. La completa se guarda en memoria para que
+       Guardar no la pise con la máscara, y para el botón Copiar. La URL sí sigue visible. */
+    var anon=String(c.anon||'');
+    window.__vgAnonCompleta=anon;
+    var campo=$('#vgSupabaseAnon');
+    campo.value=anon ? (anon.slice(0,8)+'…'+anon.slice(-4)) : '';
+    if(!campo.dataset.vgMask){ campo.dataset.vgMask='1'; campo.addEventListener('focus',function(){ campo.select(); }); }
+    if(!document.getElementById('vgCopiarAnon')){
+      var b=document.createElement('button');
+      b.className='vg-admin-btn'; b.id='vgCopiarAnon'; b.type='button'; b.textContent='Copiar clave';
+      b.onclick=function(){
+        var k=window.__vgAnonCompleta||'';
+        if(!k){ alert('No hay clave guardada.'); return; }
+        var listo=function(){ b.textContent='¡Copiada!'; setTimeout(function(){ b.textContent='Copiar clave'; },1600); };
+        if(navigator.clipboard && navigator.clipboard.writeText){ navigator.clipboard.writeText(k).then(listo,function(){ prompt('Copia la clave:', k); }); }
+        else prompt('Copia la clave:', k);
+      };
+      campo.parentNode.insertBefore(b, campo.nextSibling);
+    }
+  }
+  if($('#vgSupabaseSQL'))$('#vgSupabaseSQL').value=SQL_TEXT.trim()};
 window.vgAdminTestSupabase=async function(){let client=needSB(); if(!client){alert('Falta URL o anon key');return} let {error}=await client.from('orders').select('id').limit(1); alert(error?'Error: '+error.message:'Conexión OK')};
 window.vgAdminLoadAll=async function(){await vgAdminLoadOrders();await vgAdminLoadProducts()};
 window.vgAdminLoadOrders=async function(){let client=needSB(); if(!client){vgAdminRenderOrders('Configura Supabase primero.');return} let {data,error}=await client.from('orders').select('*').order('created_at',{ascending:false}).limit(500); if(error){vgAdminRenderOrders(error.message);return} adminOrders=data||[];vgAdminRenderStats();vgAdminRenderOrders()};
@@ -12435,7 +12469,7 @@ window.vgAdminActivateProduct=id=>saveProductWithMeta(id,'active');
 window.vgAdminResetProduct=async function(id){ const client=getSB(); if(!client)return; if(!confirm('¿Restablecer este producto a sus datos originales?')) return; const {error}=await client.from('products_admin').delete().eq('product_id',String(id)); if(error){alert(error.message);return;} await window.vgAdminLoadProducts(); };
 window.vgAdminSyncProducts=async function(){ const client=getSB(); if(!client){alert('Configura Supabase');return;} for(const p of services()){await client.from('products_admin').upsert({product_id:String(p.id),title:p.title,category:p.categoryName||p.category||'',image:p.image||'',price_label:p.priceLabel||'',stock:p.adminStock||'',badge:p.adminBadge||'',options:p.options||[],updated_at:new Date().toISOString()},{onConflict:'product_id'});} await window.vgAdminLoadProducts(); alert('Catálogo sincronizado'); };
 window.vgAdminLoadAll=async function(){ if(typeof window.vgAdminLoadOrders==='function') await window.vgAdminLoadOrders(); if(typeof window.vgAdminLoadProducts==='function') await window.vgAdminLoadProducts(); renderSettings(); };
-function bindTabs(){ $$('.vg-admin-tab').forEach(btn=>{ btn.onclick=()=>{ $$('.vg-admin-tab').forEach(b=>b.classList.toggle('active',b===btn)); $$('.vg-admin-section').forEach(sec=>sec.classList.remove('active')); const sec=$('#vgAdmin'+btn.dataset.tab.charAt(0).toUpperCase()+btn.dataset.tab.slice(1)); if(sec) sec.classList.add('active'); if(btn.dataset.tab==='settings') renderSettings(); }; }); }
+function bindTabs(){ $$('.vg-admin-tab').forEach(btn=>{ /* Las pestañas Pedidos/Soporte/Tokens/Imágenes son del módulo de soporte (fase 17): las llena showMineTab() con loadAdmin(), y el manejador genérico solo les activaría una sección vacía. Se dejan como están (el oyente delegado v116 las atiende). */ if(['pedidos','soporte','tokens','imagenes'].indexOf(btn.dataset.tab)>=0) return; btn.onclick=()=>{ $$('.vg-admin-tab').forEach(b=>b.classList.toggle('active',b===btn)); $$('.vg-admin-section').forEach(sec=>sec.classList.remove('active')); const sec=$('#vgAdmin'+btn.dataset.tab.charAt(0).toUpperCase()+btn.dataset.tab.slice(1)); if(sec) sec.classList.add('active'); if(btn.dataset.tab==='settings') renderSettings(); }; }); }
 document.addEventListener('DOMContentLoaded',()=>{ensureSections();bindTabs();renderSettings();});
 setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
 })();
@@ -15601,6 +15635,10 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   }
 
   async function loadXboxGames(completo){
+    /* "Recargar juegos" (completo=true) vuelve a pedir los costos desde
+       cero, para no quedarse con el mapa viejo de la sesión ni con el
+       vacío que dejó un fallo al leerlos. */
+    if(completo && typeof window.vgReiniciarCostos === 'function') window.vgReiniciarCostos();
     if(descargaEnCurso){
       /* Si ya viene en camino la que sirve, se espera a ésa. Pero si el
          panel pide la completa —con los escondidos y todas las columnas— y
@@ -15728,11 +15766,11 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     if(!$('.vg-admin-tab[data-tab="analytics"]',tabs)){var a=document.createElement('button');a.className='vg-admin-tab';a.dataset.tab='analytics';a.textContent='Analítica';a.onclick=function(){activateAdminTab('analytics')};tabs.appendChild(a)}
     if(!$('#vgAdminAnalytics',content)){var sec=document.createElement('section');sec.className='vg-admin-section';sec.id='vgAdminAnalytics';sec.innerHTML='<div class="vg-admin-tools"><button class="vg-admin-btn primary" onclick="loadAnalyticsAdmin()">Actualizar analítica</button><button class="vg-admin-btn danger vg-danger-reset" onclick="resetAnalyticsAdmin()">Reiniciar analítica</button></div><div class="vg-admin-note vg-admin-ok">Este panel muestra datos internos guardados en Supabase: visitas, productos vistos, scroll y ciudad aproximada. Google Analytics real sigue disponible en GA4.</div><div id="vgAdminAnalyticsBody"></div>';content.appendChild(sec)}
     if(!$('.vg-admin-tab[data-tab="xboxcurrent"]',tabs)){var x=document.createElement('button');x.className='vg-admin-tab';x.dataset.tab='xboxcurrent';x.textContent='Xbox One / Series';x.onclick=function(){activateAdminTab('xboxcurrent')};tabs.appendChild(x)}
-    if(!$('#vgAdminXboxcurrent',content)){var xs=document.createElement('section');xs.className='vg-admin-section';xs.id='vgAdminXboxcurrent';xs.innerHTML='<div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox One / Series:</b> agrega aquí los juegos que tienes disponibles. Se muestran en la nueva ventana pública de Xbox One / Series.</div><div class="vg-xbox-admin-form"><input id="vgXboxAdminTitle" placeholder="Nombre del juego"><input id="vgXboxAdminEdicion" placeholder="Edición: Standard, Deluxe…"><select id="vgXboxAdminPlatform"><option>Xbox Series</option><option>Xbox One</option><option>Xbox One / Series</option></select><input id="vgXboxAdminPrice" type="number" min="0" placeholder="Tu precio MXN"><input id="vgXboxAdminLista" type="number" min="0" placeholder="Precio en Xbox (tachado)"><input id="vgXboxAdminImage" placeholder="URL de portada"><select id="vgXboxAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="saveXboxAdminGame()">Guardar</button></div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="clearXboxAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="loadXboxGames(true)">Recargar juegos</button></div><div id="vgXboxAdminMessage" class="vg-analytics-muted"></div><div class="vg-xbox-admin-list" id="vgXboxAdminList"></div>';content.appendChild(xs)}
+    if(!$('#vgAdminXboxcurrent',content)){var xs=document.createElement('section');xs.className='vg-admin-section';xs.id='vgAdminXboxcurrent';xs.innerHTML='<div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox One / Series:</b> agrega aquí los juegos que tienes disponibles. Se muestran en la nueva ventana pública de Xbox One / Series.</div><div class="vg-xbox-admin-form"><input id="vgXboxAdminTitle" placeholder="Nombre del juego"><input id="vgXboxAdminEdicion" placeholder="Edición: Standard, Deluxe…"><select id="vgXboxAdminPlatform"><option>Xbox Series</option><option>Xbox One</option><option>Xbox One / Series</option></select><input id="vgXboxAdminPrice" type="number" min="0" placeholder="Tu precio MXN"><input id="vgXboxAdminLista" type="number" min="0" placeholder="Precio en Xbox (tachado)"><input id="vgXboxAdminCosto" type="number" min="0" placeholder="Tu costo Kinguin (MXN)" disabled><input id="vgXboxAdminRegion" placeholder="Región (Kinguin)" disabled><input id="vgXboxAdminImage" placeholder="URL de portada"><select id="vgXboxAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="saveXboxAdminGame()">Guardar</button></div><div class="vg-analytics-muted">Costo y región son solo lectura: los escribe el repaso diario en vg_xbox_costos. Para editarlos a mano falta confirmar en Supabase la política RLS de escritura y la clave única por slug.</div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="clearXboxAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="loadXboxGames(true)">Recargar juegos</button></div><div id="vgXboxAdminMessage" class="vg-analytics-muted"></div><div class="vg-xbox-admin-list" id="vgXboxAdminList"></div>';content.appendChild(xs)}
   }
   window.renderXboxAdminGames=function(message){var box=$('#vgXboxAdminList'); if(!box)return; var msg=$('#vgXboxAdminMessage'); if(msg)msg.textContent=message||''; if(!state.games.length){box.innerHTML='<div class="vg-admin-note">Aún no hay juegos cargados.</div>';return;} /* FASE 90 · Con el catálogo importado son más de mil filas: pintarlas todas deja el panel pegado. Se enseñan las primeras 100 y el resto se busca desde la ventana pública. */ var tope=state.games.slice(0,100); box.innerHTML=(state.games.length>tope.length?'<div class="vg-admin-note">Mostrando '+tope.length+' de '+state.games.length+' juegos del catálogo.</div>':'')+tope.map(function(g){return '<div class="vg-xbox-admin-row"><img src="'+esc(g.image||'portada.png')+'" onerror="this.src=\'portada.png\'" alt=""><div><b>'+esc(g.title)+'</b><small>'+esc(g.platform)+(g.edicion?' · '+esc(g.edicion):'')+' · '+(Number(g.price)>0?money(g.price):'Cotizar')+(Number(g.precio_lista)>0?' (Store '+money(g.precio_lista)+')':'')+' · '+esc(g.status||'active')+'</small></div><div class="vg-xbox-admin-actions"><button class="vg-admin-btn" onclick="editXboxAdminGame(\''+esc(g.id)+'\')">Editar</button><button class="vg-admin-btn danger" onclick="deleteXboxAdminGame(\''+esc(g.id)+'\')">Borrar</button></div></div>'}).join('');};
-  window.clearXboxAdminForm=function(){state.selectedEditId=null; ['vgXboxAdminTitle','vgXboxAdminEdicion','vgXboxAdminPrice','vgXboxAdminLista','vgXboxAdminImage'].forEach(function(id){var el=$('#'+id); if(el)el.value=''}); var p=$('#vgXboxAdminPlatform'); if(p)p.value='Xbox Series'; var st=$('#vgXboxAdminStatus'); if(st)st.value='active'};
-  window.editXboxAdminGame=function(id){var g=state.games.find(function(x){return String(x.id)===String(id)}); if(!g)return; state.selectedEditId=id; $('#vgXboxAdminTitle').value=g.title||''; var ed=$('#vgXboxAdminEdicion'); if(ed)ed.value=g.edicion||''; $('#vgXboxAdminPlatform').value=g.platform||'Xbox Series'; $('#vgXboxAdminPrice').value=Number(g.price||0); var li=$('#vgXboxAdminLista'); if(li)li.value=Number(g.precio_lista||0)||''; $('#vgXboxAdminImage').value=g.image||''; $('#vgXboxAdminStatus').value=g.status||'active'; activateAdminTab('xboxcurrent');
+  window.clearXboxAdminForm=function(){state.selectedEditId=null; ['vgXboxAdminTitle','vgXboxAdminEdicion','vgXboxAdminPrice','vgXboxAdminLista','vgXboxAdminCosto','vgXboxAdminRegion','vgXboxAdminImage'].forEach(function(id){var el=$('#'+id); if(el)el.value=''}); var p=$('#vgXboxAdminPlatform'); if(p)p.value='Xbox Series'; var st=$('#vgXboxAdminStatus'); if(st)st.value='active'};
+  window.editXboxAdminGame=function(id){var g=state.games.find(function(x){return String(x.id)===String(id)}); if(!g)return; state.selectedEditId=id; $('#vgXboxAdminTitle').value=g.title||''; var ed=$('#vgXboxAdminEdicion'); if(ed)ed.value=g.edicion||''; $('#vgXboxAdminPlatform').value=g.platform||'Xbox Series'; $('#vgXboxAdminPrice').value=Number(g.price||0); var li=$('#vgXboxAdminLista'); if(li)li.value=Number(g.precio_lista||0)||''; $('#vgXboxAdminImage').value=g.image||''; $('#vgXboxAdminStatus').value=g.status||'active'; /* El costo y la región se enseñan (solo lectura): viven en vg_xbox_costos y los escribe el repaso diario. */ var rellenarCosto=function(mapa){var cc=mapa&&g.slug?mapa[g.slug]:null; var ce=$('#vgXboxAdminCosto'); if(ce)ce.value=cc?Number(cc.costo||0):''; var re=$('#vgXboxAdminRegion'); if(re)re.value=cc?String(cc.region||''):'';}; var mapaCostos=(typeof window.vgXboxCostos==='function')?window.vgXboxCostos(function(){ if(String(state.selectedEditId)===String(id)) rellenarCosto(window.vgXboxCostos()); }):null; if(mapaCostos) rellenarCosto(mapaCostos); activateAdminTab('xboxcurrent');
     /* FASE 97 · Editar sí funcionaba: llenaba el formulario. Lo que pasa es
        que el formulario está arriba del todo y con novecientos juegos en la
        lista queda a pantallas de distancia, así que parecía que el botón no
@@ -15751,7 +15789,7 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     var nombre=$('#vgXboxAdminTitle');
     if(nombre) setTimeout(function(){ try{ nombre.focus({preventScroll:true}); }catch(e){ nombre.focus(); } }, 350);
   };
-  window.saveXboxAdminGame=async function(){var title=String($('#vgXboxAdminTitle').value||'').trim(); if(!title){alert('Escribe el nombre del juego.');return;} var game={title:title,platform:$('#vgXboxAdminPlatform').value||'Xbox Series',price:Number($('#vgXboxAdminPrice').value||0),image:String($('#vgXboxAdminImage').value||'').trim(),status:$('#vgXboxAdminStatus').value||'active',updated_at:new Date().toISOString()}; var ed=$('#vgXboxAdminEdicion'), li=$('#vgXboxAdminLista'); if(ed)game.edicion=String(ed.value||'').trim(); if(li)game.precio_lista=Number(li.value||0)||null; var client=getSB(); if(client){var id=state.selectedEditId; var guarda=function(datos){return id?client.from(XBOX_TABLE).update(datos).eq('id',id):client.from(XBOX_TABLE).insert(datos)}; var res=await guarda(game); /* FASE 90 · Si todavía no corriste el SQL de la fase 90, la base no tiene edicion ni precio_lista: se guarda sin ellas en vez de tronar. */ if(res.error&&/edicion|precio_lista/i.test(String(res.error.message||''))){var basico=Object.assign({},game); delete basico.edicion; delete basico.precio_lista; res=await guarda(basico);} if(res.error){alert('No se pudo guardar en Supabase: '+res.error.message); return;}} else {var arr=localGames(); if(state.selectedEditId){arr=arr.map(function(x){return String(x.id)===String(state.selectedEditId)?Object.assign({},x,game):x})}else{game.id='local_'+Date.now();game.created_at=new Date().toISOString();arr.unshift(game)} saveLocalGames(arr)} clearXboxAdminForm(); await loadXboxGames(true);};
+  window.saveXboxAdminGame=async function(){var title=String($('#vgXboxAdminTitle').value||'').trim(); if(!title){alert('Escribe el nombre del juego.');return;} var game={title:title,platform:$('#vgXboxAdminPlatform').value||'Xbox Series',price:Number($('#vgXboxAdminPrice').value||0),image:String($('#vgXboxAdminImage').value||'').trim(),status:$('#vgXboxAdminStatus').value||'active',updated_at:new Date().toISOString()}; var ed=$('#vgXboxAdminEdicion'), li=$('#vgXboxAdminLista'); if(ed)game.edicion=String(ed.value||'').trim(); if(li)game.precio_lista=Number(li.value||0)||null; /* El costo y la región NO se guardan aquí: son solo lectura hasta confirmar en Supabase la RLS de escritura y la clave única por slug en vg_xbox_costos; hoy los escribe el repaso diario (cron). */ var client=getSB(); if(client){var id=state.selectedEditId; var guarda=function(datos){return id?client.from(XBOX_TABLE).update(datos).eq('id',id):client.from(XBOX_TABLE).insert(datos)}; var res=await guarda(game); /* FASE 90 · Si todavía no corriste el SQL de la fase 90, la base no tiene edicion ni precio_lista: se guarda sin ellas en vez de tronar. */ if(res.error&&/edicion|precio_lista/i.test(String(res.error.message||''))){var basico=Object.assign({},game); delete basico.edicion; delete basico.precio_lista; res=await guarda(basico);} if(res.error){alert('No se pudo guardar en Supabase: '+res.error.message); return;}} else {var arr=localGames(); if(state.selectedEditId){arr=arr.map(function(x){return String(x.id)===String(state.selectedEditId)?Object.assign({},x,game):x})}else{game.id='local_'+Date.now();game.created_at=new Date().toISOString();arr.unshift(game)} saveLocalGames(arr)} clearXboxAdminForm(); await loadXboxGames(true);};
   window.deleteXboxAdminGame=async function(id){if(!confirm('¿Borrar este juego del catálogo Xbox One / Series?'))return; var client=getSB(); if(client){var res=await client.from(XBOX_TABLE).delete().eq('id',id); if(res.error){alert('No se pudo borrar: '+res.error.message); return;}} else {saveLocalGames(localGames().filter(function(x){return String(x.id)!==String(id)}))} await loadXboxGames(true);};
   window.loadXboxGames=loadXboxGames;
 
@@ -16403,6 +16441,19 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
       '<div class="vg-admin-analytics-grid"><div class="vg-analytics-card"><b>'+checkout.length+'</b><span>Compras iniciadas</span><div class="vg-analytics-small">Métodos de pago abiertos</div></div><div class="vg-analytics-card"><b>'+all.length+'</b><span>Eventos</span><div class="vg-analytics-small">Después del último reinicio</div></div><div class="vg-analytics-card"><b>'+cities.length+'</b><span>Ciudades</span><div class="vg-analytics-small">Ubicación aproximada</div></div><div class="vg-analytics-card"><b>'+productRaw.length+'</b><span>Eventos producto</span><div class="vg-analytics-small">Registros crudos</div></div></div>'+ 
       '<div class="vg-analytics-layout"><div class="vg-analytics-box"><h3>Productos más vistos</h3>'+(products.length?products.map(function(x){return '<div class="vg-analytics-row"><div><b>'+esc(x.name)+'</b><small>Vistas limpias</small></div><strong>'+x.count+'</strong></div>'}).join(''):'<p class="vg-analytics-muted">Todavía no hay productos vistos.</p>')+'</div><div class="vg-analytics-box"><h3>Ciudades</h3>'+(cities.length?cities.map(function(x){return '<div class="vg-analytics-row"><div><b>'+esc(x.name)+'</b><small>Ciudad aproximada por IP</small></div><strong>'+x.count+'</strong></div>'}).join(''):'<p class="vg-analytics-muted">Todavía no hay ciudad registrada.</p>')+'</div></div>';
   };
+
+  /* No cargar dos veces a la vez: al abrir el panel ya se pide la analítica
+     (ver el abridor del panel, fase 17) y la pestaña la vuelve a pedir al
+     pulsarla. Sin esto, las dos llamadas corrían a la vez y la segunda
+     borraba lo que pintaba la primera. */
+  (function(){
+    var original = window.loadAnalyticsAdmin, enCurso = false;
+    window.loadAnalyticsAdmin = async function(){
+      if(enCurso) return;
+      enCurso = true;
+      try{ await original(); } finally { enCurso = false; }
+    };
+  })();
 
   window.vgAnalyticsSendTest=async function(){await track('page_view',{section:'admin-test',metadata:{manual_test:true}}); setTimeout(function(){window.loadAnalyticsAdmin&&window.loadAnalyticsAdmin()},900)};
   window.resetAnalyticsAdmin=async function(){
@@ -25219,7 +25270,13 @@ window.vgAdminOpen = async function(){
      a que exista la barra de pestañas antes de inyectar las mías. */
   var intentos=0;
   (function esperar(){
-    if(ensureAdminTabs()){ showMineTab('pedidos'); startAdminRealtime(); return; }
+    if(ensureAdminTabs()){
+      showMineTab('pedidos'); startAdminRealtime();
+      /* La analítica se carga al abrir el panel, no solo al pulsar su pestaña o su botón:
+         antes el cuerpo quedaba vacío hasta entonces. */
+      if(typeof window.loadAnalyticsAdmin==='function') window.loadAnalyticsAdmin();
+      return;
+    }
     if(++intentos<40) setTimeout(esperar,80);
   })();
 };
@@ -25234,7 +25291,10 @@ async function loadAdmin(){
   var body = (A.view==='tickets') ? qs('#vgAdminSoporte') : qs('#vgAdminPedidos');
   if(!body) return;
   body.innerHTML='<div class="vg17-empty">Cargando...</div>';
-  if(A.view==='tickets') return renderAdminTickets(body);
+  if(A.view==='tickets'){
+    try{ return await renderAdminTickets(body); }
+    catch(e){ body.innerHTML='<div class="vg17-empty">Error cargando soporte: '+esc(e.message||e)+'</div>'; return; }
+  }
   try{ A.orders=await allOrders(); }
   catch(e){ body.innerHTML='<div class="vg17-empty">Error: '+esc(e.message||e)+'</div>'; return; }
   renderAdminOrders(body);
@@ -25457,9 +25517,12 @@ async function refreshAdminChat(ref){
    generas una temporal y se la mandas por WhatsApp.
    ═══════════════════════════════════════════════════════════════ */
 async function renderPasswordRequests(cont){
-  var c=SB(); if(!c||!cont) return;
-  var r=await c.from('vg_password_requests').select('*')
-        .order('created_at',{ascending:false}).limit(50);
+  var c=SB(); if(!cont) return;
+  if(!c){ cont.innerHTML='<span>🔑 Cambios de contraseña</span><div class="vg17-empty">Error: sin conexión con Supabase.</div>'; return; }
+  var r;
+  try{ r=await c.from('vg_password_requests').select('*')
+        .order('created_at',{ascending:false}).limit(50); }
+  catch(err){ cont.innerHTML='<span>🔑 Cambios de contraseña</span><div class="vg17-empty">Error: '+esc(err.message||err)+'</div>'; return; }
   if(r.error){
     cont.innerHTML='<span>🔑 Cambios de contraseña</span><div class="vg17-empty">Error: '+esc(r.error.message)+'</div>';
     return;
@@ -25543,6 +25606,7 @@ window.__vgCargarPasswords = renderPasswordRequests;
 
 async function renderAdminTickets(body){
   var c=SB();
+  if(!c){ body.innerHTML='<div class="vg17-empty">Error: sin conexión con Supabase. No se pudo cargar Soporte.</div>'; return; }
   /* Las solicitudes de contraseña van arriba de los reportes de falla:
      son las que dejan al cliente sin poder entrar. */
   body.innerHTML='<div class="vg17-box" id="vgPwReqs"><span>🔑 Cambios de contraseña</span>'+
@@ -25550,7 +25614,9 @@ async function renderAdminTickets(body){
   renderPasswordRequests(qs('#vgPwReqs'));
   var lista=qs('#vgTicketsLista');
 
-  var r=await c.from('vg_support_tickets').select('*').order('created_at',{ascending:false}).limit(200);
+  var r;
+  try{ r=await c.from('vg_support_tickets').select('*').order('created_at',{ascending:false}).limit(200); }
+  catch(err){ lista.innerHTML='<div class="vg17-empty">Error: '+esc(err.message||err)+'</div>'; return; }
   if(r.error){ lista.innerHTML='<div class="vg17-empty">Error: '+esc(r.error.message)+'</div>'; return; }
   A.tickets=r.data||[];
   if(!A.tickets.length){ lista.innerHTML='<div class="vg17-empty">Sin reportes de falla.</div>'; return; }
@@ -25558,7 +25624,8 @@ async function renderAdminTickets(body){
   body.innerHTML=A.tickets.map(function(t){
     return '<div class="vg17-box" data-t="'+esc(t.id)+'">'+
       '<div class="vg17-row"><b style="color:#fff">'+esc(t.product_name||'(reporte sin producto)')+'</b>'+
-        '<span class="vg17-chip '+(t.status==='resuelto'?'entregado':t.status==='en_proceso'?'proceso':'pendiente')+'">'+esc(t.status)+'</span></div>'+
+        '<span class="vg17-chip '+(t.status==='resuelto'?'entregado':t.status==='en_proceso'?'proceso':'pendiente')+'">'+esc(t.status)+'</span>'+
+        (t.order_id ? '' : '<span class="vg17-chip" style="background:rgba(255,180,92,.14);color:#ffd68a;border:1px solid rgba(255,180,92,.4)">⚠ sin pedido ligado</span>')+'</div>'+
       '<p style="margin:8px 0 0;color:#93a0bd;font-size:0.75rem">'+esc(t.customer_name||'')+' · '+esc(t.customer_phone||'')+' · '+esc(dateMX(t.created_at))+'</p>'+
       '<div class="vg17-grid2" style="margin-top:10px">'+
         '<div class="vg17-box" style="margin:0"><span>Compra</span><b>'+esc(t.purchase_date)+'\n'+esc(t.subscription_period)+'</b></div>'+
@@ -39118,9 +39185,6 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
       if(plataforma === '360' && p.indexOf('360') < 0) return false;
       if(plataforma === 'clasico' && p.indexOf('clasico') < 0) return false;
       if(q && llano(g.name).indexOf(q) < 0) return false;
-      /* FASE 2 · PASO 2 — rango de precio del sidebar, combinado con la
-         plataforma y la búsqueda. */
-      if(window.vgPaso2EnRango && !window.vgPaso2EnRango(Number(g.price || 0))) return false;
       return true;
     });
     var s = document.getElementById('sortSelect');
@@ -39134,11 +39198,6 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
   function cuenta(cual){
     return visibles().filter(function(g){
       var p = llano(g.platform);
-      /* FASE 2 · PASO 2 — los chips cuentan solo los juegos DENTRO del
-         rango de precio del sidebar, no el total del catálogo. Va ANTES
-         de los returns de plataforma: si no, esos returns lo saltaban
-         y los chips de 360/Clásico seguían mostrando el total. */
-      if(window.vgPaso2EnRango && !window.vgPaso2EnRango(Number(g.price || 0))) return false;
       if(cual === '360') return p.indexOf('360') >= 0;
       if(cual === 'clasico') return p.indexOf('clasico') >= 0;
       return true;
@@ -39283,7 +39342,7 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
     grid.innerHTML = barra() + (l.length
       ? l.map(tarjeta).join('')
       : '<div class="vgxr-vacio"><b>No encontré juegos con ese filtro.</b>' +
-        '<p style="margin:6px 0 0">Borra la búsqueda de arriba, toca "Todos" o quita el rango de precio del lateral.</p></div>');
+        '<p style="margin:6px 0 0">Borra la búsqueda de arriba o toca "Todos".</p></div>');
 
     /* La cuenta de juegos va en los chips de la barra y no en
        #productsSubtitle: ese párrafo está oculto en toda la página. */
@@ -45128,7 +45187,7 @@ button.vg119-incompleto{
 (function(){
   'use strict';
 
-  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX'); }
+  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX') + ' MXN'; }
   function esc(s){
     return String(s==null?'':s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
@@ -45184,7 +45243,8 @@ button.vg119-incompleto{
       (costo ? '<span>te cuesta <b>' + pesos(costo) + '</b></span>' +
                '<span class="vg-x104-gana">ganas ' + pesos(gana) + '</span>' +
                (c.region ? '<span class="vg-x104-reg">' + esc(c.region) + '</span>' : '')
-             : '<span class="vg-x104-sin">sin costo guardado</span>') +
+             : (costos === null ? '<span class="vg-x104-sin">Cargando costos…</span>'
+                                : '<span class="vg-x104-sin">sin costo guardado</span>')) +
       '<a class="vg-x104-btn" href="' + esc(enlace) + '" target="_blank" rel="noopener">Comprar en Kinguin ↗</a>';
 
     tarjeta.appendChild(caja);
@@ -45410,12 +45470,15 @@ button.vg119-incompleto{
   var mostrados = TOPE;
   var costos = null;        // slug -> {costo, region, url_proveedor}
   var pidiendoCostos = false;
+  /* Último fallo al pedir los costos: para no repintar en bucle si la
+     tabla no contesta (pintar() vuelve a pedirlos al repintar). */
+  var ultimoFalloCostos = 0;
 
   function esc(s){
     return String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;')
       .replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
   }
-  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX'); }
+  function pesos(n){ return '$' + Number(n||0).toLocaleString('es-MX') + ' MXN'; }
 
   function buscarEnKinguin(titulo){
     return 'https://www.kinguin.net/listing?phrase=' + encodeURIComponent(String(titulo||'')) +
@@ -45558,15 +45621,27 @@ button.vg119-incompleto{
     caja.textContent = 'Preguntándole a Kinguin por los ' + ((typeof window.vgXboxTodos === 'function') ? window.vgXboxTodos().length : '') + ' juegos. Tarda medio minuto.';
     try{
       var d = await api('/api/cron-precios' + (aplicar ? '' : '?ensayo=1'));
-      if(d.error){ caja.textContent = 'Error: ' + d.error; return; }
+      /* Si Kinguin no contestó, el servidor responde 502 sin escribir nada:
+         que se lea así, y no como que los juegos "ya no están en Kinguin". */
+      if(d.error){
+        caja.textContent = (String(d.error).indexOf('Kinguin') >= 0
+          ? 'No se pudo consultar Kinguin: ' + d.error + ' No se cambió ningún precio ni se escondió ningún juego. Inténtalo más tarde.'
+          : 'Error: ' + d.error);
+        return;
+      }
       var l = [];
       l.push('Revisados ' + d.revisados + ' juegos en ' + d.segundos + 's · 1 EUR = ' + d.tipoCambio + ' MXN');
       l.push('Suben ' + d.suben + ' · bajan ' + d.bajan + ' · se esconden ' + d.seEsconden + ' · vuelven ' + d.vuelven + ' · sin cambio ' + d.sinCambio);
       if(aplicar) l.push('Aplicados: ' + d.escritos + ' precios y ' + d.escondidos + ' escondidos' + (d.pendientes ? ' · quedan ' + d.pendientes + ' para la próxima corrida' : ''));
       /* Lo de la tienda de Xbox va aparte porque es lo que decide si un
-         juego se puede publicar. Si Microsoft dejó consultas sin contestar
-         hay juegos que pasaron sin comparar, y eso hay que verlo. */
-      if(d.preciosDeXboxQueCambiaron) l.push('Precios de la tienda de Xbox al día: ' + d.preciosDeXboxQueCambiaron + (aplicar ? ' · guardados ' + d.preciosDeXboxGuardados + (d.preciosDeXboxPorGuardar ? ' · quedan ' + d.preciosDeXboxPorGuardar : '') : ''));
+         juego se puede publicar. "Precios de Xbox que cambiaron hoy" es
+         solo eso —los que cambiaron en esta corrida—, no el total al día:
+         los totales van en la línea siguiente. Si Microsoft dejó
+         consultas sin contestar hay juegos que pasaron sin comparar, y
+         eso hay que verlo. */
+      if(d.preciosDeXboxQueCambiaron) l.push('Precios de Xbox que cambiaron hoy: ' + d.preciosDeXboxQueCambiaron + (aplicar ? ' · guardados ' + d.preciosDeXboxGuardados + (d.preciosDeXboxPorGuardar ? ' · quedan ' + d.preciosDeXboxPorGuardar : '') : ''));
+      if(d.conPrecioDeXbox != null && d.revisados) l.push('Con precio de la tienda de Xbox guardado: ' + d.conPrecioDeXbox + ' de ' + d.revisados + ' · con ficha de Xbox: ' + d.conFichaDeXbox + ' de ' + d.revisados);
+      if(d.tipoCambioEsRespaldo) l.push('OJO: Kinguin no dio el tipo de cambio; se usó el de respaldo (1 EUR = ' + d.tipoCambio + ' MXN).');
       if(d.fichasDeXboxEncontradas) l.push('Fichas de Xbox encontradas para juegos que no la tenían: ' + d.fichasDeXboxEncontradas);
       if(d.bloquesDeXboxSinRespuesta) l.push('OJO: Microsoft dejó ' + d.bloquesDeXboxSinRespuesta + ' consultas sin contestar; hasta ' + (d.bloquesDeXboxSinRespuesta * 20) + ' juegos pasaron sin comparar contra su tienda.');
       if(d.masSuben && d.masSuben.length){
@@ -45588,29 +45663,45 @@ button.vg119-incompleto{
 
   /* Los costos se leen una vez por sesión. Si el usuario no es admin, la
      tabla no le devuelve nada: no es un error, es la política haciendo su
-     trabajo, así que se guarda un mapa vacío y no se vuelve a intentar. */
+     trabajo, así que se guarda un mapa vacío y no se vuelve a intentar.
+     Pero si la lectura FALLA (sin cliente, error de red o de la tabla),
+     no se guarda nada: costos queda en null para reintentar en la
+     siguiente carga, y mientras tanto la tarjeta dice "Cargando costos…"
+     en vez de "sin costo guardado". */
   function traerCostos(despues){
     /* Si ya están, o ya vienen en camino, no se hace nada: llamar aquí al
        callback repintaría, y repintar vuelve a pasar por aquí. */
     if(costos || pidiendoCostos) return;
+    /* Tras un fallo se espera 15 s antes de reintentar: sin esto, el
+       repintado que sigue al fallo pediría los costos otra vez, y otra,
+       sin parar. */
+    if(Date.now() - ultimoFalloCostos < 15000) return;
     /* Con el cliente que sí lleva la sesión: vg_xbox_costos solo abre para el
        administrador, y el cliente de siempre iba como anónimo. */
     var sb = sbConSesion();
-    if(!sb){ costos = {}; if(despues) despues(); return; }
+    if(!sb){ ultimoFalloCostos = Date.now(); if(despues) despues(); return; }
     pidiendoCostos = true;
     (async function(){
-      var mapa = {}, desde = 0;
+      var mapa = {}, desde = 0, fallo = null;
       try{
         while(true){
           var r = await sb.from('vg_xbox_costos').select('*').range(desde, desde+999);
-          if(r.error) break;
+          if(r.error){ fallo = r.error; break; }
           (r.data||[]).forEach(function(c){ mapa[c.slug] = c; });
           if(!r.data || r.data.length < 1000) break;
           desde += 1000;
         }
-      }catch(e){}
-      costos = mapa;
+      }catch(e){ fallo = e; }
       pidiendoCostos = false;
+      if(fallo){
+        /* No se cachea el mapa (ni vacío ni a medias): la próxima carga
+           lo vuelve a intentar y la tarjeta sigue diciendo que los costos
+           están cargando, no que no existen. */
+        costos = null;
+        ultimoFalloCostos = Date.now();
+      }else{
+        costos = mapa;
+      }
       if(despues) despues();
     })();
   }
@@ -45659,7 +45750,8 @@ button.vg119-incompleto{
           ? '<div class="vg-x95-caro">Más caro que en Xbox (' + pesos(g.precio_lista) + ') — no lo vendas así</div>' : '') +
         '<div class="vg-x92-cuentas">' +
           '<span class="vg-x92-venta">' + pesos(g.price) + '</span>' +
-          (costo ? '<span>te cuesta <b>' + pesos(costo) + '</b></span>' +
+          (costos === null ? '<span class="vg-x92-sincosto">Cargando costos…</span>'
+                 : costo ? '<span>te cuesta <b>' + pesos(costo) + '</b></span>' +
                    '<span class="vg-x92-gana">ganas ' + pesos(gana) + ' · ' + margen + '%</span>' +
                    (c.region ? '<span class="vg-x92-region">' + esc(c.region) + '</span>' : '')
                  : '<span class="vg-x92-sincosto">sin costo guardado</span>') +
@@ -45755,7 +45847,7 @@ button.vg119-incompleto{
     var cuenta = document.getElementById('vgX92Cuenta');
     if(cuenta) cuenta.textContent = 'Mostrando ' + vista.length + ' de ' + lista.length +
       (q ? ' que coinciden' : ' juegos') +
-      (costos && !Object.keys(costos).length ? ' · costos no disponibles' : '');
+      (costos === null ? ' · cargando costos…' : (costos && !Object.keys(costos).length ? ' · costos no disponibles' : ''));
   }
 
   /* Los costos, para quien los necesite fuera de aquí: la ficha del pedido
@@ -45764,6 +45856,14 @@ button.vg119-incompleto{
     if(costos) return costos;
     traerCostos(despues);
     return null;
+  };
+
+  /* "Recargar juegos" vuelve a pedir los costos desde cero, en vez de
+     quedarse con el mapa de la sesión (o con el vacío que dejó un fallo).
+     Lo llama loadXboxGames(true), que vive en otro bloque. */
+  window.vgReiniciarCostos = function(){
+    costos = null; pidiendoCostos = false; ultimoFalloCostos = 0;
+    traerCostos(function(){ pintar(); });
   };
 
   function envolver(){
@@ -45944,9 +46044,6 @@ button.vg119-incompleto{
     var lista = juegos().filter(function(j){
       if(generoActivo !== 'todos' && String(j.generos || '').indexOf(generoActivo) < 0) return false;
       if(Number(j.price || 0) > tope) return false;
-      /* FASE 2 · PASO 2 — rango de precio del sidebar: se combina con el
-         tope de la barra propia y con el género. */
-      if(window.vgPaso2EnRango && !window.vgPaso2EnRango(Number(j.price || 0))) return false;
       return true;
     });
 
@@ -48389,23 +48486,6 @@ button.vg119-incompleto{
       if(!isFinite(v) || v < 0) return null;
       return Math.floor(v);
     }
-    /* ¿Este precio pasa el rango del sidebar? Lo usan también las
-       rejillas de Xbox y Retro: sus módulos llaman a este helper
-       desde sus filtros. Sin límites, todo pasa; con límites, los
-       juegos sin precio ("Cotizar", 0) quedan fuera, igual que en
-       filteredServices(). Si algo falla, no se filtra nada. */
-    window.vgPaso2EnRango = function(precio){
-      try{
-        var mn = (typeof vgPriceMin === 'number') ? vgPriceMin : null;
-        var mx = (typeof vgPriceMax === 'number') ? vgPriceMax : null;
-        if(mn === null && mx === null) return true;
-        var p = Number(precio || 0);
-        if(p === 0) return false;
-        if(mn !== null && p < mn) return false;
-        if(mx !== null && p > mx) return false;
-        return true;
-      }catch(e){ return true; }
-    };
     function marcarChip(){
       chips.forEach(function(ch){
         var cMin = ch.getAttribute('data-min') === '' ? null : Number(ch.getAttribute('data-min'));
