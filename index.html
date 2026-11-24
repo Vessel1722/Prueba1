@@ -47937,8 +47937,11 @@ button.vg119-incompleto{
      Ken Burns ligera. Sin video = sin "Unable to play media".
      ============================================================ */
 
-  /* 1. Banda negra: quitar el padding-top de 176px y cabecera sticky */
-  html body{padding-top:0 !important}
+  /* 1. Banda negra: quitar el padding-top de 176px y cabecera sticky.
+     OJO: body.vg-fixed-navbar-ready tiene clase (0,1,1), así que un
+     "html body" simple pierde. Hay que nombrar las clases también. */
+  html body,html body.vg-fixed-navbar-ready,html body.vg-admin-lock{padding-top:0 !important}
+  html,:root{--vg-fixed-topbar-height:0px !important;--vg-fixed-navbar-height:0px !important}
   html body header.topbar{position:sticky !important;top:0 !important;z-index:60 !important}
   html{scroll-padding-top:90px !important}
 
@@ -47979,10 +47982,10 @@ button.vg119-incompleto{
   html body #vgHeroVideo{display:none !important}
   html body #homeView .hero .hero-bg{display:none !important}
   html body #homeView .hero{position:relative !important;overflow:hidden !important;background:#070912 !important}
-  html body #homeView .hero::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:url('vg-hero-vessel.jpg') !important;background-size:cover !important;background-position:center 30% !important;animation:vgKenBurns 18s ease-in-out infinite alternate !important}
+  html body #homeView .hero::before{content:"" !important;position:absolute !important;inset:0 !important;background-image:url('vg-hero-vessel.jpg') !important;background-size:cover !important;background-position:center 30% !important;animation:vgKenBurns 12s ease-in-out infinite alternate !important}
   html body #homeView .hero::after{content:"" !important;position:absolute !important;inset:0 !important;background:linear-gradient(90deg,rgba(5,7,15,.82),rgba(5,7,15,.45) 55%,rgba(5,7,15,.25)) !important}
   html body #homeView .hero-inner{position:relative !important;z-index:2 !important}
-  @keyframes vgKenBurns{from{transform:scale(1)}to{transform:scale(1.08)}}
+  @keyframes vgKenBurns{from{transform:scale(1)}to{transform:scale(1.12)}}
 
   /* 8. Hero compacto en PC */
   @media(min-width:1024px){
