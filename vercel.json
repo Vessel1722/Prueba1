@@ -94,6 +94,14 @@
     {
       "source": "/sitemap-juegos.xml",
       "destination": "/api/sitemap-juegos"
+    },
+    {
+      "source": "/promo-whatsapp",
+      "destination": "/promo-whatsapp.html"
+    },
+    {
+      "source": "/favicon.ico",
+      "destination": "/favicon-64.png"
     }
   ]
 }
