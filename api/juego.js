@@ -28,6 +28,7 @@ module.exports = async (req, res) => {
   const clave = String(process.env.SUPABASE_ANON_KEY || process.env.SUPABASE_SERVICE_KEY || '').trim();
 
   let juego = null;
+  let buscado = false;
   if (slug && url && clave) {
     try {
       const r = await fetch(
@@ -35,10 +36,28 @@ module.exports = async (req, res) => {
         { headers: { apikey: clave, Authorization: 'Bearer ' + clave } }
       );
       if (r.ok) {
+        buscado = true;
         const filas = await r.json();
         juego = (filas && filas[0]) || null;
       }
     } catch (e) { /* si falla, se sirve la ficha genérica */ }
+  }
+
+  /* Slug buscado en la base y no existe: 404 real, sin indexar.
+     Antes devolvía 200 con ficha genérica y canonical a una URL que
+     no existe, y Google podía indexarla. Solo se aplica cuando la
+     búsqueda se hizo de verdad; si Supabase falló, se mantiene la
+     ficha genérica para no romper los enlaces compartidos. */
+  if (slug && buscado && !juego) {
+    res.setHeader('Content-Type', 'text/html; charset=utf-8');
+    res.setHeader('Cache-Control', 'no-store');
+    return res.status(404).send(`<!doctype html>
+<html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Juego no encontrado | Vessel Games</title>
+<style>body{margin:0;background:#08090f;color:#f7f3ea;font-family:system-ui,sans-serif;display:flex;align-items:center;justify-content:center;min-height:100vh;padding:24px;text-align:center}h1{font-size:20px}a{display:inline-block;background:#19e6c1;color:#08221c;text-decoration:none;border-radius:999px;padding:13px 30px;font-weight:800;margin-top:16px}</style>
+</head><body><div><h1>Este juego no existe en Vessel Games</h1><p>Puede que se haya agotado o que el enlace esté mal escrito.</p><a href="${esc(BASE)}/">Volver a la tienda</a></div></body></html>`);
   }
 
   const destino  = BASE + '/?juego=' + encodeURIComponent(slug);   // adonde va la persona
