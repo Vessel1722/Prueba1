@@ -15923,535 +15923,6 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
       if(win && win.document){
         win.document.open();
         win.document.write(`<!doctype html><html><head><title>Preparando WhatsApp...</title><meta name="viewport" content="width=device-width,initial-scale=1"></head><body><div class="box"><div class="spin"></div><h2>Preparando WhatsApp</h2><p>Estamos registrando tu pedido. Esta ventana se abrirá en WhatsApp automáticamente.</p></div>
-<style id="vg-retro-tr-v2">
-/* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
- * Estilos para el grid TR de la sección Xbox Retro (flujo v112):
- * badge Cuenta nueva, precio MX tachado, resaltado 360/Clásico,
- * barra de pedido mínimo. Reutiliza las clases de tarjeta de v112
- * (.card.vgxr-card, .imgbox, .info, .price-line, .premium-actions). */
-
-.vg-tr-badge{
-  display:inline-block;
-  margin-top:6px;
-  padding:3px 8px;
-  border-radius:999px;
-  background:#19e6c1;
-  color:#06231c;
-  font-size:.68rem;
-  font-weight:800;
-  letter-spacing:.06em;
-  text-transform:uppercase;
-}
-.vg-tr-mx{
-  display:block;
-  font-size:.8rem;
-  color:#9aa3b2;
-  text-decoration:line-through;
-  margin-top:2px;
-}
-.vg-tr-360, .vg-tr-clasico{
-  outline:2px solid #8b5cf6;
-  outline-offset:-2px;
-}
-.vg-tr-360 .card-badge, .vg-tr-clasico .card-badge{
-  background:#8b5cf6;
-}
-
-/* Barra de pedido mínimo (sustituye el combo del 10% en modo TR). */
-.vg-tr-progress{
-  margin:10px 0 14px;
-  padding:10px 12px;
-  border-radius:12px;
-  background:#0e1a2e;
-  border:1px solid #1e3a5f;
-  color:#dbe4f0;
-  font-size:.86rem;
-  line-height:1.45;
-}
-.vg-tr-progress.vg-tr-ok{
-  background:#0b2e23;
-  border-color:#19e6c1;
-}
-.vg-tr-bar{
-  height:8px;
-  border-radius:999px;
-  background:#1c2b45;
-  margin-top:8px;
-  overflow:hidden;
-}
-.vg-tr-bar i{
-  display:block;
-  height:100%;
-  background:#19e6c1;
-  border-radius:999px;
-}
-.vg-tr-note{
-  margin-top:6px;
-  font-size:.78rem;
-  color:#9aa3b2;
-}
-
-/* Chips extra de plataforma (One / Series / One+Series). */
-.vgxr-chip.vg-tr-chip-on{
-  background:#8b5cf6;
-  color:#fff;
-  border-color:#8b5cf6;
-}
-
-/* Ficha del juego en modo TR: precio tachado y nota del mínimo. */
-.vgxr-ficha .vg-tr-mx{
-  display:inline;
-  margin-left:8px;
-}
-.vgxr-ficha .vg-tr-badge{
-  margin:0 0 0 8px;
-  vertical-align:middle;
-}
-</style>
-<script id="vg-retro-tr-v2">
-/* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
- *
- * REEMPLAZA a vg-retro-tr-v1. La v1 tomó el control del MODAL Retro
- * viejo (openRetroModal/renderRetroGrid), pero la tienda ya no usa
- * ese modal: el flujo actual es la SECCIÓN v112
- * (vg-retro-seccion-js-v112): showSection('retro') -> pintar(),
- * ficha window.vgxrVer, agregar window.vgxrAgregar, comprar
- * window.vgxrComprar, datos por window.vgRetroJuegos.
- *
- * Esta v2 toma el control de ESE flujo:
- *   · window.vgRetroJuegos devuelve los juegos TR con la forma vieja
- *     ({id, name, platform, price, status, image}), así los conteos,
- *     los chips, la búsqueda y la franja de la sección ya ven datos TR.
- *   · pintarTR() pinta la rejilla con badge Cuenta nueva, precio MX
- *     tachado, 360/Clásico primero y barra de pedido mínimo en MXN.
- *   · vgxrVer/vgxrAgregar/vgxrComprar envueltos: ficha con precio TR,
- *     mínimo de 300 TRY y revalidación antes de pagar.
- *   · Los artículos TR en el carrito llevan título "Cuenta Nueva · …"
- *     (NO empiezan con "Xbox Retro · "), así no les cae el 10% viejo.
- *   · Al cliente solo se le muestran pesos. La lira (`tr`) solo vive
- *     en memoria para sumar el pedido mínimo y nunca se pinta.
- *   · Sin descuento extra del 10%: el precio TR ya es el precio final.
- *   · Si el catálogo TR no carga, todo delega al flujo de siempre.
- */
-(function () {
-  'use strict';
-
-  var MINIMO_TRY = 300;
-  var state = { listo: false, juegos: [], tc: 0.38, minimoMxn: 115, fuente: '' };
-  var filtroPlataforma = 'all';
-  var busquedaTR = '';
-
-  function $(s, r) { return (r || document).querySelector(s); }
-  function esc(s) {
-    return String(s == null ? '' : s).replace(/[&<>'"]/g, function (c) {
-      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c];
-    });
-  }
-  function money(n) { return '$' + Number(n || 0).toLocaleString('es-MX') + ' MXN'; }
-  function bySlug(slug) {
-    for (var i = 0; i < state.juegos.length; i++) if (state.juegos[i].slug === slug) return state.juegos[i];
-    return null;
-  }
-  function tryDe(lista) {
-    var t = 0;
-    for (var i = 0; i < lista.length; i++) t += Number((bySlug(lista[i]) || {}).tr || 0);
-    return t;
-  }
-  function totalDe(lista) {
-    var t = 0;
-    for (var i = 0; i < lista.length; i++) t += Number((bySlug(lista[i]) || {}).venta_mxn || 0);
-    return t;
-  }
-  function toast(titulo, msg) {
-    try {
-      if (typeof window.showToast === 'function') window.showToast(titulo, msg);
-      else alert(titulo + ': ' + msg);
-    } catch (e) { alert(titulo + ': ' + msg); }
-  }
-
-  /* ── Carga del catálogo ── */
-  function cargar() {
-    return fetch('/api/catalogo-retro-tr', { headers: { 'Accept': 'application/json' } })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (d) {
-        if (!d || !Array.isArray(d.juegos) || !d.juegos.length) throw new Error('catálogo vacío');
-        state.juegos = d.juegos;
-        state.tc = Number(d.tipo_cambio || 0.38);
-        state.minimoMxn = Number(d.minimo_mxn || Math.ceil(MINIMO_TRY * state.tc));
-        state.fuente = d.fuente || '';
-        state.listo = true;
-        try { if (typeof window.renderNav === 'function') window.renderNav(); } catch (e) {}
-        try {
-          if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') pintarTR();
-        } catch (e) {}
-      })
-      .catch(function () { state.listo = false; });
-  }
-
-  /* ── Costura con la sección v112: los juegos TR con la forma vieja ── */
-  function aFormaVieja(g) {
-    return {
-      id: g.slug, name: g.title, platform: g.platform,
-      price: Number(g.venta_mxn || 0), status: 'active', image: g.image || 'portada.png',
-    };
-  }
-  var origJuegos = window.vgRetroJuegos;
-  window.vgRetroJuegos = function () {
-    if (state.listo) return state.juegos.map(aFormaVieja);
-    return (typeof origJuegos === 'function') ? (origJuegos() || []) : [];
-  };
-
-  /* ── Carrito ── */
-  function elCarrito() {
-    try { if (typeof cart !== 'undefined' && Array.isArray(cart)) return cart; } catch (e) {}
-    return Array.isArray(window.cart) ? window.cart : null;
-  }
-  function trEnCarrito() {
-    var c = elCarrito() || [];
-    var slugs = [];
-    c.forEach(function (it) {
-      if (it && it.vg_tr && Array.isArray(it.tr_slugs)) slugs.push.apply(slugs, it.tr_slugs);
-    });
-    slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
-    return { slugs: slugs, tryTotal: tryDe(slugs), totalMxn: totalDe(slugs), count: slugs.length };
-  }
-  function itemTR(g) {
-    return {
-      title: 'Cuenta Nueva · ' + g.title,
-      option: g.platform + ' · cuenta nueva · ' + money(g.venta_mxn),
-      price: Number(g.venta_mxn || 0),
-      image: g.image || 'portada.png',
-      vg_tr: true, tr_slugs: [g.slug], tr: Number(g.tr || 0),
-    };
-  }
-  function cerrarFicha() {
-    var f = document.getElementById('vgxrFicha');
-    if (f) f.classList.remove('vgxr-ver');
-    document.body.classList.remove('vgxr-abierto');
-  }
-
-  /* ── Rejilla TR ── */
-  var ORDEN_PLAT = { 'Xbox 360': 0, 'Clásico': 1, 'Xbox One': 2, 'Xbox One / Series': 3, 'Xbox Series': 4 };
-  function filtradosTR() {
-    /* La búsqueda se adopta del buscador de arriba solo si encuentra
-       algo, igual que hace la sección vieja. */
-    var g = document.getElementById('globalSearch');
-    var t = (g && g.value ? String(g.value) : '').trim();
-    var q = '';
-    if (t) {
-      var ql = t.toLowerCase();
-      var hay = state.juegos.some(function (x) {
-        return String(x.title + ' ' + x.platform).toLowerCase().indexOf(ql) >= 0;
-      });
-      if (hay) q = ql;
-    }
-    busquedaTR = q;
-    var list = state.juegos.filter(function (x) {
-      if (filtroPlataforma !== 'all' && x.platform !== filtroPlataforma) return false;
-      if (q && String(x.title).toLowerCase().indexOf(q) < 0) return false;
-      return true;
-    });
-    var s = document.getElementById('sortSelect');
-    var orden = (s && s.value) || 'default';
-    if (orden === 'priceAsc') list.sort(function (a, b) { return Number(a.venta_mxn || 0) - Number(b.venta_mxn || 0); });
-    else if (orden === 'priceDesc') list.sort(function (a, b) { return Number(b.venta_mxn || 0) - Number(a.venta_mxn || 0); });
-    else if (orden === 'name') list.sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'es'); });
-    else list.sort(function (a, b) {
-      var pa = ORDEN_PLAT[a.platform] == null ? 9 : ORDEN_PLAT[a.platform];
-      var pb = ORDEN_PLAT[b.platform] == null ? 9 : ORDEN_PLAT[b.platform];
-      if (pa !== pb) return pa - pb;
-      return String(a.title).localeCompare(String(b.title), 'es');
-    });
-    return list;
-  }
-  function cuentaPlat(p) {
-    if (p === 'all') return state.juegos.length;
-    var n = 0;
-    for (var i = 0; i < state.juegos.length; i++) if (state.juegos[i].platform === p) n++;
-    return n;
-  }
-  function clasePlat(g) {
-    if (g.platform === 'Xbox 360') return ' vg-tr-360';
-    if (g.platform === 'Clásico') return ' vg-tr-clasico';
-    return '';
-  }
-  function tarjetaTR(g) {
-    var img = g.image || 'portada.png';
-    return '<article class="card vgxr-card' + clasePlat(g) + '">' +
-      '<div class="imgbox">' +
-        '<span class="card-badge ' + (g.platform === 'Xbox 360' ? 'ready' : 'hot') + '">' + esc(g.platform) + '</span>' +
-        '<span class="vgxr-fondo" style="background-image:url(&quot;' + esc(img) + '&quot;)"></span>' +
-        '<img decoding="async" loading="lazy" width="640" height="360" src="' + esc(img) + '" ' +
-          'alt="' + esc(g.title) + '" referrerpolicy="no-referrer" ' +
-          'data-vgxr-id="' + esc(g.slug) + '" onerror="window.vgxrFalloFoto(this)">' +
-      '</div>' +
-      '<div class="info">' +
-        '<div class="meta"><span class="tag">Xbox Retro</span><span class="vg-tr-badge">Cuenta nueva</span></div>' +
-        '<h3>' + esc(g.title) + '</h3>' +
-        '<p class="desc">' + esc(g.platform) + ' · se entrega en una cuenta nueva y completa, solo tuya.</p>' +
-        '<div class="price-line"><div>' +
-          '<div class="from">Precio</div>' +
-          '<div class="price">' + esc(money(g.venta_mxn)) + '</div>' +
-          '<span class="vg-tr-mx">' + esc(money(g.mx)) + '</span>' +
-          '<small class="option-count">1 juego · cuenta nueva</small>' +
-        '</div></div>' +
-        '<div class="premium-actions">' +
-          '<button class="detail-btn" onclick="window.vgxrVer(\'' + esc(g.slug) + '\')">Ver juego</button>' +
-          '<button class="quick-add-btn" title="Agregar al carrito" ' +
-            'aria-label="Agregar ' + esc(g.title) + ' al carrito" ' +
-            'onclick="window.vgxrAgregar(\'' + esc(g.slug) + '\')">+</button>' +
-        '</div>' +
-      '</div>' +
-    '</article>';
-  }
-  function barraTR() {
-    var enCarrito = trEnCarrito();
-    var faltaTry = Math.max(0, MINIMO_TRY - enCarrito.tryTotal);
-    var faltaMxn = Math.ceil(faltaTry * state.tc);
-    var pct = Math.min(100, Math.round((enCarrito.tryTotal / MINIMO_TRY) * 100));
-    var chip = function (id, txt, n) {
-      return '<button type="button" class="vgxr-chip' + (filtroPlataforma === id ? ' vgxr-on' : '') + '" ' +
-        'onclick="window.vgxrFiltrar(\'' + id + '\')">' + txt +
-        ' <span style="opacity:.6">' + n + '</span></button>';
-    };
-    return '<div class="vgxr-barra">' +
-      '<div class="vgxr-chips">' +
-        chip('all', 'Todos', cuentaPlat('all')) +
-        chip('Xbox 360', 'Xbox 360', cuentaPlat('Xbox 360')) +
-        chip('Clásico', 'Xbox Clásico', cuentaPlat('Clásico')) +
-        chip('Xbox One', 'Xbox One', cuentaPlat('Xbox One')) +
-        chip('Xbox Series', 'Xbox Series', cuentaPlat('Xbox Series')) +
-        chip('Xbox One / Series', 'Xbox One / Series', cuentaPlat('Xbox One / Series')) +
-      '</div>' +
-      '<div class="vg-tr-progress' + (faltaTry <= 0 && enCarrito.count > 0 ? ' vg-tr-ok' : '') + '">' +
-        (enCarrito.count > 0 && faltaTry <= 0
-          ? '<b>Pedido mínimo completo.</b> Todos los juegos son para cuenta nueva.'
-          : '<b>Pedido mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva.</b>' +
-            (enCarrito.count > 0
-              ? ' Te faltan ' + money(faltaMxn) + ' en juegos para completar tu pedido.'
-              : ' Elige juegos: los de menos de 300 liras solo se venden en paquete.')) +
-        '<div class="vg-tr-bar"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="vg-tr-note">Juegos para cuenta nueva. El precio que ves ya incluye la ganancia y es menor que en la tienda de México.</div>' +
-      '</div>' +
-    '</div>';
-  }
-  function pintarTR() {
-    var grid = document.getElementById('productsGrid');
-    if (!grid || !state.listo) return;
-    var l = filtradosTR();
-    var vacio = document.getElementById('emptyState');
-    if (vacio) vacio.style.display = 'none';
-    grid.innerHTML = barraTR() + (l.length
-      ? l.map(tarjetaTR).join('')
-      : '<div class="vgxr-vacio"><b>No encontré juegos con ese filtro.</b>' +
-        '<p style="margin:6px 0 0">Borra la búsqueda de arriba o toca "Todos".</p></div>');
-  }
-
-  /* ── Agregar y comprar desde la sección ── */
-  function agregarTR(g) {
-    var c = elCarrito();
-    if (!c) { alert('No se pudo agregar al carrito.'); return false; }
-    c.push(itemTR(g));
-    if (typeof window.updateCartCount === 'function') window.updateCartCount();
-    cerrarFicha();
-    toast('Agregado al carrito', g.title + ' · ' + money(g.venta_mxn));
-    try {
-      if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') pintarTR();
-    } catch (e) {}
-    return true;
-  }
-  function comprarTR(g) {
-    if (Number(g.tr || 0) >= MINIMO_TRY) {
-      cerrarFicha();
-      window.openPaymentModal({
-        items: [itemTR(g)], total: Number(g.venta_mxn || 0),
-        source: 'retro', vg_tr: true, tr_slugs: [g.slug],
-      });
-      return;
-    }
-    agregarTR(g);
-    toast('Solo se vende en paquete',
-      'Este juego solo se vende junto con otros hasta completar ' + money(state.minimoMxn) +
-      '. Ya está en tu carrito: agrega más juegos Cuenta Nueva.');
-  }
-
-  /* ── Ficha del juego (v112 la crea; aquí se rellenan los datos TR) ── */
-  function parcheFicha(g) {
-    var f = document.getElementById('vgxrFicha');
-    if (!f) return;
-    var foto = f.querySelector('.vgxr-ficha-foto img');
-    if (foto) { foto.src = g.image || 'portada.png'; foto.alt = g.title; }
-    var fondo = f.querySelector('.vgxr-ficha-fondo');
-    if (fondo) fondo.style.backgroundImage = 'url("' + (g.image || '') + '")';
-    var tag = f.querySelector('.vgxr-ficha-tag');
-    if (tag) tag.textContent = g.platform + ' · Cuenta nueva';
-    var precio = f.querySelector('.vgxr-ficha-precio');
-    if (precio) precio.innerHTML = esc(money(g.venta_mxn)) + ' <span class="vg-tr-mx">' + esc(money(g.mx)) + '</span>';
-    var nota = f.querySelector('.vgxr-ficha-nota');
-    if (nota) nota.textContent = 'Juegos para cuenta nueva. Pedido mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva.';
-  }
-
-  /* ── Envoltorios del flujo de la sección ── */
-  var origShow = window.showSection;
-  window.showSection = function (cat) {
-    var r = (typeof origShow === 'function') ? origShow.apply(this, arguments) : undefined;
-    try {
-      if (cat === 'retro' && state.listo) pintarTR();
-    } catch (e) {}
-    return r;
-  };
-
-  var origRP = window.renderProducts;
-  window.renderProducts = function () {
-    var r = (typeof origRP === 'function') ? origRP.apply(this, arguments) : undefined;
-    try {
-      if (typeof activeCategory !== 'undefined' && activeCategory === 'retro' && state.listo) pintarTR();
-    } catch (e) {}
-    return r;
-  };
-
-  var origFiltrar = window.vgxrFiltrar;
-  window.vgxrFiltrar = function (id) {
-    if (!state.listo) return (typeof origFiltrar === 'function') ? origFiltrar(id) : undefined;
-    filtroPlataforma = (id === 'all' || id === 'Xbox 360' || id === 'Clásico' ||
-      id === 'Xbox One' || id === 'Xbox Series' || id === 'Xbox One / Series') ? id : 'all';
-    var g = document.getElementById('globalSearch');
-    if (g) g.value = '';
-    pintarTR();
-  };
-
-  var origVer = window.vgxrVer;
-  window.vgxrVer = function (id) {
-    if (!state.listo) return (typeof origVer === 'function') ? origVer(id) : undefined;
-    var g = bySlug(id);
-    if (!g) return (typeof origVer === 'function') ? origVer(id) : undefined;
-    if (typeof origVer === 'function') origVer(id);
-    parcheFicha(g);
-  };
-
-  var origAgregar = window.vgxrAgregar;
-  window.vgxrAgregar = function (id) {
-    if (!state.listo) return (typeof origAgregar === 'function') ? origAgregar(id) : undefined;
-    var g = bySlug(id);
-    if (!g) return (typeof origAgregar === 'function') ? origAgregar(id) : undefined;
-    agregarTR(g);
-  };
-
-  var origComprar = window.vgxrComprar;
-  window.vgxrComprar = function (id) {
-    if (!state.listo) return (typeof origComprar === 'function') ? origComprar(id) : undefined;
-    var g = bySlug(id);
-    if (!g) return (typeof origComprar === 'function') ? origComprar(id) : undefined;
-    comprarTR(g);
-  };
-
-  /* ── El modal viejo: todo lo que lo abría ahora va a la sección ── */
-  var origOpen = window.openRetroModal;
-  window.openRetroModal = function () {
-    if (!state.listo) return (typeof origOpen === 'function') ? origOpen() : undefined;
-    if (typeof window.showSection === 'function') window.showSection('retro');
-  };
-  var origRender = window.renderRetroGrid;
-  window.renderRetroGrid = function () {
-    if (!state.listo) return (typeof origRender === 'function') ? origRender() : undefined;
-    try {
-      if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') { pintarTR(); return; }
-    } catch (e) {}
-    return (typeof origRender === 'function') ? origRender() : undefined;
-  };
-  var origToggle = window.toggleRetroGame;
-  window.toggleRetroGame = function (id) {
-    return (typeof origToggle === 'function') ? origToggle(id) : undefined;
-  };
-  var origAdd = window.addRetroToCart;
-  window.addRetroToCart = function () {
-    return (typeof origAdd === 'function') ? origAdd() : undefined;
-  };
-  var origBuy = window.buyRetroNow;
-  window.buyRetroNow = function () {
-    return (typeof origBuy === 'function') ? origBuy() : undefined;
-  };
-
-  /* ── Revalidación antes de pagar ── */
-  function validarPedido(order) {
-    var slugs = [];
-    (order.items || []).forEach(function (it) {
-      if (Array.isArray(it.tr_slugs)) slugs.push.apply(slugs, it.tr_slugs);
-    });
-    if (Array.isArray(order.tr_slugs)) slugs.push.apply(slugs, order.tr_slugs);
-    slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
-    if (!slugs.length) return Promise.resolve(order);
-    return fetch('/api/validar-tr', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ slugs: slugs }),
-    })
-      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(function (d) {
-        if (!d || d.ok !== true) {
-          var malos = (d && d.juegos ? d.juegos.filter(function (j) { return !j.ok; }) : []);
-          var msg = 'No se pudo confirmar el precio actual de ' +
-            (malos.length ? malos.length + ' juego(s) de tu pedido' : 'tu pedido') +
-            '. Vuelve a elegirlos; el precio pudo cambiar en la tienda.';
-          if (d && d.try_ok === false) {
-            msg = 'Tu pedido ya no llega al mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva. Agrega más juegos.';
-          }
-          throw new Error(msg);
-        }
-        var mapa = {};
-        (d.juegos || []).forEach(function (j) { mapa[j.slug] = j; });
-        var cambio = false;
-        (order.items || []).forEach(function (it) {
-          if (!Array.isArray(it.tr_slugs)) return;
-          var nuevo = 0;
-          it.tr_slugs.forEach(function (s) { nuevo += Number((mapa[s] || {}).venta_mxn || 0); });
-          if (nuevo && nuevo !== Number(it.price)) { it.price = nuevo; cambio = true; }
-        });
-        var nuevoTotal = (order.items || []).reduce(function (s, it) { return s + Number(it.price || 0); }, 0);
-        if (nuevoTotal !== Number(order.total)) { order.total = nuevoTotal; cambio = true; }
-        if (cambio) toast('Precio actualizado', 'El precio se actualizó al momento de pagar. Total: ' + money(order.total));
-        return order;
-      });
-  }
-
-  /* El pago de un pedido Cuenta Nueva pasa por el mínimo y la
-     revalidación. Los demás pedidos siguen su camino sin tocarlos. */
-  var origPay = window.openPaymentModal;
-  window.openPaymentModal = function (order) {
-    var esTR = !!order && (order.vg_tr || (order.items || []).some(function (it) { return it && it.vg_tr; }));
-    if (!esTR) return (typeof origPay === 'function') ? origPay(order) : undefined;
-    var slugs = [];
-    (order.items || []).forEach(function (it) {
-      if (it && it.vg_tr && Array.isArray(it.tr_slugs)) slugs.push.apply(slugs, it.tr_slugs);
-    });
-    if (Array.isArray(order.tr_slugs)) slugs.push.apply(slugs, order.tr_slugs);
-    slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
-    var tryTotal = tryDe(slugs);
-    if (tryTotal < MINIMO_TRY) {
-      var falta = Math.ceil((MINIMO_TRY - tryTotal) * state.tc);
-      toast('Pedido mínimo',
-        'Te faltan ' + money(falta) + ' en juegos Cuenta Nueva para completar tu pedido. Agrega más juegos o quita los de Cuenta Nueva del carrito.');
-      return;
-    }
-    validarPedido(order)
-      .then(function (ok) { if (typeof origPay === 'function') origPay(ok); })
-      .catch(function (e) { toast('No se puede pagar aún', e && e.message ? e.message : 'No se pudo verificar el precio actual.'); });
-  };
-
-  window.vgTR = {
-    state: state,
-    recargar: cargar,
-    pintar: pintarTR,
-    enCarrito: trEnCarrito,
-  };
-
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', cargar);
-  } else {
-    cargar();
-  }
-})();
-</script>
 </body></html>`);
         win.document.close();
       }
@@ -50155,5 +49626,534 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
 </script>
 
 
+<style id="vg-retro-tr-v2">
+/* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
+ * Estilos para el grid TR de la sección Xbox Retro (flujo v112):
+ * badge Cuenta nueva, precio MX tachado, resaltado 360/Clásico,
+ * barra de pedido mínimo. Reutiliza las clases de tarjeta de v112
+ * (.card.vgxr-card, .imgbox, .info, .price-line, .premium-actions). */
+
+.vg-tr-badge{
+  display:inline-block;
+  margin-top:6px;
+  padding:3px 8px;
+  border-radius:999px;
+  background:#19e6c1;
+  color:#06231c;
+  font-size:.68rem;
+  font-weight:800;
+  letter-spacing:.06em;
+  text-transform:uppercase;
+}
+.vg-tr-mx{
+  display:block;
+  font-size:.8rem;
+  color:#9aa3b2;
+  text-decoration:line-through;
+  margin-top:2px;
+}
+.vg-tr-360, .vg-tr-clasico{
+  outline:2px solid #8b5cf6;
+  outline-offset:-2px;
+}
+.vg-tr-360 .card-badge, .vg-tr-clasico .card-badge{
+  background:#8b5cf6;
+}
+
+/* Barra de pedido mínimo (sustituye el combo del 10% en modo TR). */
+.vg-tr-progress{
+  margin:10px 0 14px;
+  padding:10px 12px;
+  border-radius:12px;
+  background:#0e1a2e;
+  border:1px solid #1e3a5f;
+  color:#dbe4f0;
+  font-size:.86rem;
+  line-height:1.45;
+}
+.vg-tr-progress.vg-tr-ok{
+  background:#0b2e23;
+  border-color:#19e6c1;
+}
+.vg-tr-bar{
+  height:8px;
+  border-radius:999px;
+  background:#1c2b45;
+  margin-top:8px;
+  overflow:hidden;
+}
+.vg-tr-bar i{
+  display:block;
+  height:100%;
+  background:#19e6c1;
+  border-radius:999px;
+}
+.vg-tr-note{
+  margin-top:6px;
+  font-size:.78rem;
+  color:#9aa3b2;
+}
+
+/* Chips extra de plataforma (One / Series / One+Series). */
+.vgxr-chip.vg-tr-chip-on{
+  background:#8b5cf6;
+  color:#fff;
+  border-color:#8b5cf6;
+}
+
+/* Ficha del juego en modo TR: precio tachado y nota del mínimo. */
+.vgxr-ficha .vg-tr-mx{
+  display:inline;
+  margin-left:8px;
+}
+.vgxr-ficha .vg-tr-badge{
+  margin:0 0 0 8px;
+  vertical-align:middle;
+}
+</style>
+<script id="vg-retro-tr-v2">
+/* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
+ *
+ * REEMPLAZA a vg-retro-tr-v1. La v1 tomó el control del MODAL Retro
+ * viejo (openRetroModal/renderRetroGrid), pero la tienda ya no usa
+ * ese modal: el flujo actual es la SECCIÓN v112
+ * (vg-retro-seccion-js-v112): showSection('retro') -> pintar(),
+ * ficha window.vgxrVer, agregar window.vgxrAgregar, comprar
+ * window.vgxrComprar, datos por window.vgRetroJuegos.
+ *
+ * Esta v2 toma el control de ESE flujo:
+ *   · window.vgRetroJuegos devuelve los juegos TR con la forma vieja
+ *     ({id, name, platform, price, status, image}), así los conteos,
+ *     los chips, la búsqueda y la franja de la sección ya ven datos TR.
+ *   · pintarTR() pinta la rejilla con badge Cuenta nueva, precio MX
+ *     tachado, 360/Clásico primero y barra de pedido mínimo en MXN.
+ *   · vgxrVer/vgxrAgregar/vgxrComprar envueltos: ficha con precio TR,
+ *     mínimo de 300 TRY y revalidación antes de pagar.
+ *   · Los artículos TR en el carrito llevan título "Cuenta Nueva · …"
+ *     (NO empiezan con "Xbox Retro · "), así no les cae el 10% viejo.
+ *   · Al cliente solo se le muestran pesos. La lira (`tr`) solo vive
+ *     en memoria para sumar el pedido mínimo y nunca se pinta.
+ *   · Sin descuento extra del 10%: el precio TR ya es el precio final.
+ *   · Si el catálogo TR no carga, todo delega al flujo de siempre.
+ */
+(function () {
+  'use strict';
+
+  var MINIMO_TRY = 300;
+  var state = { listo: false, juegos: [], tc: 0.38, minimoMxn: 115, fuente: '' };
+  var filtroPlataforma = 'all';
+  var busquedaTR = '';
+
+  function $(s, r) { return (r || document).querySelector(s); }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/[&<>'"]/g, function (c) {
+      return { '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;' }[c];
+    });
+  }
+  function money(n) { return '$' + Number(n || 0).toLocaleString('es-MX') + ' MXN'; }
+  function bySlug(slug) {
+    for (var i = 0; i < state.juegos.length; i++) if (state.juegos[i].slug === slug) return state.juegos[i];
+    return null;
+  }
+  function tryDe(lista) {
+    var t = 0;
+    for (var i = 0; i < lista.length; i++) t += Number((bySlug(lista[i]) || {}).tr || 0);
+    return t;
+  }
+  function totalDe(lista) {
+    var t = 0;
+    for (var i = 0; i < lista.length; i++) t += Number((bySlug(lista[i]) || {}).venta_mxn || 0);
+    return t;
+  }
+  function toast(titulo, msg) {
+    try {
+      if (typeof window.showToast === 'function') window.showToast(titulo, msg);
+      else alert(titulo + ': ' + msg);
+    } catch (e) { alert(titulo + ': ' + msg); }
+  }
+
+  /* ── Carga del catálogo ── */
+  function cargar() {
+    return fetch('/api/catalogo-retro-tr', { headers: { 'Accept': 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        if (!d || !Array.isArray(d.juegos) || !d.juegos.length) throw new Error('catálogo vacío');
+        state.juegos = d.juegos;
+        state.tc = Number(d.tipo_cambio || 0.38);
+        state.minimoMxn = Number(d.minimo_mxn || Math.ceil(MINIMO_TRY * state.tc));
+        state.fuente = d.fuente || '';
+        state.listo = true;
+        try { if (typeof window.renderNav === 'function') window.renderNav(); } catch (e) {}
+        try {
+          if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') pintarTR();
+        } catch (e) {}
+      })
+      .catch(function () { state.listo = false; });
+  }
+
+  /* ── Costura con la sección v112: los juegos TR con la forma vieja ── */
+  function aFormaVieja(g) {
+    return {
+      id: g.slug, name: g.title, platform: g.platform,
+      price: Number(g.venta_mxn || 0), status: 'active', image: g.image || 'portada.png',
+    };
+  }
+  var origJuegos = window.vgRetroJuegos;
+  window.vgRetroJuegos = function () {
+    if (state.listo) return state.juegos.map(aFormaVieja);
+    return (typeof origJuegos === 'function') ? (origJuegos() || []) : [];
+  };
+
+  /* ── Carrito ── */
+  function elCarrito() {
+    try { if (typeof cart !== 'undefined' && Array.isArray(cart)) return cart; } catch (e) {}
+    return Array.isArray(window.cart) ? window.cart : null;
+  }
+  function trEnCarrito() {
+    var c = elCarrito() || [];
+    var slugs = [];
+    c.forEach(function (it) {
+      if (it && it.vg_tr && Array.isArray(it.tr_slugs)) slugs.push.apply(slugs, it.tr_slugs);
+    });
+    slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
+    return { slugs: slugs, tryTotal: tryDe(slugs), totalMxn: totalDe(slugs), count: slugs.length };
+  }
+  function itemTR(g) {
+    return {
+      title: 'Cuenta Nueva · ' + g.title,
+      option: g.platform + ' · cuenta nueva · ' + money(g.venta_mxn),
+      price: Number(g.venta_mxn || 0),
+      image: g.image || 'portada.png',
+      vg_tr: true, tr_slugs: [g.slug], tr: Number(g.tr || 0),
+    };
+  }
+  function cerrarFicha() {
+    var f = document.getElementById('vgxrFicha');
+    if (f) f.classList.remove('vgxr-ver');
+    document.body.classList.remove('vgxr-abierto');
+  }
+
+  /* ── Rejilla TR ── */
+  var ORDEN_PLAT = { 'Xbox 360': 0, 'Clásico': 1, 'Xbox One': 2, 'Xbox One / Series': 3, 'Xbox Series': 4 };
+  function filtradosTR() {
+    /* La búsqueda se adopta del buscador de arriba solo si encuentra
+       algo, igual que hace la sección vieja. */
+    var g = document.getElementById('globalSearch');
+    var t = (g && g.value ? String(g.value) : '').trim();
+    var q = '';
+    if (t) {
+      var ql = t.toLowerCase();
+      var hay = state.juegos.some(function (x) {
+        return String(x.title + ' ' + x.platform).toLowerCase().indexOf(ql) >= 0;
+      });
+      if (hay) q = ql;
+    }
+    busquedaTR = q;
+    var list = state.juegos.filter(function (x) {
+      if (filtroPlataforma !== 'all' && x.platform !== filtroPlataforma) return false;
+      if (q && String(x.title).toLowerCase().indexOf(q) < 0) return false;
+      return true;
+    });
+    var s = document.getElementById('sortSelect');
+    var orden = (s && s.value) || 'default';
+    if (orden === 'priceAsc') list.sort(function (a, b) { return Number(a.venta_mxn || 0) - Number(b.venta_mxn || 0); });
+    else if (orden === 'priceDesc') list.sort(function (a, b) { return Number(b.venta_mxn || 0) - Number(a.venta_mxn || 0); });
+    else if (orden === 'name') list.sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'es'); });
+    else list.sort(function (a, b) {
+      var pa = ORDEN_PLAT[a.platform] == null ? 9 : ORDEN_PLAT[a.platform];
+      var pb = ORDEN_PLAT[b.platform] == null ? 9 : ORDEN_PLAT[b.platform];
+      if (pa !== pb) return pa - pb;
+      return String(a.title).localeCompare(String(b.title), 'es');
+    });
+    return list;
+  }
+  function cuentaPlat(p) {
+    if (p === 'all') return state.juegos.length;
+    var n = 0;
+    for (var i = 0; i < state.juegos.length; i++) if (state.juegos[i].platform === p) n++;
+    return n;
+  }
+  function clasePlat(g) {
+    if (g.platform === 'Xbox 360') return ' vg-tr-360';
+    if (g.platform === 'Clásico') return ' vg-tr-clasico';
+    return '';
+  }
+  function tarjetaTR(g) {
+    var img = g.image || 'portada.png';
+    return '<article class="card vgxr-card' + clasePlat(g) + '">' +
+      '<div class="imgbox">' +
+        '<span class="card-badge ' + (g.platform === 'Xbox 360' ? 'ready' : 'hot') + '">' + esc(g.platform) + '</span>' +
+        '<span class="vgxr-fondo" style="background-image:url(&quot;' + esc(img) + '&quot;)"></span>' +
+        '<img decoding="async" loading="lazy" width="640" height="360" src="' + esc(img) + '" ' +
+          'alt="' + esc(g.title) + '" referrerpolicy="no-referrer" ' +
+          'data-vgxr-id="' + esc(g.slug) + '" onerror="window.vgxrFalloFoto(this)">' +
+      '</div>' +
+      '<div class="info">' +
+        '<div class="meta"><span class="tag">Xbox Retro</span><span class="vg-tr-badge">Cuenta nueva</span></div>' +
+        '<h3>' + esc(g.title) + '</h3>' +
+        '<p class="desc">' + esc(g.platform) + ' · se entrega en una cuenta nueva y completa, solo tuya.</p>' +
+        '<div class="price-line"><div>' +
+          '<div class="from">Precio</div>' +
+          '<div class="price">' + esc(money(g.venta_mxn)) + '</div>' +
+          '<span class="vg-tr-mx">' + esc(money(g.mx)) + '</span>' +
+          '<small class="option-count">1 juego · cuenta nueva</small>' +
+        '</div></div>' +
+        '<div class="premium-actions">' +
+          '<button class="detail-btn" onclick="window.vgxrVer(\'' + esc(g.slug) + '\')">Ver juego</button>' +
+          '<button class="quick-add-btn" title="Agregar al carrito" ' +
+            'aria-label="Agregar ' + esc(g.title) + ' al carrito" ' +
+            'onclick="window.vgxrAgregar(\'' + esc(g.slug) + '\')">+</button>' +
+        '</div>' +
+      '</div>' +
+    '</article>';
+  }
+  function barraTR() {
+    var enCarrito = trEnCarrito();
+    var faltaTry = Math.max(0, MINIMO_TRY - enCarrito.tryTotal);
+    var faltaMxn = Math.ceil(faltaTry * state.tc);
+    var pct = Math.min(100, Math.round((enCarrito.tryTotal / MINIMO_TRY) * 100));
+    var chip = function (id, txt, n) {
+      return '<button type="button" class="vgxr-chip' + (filtroPlataforma === id ? ' vgxr-on' : '') + '" ' +
+        'onclick="window.vgxrFiltrar(\'' + id + '\')">' + txt +
+        ' <span style="opacity:.6">' + n + '</span></button>';
+    };
+    return '<div class="vgxr-barra">' +
+      '<div class="vgxr-chips">' +
+        chip('all', 'Todos', cuentaPlat('all')) +
+        chip('Xbox 360', 'Xbox 360', cuentaPlat('Xbox 360')) +
+        chip('Clásico', 'Xbox Clásico', cuentaPlat('Clásico')) +
+        chip('Xbox One', 'Xbox One', cuentaPlat('Xbox One')) +
+        chip('Xbox Series', 'Xbox Series', cuentaPlat('Xbox Series')) +
+        chip('Xbox One / Series', 'Xbox One / Series', cuentaPlat('Xbox One / Series')) +
+      '</div>' +
+      '<div class="vg-tr-progress' + (faltaTry <= 0 && enCarrito.count > 0 ? ' vg-tr-ok' : '') + '">' +
+        (enCarrito.count > 0 && faltaTry <= 0
+          ? '<b>Pedido mínimo completo.</b> Todos los juegos son para cuenta nueva.'
+          : '<b>Pedido mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva.</b>' +
+            (enCarrito.count > 0
+              ? ' Te faltan ' + money(faltaMxn) + ' en juegos para completar tu pedido.'
+              : ' Elige juegos: los de menos de 300 liras solo se venden en paquete.')) +
+        '<div class="vg-tr-bar"><i style="width:' + pct + '%"></i></div>' +
+        '<div class="vg-tr-note">Juegos para cuenta nueva. El precio que ves ya incluye la ganancia y es menor que en la tienda de México.</div>' +
+      '</div>' +
+    '</div>';
+  }
+  function pintarTR() {
+    var grid = document.getElementById('productsGrid');
+    if (!grid || !state.listo) return;
+    var l = filtradosTR();
+    var vacio = document.getElementById('emptyState');
+    if (vacio) vacio.style.display = 'none';
+    grid.innerHTML = barraTR() + (l.length
+      ? l.map(tarjetaTR).join('')
+      : '<div class="vgxr-vacio"><b>No encontré juegos con ese filtro.</b>' +
+        '<p style="margin:6px 0 0">Borra la búsqueda de arriba o toca "Todos".</p></div>');
+  }
+
+  /* ── Agregar y comprar desde la sección ── */
+  function agregarTR(g) {
+    var c = elCarrito();
+    if (!c) { alert('No se pudo agregar al carrito.'); return false; }
+    c.push(itemTR(g));
+    if (typeof window.updateCartCount === 'function') window.updateCartCount();
+    cerrarFicha();
+    toast('Agregado al carrito', g.title + ' · ' + money(g.venta_mxn));
+    try {
+      if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') pintarTR();
+    } catch (e) {}
+    return true;
+  }
+  function comprarTR(g) {
+    if (Number(g.tr || 0) >= MINIMO_TRY) {
+      cerrarFicha();
+      window.openPaymentModal({
+        items: [itemTR(g)], total: Number(g.venta_mxn || 0),
+        source: 'retro', vg_tr: true, tr_slugs: [g.slug],
+      });
+      return;
+    }
+    agregarTR(g);
+    toast('Solo se vende en paquete',
+      'Este juego solo se vende junto con otros hasta completar ' + money(state.minimoMxn) +
+      '. Ya está en tu carrito: agrega más juegos Cuenta Nueva.');
+  }
+
+  /* ── Ficha del juego (v112 la crea; aquí se rellenan los datos TR) ── */
+  function parcheFicha(g) {
+    var f = document.getElementById('vgxrFicha');
+    if (!f) return;
+    var foto = f.querySelector('.vgxr-ficha-foto img');
+    if (foto) { foto.src = g.image || 'portada.png'; foto.alt = g.title; }
+    var fondo = f.querySelector('.vgxr-ficha-fondo');
+    if (fondo) fondo.style.backgroundImage = 'url("' + (g.image || '') + '")';
+    var tag = f.querySelector('.vgxr-ficha-tag');
+    if (tag) tag.textContent = g.platform + ' · Cuenta nueva';
+    var precio = f.querySelector('.vgxr-ficha-precio');
+    if (precio) precio.innerHTML = esc(money(g.venta_mxn)) + ' <span class="vg-tr-mx">' + esc(money(g.mx)) + '</span>';
+    var nota = f.querySelector('.vgxr-ficha-nota');
+    if (nota) nota.textContent = 'Juegos para cuenta nueva. Pedido mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva.';
+  }
+
+  /* ── Envoltorios del flujo de la sección ── */
+  var origShow = window.showSection;
+  window.showSection = function (cat) {
+    var r = (typeof origShow === 'function') ? origShow.apply(this, arguments) : undefined;
+    try {
+      if (cat === 'retro' && state.listo) pintarTR();
+    } catch (e) {}
+    return r;
+  };
+
+  var origRP = window.renderProducts;
+  window.renderProducts = function () {
+    var r = (typeof origRP === 'function') ? origRP.apply(this, arguments) : undefined;
+    try {
+      if (typeof activeCategory !== 'undefined' && activeCategory === 'retro' && state.listo) pintarTR();
+    } catch (e) {}
+    return r;
+  };
+
+  var origFiltrar = window.vgxrFiltrar;
+  window.vgxrFiltrar = function (id) {
+    if (!state.listo) return (typeof origFiltrar === 'function') ? origFiltrar(id) : undefined;
+    filtroPlataforma = (id === 'all' || id === 'Xbox 360' || id === 'Clásico' ||
+      id === 'Xbox One' || id === 'Xbox Series' || id === 'Xbox One / Series') ? id : 'all';
+    var g = document.getElementById('globalSearch');
+    if (g) g.value = '';
+    pintarTR();
+  };
+
+  var origVer = window.vgxrVer;
+  window.vgxrVer = function (id) {
+    if (!state.listo) return (typeof origVer === 'function') ? origVer(id) : undefined;
+    var g = bySlug(id);
+    if (!g) return (typeof origVer === 'function') ? origVer(id) : undefined;
+    if (typeof origVer === 'function') origVer(id);
+    parcheFicha(g);
+  };
+
+  var origAgregar = window.vgxrAgregar;
+  window.vgxrAgregar = function (id) {
+    if (!state.listo) return (typeof origAgregar === 'function') ? origAgregar(id) : undefined;
+    var g = bySlug(id);
+    if (!g) return (typeof origAgregar === 'function') ? origAgregar(id) : undefined;
+    agregarTR(g);
+  };
+
+  var origComprar = window.vgxrComprar;
+  window.vgxrComprar = function (id) {
+    if (!state.listo) return (typeof origComprar === 'function') ? origComprar(id) : undefined;
+    var g = bySlug(id);
+    if (!g) return (typeof origComprar === 'function') ? origComprar(id) : undefined;
+    comprarTR(g);
+  };
+
+  /* ── El modal viejo: todo lo que lo abría ahora va a la sección ── */
+  var origOpen = window.openRetroModal;
+  window.openRetroModal = function () {
+    if (!state.listo) return (typeof origOpen === 'function') ? origOpen() : undefined;
+    if (typeof window.showSection === 'function') window.showSection('retro');
+  };
+  var origRender = window.renderRetroGrid;
+  window.renderRetroGrid = function () {
+    if (!state.listo) return (typeof origRender === 'function') ? origRender() : undefined;
+    try {
+      if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') { pintarTR(); return; }
+    } catch (e) {}
+    return (typeof origRender === 'function') ? origRender() : undefined;
+  };
+  var origToggle = window.toggleRetroGame;
+  window.toggleRetroGame = function (id) {
+    return (typeof origToggle === 'function') ? origToggle(id) : undefined;
+  };
+  var origAdd = window.addRetroToCart;
+  window.addRetroToCart = function () {
+    return (typeof origAdd === 'function') ? origAdd() : undefined;
+  };
+  var origBuy = window.buyRetroNow;
+  window.buyRetroNow = function () {
+    return (typeof origBuy === 'function') ? origBuy() : undefined;
+  };
+
+  /* ── Revalidación antes de pagar ── */
+  function validarPedido(order) {
+    var slugs = [];
+    (order.items || []).forEach(function (it) {
+      if (Array.isArray(it.tr_slugs)) slugs.push.apply(slugs, it.tr_slugs);
+    });
+    if (Array.isArray(order.tr_slugs)) slugs.push.apply(slugs, order.tr_slugs);
+    slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
+    if (!slugs.length) return Promise.resolve(order);
+    return fetch('/api/validar-tr', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ slugs: slugs }),
+    })
+      .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+      .then(function (d) {
+        if (!d || d.ok !== true) {
+          var malos = (d && d.juegos ? d.juegos.filter(function (j) { return !j.ok; }) : []);
+          var msg = 'No se pudo confirmar el precio actual de ' +
+            (malos.length ? malos.length + ' juego(s) de tu pedido' : 'tu pedido') +
+            '. Vuelve a elegirlos; el precio pudo cambiar en la tienda.';
+          if (d && d.try_ok === false) {
+            msg = 'Tu pedido ya no llega al mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva. Agrega más juegos.';
+          }
+          throw new Error(msg);
+        }
+        var mapa = {};
+        (d.juegos || []).forEach(function (j) { mapa[j.slug] = j; });
+        var cambio = false;
+        (order.items || []).forEach(function (it) {
+          if (!Array.isArray(it.tr_slugs)) return;
+          var nuevo = 0;
+          it.tr_slugs.forEach(function (s) { nuevo += Number((mapa[s] || {}).venta_mxn || 0); });
+          if (nuevo && nuevo !== Number(it.price)) { it.price = nuevo; cambio = true; }
+        });
+        var nuevoTotal = (order.items || []).reduce(function (s, it) { return s + Number(it.price || 0); }, 0);
+        if (nuevoTotal !== Number(order.total)) { order.total = nuevoTotal; cambio = true; }
+        if (cambio) toast('Precio actualizado', 'El precio se actualizó al momento de pagar. Total: ' + money(order.total));
+        return order;
+      });
+  }
+
+  /* El pago de un pedido Cuenta Nueva pasa por el mínimo y la
+     revalidación. Los demás pedidos siguen su camino sin tocarlos. */
+  var origPay = window.openPaymentModal;
+  window.openPaymentModal = function (order) {
+    var esTR = !!order && (order.vg_tr || (order.items || []).some(function (it) { return it && it.vg_tr; }));
+    if (!esTR) return (typeof origPay === 'function') ? origPay(order) : undefined;
+    var slugs = [];
+    (order.items || []).forEach(function (it) {
+      if (it && it.vg_tr && Array.isArray(it.tr_slugs)) slugs.push.apply(slugs, it.tr_slugs);
+    });
+    if (Array.isArray(order.tr_slugs)) slugs.push.apply(slugs, order.tr_slugs);
+    slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
+    var tryTotal = tryDe(slugs);
+    if (tryTotal < MINIMO_TRY) {
+      var falta = Math.ceil((MINIMO_TRY - tryTotal) * state.tc);
+      toast('Pedido mínimo',
+        'Te faltan ' + money(falta) + ' en juegos Cuenta Nueva para completar tu pedido. Agrega más juegos o quita los de Cuenta Nueva del carrito.');
+      return;
+    }
+    validarPedido(order)
+      .then(function (ok) { if (typeof origPay === 'function') origPay(ok); })
+      .catch(function (e) { toast('No se puede pagar aún', e && e.message ? e.message : 'No se pudo verificar el precio actual.'); });
+  };
+
+  window.vgTR = {
+    state: state,
+    recargar: cargar,
+    pintar: pintarTR,
+    enCarrito: trEnCarrito,
+  };
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', cargar);
+  } else {
+    cargar();
+  }
+})();
+</script>
 </body>
 </html>
