@@ -49628,10 +49628,11 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
 
 <style id="vg-retro-tr-v2">
 /* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
- * Estilos para el grid TR de la sección Xbox Retro (flujo v112):
- * badge Cuenta nueva, precio MX tachado, resaltado 360/Clásico,
- * barra de pedido mínimo. Reutiliza las clases de tarjeta de v112
- * (.card.vgxr-card, .imgbox, .info, .price-line, .premium-actions). */
+ * Estilos para el grid TR de la sección Xbox Cuentas (flujo v112):
+ * badge Cuenta nueva, precio MX tachado, resaltado 360/Clásico y
+ * caja de precio oscura y legible. Reutiliza las clases de tarjeta
+ * de v112 (.card.vgxr-card, .imgbox, .info, .price-line,
+ * .premium-actions). */
 
 .vg-tr-badge{
   display:inline-block;
@@ -49660,7 +49661,34 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
   background:#8b5cf6;
 }
 
-/* Barra de pedido mínimo (sustituye el combo del 10% en modo TR). */
+/* ── Precios: legibles, sin brillo ─────────────────────────────
+   La caja de precio de la tienda es un degradado menta→morado con
+   texto claro encima y casi no se lee. En las tarjetas Cuenta Nueva
+   la caja es azul oscuro sólido con borde fino: el precio en blanco
+   grande, el "PRECIO" en gris tenue y el precio de México tachado
+   en gris. */
+.vg-tr-card .price-line{
+  background:#0b1220 !important;
+  border:1px solid #22304a !important;
+  border-radius:14px !important;
+  padding:10px 14px !important;
+}
+.vg-tr-card .price-line .from{
+  color:#8b93a5 !important;
+  font-size:.68rem !important;
+  letter-spacing:.12em !important;
+}
+.vg-tr-card .price-line .price{
+  color:#ffffff !important;
+  font-size:1.25rem !important;
+  font-weight:800 !important;
+}
+.vg-tr-card .price-line .option-count{
+  color:#8b93a5 !important;
+}
+
+/* Barra de pedido mínimo: ya no se muestra al cliente (la regla de
+   300 TRY es interna); los estilos quedan por si se reactiva. */
 .vg-tr-progress{
   margin:10px 0 14px;
   padding:10px 12px;
@@ -49711,6 +49739,7 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
   vertical-align:middle;
 }
 </style>
+
 <script id="vg-retro-tr-v2">
 /* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
  *
@@ -49726,9 +49755,12 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
  *     ({id, name, platform, price, status, image}), así los conteos,
  *     los chips, la búsqueda y la franja de la sección ya ven datos TR.
  *   · pintarTR() pinta la rejilla con badge Cuenta nueva, precio MX
- *     tachado, 360/Clásico primero y barra de pedido mínimo en MXN.
- *   · vgxrVer/vgxrAgregar/vgxrComprar envueltos: ficha con precio TR,
- *     mínimo de 300 TRY y revalidación antes de pagar.
+ *     tachado y 360/Clásico primero. La regla de 300 TRY es INTERNA:
+ *     nunca se muestra al cliente (ni barra, ni montos, ni la palabra
+ *     "mínimo"); solo decide en silencio si un juego se vende solo o
+ *     va al carrito y si el pedido se puede pagar.
+ *   · vgxrVer/vgxrAgregar/vgxrComprar envueltos: ficha con precio TR
+ *     y revalidación antes de pagar.
  *   · Los artículos TR en el carrito llevan título "Cuenta Nueva · …"
  *     (NO empiezan con "Xbox Retro · "), así no les cae el 10% viejo.
  *   · Al cliente solo se le muestran pesos. La lira (`tr`) solo vive
@@ -49784,6 +49816,7 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
         state.fuente = d.fuente || '';
         state.listo = true;
         try { if (typeof window.renderNav === 'function') window.renderNav(); } catch (e) {}
+        renombrarSeccion();
         try {
           if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') pintarTR();
         } catch (e) {}
@@ -49880,7 +49913,7 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
   }
   function tarjetaTR(g) {
     var img = g.image || 'portada.png';
-    return '<article class="card vgxr-card' + clasePlat(g) + '">' +
+    return '<article class="card vgxr-card vg-tr-card' + clasePlat(g) + '">' +
       '<div class="imgbox">' +
         '<span class="card-badge ' + (g.platform === 'Xbox 360' ? 'ready' : 'hot') + '">' + esc(g.platform) + '</span>' +
         '<span class="vgxr-fondo" style="background-image:url(&quot;' + esc(img) + '&quot;)"></span>' +
@@ -49889,7 +49922,7 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
           'data-vgxr-id="' + esc(g.slug) + '" onerror="window.vgxrFalloFoto(this)">' +
       '</div>' +
       '<div class="info">' +
-        '<div class="meta"><span class="tag">Xbox Retro</span><span class="vg-tr-badge">Cuenta nueva</span></div>' +
+        '<div class="meta"><span class="tag">Xbox Cuentas</span><span class="vg-tr-badge">Cuenta nueva</span></div>' +
         '<h3>' + esc(g.title) + '</h3>' +
         '<p class="desc">' + esc(g.platform) + ' · se entrega en una cuenta nueva y completa, solo tuya.</p>' +
         '<div class="price-line"><div>' +
@@ -49908,10 +49941,6 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
     '</article>';
   }
   function barraTR() {
-    var enCarrito = trEnCarrito();
-    var faltaTry = Math.max(0, MINIMO_TRY - enCarrito.tryTotal);
-    var faltaMxn = Math.ceil(faltaTry * state.tc);
-    var pct = Math.min(100, Math.round((enCarrito.tryTotal / MINIMO_TRY) * 100));
     var chip = function (id, txt, n) {
       return '<button type="button" class="vgxr-chip' + (filtroPlataforma === id ? ' vgxr-on' : '') + '" ' +
         'onclick="window.vgxrFiltrar(\'' + id + '\')">' + txt +
@@ -49925,16 +49954,6 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
         chip('Xbox One', 'Xbox One', cuentaPlat('Xbox One')) +
         chip('Xbox Series', 'Xbox Series', cuentaPlat('Xbox Series')) +
         chip('Xbox One / Series', 'Xbox One / Series', cuentaPlat('Xbox One / Series')) +
-      '</div>' +
-      '<div class="vg-tr-progress' + (faltaTry <= 0 && enCarrito.count > 0 ? ' vg-tr-ok' : '') + '">' +
-        (enCarrito.count > 0 && faltaTry <= 0
-          ? '<b>Pedido mínimo completo.</b> Todos los juegos son para cuenta nueva.'
-          : '<b>Pedido mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva.</b>' +
-            (enCarrito.count > 0
-              ? ' Te faltan ' + money(faltaMxn) + ' en juegos para completar tu pedido.'
-              : ' Elige juegos: los de menos de 300 liras solo se venden en paquete.')) +
-        '<div class="vg-tr-bar"><i style="width:' + pct + '%"></i></div>' +
-        '<div class="vg-tr-note">Juegos para cuenta nueva. El precio que ves ya incluye la ganancia y es menor que en la tienda de México.</div>' +
       '</div>' +
     '</div>';
   }
@@ -49973,9 +49992,6 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
       return;
     }
     agregarTR(g);
-    toast('Solo se vende en paquete',
-      'Este juego solo se vende junto con otros hasta completar ' + money(state.minimoMxn) +
-      '. Ya está en tu carrito: agrega más juegos Cuenta Nueva.');
   }
 
   /* ── Ficha del juego (v112 la crea; aquí se rellenan los datos TR) ── */
@@ -49991,7 +50007,26 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
     var precio = f.querySelector('.vgxr-ficha-precio');
     if (precio) precio.innerHTML = esc(money(g.venta_mxn)) + ' <span class="vg-tr-mx">' + esc(money(g.mx)) + '</span>';
     var nota = f.querySelector('.vgxr-ficha-nota');
-    if (nota) nota.textContent = 'Juegos para cuenta nueva. Pedido mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva.';
+    if (nota) nota.textContent = 'Juegos para cuenta nueva. El precio que ves ya incluye la ganancia.';
+  }
+
+  /* ── Nombre de la sección ──
+     La sección se llama "Xbox Cuentas": son juegos de todo tipo
+     (360, Clásico, One y Series) en cuenta nueva. Se cambia el
+     rótulo en CATEGORIES (fuente del menú lateral y del encabezado)
+     y el título cada vez que se abre la sección. */
+  function renombrarSeccion() {
+    try {
+      if (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) {
+        for (var i = 0; i < CATEGORIES.length; i++) {
+          if (CATEGORIES[i] && CATEGORIES[i].id === 'retro') {
+            CATEGORIES[i].label = 'Xbox Cuentas';
+            CATEGORIES[i].desc = 'Juegos de Xbox 360, Xbox Clásico, Xbox One y Xbox Series en cuenta nueva, solo para ti.';
+          }
+        }
+      }
+      if (typeof window.renderNav === 'function') window.renderNav();
+    } catch (e) {}
   }
 
   /* ── Envoltorios del flujo de la sección ── */
@@ -49999,7 +50034,12 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
   window.showSection = function (cat) {
     var r = (typeof origShow === 'function') ? origShow.apply(this, arguments) : undefined;
     try {
-      if (cat === 'retro' && state.listo) pintarTR();
+      if (cat === 'retro') {
+        renombrarSeccion();
+        var t = document.getElementById('productsTitle');
+        if (t) t.textContent = 'Juegos Xbox Cuentas';
+        if (state.listo) pintarTR();
+      }
     } catch (e) {}
     return r;
   };
@@ -50097,7 +50137,7 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
             (malos.length ? malos.length + ' juego(s) de tu pedido' : 'tu pedido') +
             '. Vuelve a elegirlos; el precio pudo cambiar en la tienda.';
           if (d && d.try_ok === false) {
-            msg = 'Tu pedido ya no llega al mínimo de ' + money(state.minimoMxn) + ' en juegos Cuenta Nueva. Agrega más juegos.';
+            msg = 'Tu pedido aún no se puede completar. Agrega más juegos Cuenta Nueva al carrito e inténtalo de nuevo.';
           }
           throw new Error(msg);
         }
@@ -50131,9 +50171,8 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
     slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
     var tryTotal = tryDe(slugs);
     if (tryTotal < MINIMO_TRY) {
-      var falta = Math.ceil((MINIMO_TRY - tryTotal) * state.tc);
-      toast('Pedido mínimo',
-        'Te faltan ' + money(falta) + ' en juegos Cuenta Nueva para completar tu pedido. Agrega más juegos o quita los de Cuenta Nueva del carrito.');
+      toast('Pedido incompleto',
+        'Tu pedido aún no se puede completar. Agrega más juegos Cuenta Nueva al carrito e inténtalo de nuevo.');
       return;
     }
     validarPedido(order)
@@ -50146,7 +50185,9 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
     recargar: cargar,
     pintar: pintarTR,
     enCarrito: trEnCarrito,
+    renombrar: renombrarSeccion,
   };
+  renombrarSeccion();
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', cargar);
@@ -50155,5 +50196,6 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
   }
 })();
 </script>
+
 </body>
 </html>
