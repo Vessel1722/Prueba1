@@ -46009,8 +46009,29 @@ button.vg119-incompleto{
 
 
   function generosDelCatalogo(){
+    /* Los conteos se calculan sobre lo que se está viendo (tope de
+       precio, búsqueda y rango del sidebar), no sobre el catálogo
+       entero: antes "Acción (1.234)" no cambiaba al filtrar. El
+       género en curso no se aplica al contar, para que los demás
+       chips no se vayan a cero al tocar uno. Con un juego fijado se
+       cuentan todos (el fijado manda sobre los filtros).
+       (Auditoría 2026-11-24.) */
+    var base;
+    if(fijado){
+      base = juegos();
+    } else {
+      var generoAntes = generoActivo;
+      try{
+        generoActivo = 'todos';
+        base = ordenados();
+      }catch(e){
+        base = juegos();
+      }finally{
+        generoActivo = generoAntes;
+      }
+    }
     var cuenta = {};
-    juegos().forEach(function(j){
+    base.forEach(function(j){
       String(j.generos || '').split('·').forEach(function(g){
         g = g.trim();
         if(g) cuenta[g] = (cuenta[g] || 0) + 1;
@@ -46110,7 +46131,26 @@ button.vg119-incompleto{
 
     /* Se rehacen solo si cambió el catálogo: pintarlos en cada tecla del
        buscador haría parpadear los chips mientras el cliente escribe. */
-    if(caja && caja.dataset.total === String(total)) return;
+    if(caja && caja.dataset.total === String(total)){
+      /* El catálogo no cambió, pero los filtros sí pueden haberlo hecho:
+         se actualizan los números en su sitio, sin reconstruir la fila.
+         Los géneros que ya no llegan al mínimo se esconden; ninguno
+         nuevo puede aparecer, porque filtrar solo resta.
+         (Auditoría 2026-11-24.) */
+      var frescos = generosDelCatalogo();
+      var mapa = {};
+      frescos.forEach(function(g){ mapa[g.nombre] = g.n; });
+      caja.querySelectorAll('.vg-x103-chip[data-gen]').forEach(function(b){
+        var gen = b.getAttribute('data-gen');
+        if(gen === 'todos') return;
+        var n = mapa[gen];
+        if(n == null){ b.style.display = 'none'; return; }
+        b.style.display = '';
+        var sp = b.querySelector('span');
+        if(sp) sp.textContent = n;
+      });
+      return;
+    }
     if(caja && caja.parentNode) caja.parentNode.removeChild(caja);
     if(!total) return;
 
@@ -48270,7 +48310,7 @@ button.vg119-incompleto{
 </style>
 
 <script id="vg-fase2-hero">
-  /* ============================================================
+/* ============================================================
      Vessel Games Fase 2, Paso 3 — Hero en 4 banners (solo PC)
      Prueba1 solamente. No toca datos, precios, carrito, modal,
      compra por WhatsApp ni admin. No inventa textos ni imágenes:
@@ -48348,18 +48388,44 @@ button.vg119-incompleto{
 
       /* Banners 2-4: categorías reales de CATEGORIES, con su bg,
          su icono, su label y su desc. El botón usa showSection,
-         la misma función que los botones de categoría. */
+         la misma función que los botones de categoría.
+         FOTO (auditoría 2026-11-24): antes la media era solo el
+         degradado + icono SVG, sin foto. Ahora cada banner lleva la
+         foto real de su servicio principal (las mismas URLs que ya
+         usa el inicio Fase 1); Software se resuelve del catálogo en
+         vivo y si no hay foto se queda el degradado + icono de antes.
+         Con foto no se pone el icono: encima de la foto estorbaba. */
+      var FOTOS_CATEGORIA = {
+        gaming: 'https://i.imgur.com/soHmMpnh.jpg',    /* Game Pass, Servicios id 6 */
+        streaming: 'https://i.imgur.com/qCyFDLAh.jpg', /* Netflix, Servicios id 8 */
+      };
+      function fotoCategoria(c){
+        if(FOTOS_CATEGORIA[c.id]) return FOTOS_CATEGORIA[c.id];
+        try{
+          var S = (typeof SERVICES !== 'undefined' && SERVICES) || window.SERVICES || [];
+          for(var i = 0; i < S.length; i++){
+            var s = S[i];
+            if(s && s.image && /software/i.test(String(s.categoryName || s.category || ''))) return s.image;
+          }
+        }catch(e){}
+        return '';
+      }
       [gaming, streaming, software].forEach(function(c){
         var art = document.createElement('article');
         art.className = 'vg-fase2-banner';
         var media = document.createElement('div');
         media.className = 'vg-fase2-banner-media';
-        if(c.bg) media.style.background = c.bg;
-        if(c.icon){
-          var ic = document.createElement('span');
-          ic.className = 'vg-fase2-banner-icon';
-          ic.innerHTML = c.icon; /* SVG propio de la categoría, ya existe */
-          media.appendChild(ic);
+        var foto = fotoCategoria(c);
+        if(foto){
+          media.style.backgroundImage = "url('" + foto + "')";
+        } else {
+          if(c.bg) media.style.background = c.bg;
+          if(c.icon){
+            var ic = document.createElement('span');
+            ic.className = 'vg-fase2-banner-icon';
+            ic.innerHTML = c.icon; /* SVG propio de la categoría, ya existe */
+            media.appendChild(ic);
+          }
         }
         art.appendChild(media);
         var body = document.createElement('div');
@@ -48472,7 +48538,7 @@ button.vg119-incompleto{
 </script>
 
 <script id="vg-fase2-paso2">
-  /* ============================================================
+/* ============================================================
      Vessel Games Fase 2, Paso 2 — cableado del filtro de precio
      del sidebar (solo Prueba1). Lee y escribe vgPriceMin /
      vgPriceMax, declaradas con let en el script principal justo
@@ -48515,6 +48581,20 @@ button.vg119-incompleto{
         return true;
       }catch(e){ return true; }
     };
+    /* Los chips de arriba ("Hasta $…") guardan su tope en
+       window.vgPriceMax, distinto del let vgPriceMax del sidebar:
+       si no se resetea aquí, "Limpiar filtros" deja el catálogo
+       filtrado por ese tope aunque ningún chip se vea marcado, y el
+       rango del sidebar conviviría con un tope invisible.
+       (Auditoría 2026-11-24.) */
+    function limpiarChipsArriba(){
+      try{
+        window.vgPriceMax = Infinity;
+        document.querySelectorAll('.vg-filter-chip').forEach(function(b){ b.classList.remove('active'); });
+        var todos = document.querySelector('.vg-filter-chip[data-price="all"]');
+        if(todos) todos.classList.add('active');
+      }catch(e){}
+    }
     function marcarChip(){
       chips.forEach(function(ch){
         var cMin = ch.getAttribute('data-min') === '' ? null : Number(ch.getAttribute('data-min'));
@@ -48529,6 +48609,7 @@ button.vg119-incompleto{
       if(mn !== null && mx !== null && mn > mx){ var t = mn; mn = mx; mx = t; inputMin.value = mn; inputMax.value = mx; }
       vgPriceMin = mn; vgPriceMax = mx;
       marcarChip();
+      limpiarChipsArriba(); /* el rango del sidebar manda ahora; el tope de arriba se apaga */
       if(typeof renderProducts === 'function') renderProducts();
     }
     function ponerRango(mn, mx){
@@ -48555,6 +48636,7 @@ button.vg119-incompleto{
       inputMin.value = ''; inputMax.value = '';
       vgPriceMin = null; vgPriceMax = null;
       marcarChip();
+      limpiarChipsArriba(); /* "Limpiar filtros" también desmarca los "Hasta $…" y quita su tope */
       if(typeof showSection === 'function') showSection('all');
       else if(typeof renderProducts === 'function') renderProducts();
     };
@@ -48892,565 +48974,6 @@ button.vg119-incompleto{
   }
 }
 </style>
-<style id="vg-admin-v2">
-/* ================================================================
-   vg-admin-v2 · Rediseño del panel admin, segunda versión
-   ---------------------------------------------------------------
-   POR QUÉ NO SE VEÍA vg-admin-clean-v1 (verificado en el archivo):
-   - Era el bloque de estilos nº 2 de 125, en la línea 7241,
-     dentro del primer bloque de estilos. Quedaban 123 bloques DESPUÉS.
-   - Reglas posteriores con igual o mayor especificidad + !important
-     lo pisaban, por ejemplo:
-       · h2: línea 26902 "html body #vgAdminModal.active.active.active
-         .vg-admin-head h2{font-size:0.75rem!important}" (triple
-         .active) y línea 42998 "19px!important".
-       · pestaña activa: líneas 43034, 43782, 43805, 44494, 44514.
-       · panel: línea 42955 grid 232px 1fr (barra lateral v123),
-         línea 43745 background var(--l-bg), línea 44806 100vw.
-       · tema claro v127 (#F1F3F5) y carbón v130 (#16181D) redefinen
-         las variables --l-* que usa casi todo el panel.
-     Además clean-v1 suponía pestañas horizontales arriba, pero en
-     PC el panel es en realidad una BARRA LATERAL (v123, 232px).
-     Resultado: fondo oscuro casi igual que antes y títulos/tabs
-     con los valores viejos. Por eso "se mira igual".
-
-   QUÉ CAMBIA EN v2 PARA QUE SÍ GANE Y SÍ SE NOTE:
-   - Este bloque es el ÚLTIMO bloque de estilos del documento
-     (después de vg-fase2-paso2), así que en empate de
-     especificidad gana por ir después.
-   - Casi todas las reglas usan "html body #vgAdminModal#vgAdminModal"
-     (DOBLE ID) + !important, y el h2 usa triple .active con doble
-     ID, para ganar también a la regla de la línea 26902.
-   - Redefine las variables --l-* con una paleta CLARA propia, así
-     que hasta las reglas viejas que usan var(--l-bg) pintan claro.
-   - Cambio OBVIO: panel CLARO (fondo #eef1f7, tarjetas blancas),
-     barra lateral MORADA con pestaña activa blanca, título grande
-     oscuro, stats con número morado grande, Entregar en verde
-     menta a todo lo ancho. Identidad Vessel: morado #8b5cf6 /
-     #6d28d9 y menta #19e6c1.
-   SOLO PRESENTACIÓN. No toca lógica JS, textos, botones, precios,
-   costos, Supabase, RLS ni el orden de las secciones. No cambia
-   ningún id ni clase que use el JS.
-   ================================================================ */
-
-/* ── 0 · Variables: paleta clara propia ── */
-html body #vgAdminModal#vgAdminModal{
-  --l-bg:#e9edf5!important;
-  --l-surface:#ffffff!important;
-  --l-surface-2:#f4f6fb!important;
-  --l-surface-3:#e8ecf4!important;
-  --l-ink:#141a2e!important;
-  --l-ink-2:#3d465e!important;
-  --l-muted:#6b7590!important;
-  --l-faint:#8a93a8!important;
-  --l-line:#dfe4ef!important;
-  --l-line-2:#cdd4e3!important;
-  --l-accent:#6d28d9!important;
-  --l-accent-ink:#6d28d9!important;
-  --l-accent-wash:#f3efff!important;
-  --l-slate:#241b4d!important;
-  --l-ok:#0ea47a!important;
-  --l-ok-wash:#e2f8f0!important;
-  --l-warn:#b45309!important;
-  --l-warn-wash:#fef3c7!important;
-  --l-crit:#dc2626!important;
-  --l-crit-wash:#fee2e2!important;
-  --l-info-wash:#eef2ff!important;
-  --l-sobre:#ffffff!important;
-  background:rgba(13,16,38,.62)!important;
-}
-html body #vgAdminModal#vgAdminModal.active{display:flex!important;}
-
-/* ── 1 · Panel: pantalla completa, claro, sin brillos ── */
-html body #vgAdminModal#vgAdminModal .vg-admin-panel{
-  background:#ffffff!important;
-  color:#141a2e!important;
-  width:100vw!important;
-  max-width:100vw!important;
-  height:100vh!important;
-  height:100dvh!important;
-  max-height:100dvh!important;
-  border-radius:0!important;
-  border:0!important;
-  box-shadow:none!important;
-  overflow:hidden!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-panel::before,
-html body #vgAdminModal#vgAdminModal .vg-admin-panel::after{display:none!important;background:none!important;}
-
-/* ── 2 · Cabecera: blanca, con línea morada, título GRANDE ── */
-html body #vgAdminModal#vgAdminModal .vg-admin-head{
-  background:#ffffff!important;
-  border-bottom:3px solid #6d28d9!important;
-  padding:18px 28px!important;
-  min-height:78px!important;
-  display:flex!important;
-  align-items:center!important;
-  gap:16px!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-head::before,
-html body #vgAdminModal#vgAdminModal .vg-admin-head::after{display:none!important;background:none!important;}
-html body #vgAdminModal#vgAdminModal.active.active.active .vg-admin-head h2,
-html body #vgAdminModal#vgAdminModal .vg-admin-head h2{
-  font-size:1.65rem!important;
-  line-height:1.15!important;
-  font-weight:900!important;
-  letter-spacing:-.02em!important;
-  color:#141a2e!important;
-  margin:0!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-head p{
-  font-size:.92rem!important;
-  line-height:1.4!important;
-  color:#6b7590!important;
-  margin:3px 0 0!important;
-  max-width:none!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-x{
-  position:static!important;
-  width:44px!important;
-  height:44px!important;
-  flex:none!important;
-  border-radius:12px!important;
-  border:2px solid #dfe4ef!important;
-  background:#ffffff!important;
-  color:#141a2e!important;
-  font-size:1.2rem!important;
-}
-
-/* ── 3 · Barra lateral morada (PC): pestañas verticales ── */
-@media(min-width:901px){
-  html body #vgAdminModal#vgAdminModal .vg-admin-panel{
-    display:grid!important;
-    grid-template-columns:248px minmax(0,1fr)!important;
-    grid-template-rows:auto minmax(0,1fr)!important;
-    grid-template-areas:"lateral cabecera" "lateral cuerpo"!important;
-    gap:0!important;
-  }
-  html body #vgAdminModal#vgAdminModal .vg-admin-head{grid-area:cabecera!important;}
-  html body #vgAdminModal#vgAdminModal .vg-admin-tabs{grid-area:lateral!important;}
-  html body #vgAdminModal#vgAdminModal .vg-admin-content{grid-area:cuerpo!important;}
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
-  background:linear-gradient(180deg,#241b4d,#3b2a7a 55%,#241b4d)!important;
-  padding:20px 14px!important;
-  gap:4px!important;
-  display:flex!important;
-  flex-direction:column!important;
-  align-items:stretch!important;
-  overflow-y:auto!important;
-  overflow-x:hidden!important;
-  border-right:0!important;
-  border-bottom:0!important;
-  flex-wrap:nowrap!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-tabs::before{
-  content:"VESSEL GAMES · PANEL ADMIN"!important;
-  display:block!important;
-  color:#19e6c1!important;
-  font-size:.68rem!important;
-  font-weight:900!important;
-  letter-spacing:.14em!important;
-  padding:6px 12px 16px!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab,
-html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{
-  background:transparent!important;
-  border:0!important;
-  border-left:4px solid transparent!important;
-  border-radius:10px!important;
-  color:rgba(255,255,255,.88)!important;
-  padding:11px 14px!important;
-  min-height:44px!important;
-  font-size:.9rem!important;
-  font-weight:700!important;
-  text-align:left!important;
-  justify-content:flex-start!important;
-  white-space:normal!important;
-  letter-spacing:0!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab:hover,
-html body #vgAdminModal#vgAdminModal .vg-admin-tab-x:hover{
-  background:rgba(255,255,255,.12)!important;
-  border-color:transparent!important;
-  color:#ffffff!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab.active,
-html body #vgAdminModal#vgAdminModal .vg-admin-tab-x.active{
-  background:#ffffff!important;
-  color:#4c1d95!important;
-  border-left-color:#19e6c1!important;
-  box-shadow:0 6px 18px rgba(0,0,0,.28)!important;
-}
-
-/* ── 4 · Contenido: fondo claro, aire ── */
-html body #vgAdminModal#vgAdminModal .vg-admin-content{
-  background:#eef1f7!important;
-  color:#141a2e!important;
-  padding:24px 28px 32px!important;
-  overflow-y:auto!important;
-  overflow-x:hidden!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-section{
-  background:transparent!important;
-  border:0!important;
-  box-shadow:none!important;
-  color:#141a2e!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-login-card,
-html body #vgAdminModal#vgAdminModal .vg-admin-private-card{
-  background:#ffffff!important;
-  color:#141a2e!important;
-  border-radius:20px!important;
-  border:1px solid #dfe4ef!important;
-  box-shadow:0 20px 60px rgba(20,26,46,.18)!important;
-}
-
-/* ── 5 · Stats: 4 tarjetas blancas, número morado grande ── */
-html body #vgAdminModal#vgAdminModal #vgAdminStats,
-html body #vgAdminModal#vgAdminModal .vg-admin-stats,
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-cards,
-html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards{
-  display:grid!important;
-  grid-template-columns:repeat(4,minmax(0,1fr))!important;
-  gap:16px!important;
-  margin-bottom:20px!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-stat,
-html body #vgAdminModal#vgAdminModal .vg17-stat{
-  background:#ffffff!important;
-  border:1px solid #dfe4ef!important;
-  border-radius:16px!important;
-  padding:18px 20px!important;
-  box-shadow:0 2px 10px rgba(20,26,46,.06)!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-stat span,
-html body #vgAdminModal#vgAdminModal .vg17-stat span{
-  color:#6b7590!important;
-  font-size:.72rem!important;
-  font-weight:800!important;
-  text-transform:uppercase!important;
-  letter-spacing:.08em!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-stat b,
-html body #vgAdminModal#vgAdminModal .vg17-stat b{
-  color:#6d28d9!important;
-  font-size:2rem!important;
-  line-height:1.1!important;
-  font-weight:900!important;
-  display:block!important;
-  margin-top:6px!important;
-}
-
-/* ── 6 · Cajas y tarjetas: blancas, un solo ritmo ── */
-html body #vgAdminModal#vgAdminModal .vg17-box,
-html body #vgAdminModal#vgAdminModal .vg17-card,
-html body #vgAdminModal#vgAdminModal .vg-admin-card{
-  background:#ffffff!important;
-  border:1px solid #dfe4ef!important;
-  border-radius:16px!important;
-  padding:18px 20px!important;
-  margin-bottom:16px!important;
-  color:#141a2e!important;
-  box-shadow:0 2px 10px rgba(20,26,46,.05)!important;
-  clip-path:none!important;
-}
-html body #vgAdminModal#vgAdminModal .vg17-box>span{
-  color:#6d28d9!important;
-  font-size:.75rem!important;
-  font-weight:900!important;
-  text-transform:uppercase!important;
-  letter-spacing:.08em!important;
-}
-html body #vgAdminModal#vgAdminModal .vg17-card h4{color:#141a2e!important;font-size:1rem!important;}
-html body #vgAdminModal#vgAdminModal .vg17-box p,
-html body #vgAdminModal#vgAdminModal .vg17-card p{color:#3d465e!important;}
-html body #vgAdminModal#vgAdminModal .vg17-row b{color:#141a2e!important;}
-
-/* ── 7 · Botones e inputs: morado, legibles ── */
-html body #vgAdminModal#vgAdminModal .vg17-btn,
-html body #vgAdminModal#vgAdminModal .vg-admin-btn{
-  background:#6d28d9!important;
-  color:#ffffff!important;
-  border:0!important;
-  border-radius:12px!important;
-  padding:12px 18px!important;
-  font-weight:900!important;
-  min-height:44px!important;
-}
-html body #vgAdminModal#vgAdminModal .vg17-btn.primary,
-html body #vgAdminModal#vgAdminModal .vg-admin-btn.primary{
-  background:linear-gradient(135deg,#6d28d9,#8b5cf6)!important;
-  color:#ffffff!important;
-}
-html body #vgAdminModal#vgAdminModal input,
-html body #vgAdminModal#vgAdminModal select,
-html body #vgAdminModal#vgAdminModal textarea{
-  background:#ffffff!important;
-  color:#141a2e!important;
-  border:1px solid #cdd4e3!important;
-  border-radius:12px!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-admin-tools{
-  display:flex!important;
-  gap:10px!important;
-  flex-wrap:wrap!important;
-  align-items:center!important;
-  margin-bottom:18px!important;
-  background:#ffffff!important;
-  border:1px solid #dfe4ef!important;
-  border-radius:14px!important;
-  padding:12px!important;
-}
-
-/* ── 8 · PEDIDOS: lista | detalle | chat, todo claro ── */
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
-  display:grid!important;
-  grid-template-columns:320px minmax(0,1fr) 360px!important;
-  gap:16px!important;
-  height:calc(100vh - 215px)!important;
-  min-height:480px!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-col{
-  background:#ffffff!important;
-  border:1px solid #dfe4ef!important;
-  border-radius:18px!important;
-  overflow:hidden!important;
-  box-shadow:0 2px 12px rgba(20,26,46,.06)!important;
-  display:flex!important;
-  flex-direction:column!important;
-  min-height:0!important;
-  height:auto!important;
-  max-height:none!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-colhead{
-  background:#241b4d!important;
-  color:#ffffff!important;
-  padding:13px 16px!important;
-  font-size:.72rem!important;
-  font-weight:900!important;
-  letter-spacing:.1em!important;
-  text-transform:uppercase!important;
-  border-bottom:0!important;
-  flex:none!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-colhead b{color:#19e6c1!important;font-size:.72rem!important;}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-scroll{
-  padding:12px!important;
-  background:#ffffff!important;
-  flex:1!important;
-  min-height:0!important;
-  overflow-y:auto!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row{
-  background:#f7f8fc!important;
-  border:1px solid #e6e9f2!important;
-  border-radius:14px!important;
-  padding:14px!important;
-  margin-bottom:10px!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row:hover{
-  background:#ffffff!important;
-  border-color:#8b5cf6!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row.active{
-  background:#f3efff!important;
-  border:1px solid #8b5cf6!important;
-  box-shadow:0 4px 14px rgba(109,40,217,.16)!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowtop b{
-  color:#141a2e!important;
-  font-size:.95rem!important;
-  font-weight:800!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-amt{
-  color:#0a7d5e!important;
-  font-weight:900!important;
-  font-size:.9rem!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowsub{
-  color:#6b7590!important;
-  font-size:.8rem!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowfoot time{color:#6b7590!important;}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-cup{
-  background:transparent!important;
-  color:#6d28d9!important;
-  font-weight:800!important;
-}
-/* Un solo distintivo de estado, sólido y legible */
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip,
-html body #vgAdminModal#vgAdminModal .vg17-chip{
-  background:#6d28d9!important;
-  color:#ffffff!important;
-  border:0!important;
-  border-radius:999px!important;
-  padding:4px 11px!important;
-  font-size:.72rem!important;
-  font-weight:900!important;
-  text-transform:uppercase!important;
-  letter-spacing:.04em!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.pendiente{background:#b45309!important;}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.proceso,
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.en_proceso{background:#6d28d9!important;}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.entregado{background:#0ea47a!important;}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.cancelado{background:#dc2626!important;}
-/* Detalle: ficha lila, total verde oscuro grande */
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idcard{
-  background:linear-gradient(135deg,#ede9fe,#e2f8f0)!important;
-  border:1px solid #c4b5fd!important;
-  border-radius:16px!important;
-  padding:16px 18px!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idtop b{
-  color:#141a2e!important;
-  font-size:1.15rem!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idmeta{color:#3d465e!important;}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-amt.big{
-  color:#0a7d5e!important;
-  font-size:1.4rem!important;
-}
-/* Estado: píldoras blancas, solo la activa es morada */
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-quick button{
-  background:#ffffff!important;
-  color:#3d465e!important;
-  border:1px solid #cdd4e3!important;
-  border-radius:999px!important;
-  padding:9px 14px!important;
-  font-weight:800!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-quick button.on{
-  background:#6d28d9!important;
-  color:#ffffff!important;
-  border-color:#6d28d9!important;
-}
-/* Entregar: LA acción principal, grande, verde menta, a todo lo ancho */
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver{
-  background:#e2f8f0!important;
-  border:2px solid #0ea47a!important;
-  border-radius:16px!important;
-  padding:16px!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver>span{
-  color:#0a7d5e!important;
-  font-weight:900!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver p{color:#3d465e!important;}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver textarea{
-  background:#ffffff!important;
-  color:#141a2e!important;
-  border:1px solid #a7d8c8!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver .vg17-btn{
-  width:100%!important;
-  height:52px!important;
-  background:#0ea47a!important;
-  color:#ffffff!important;
-  font-size:1rem!important;
-  font-weight:900!important;
-  border-radius:14px!important;
-  margin-top:10px!important;
-}
-/* Chat: columna blanca, mensajes sobre gris claro */
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat .vg17-msgs{
-  background:#f4f6fb!important;
-  border:1px solid #e6e9f2!important;
-  border-radius:14px!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-msg{
-  background:#ffffff!important;
-  color:#141a2e!important;
-  border:1px solid #e6e9f2!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg-proof-preview-img{max-height:300px!important;}
-
-/* ── 9 · Xbox / Catálogo / resto: mismo ritmo blanco ── */
-html body #vgAdminModal#vgAdminModal #vgAdminProductsList{
-  display:grid!important;
-  grid-template-columns:repeat(auto-fill,minmax(340px,1fr))!important;
-  gap:16px!important;
-}
-html body #vgAdminModal#vgAdminModal #vgAdminSettings .vg-settings-grid{
-  display:grid!important;
-  grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;
-  gap:16px!important;
-}
-html body #vgAdminModal#vgAdminModal .vg-order-card{
-  background:#ffffff!important;
-  border:1px solid #dfe4ef!important;
-  border-radius:16px!important;
-  padding:16px!important;
-}
-
-/* ── 10 · Pantallas medianas: chat baja, resto igual ── */
-@media(max-width:1300px) and (min-width:901px){
-  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
-    grid-template-columns:300px minmax(0,1fr)!important;
-    grid-template-rows:minmax(0,1fr) auto!important;
-    height:calc(100vh - 215px)!important;
-  }
-  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat{
-    grid-column:1/-1!important;
-    height:380px!important;
-  }
-}
-
-/* ── 11 · Móvil: una columna, nada tapado ── */
-@media(max-width:900px){
-  html body #vgAdminModal#vgAdminModal .vg-admin-panel{
-    display:block!important;
-    grid-template-columns:none!important;
-    grid-template-rows:none!important;
-    grid-template-areas:none!important;
-    height:auto!important;
-    min-height:100dvh!important;
-    overflow:visible!important;
-  }
-  html body #vgAdminModal#vgAdminModal .vg-admin-head{
-    padding:16px!important;
-    min-height:0!important;
-  }
-  html body #vgAdminModal#vgAdminModal.active.active.active .vg-admin-head h2,
-  html body #vgAdminModal#vgAdminModal .vg-admin-head h2{font-size:1.35rem!important;}
-  html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
-    flex-direction:row!important;
-    flex-wrap:nowrap!important;
-    overflow-x:auto!important;
-    overflow-y:hidden!important;
-    padding:10px 12px!important;
-    background:linear-gradient(90deg,#241b4d,#3b2a7a)!important;
-  }
-  html body #vgAdminModal#vgAdminModal .vg-admin-tabs::before{display:none!important;}
-  html body #vgAdminModal#vgAdminModal .vg-admin-tab,
-  html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{
-    flex:none!important;
-    white-space:nowrap!important;
-  }
-  html body #vgAdminModal#vgAdminModal .vg-admin-content{padding:16px 12px 28px!important;}
-  html body #vgAdminModal#vgAdminModal #vgAdminStats,
-  html body #vgAdminModal#vgAdminModal .vg-admin-stats,
-  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-cards,
-  html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards{
-    grid-template-columns:repeat(2,minmax(0,1fr))!important;
-    gap:10px!important;
-  }
-  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
-    grid-template-columns:1fr!important;
-    grid-template-rows:none!important;
-    grid-auto-rows:min-content!important;
-    height:auto!important;
-    min-height:0!important;
-    gap:14px!important;
-  }
-  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-list{max-height:320px!important;}
-  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat{height:420px!important;}
-  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-detail .vgA-scroll{max-height:none!important;}
-  html body #vgAdminModal#vgAdminModal .vg-admin-tools{flex-direction:column!important;align-items:stretch!important;}
-  html body #vgAdminModal#vgAdminModal #vgAdminProductsList{grid-template-columns:1fr!important;}
-}
-</style>
 
 <script id="vg-modal-redisenado-v1">
 /* ============================================================
@@ -49625,6 +49148,1708 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
 })();
 </script>
 
+
+<style id="vg-tr-admin-v1">
+/* Panel admin: Xbox Cuentas (vg-tr-admin-v1).
+ * Solo lo que no cubren las clases del panel: los campos de solo
+ * lectura (costo y ganancia) y la línea de estadísticas. El resto
+ * reutiliza .vg-xbox-admin-form, .vg-xbox-admin-row y .vg-admin-btn,
+ * así que sigue el diseño del panel (v2). */
+#vgAdminCuentas .vg-xbox-admin-form input:disabled{
+  opacity:.55;
+  cursor:not-allowed;
+}
+#vgTrAdminStats{
+  margin:0 0 12px;
+  font-weight:700;
+}
+</style>
+
+<script id="vg-tr-admin-v1">
+/* Panel admin: Xbox Cuentas (vg-tr-admin-v1).
+ *
+ * Pestaña "Xbox Cuentas" en el panel admin, igual que la sección de
+ * Kinguin con Xbox One / Series: formulario para editar un juego,
+ * lista con buscador y filtro por plataforma, "Recargar juegos" y
+ * "Recalcular precios" (repaso diario de Turquía).
+ *
+ * Los datos viven en la tabla vg_xbox_tr (1,640 juegos). La lectura
+ * va por /api/catalogo-retro-tr (no necesita cliente de Supabase).
+ * El guardado usa el cliente del panel (sesión del administrador,
+ * storageKey 'vg_sb_auth') y hace upsert por slug. Si Supabase
+ * rechaza la escritura es que falta la política RLS de escritura:
+ * corre ~/workspace/retro-tr/admin-tr-rls.sql en el editor SQL de
+ * Supabase (una sola vez).
+ *
+ * El precio de venta lo recalcula el repaso diario con la regla v3
+ * (ganancia 120% del costo, $15–$400; MX < $60 a ~80% del MX; topes
+ * 90% MX y precio One/Series). Por eso el costo y la ganancia son
+ * solo lectura, como en la sección de Kinguin. Si se edita el precio
+ * de México o el de Turquía a mano, hay que pulsar "Recalcular
+ * precios" para que la venta se actualice con la regla. */
+(function () {
+  'use strict';
+  if (window.__vgTrAdminV1) return;
+  window.__vgTrAdminV1 = true;
+
+  var TR_TABLE = 'vg_xbox_tr';
+  var PLATS = ['Xbox 360', 'Clásico', 'Xbox One', 'Xbox One / Series', 'Xbox Series'];
+  var state = { juegos: [], cargados: false, editSlug: '', editMsId: '' };
+
+  function qs(s, r) { try { return (r || document).querySelector(s); } catch (e) { return null; } }
+  function qsa(s, r) { try { return Array.prototype.slice.call((r || document).querySelectorAll(s)); } catch (e) { return []; } }
+  function esc(s) {
+    if (typeof window.esc === 'function') return window.esc(s);
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function attr(s) { return esc(s); }
+  function money(v) {
+    if (typeof window.money === 'function') return window.money(v);
+    var n = Number(v || 0);
+    return '$' + n.toLocaleString('es-MX', { maximumFractionDigits: 2 }) + ' MXN';
+  }
+  function slugify(t) {
+    return String(t || '').toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '')
+      .replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 80) || ('juego-' + Date.now());
+  }
+
+  /* Cliente de Supabase con la sesión del administrador (igual que el
+     de la sección de Xbox: misma URL, misma clave anon, mismo cajón
+     de sesión 'vg_sb_auth'). */
+  var sbClient = null, sbSig = '';
+  function clienteSB() {
+    var url = window.VG_SUPABASE_URL, anon = window.VG_SUPABASE_ANON_KEY;
+    if (!window.supabase || !url || !anon) return null;
+    var sig = url + '|' + String(anon).slice(0, 16);
+    if (!sbClient || sbSig !== sig) {
+      sbClient = window.supabase.createClient(url, anon, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'vg_sb_auth' },
+      });
+      sbSig = sig;
+    }
+    return sbClient;
+  }
+  async function tokenTR() {
+    var sb = clienteSB();
+    if (sb && sb.auth && sb.auth.getSession) {
+      try {
+        var s = await Promise.race([
+          sb.auth.getSession(),
+          new Promise(function (r) { setTimeout(function () { r(null); }, 3000); }),
+        ]);
+        var t = s && s.data && s.data.session && s.data.session.access_token;
+        if (t) return t;
+      } catch (e) {}
+    }
+    try {
+      var crudo = localStorage.getItem('vg_sb_auth');
+      if (crudo) {
+        var j = JSON.parse(crudo);
+        var tok = j && (j.access_token || (j.currentSession && j.currentSession.access_token));
+        if (tok) return tok;
+      }
+    } catch (e) {}
+    return '';
+  }
+  async function apiTR(ruta) {
+    var t = await tokenTR();
+    var r = await fetch(ruta, { headers: { Authorization: 'Bearer ' + t } });
+    return r.json();
+  }
+
+  /* showAdminTab vive dentro del bloque v101 (no es global): se
+     replica aquí su lógica para cambiar de pestaña. */
+  function mostrarPestana(name) {
+    qsa('#vgAdminModal .vg-admin-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === name); });
+    qsa('#vgAdminModal .vg-admin-section').forEach(function (sec) { sec.classList.remove('active'); });
+    var sec = qs('#vgAdmin' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (sec) sec.classList.add('active');
+  }
+
+  /* ── Pestaña y sección (igual que ensureRetroAdmin v101) ── */
+  function ensureTrAdmin() {
+    var tabs = qs('#vgAdminModal .vg-admin-tabs'), content = qs('#vgAdminModal .vg-admin-content');
+    if (!tabs || !content) return;
+    var tab = qs('.vg-admin-tab[data-tab="cuentas"]', tabs);
+    if (!tab) {
+      tab = document.createElement('button');
+      tab.className = 'vg-admin-tab';
+      tab.dataset.tab = 'cuentas';
+      tab.textContent = 'Xbox Cuentas';
+      tabs.appendChild(tab);
+    }
+    tab.onclick = function () { mostrarPestana('cuentas'); window.loadTrAdmin(); };
+    var sec = qs('#vgAdminCuentas', content);
+    if (!sec) {
+      sec = document.createElement('section');
+      sec.className = 'vg-admin-section';
+      sec.id = 'vgAdminCuentas';
+      content.appendChild(sec);
+    }
+    if (sec.dataset.vgTrReady === '1') return;
+    sec.dataset.vgTrReady = '1';
+    sec.innerHTML =
+      '<div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox Cuentas:</b> juegos en cuenta nueva, más baratos en Turquía que en México. Aquí puedes editar nombre, plataforma, precio de venta, precio de México, precio de Turquía, estado e imagen.</div>' +
+      '<div id="vgTrAdminStats" class="vg-analytics-muted"></div>' +
+      '<div class="vg-xbox-admin-form">' +
+        '<input id="vgTrAdminTitle" placeholder="Nombre del juego">' +
+        '<select id="vgTrAdminPlatform">' + PLATS.map(function (p) { return '<option>' + p + '</option>'; }).join('') + '</select>' +
+        '<input id="vgTrAdminVenta" type="number" min="0" placeholder="Tu precio MXN">' +
+        '<input id="vgTrAdminMx" type="number" min="0" step="0.01" placeholder="Precio en Xbox MX">' +
+        '<input id="vgTrAdminTr" type="number" min="0" step="0.01" placeholder="Precio en Turquía (TRY)">' +
+        '<input id="vgTrAdminCosto" type="number" min="0" placeholder="Tu costo (MXN)" disabled>' +
+        '<input id="vgTrAdminGanancia" type="number" min="0" placeholder="Ganancia (MXN)" disabled>' +
+        '<input id="vgTrAdminImage" placeholder="URL de portada">' +
+        '<select id="vgTrAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select>' +
+        '<button class="vg-admin-btn primary" onclick="vgSaveTrAdminGame()">Guardar</button>' +
+      '</div>' +
+      '<div class="vg-analytics-muted">Costo y ganancia son solo lectura: los escribe el repaso diario con la regla de ganancia. Si cambias el precio de México o el de Turquía, pulsa "Recalcular precios" para que la venta se actualice. La compra mínima es de $200 MXN por cuenta.</div>' +
+      '<div class="vg-admin-tools">' +
+        '<button class="vg-admin-btn" onclick="vgClearTrAdminForm()">Limpiar formulario</button>' +
+        '<button class="vg-admin-btn" onclick="loadTrAdmin()">Recargar juegos</button>' +
+        '<button class="vg-admin-btn" onclick="vgRecalcularTr(false)">Recalcular precios (ensayo)</button>' +
+        '<button class="vg-admin-btn primary" onclick="vgRecalcularTr(true)">Aplicar recálculo</button>' +
+      '</div>' +
+      '<div class="vg-retro-admin-search-v101">' +
+        '<input class="vg-admin-input" id="vgTrAdminSearch" placeholder="Buscar juego..." oninput="renderTrAdminList()">' +
+        '<select class="vg-admin-select" id="vgTrAdminFilter" onchange="renderTrAdminList()"><option value="all">Todas las plataformas</option>' +
+        PLATS.map(function (p) { return '<option value="' + p + '">' + p + '</option>'; }).join('') + '</select>' +
+      '</div>' +
+      '<div id="vgTrAdminMsg" class="vg-analytics-muted"></div>' +
+      '<div id="vgTrAdminInforme" class="vg-analytics-muted" style="white-space:pre-line"></div>' +
+      '<div class="vg-xbox-admin-list" id="vgTrAdminList"></div>';
+  }
+
+  function statsLine() {
+    var el = qs('#vgTrAdminStats');
+    if (!el) return;
+    if (!state.juegos.length) { el.textContent = ''; return; }
+    var porPlat = {};
+    var activos = 0, suma = 0;
+    state.juegos.forEach(function (g) {
+      porPlat[g.platform] = (porPlat[g.platform] || 0) + 1;
+      if (g.status !== 'hidden') activos++;
+      suma += Number(g.venta_mxn || 0);
+    });
+    el.textContent = state.juegos.length.toLocaleString('es-MX') + ' juegos · ' + activos + ' activos · ' +
+      PLATS.map(function (p) { return p + ' ' + (porPlat[p] || 0); }).join(' · ') +
+      ' · Venta media ' + money(state.juegos.length ? suma / state.juegos.length : 0);
+  }
+
+  window.renderTrAdminList = function (msg) {
+    ensureTrAdmin();
+    var box = qs('#vgTrAdminList'), m = qs('#vgTrAdminMsg');
+    if (m) m.textContent = msg || '';
+    if (!box) return;
+    var q = String((qs('#vgTrAdminSearch') && qs('#vgTrAdminSearch').value) || '').toLowerCase();
+    var f = String((qs('#vgTrAdminFilter') && qs('#vgTrAdminFilter').value) || 'all');
+    var list = state.juegos.filter(function (g) {
+      return (f === 'all' || String(g.platform) === f) &&
+        (!q || [g.title, g.platform, g.slug].join(' ').toLowerCase().indexOf(q) >= 0);
+    });
+    statsLine();
+    if (!list.length) { box.innerHTML = '<div class="vg-admin-note">No encontré juegos Cuenta Nueva con ese filtro.</div>'; return; }
+    /* Igual que la sección de Xbox: las primeras 100, el resto se busca. */
+    var tope = list.slice(0, 100);
+    box.innerHTML = (list.length > tope.length
+      ? '<div class="vg-admin-note">Mostrando ' + tope.length + ' de ' + list.length + ' juegos del catálogo.</div>' : '') +
+      tope.map(function (g) {
+        return '<div class="vg-xbox-admin-row"><img src="' + attr(g.image || 'portada.png') + '" onerror="this.src=\'portada.png\'" alt="">' +
+          '<div><b>' + esc(g.title) + '</b><small>' + esc(g.platform) + ' · ' + (Number(g.venta_mxn) > 0 ? money(g.venta_mxn) : 'Cotizar') +
+          (Number(g.mx) > 0 ? ' (MX ' + money(g.mx) + ')' : '') +
+          (Number(g.tr) > 0 ? ' · ' + Number(g.tr) + ' TRY' : '') +
+          ' · ' + esc(g.status || 'active') + '</small></div>' +
+          '<div class="vg-xbox-admin-actions"><button class="vg-admin-btn" onclick="vgEditTrAdminGame(\'' + attr(g.slug) + '\')">Editar</button>' +
+          '<button class="vg-admin-btn danger" onclick="vgDeleteTrAdminGame(\'' + attr(g.slug) + '\')">Borrar</button></div></div>';
+      }).join('');
+  };
+
+  window.loadTrAdmin = async function () {
+    ensureTrAdmin();
+    window.renderTrAdminList('Cargando juegos Cuenta Nueva...');
+    try {
+      var r = await fetch('/api/catalogo-retro-tr?fresco=1', { headers: { Accept: 'application/json' } });
+      var d = await r.json();
+      if (!d || !Array.isArray(d.juegos)) throw new Error('sin catálogo');
+      state.juegos = d.juegos;
+      state.cargados = true;
+      window.renderTrAdminList('Juegos Cuenta Nueva cargados: ' + d.juegos.length + ' (fuente: ' + (d.fuente || '?') + ').');
+    } catch (e) {
+      window.renderTrAdminList('No se pudo cargar el catálogo Cuenta Nueva.');
+    }
+  };
+
+  window.vgEditTrAdminGame = function (slug) {
+    ensureTrAdmin();
+    var g = state.juegos.find(function (x) { return String(x.slug) === String(slug); });
+    if (!g) return;
+    state.editSlug = String(slug);
+    state.editMsId = g.ms_id || '';
+    qs('#vgTrAdminTitle').value = g.title || '';
+    qs('#vgTrAdminPlatform').value = g.platform || 'Xbox One';
+    qs('#vgTrAdminVenta').value = Number(g.venta_mxn || 0);
+    qs('#vgTrAdminMx').value = Number(g.mx || 0) || '';
+    qs('#vgTrAdminTr').value = Number(g.tr || 0) || '';
+    qs('#vgTrAdminCosto').value = Number(g.costo_mxn || 0) || '';
+    qs('#vgTrAdminGanancia').value = Number(g.ganancia || 0) || '';
+    qs('#vgTrAdminImage').value = g.image || '';
+    qs('#vgTrAdminStatus').value = g.status || 'active';
+    mostrarPestana('cuentas');
+  };
+
+  window.vgClearTrAdminForm = function () {
+    state.editSlug = '';
+    state.editMsId = '';
+    ['#vgTrAdminTitle', '#vgTrAdminVenta', '#vgTrAdminMx', '#vgTrAdminTr', '#vgTrAdminCosto', '#vgTrAdminGanancia', '#vgTrAdminImage'].forEach(function (s) {
+      var el = qs(s);
+      if (el) el.value = '';
+    });
+    var p = qs('#vgTrAdminPlatform');
+    if (p) p.value = 'Xbox One';
+    var st = qs('#vgTrAdminStatus');
+    if (st) st.value = 'active';
+  };
+
+  window.vgSaveTrAdminGame = async function () {
+    ensureTrAdmin();
+    var title = String((qs('#vgTrAdminTitle') && qs('#vgTrAdminTitle').value) || '').trim();
+    if (!title) { alert('Escribe el nombre del juego.'); return; }
+    var slug = state.editSlug || slugify(title);
+    var row = {
+      slug: slug,
+      title: title,
+      platform: (qs('#vgTrAdminPlatform') && qs('#vgTrAdminPlatform').value) || 'Xbox One',
+      ms_id: state.editMsId || null,
+      image: String((qs('#vgTrAdminImage') && qs('#vgTrAdminImage').value) || '').trim(),
+      mx: Number((qs('#vgTrAdminMx') && qs('#vgTrAdminMx').value) || 0) || null,
+      tr: Number((qs('#vgTrAdminTr') && qs('#vgTrAdminTr').value) || 0) || null,
+      venta_mxn: Number((qs('#vgTrAdminVenta') && qs('#vgTrAdminVenta').value) || 0),
+      status: (qs('#vgTrAdminStatus') && qs('#vgTrAdminStatus').value) || 'active',
+      updated_at: new Date().toISOString(),
+    };
+    var client = clienteSB();
+    if (!client) { alert('No hay cliente de Supabase en esta página.'); return; }
+    var res = await client.from(TR_TABLE).upsert(row, { onConflict: 'slug' });
+    if (res.error) {
+      alert('No se pudo guardar en Supabase: ' + res.error.message +
+        (String(res.error.message || '').indexOf('row-level security') >= 0 || res.error.code === '42501'
+          ? ' Falta la política de escritura: corre admin-tr-rls.sql en el editor SQL de Supabase (una sola vez).'
+          : ''));
+      return;
+    }
+    window.vgClearTrAdminForm();
+    await window.loadTrAdmin();
+    window.renderTrAdminList('Juego Cuenta Nueva guardado.');
+  };
+
+  window.vgDeleteTrAdminGame = async function (slug) {
+    if (!confirm('¿Borrar este juego de Xbox Cuentas? Ya no saldrá en la tienda.')) return;
+    var client = clienteSB();
+    if (!client) { alert('No hay cliente de Supabase en esta página.'); return; }
+    var res = await client.from(TR_TABLE).delete().eq('slug', slug);
+    if (res.error) { alert('No se pudo borrar: ' + res.error.message); return; }
+    await window.loadTrAdmin();
+    window.renderTrAdminList('Juego borrado.');
+  };
+
+  /* Repaso diario de Turquía, igual que el repaso de Kinguin: ensayo
+     solo muestra lo que cambiaría; aplicar escribe los precios nuevos
+     (necesita la clave del cron en Vercel o la sesión del admin). */
+  window.vgRecalcularTr = async function (aplicar) {
+    ensureTrAdmin();
+    var caja = qs('#vgTrAdminInforme');
+    if (caja) caja.textContent = aplicar
+      ? 'Recalculando los precios de Xbox Cuentas con Microsoft. Tarda un rato.'
+      : 'Revisando qué precios cambiarían, sin escribir nada todavía.';
+    try {
+      var d = await apiTR('/api/cron-precios-tr' + (aplicar ? '' : '?ensayo=1'));
+      if (!caja) return;
+      if (d.error) {
+        caja.textContent = 'Error: ' + d.error + (String(d.error).indexOf('SUPABASE_SERVICE_KEY') >= 0
+          ? ' Falta la clave del servicio en Vercel; solo Miguel la tiene.'
+          : '');
+        return;
+      }
+      var l = [];
+      if (typeof d.total !== 'undefined') l.push('Revisados ' + d.total + ' juegos');
+      if (typeof d.actualizados !== 'undefined') l.push('Precios actualizados: ' + d.actualizados);
+      if (typeof d.publicados !== 'undefined') l.push('Publicados: ' + d.publicados);
+      if (typeof d.ocultos !== 'undefined') l.push('Ocultos por ya no convenir: ' + d.ocultos);
+      if (typeof d.sin_precio !== 'undefined') l.push('Sin precio actual: ' + d.sin_precio);
+      if (typeof d.errores !== 'undefined' && d.errores) l.push('Errores: ' + d.errores);
+      if (d.duracion_ms) l.push('Tardó ' + Math.round(d.duracion_ms / 1000) + 's');
+      if (d.tipo_cambio) l.push('Tipo de cambio ' + d.tipo_cambio + ' MXN/TRY');
+      if (!l.length) l.push(JSON.stringify(d).slice(0, 400));
+      caja.textContent = (aplicar ? 'Recálculo aplicado.\n' : 'Ensayo (nada escrito).\n') + l.join(' · ');
+      if (aplicar && typeof window.loadTrAdmin === 'function') window.loadTrAdmin();
+    } catch (e) {
+      if (caja) caja.textContent = 'No se pudo: ' + String((e && e.message) || e);
+    }
+  };
+
+  /* Arranque: igual que v101, se engancha a vgAdminOpen. */
+  function boot() {
+    ensureTrAdmin();
+    if (qs('#vgAdminCuentas.active')) window.loadTrAdmin();
+  }
+  var oldOpenAdmin = window.vgAdminOpen;
+  if (typeof oldOpenAdmin === 'function' && !oldOpenAdmin.__vgTrAdminV1) {
+    window.vgAdminOpen = function () {
+      var r = oldOpenAdmin.apply(this, arguments);
+      setTimeout(boot, 300);
+      setTimeout(function () { if (qs('#vgAdminCuentas.active')) window.loadTrAdmin(); }, 700);
+      return r;
+    };
+    window.vgAdminOpen.__vgTrAdminV1 = true;
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+
+<style id="vg-inicio-admin-v1">
+/* Panel admin: Inicio (vg-inicio-admin-v1).
+ * Solo lo que no cubren las clases del panel: el formulario de cada
+ * bloque de contenido y sus títulos. Las filas reutilizan
+ * .vg-xbox-admin-row y los botones .vg-admin-btn del panel. */
+.vg-inicio-sec{
+  margin:18px 0 8px;
+}
+.vg-inicio-titulo{
+  margin:0 0 10px;
+  color:#fff;
+  font-size:1rem;
+}
+.vg-inicio-form{
+  display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(220px,1fr));
+  gap:9px;
+  margin-bottom:12px;
+}
+.vg-inicio-form .vg-admin-input{
+  width:100%;
+}
+.vg-inicio-check{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  color:#dbe4f0;
+  font-size:.9rem;
+}
+@media(max-width:980px){
+  .vg-inicio-form{grid-template-columns:1fr}
+}
+</style>
+
+<script id="vg-inicio-admin-v1">
+/* Panel admin: Inicio (vg-inicio-admin-v1).
+ *
+ * Pestaña "Inicio" en el panel admin: lo que se muestra en el inicio
+ * de la tienda y que Miguel edita sin tocar código — la cinta
+ * informativa, las promociones del héroe y las ofertas destacadas.
+ *
+ * Los datos viven en la tabla vg_inicio_contenido (tipos 'cinta',
+ * 'heroe' y 'oferta'). La lectura va directo a Supabase con el
+ * cliente del panel (sesión del administrador); si no hay cliente,
+ * cae a /api/contenido-inicio. El guardado hace upsert por id con la
+ * sesión del administrador. Si Supabase rechaza la escritura es que
+ * falta correr ~/workspace/retro-tr/crear-tabla-inicio.sql en el
+ * editor SQL de Supabase (una sola vez: crea la tabla y las
+ * políticas de lectura pública y escritura del admin).
+ *
+ * La tienda lee el contenido con /api/contenido-inicio (con
+ * contenido por defecto si la tabla está vacía), así el inicio nunca
+ * se queda vacío. */
+(function () {
+  'use strict';
+  if (window.__vgInicioAdminV1) return;
+  window.__vgInicioAdminV1 = true;
+
+  var TABLA = 'vg_inicio_contenido';
+  var state = { filas: [], editId: '', editTipo: '' };
+
+  function qs(s, r) { try { return (r || document).querySelector(s); } catch (e) { return null; } }
+  function qsa(s, r) { try { return Array.prototype.slice.call((r || document).querySelectorAll(s)); } catch (e) { return []; } }
+  function esc(s) {
+    if (typeof window.esc === 'function') return window.esc(s);
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function attr(s) { return esc(s); }
+  function money(v) {
+    if (typeof window.money === 'function') return window.money(v);
+    return '$' + Number(v || 0).toLocaleString('es-MX', { maximumFractionDigits: 2 }) + ' MXN';
+  }
+
+  var sbClient = null, sbSig = '';
+  function clienteSB() {
+    var url = window.VG_SUPABASE_URL, anon = window.VG_SUPABASE_ANON_KEY;
+    if (!window.supabase || !url || !anon) return null;
+    var sig = url + '|' + String(anon).slice(0, 16);
+    if (!sbClient || sbSig !== sig) {
+      sbClient = window.supabase.createClient(url, anon, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'vg_sb_auth' },
+      });
+      sbSig = sig;
+    }
+    return sbClient;
+  }
+
+  function mostrarPestana(name) {
+    qsa('#vgAdminModal .vg-admin-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === name); });
+    qsa('#vgAdminModal .vg-admin-section').forEach(function (sec) { sec.classList.remove('active'); });
+    var sec = qs('#vgAdmin' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (sec) sec.classList.add('active');
+  }
+
+  /* ── Pestaña y sección ── */
+  function campo(id, ph, tipo) {
+    return '<input class="vg-admin-input" id="' + id + '" placeholder="' + esc(ph) + '"' + (tipo ? ' type="' + tipo + '"' : '') + '>';
+  }
+  function ensureInicioAdmin() {
+    var tabs = qs('#vgAdminModal .vg-admin-tabs'), content = qs('#vgAdminModal .vg-admin-content');
+    if (!tabs || !content) return;
+    var tab = qs('.vg-admin-tab[data-tab="inicio"]', tabs);
+    if (!tab) {
+      tab = document.createElement('button');
+      tab.className = 'vg-admin-tab';
+      tab.dataset.tab = 'inicio';
+      tab.textContent = 'Inicio';
+      tabs.appendChild(tab);
+    }
+    tab.onclick = function () { mostrarPestana('inicio'); window.loadInicioAdmin(); };
+    var sec = qs('#vgAdminInicio', content);
+    if (!sec) {
+      sec = document.createElement('section');
+      sec.className = 'vg-admin-section';
+      sec.id = 'vgAdminInicio';
+      content.appendChild(sec);
+    }
+    if (sec.dataset.vgInicioReady === '1') return;
+    sec.dataset.vgInicioReady = '1';
+    sec.innerHTML =
+      '<div class="vg-admin-note vg-admin-ok"><b>Contenido del inicio:</b> lo que se muestra en la página principal y que se edita aquí: la cinta informativa, las promociones del héroe y las ofertas destacadas. Los cambios se ven en la tienda al recargar (la cinta y el héroe se leen con /api/contenido-inicio).</div>' +
+      '<div class="vg-admin-tools"><button class="vg-admin-btn" onclick="loadInicioAdmin()">Recargar contenido</button></div>' +
+      '<div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Cinta informativa</h3>' +
+        '<div class="vg-inicio-form">' + campo('vgInicioCintaTexto', 'Texto de la cinta...') + campo('vgInicioCintaOrden', 'Orden', 'number') +
+        '<label class="vg-inicio-check"><input type="checkbox" id="vgInicioCintaActivo" checked> Activa</label>' +
+        '<button class="vg-admin-btn primary" onclick="vgSaveInicioFila(\'cinta\')">Guardar en la cinta</button></div>' +
+        '<div class="vg-xbox-admin-list" id="vgInicioListaCinta"></div></div>' +
+      '<div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Promociones del héroe</h3>' +
+        '<div class="vg-inicio-form">' + campo('vgInicioHeroeTitulo', 'Título (ej. Xbox Cuentas)') + campo('vgInicioHeroeSub', 'Subtítulo') +
+        campo('vgInicioHeroeImagen', 'URL de imagen (opcional)') + campo('vgInicioHeroeEnlace', 'Sección al pulsar (ej. retro)') + campo('vgInicioHeroeOrden', 'Orden', 'number') +
+        '<label class="vg-inicio-check"><input type="checkbox" id="vgInicioHeroeActivo" checked> Activa</label>' +
+        '<button class="vg-admin-btn primary" onclick="vgSaveInicioFila(\'heroe\')">Guardar promoción</button></div>' +
+        '<div class="vg-xbox-admin-list" id="vgInicioListaHeroe"></div></div>' +
+      '<div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Ofertas destacadas</h3>' +
+        '<div class="vg-inicio-form">' + campo('vgInicioOfertaTitulo', 'Título (ej. Gears Of War 3)') + campo('vgInicioOfertaSub', 'Subtítulo (ej. Xbox 360 · Cuenta nueva)') +
+        campo('vgInicioOfertaPrecio', 'Precio MXN', 'number') + campo('vgInicioOfertaMx', 'Precio en México (tachado)', 'number') +
+        campo('vgInicioOfertaImagen', 'URL de imagen (opcional)') + campo('vgInicioOfertaEnlace', 'Sección al pulsar (ej. retro)') + campo('vgInicioOfertaOrden', 'Orden', 'number') +
+        '<label class="vg-inicio-check"><input type="checkbox" id="vgInicioOfertaActivo" checked> Activa</label>' +
+        '<button class="vg-admin-btn primary" onclick="vgSaveInicioFila(\'oferta\')">Guardar oferta</button></div>' +
+        '<div class="vg-xbox-admin-list" id="vgInicioListaOferta"></div></div>' +
+      '<div id="vgInicioAdminMsg" class="vg-analytics-muted"></div>';
+  }
+
+  function filaHTML(f) {
+    var det = [];
+    if (f.subtitulo) det.push(esc(f.subtitulo));
+    if (f.tipo === 'oferta') det.push(money(f.precio) + (Number(f.precio_mx) > 0 ? ' (MX ' + money(f.precio_mx) + ')' : ''));
+    if (f.enlace) det.push('→ ' + esc(f.enlace));
+    det.push('orden ' + (f.orden || 0));
+    det.push(f.activo ? 'activa' : 'inactiva');
+    return '<div class="vg-xbox-admin-row">' +
+      (f.imagen ? '<img src="' + attr(f.imagen) + '" onerror="this.src=\'portada.png\'" alt="">' : '<img src="portada.png" alt="">') +
+      '<div><b>' + esc(f.titulo) + '</b><small>' + det.join(' · ') + '</small></div>' +
+      '<div class="vg-xbox-admin-actions"><button class="vg-admin-btn" onclick="vgEditInicioFila(\'' + attr(f.id) + '\')">Editar</button>' +
+      '<button class="vg-admin-btn danger" onclick="vgDeleteInicioFila(\'' + attr(f.id) + '\')">Borrar</button></div></div>';
+  }
+
+  function pintarListas() {
+    ['cinta', 'heroe', 'oferta'].forEach(function (tipo) {
+      var box = qs('#vgInicioLista' + tipo.charAt(0).toUpperCase() + tipo.slice(1));
+      if (!box) return;
+      var list = state.filas.filter(function (f) { return f.tipo === tipo; })
+        .sort(function (a, b) { return (a.orden || 0) - (b.orden || 0); });
+      box.innerHTML = list.length
+        ? list.map(filaHTML).join('')
+        : '<div class="vg-admin-note">Sin contenido en esta sección.</div>';
+    });
+    var m = qs('#vgInicioAdminMsg');
+    if (m) m.textContent = 'Contenido cargado: ' + state.filas.length + ' filas.';
+  }
+
+  window.loadInicioAdmin = async function () {
+    ensureInicioAdmin();
+    var client = clienteSB();
+    var filas = null;
+    if (client) {
+      var res = await client.from(TABLA).select('*').order('tipo', { ascending: true }).order('orden', { ascending: true });
+      if (!res.error && Array.isArray(res.data)) filas = res.data;
+    }
+    if (!filas) {
+      try {
+        var r = await fetch('/api/contenido-inicio?_=' + Date.now(), { headers: { Accept: 'application/json' } });
+        var d = await r.json();
+        filas = []
+          .concat((d.cinta || []).map(function (c) { return { id: c.id, tipo: 'cinta', titulo: c.texto, orden: 0, activo: true }; }))
+          .concat((d.heroes || []).map(function (h, i) { return { id: h.id, tipo: 'heroe', titulo: h.titulo, subtitulo: h.subtitulo, imagen: h.imagen, enlace: h.enlace, orden: i + 1, activo: true }; }))
+          .concat((d.ofertas || []).map(function (o, i) { return { id: o.id, tipo: 'oferta', titulo: o.titulo, subtitulo: o.subtitulo, precio: o.precio, precio_mx: o.precio_mx, imagen: o.imagen, enlace: o.enlace, orden: i + 1, activo: true }; }));
+      } catch (e) { filas = []; }
+    }
+    state.filas = filas || [];
+    pintarListas();
+  };
+
+  function valor(id) { var el = qs('#' + id); return el ? el.value : ''; }
+  function valorNum(id) { return Number(valor(id) || 0) || 0; }
+  function valorCheck(id) { var el = qs('#' + id); return el ? !!el.checked : true; }
+  function poner(id, v) { var el = qs('#' + id); if (el) el.value = v == null ? '' : v; }
+  function ponerCheck(id, v) { var el = qs('#' + id); if (el) el.checked = !!v; }
+
+  window.vgEditInicioFila = function (id) {
+    ensureInicioAdmin();
+    var f = state.filas.find(function (x) { return String(x.id) === String(id); });
+    if (!f) return;
+    state.editId = String(id);
+    state.editTipo = f.tipo;
+    if (f.tipo === 'cinta') {
+      poner('vgInicioCintaTexto', f.titulo); poner('vgInicioCintaOrden', f.orden); ponerCheck('vgInicioCintaActivo', f.activo);
+    } else if (f.tipo === 'heroe') {
+      poner('vgInicioHeroeTitulo', f.titulo); poner('vgInicioHeroeSub', f.subtitulo); poner('vgInicioHeroeImagen', f.imagen);
+      poner('vgInicioHeroeEnlace', f.enlace); poner('vgInicioHeroeOrden', f.orden); ponerCheck('vgInicioHeroeActivo', f.activo);
+    } else {
+      poner('vgInicioOfertaTitulo', f.titulo); poner('vgInicioOfertaSub', f.subtitulo); poner('vgInicioOfertaPrecio', f.precio);
+      poner('vgInicioOfertaMx', f.precio_mx); poner('vgInicioOfertaImagen', f.imagen); poner('vgInicioOfertaEnlace', f.enlace);
+      poner('vgInicioOfertaOrden', f.orden); ponerCheck('vgInicioOfertaActivo', f.activo);
+    }
+    mostrarPestana('inicio');
+  };
+
+  window.vgSaveInicioFila = async function (tipo) {
+    ensureInicioAdmin();
+    var fila = { tipo: tipo, updated_at: new Date().toISOString() };
+    if (tipo === 'cinta') {
+      fila.titulo = String(valor('vgInicioCintaTexto') || '').trim();
+      fila.orden = valorNum('vgInicioCintaOrden');
+      fila.activo = valorCheck('vgInicioCintaActivo');
+      if (!fila.titulo) { alert('Escribe el texto de la cinta.'); return; }
+    } else if (tipo === 'heroe') {
+      fila.titulo = String(valor('vgInicioHeroeTitulo') || '').trim();
+      fila.subtitulo = String(valor('vgInicioHeroeSub') || '').trim();
+      fila.imagen = String(valor('vgInicioHeroeImagen') || '').trim();
+      fila.enlace = String(valor('vgInicioHeroeEnlace') || '').trim();
+      fila.orden = valorNum('vgInicioHeroeOrden');
+      fila.activo = valorCheck('vgInicioHeroeActivo');
+      if (!fila.titulo) { alert('Escribe el título de la promoción.'); return; }
+    } else {
+      fila.titulo = String(valor('vgInicioOfertaTitulo') || '').trim();
+      fila.subtitulo = String(valor('vgInicioOfertaSub') || '').trim();
+      fila.precio = valorNum('vgInicioOfertaPrecio');
+      fila.precio_mx = valorNum('vgInicioOfertaMx');
+      fila.imagen = String(valor('vgInicioOfertaImagen') || '').trim();
+      fila.enlace = String(valor('vgInicioOfertaEnlace') || '').trim();
+      fila.orden = valorNum('vgInicioOfertaOrden');
+      fila.activo = valorCheck('vgInicioOfertaActivo');
+      if (!fila.titulo) { alert('Escribe el título de la oferta.'); return; }
+    }
+    var client = clienteSB();
+    if (!client) { alert('No hay cliente de Supabase en esta página.'); return; }
+    var res;
+    if (state.editId && state.editTipo === tipo) {
+      res = await client.from(TABLA).update(fila).eq('id', state.editId);
+    } else {
+      res = await client.from(TABLA).insert(fila);
+    }
+    if (res.error) {
+      alert('No se pudo guardar: ' + res.error.message +
+        (res.error.code === '42501' || String(res.error.message || '').indexOf('row-level security') >= 0
+          ? ' Falta correr crear-tabla-inicio.sql en el editor SQL de Supabase (una sola vez).'
+          : ''));
+      return;
+    }
+    state.editId = '';
+    state.editTipo = '';
+    await window.loadInicioAdmin();
+  };
+
+  window.vgDeleteInicioFila = async function (id) {
+    if (!confirm('¿Borrar este contenido del inicio?')) return;
+    var client = clienteSB();
+    if (!client) { alert('No hay cliente de Supabase en esta página.'); return; }
+    var res = await client.from(TABLA).delete().eq('id', id);
+    if (res.error) { alert('No se pudo borrar: ' + res.error.message); return; }
+    await window.loadInicioAdmin();
+  };
+
+  function boot() {
+    ensureInicioAdmin();
+    if (qs('#vgAdminInicio.active')) window.loadInicioAdmin();
+  }
+  var oldOpenAdmin = window.vgAdminOpen;
+  if (typeof oldOpenAdmin === 'function' && !oldOpenAdmin.__vgInicioAdminV1) {
+    window.vgAdminOpen = function () {
+      var r = oldOpenAdmin.apply(this, arguments);
+      setTimeout(boot, 300);
+      setTimeout(function () { if (qs('#vgAdminInicio.active')) window.loadInicioAdmin(); }, 700);
+      return r;
+    };
+    window.vgAdminOpen.__vgInicioAdminV1 = true;
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+
+<style id="vg-inicio-kinguin-v1">
+/* Inicio estilo Kinguin v1 (vg-inicio-kinguin-v1).
+ *
+ * Overlay SOLO sobre la vista de inicio (#homeView). No toca marketView,
+ * carrito, pago, modal de producto, módulos de admin ni el módulo v2 de
+ * Xbox Cuentas. La cabecera, el buscador (#globalSearch) y el carrito
+ * (#cartCount / openCart()) reales de la página se reutilizan tal cual;
+ * este bloque solo los deja oscuros y fijos como ya estaban.
+ *
+ * Paleta aprobada: fondo #0c0c13, superficie #16161f, tinta #f4f4f8,
+ * morado solo botones/lo importante, menta solo sellos/detalles chicos,
+ * precios en BLANCO y negrita, ámbar solo descuentos.
+ * PROHIBIDO: mostrar la regla interna (ni en cinta ni en
+ * subtítulos). El módulo JS filtra además cualquier texto con esa regla.
+ */
+
+/* ── Ocultar el inicio viejo (héroe Fase 2 incluido) ─────────────── */
+html body #homeView > .hero{display:none !important}
+html body #homeView #homeTiles{display:none !important}
+html body #homeView .featured-head{display:none !important}
+html body #homeView #featuredGrid{display:none !important}
+html body #homeView .promo-strip{display:none !important}
+html body #homeView > .wrap{padding-bottom:96px !important}
+
+/* ── Burbuja de WhatsApp: que no tape el botón "Agregar" ───────────
+ * Ya era solo icono; se achica a círculo de 52px, se baja el z-index
+ * por debajo de los modales (que usan z altos) y se deja aire abajo
+ * en el inicio para que la última fila pueda desplazarse por encima. */
+html body a.floating-whatsapp{
+  width:52px !important;height:52px !important;min-width:52px !important;
+  padding:0 !important;display:grid !important;place-items:center !important;
+  right:18px !important;bottom:18px !important;z-index:65 !important;
+  border-radius:50% !important;
+}
+html body a.floating-whatsapp .vg-wa-icon{display:grid !important;place-items:center !important}
+html body footer{padding-bottom:84px !important}
+
+/* ── Contenedor del inicio nuevo ─────────────────────────────────── */
+#vgInicioKinguin{
+  --bg:#0c0c13; --surface:#16161f; --surface2:#20202c; --ink:#f4f4f8;
+  --muted:#9d9dab; --line:#262633; --purple:#8b5cf6; --purple-deep:#7c3aed;
+  --purple-soft:#a78bfa; --mint:#19e6c1; --amber:#f59e0b; --navy:#10101a;
+  --pricebg:#0f0f16; --radius:14px;
+  font-family:Nunito, system-ui, -apple-system, "Segoe UI", sans-serif;
+  background:var(--bg); color:var(--ink);
+  width:100%; max-width:1240px; margin:0 auto; padding:0 16px 8px;
+  box-sizing:border-box;
+}
+#vgInicioKinguin *, #vgInicioKinguin *::before, #vgInicioKinguin *::after{box-sizing:border-box}
+#vgInicioKinguin img{background:transparent}
+#vgInicioKinguin button{font-family:inherit; cursor:pointer}
+#vgInicioKinguin a{color:inherit; text-decoration:none}
+
+/* ── (1) Franja superior ─────────────────────────────────────────── */
+.vgk-topstrip{
+  display:flex; align-items:center; gap:18px; flex-wrap:wrap;
+  background:linear-gradient(90deg,#171024,#10101a 60%,#0c0c13);
+  border:1px solid var(--line); border-radius:var(--radius);
+  padding:16px 18px; margin:14px 0;
+}
+.vgk-topstrip h2{
+  margin:0; font-size:clamp(1.25rem,2.6vw,1.8rem); line-height:1.08;
+  font-weight:900; letter-spacing:.01em; color:var(--ink);
+}
+.vgk-topstrip h2 span{display:block; color:var(--mint)}
+.vgk-topstrip .vgk-minis{display:flex; gap:8px; margin-left:auto; align-items:center}
+.vgk-topstrip .vgk-minis button{
+  border:1px solid var(--line); background:var(--surface2);
+  padding:0; border-radius:10px; overflow:hidden; width:52px; height:52px;
+}
+.vgk-topstrip .vgk-minis img{width:100%; height:100%; object-fit:cover; display:block}
+.vgk-btn{
+  border:0; border-radius:12px; padding:12px 20px; font-weight:900;
+  font-size:.92rem; color:#fff; background:var(--purple-deep);
+}
+.vgk-btn:hover{filter:brightness(1.12)}
+.vgk-btn-amber{background:var(--amber); color:#1a1000}
+.vgk-btn-ghost{background:transparent; border:1px solid var(--line); color:var(--ink)}
+
+/* ── (3) Fila de navegación + panel de categorías ────────────────── */
+.vgk-navrow{
+  display:flex; align-items:center; gap:8px; flex-wrap:wrap;
+  margin:0 0 14px; position:relative; z-index:20;
+}
+.vgk-navrow .vgk-navlink{
+  border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  border-radius:999px; padding:9px 14px; font-size:.88rem; font-weight:700;
+}
+.vgk-navrow .vgk-navlink:hover{border-color:var(--purple)}
+.vgk-navrow .vgk-spacer{flex:1}
+.vgk-catpanel{
+  display:none; position:absolute; top:calc(100% + 8px); left:0; z-index:40;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:10px; width:min(680px,94vw);
+  grid-template-columns:repeat(2,minmax(0,1fr)); gap:6px;
+  box-shadow:0 24px 60px rgba(0,0,0,.55);
+}
+.vgk-catpanel.vgk-open{display:grid}
+.vgk-catpanel button{
+  display:flex; gap:10px; align-items:center; text-align:left;
+  background:transparent; border:1px solid transparent; border-radius:10px;
+  color:var(--ink); padding:9px 10px; font-size:.9rem; font-weight:700;
+}
+.vgk-catpanel button:hover{background:var(--surface2); border-color:var(--line)}
+.vgk-catpanel button small{display:block; color:var(--muted); font-weight:500; font-size:.78rem}
+.vgk-catpanel .vgk-ico{
+  width:38px; height:38px; min-width:38px; border-radius:10px; overflow:hidden;
+  background:linear-gradient(135deg,#2a2140,#171327);
+  display:grid; place-items:center; font-size:1.15rem; color:var(--purple-soft);
+}
+.vgk-catpanel .vgk-ico img{width:100%; height:100%; object-fit:cover}
+
+/* ── (4) Héroe 3 columnas ────────────────────────────────────────── */
+.vgk-hero{display:grid; grid-template-columns:220px minmax(0,1fr) 300px; gap:14px; margin-bottom:14px}
+.vgk-promo-side{
+  border:1px solid var(--line); border-radius:var(--radius); overflow:hidden;
+  background:var(--surface); display:flex; flex-direction:column; min-height:340px;
+}
+.vgk-promo-side img{width:100%; height:190px; object-fit:cover; display:block}
+.vgk-promo-side .vgk-body{padding:14px; display:flex; flex-direction:column; gap:8px; flex:1}
+.vgk-promo-side h3{margin:0; font-size:1.05rem}
+.vgk-promo-side p{margin:0; color:var(--muted); font-size:.86rem; line-height:1.45}
+.vgk-promo-side .vgk-price{color:#fff; font-weight:900; font-size:1.05rem}
+.vgk-promo-side .vgk-btn{margin-top:auto; text-align:center}
+
+.vgk-carousel{
+  position:relative; border:1px solid var(--line); border-radius:var(--radius);
+  overflow:hidden; background:var(--navy); min-height:400px; /* Auditoría 2026-11-24: el héroe visible quedaba en ~370px; 400px lo deja en el objetivo 390-420px. Las diapositivas son absolutas (inset:0), así que no hay desborde; promo-side y reco se estiran con la fila. */
+}
+.vgk-slide{
+  position:absolute; inset:0; display:none; cursor:pointer;
+}
+.vgk-slide.vgk-on{display:block}
+.vgk-slide .vgk-slide-bg{position:absolute; inset:0; background-size:cover; background-position:center}
+.vgk-slide .vgk-slide-bg.vgk-kenburns{animation:vgkKenBurns 6.5s ease-in-out infinite alternate}
+@keyframes vgkKenBurns{from{transform:scale(1)} to{transform:scale(1.08)}}
+.vgk-slide .vgk-slide-grad{
+  position:absolute; inset:0;
+  background:linear-gradient(90deg,rgba(7,8,15,.88) 0%,rgba(7,8,15,.55) 55%,rgba(7,8,15,.15) 100%);
+}
+.vgk-slide .vgk-slide-txt{position:relative; z-index:2; padding:34px 30px; max-width:78%}
+.vgk-slide .vgk-kicker{
+  display:inline-block; font-size:.7rem; font-weight:900; letter-spacing:.1em;
+  text-transform:uppercase; color:var(--mint);
+  border:1px solid rgba(25,230,193,.4); background:rgba(25,230,193,.1);
+  border-radius:999px; padding:5px 10px; margin-bottom:12px;
+}
+.vgk-slide h3{margin:0 0 8px; font-size:clamp(1.5rem,3.2vw,2.3rem); line-height:1.05; font-weight:900; color:#fff}
+.vgk-slide p{margin:0 0 16px; color:#d7d7e2; font-size:.98rem; line-height:1.5}
+.vgk-slide .vgk-btn{display:inline-block}
+.vgk-car-arrow{
+  position:absolute; top:50%; transform:translateY(-50%); z-index:3;
+  width:38px; height:38px; border-radius:50%; border:1px solid var(--line);
+  background:rgba(12,12,19,.72); color:#fff; font-size:1.05rem; line-height:1;
+}
+.vgk-car-arrow.vgk-prev{left:10px}
+.vgk-car-arrow.vgk-next{right:10px}
+.vgk-car-dots{
+  position:absolute; left:30px; bottom:16px; z-index:3; display:flex; gap:6px;
+}
+.vgk-car-dots button{
+  width:34px; height:5px; border:0; border-radius:99px; padding:0;
+  background:rgba(255,255,255,.28); overflow:hidden; position:relative;
+}
+.vgk-car-dots button i{
+  position:absolute; inset:0; width:0%; background:var(--mint); display:block;
+}
+.vgk-car-dots button.vgk-on i{width:100%; transition:width 5.6s linear}
+
+.vgk-reco{
+  border:1px solid var(--line); border-radius:var(--radius); background:var(--surface);
+  padding:14px; display:flex; flex-direction:column; gap:10px;
+}
+.vgk-reco h3{margin:0; font-size:.95rem}
+.vgk-reco-grid{display:grid; grid-template-columns:1fr 1fr; gap:10px; flex:1}
+.vgk-reco-item{
+  border:1px solid var(--line); border-radius:12px; overflow:hidden; padding:0;
+  background:var(--surface2); color:var(--ink); text-align:left; display:flex; flex-direction:column;
+}
+.vgk-reco-item img{width:100%; height:74px; object-fit:cover; display:block}
+.vgk-reco-item b{display:block; font-size:.8rem; padding:8px 9px 0; line-height:1.25}
+.vgk-reco-item span{display:block; color:#fff; font-weight:900; font-size:.85rem; padding:3px 9px 9px}
+
+/* ── (5) Cinta informativa ───────────────────────────────────────── */
+.vgk-marquee{
+  overflow:hidden; border:1px solid var(--line); border-radius:999px;
+  background:var(--surface); margin-bottom:18px;
+  -webkit-mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);
+  mask-image:linear-gradient(90deg,transparent,#000 4%,#000 96%,transparent);
+}
+.vgk-marquee-track{
+  display:flex; gap:0; width:max-content; padding:10px 0;
+  animation:vgkMarquee 30s linear infinite;
+}
+.vgk-marquee:hover .vgk-marquee-track{animation-play-state:paused}
+@keyframes vgkMarquee{from{transform:translateX(0)} to{transform:translateX(-50%)}}
+.vgk-marquee-track span{
+  white-space:nowrap; font-size:.88rem; font-weight:700; color:var(--ink);
+  padding:0 22px; display:flex; align-items:center; gap:8px;
+}
+.vgk-marquee-track span::before{content:""; width:7px; height:7px; border-radius:50%; background:var(--mint); flex:none}
+
+/* ── Secciones del inicio ────────────────────────────────────────── */
+.vgk-section{margin:22px 0}
+.vgk-sec-head{display:flex; align-items:baseline; gap:12px; flex-wrap:wrap; margin-bottom:12px}
+.vgk-sec-head h2{margin:0; font-size:1.3rem; font-weight:900; color:#fff}
+.vgk-sec-head p{margin:0; color:var(--muted); font-size:.88rem}
+.vgk-sec-head .vgk-spacer{flex:1}
+.vgk-sec-head .vgk-count{
+  font-size:.78rem; font-weight:800; color:var(--mint);
+  border:1px solid rgba(25,230,193,.35); background:rgba(25,230,193,.08);
+  border-radius:999px; padding:4px 10px;
+}
+.vgk-chips{display:flex; gap:8px; flex-wrap:wrap; margin-bottom:12px}
+.vgk-chip{
+  border:1px solid var(--line); background:var(--surface); color:var(--ink);
+  border-radius:999px; padding:7px 13px; font-size:.84rem; font-weight:700;
+}
+.vgk-chip.vgk-on{background:var(--purple-deep); border-color:var(--purple-deep); color:#fff}
+
+/* ── (6/7/8) Tarjetas estilo Kinguin ─────────────────────────────── */
+.vgk-grid{
+  display:grid; gap:14px;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.vgk-row{
+  display:grid; gap:14px;
+  grid-template-columns:repeat(4,minmax(0,1fr));
+}
+.vgk-card{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  overflow:hidden; display:flex; flex-direction:column; position:relative;
+}
+.vgk-card:hover{border-color:rgba(139,92,246,.55)}
+.vgk-media{
+  position:relative; overflow:hidden; aspect-ratio:16/10; background:var(--surface2);
+  cursor:pointer;
+}
+.vgk-blur{
+  position:absolute; inset:-10%;
+  background-size:cover; background-position:center;
+  filter:blur(16px) brightness(.75); transform:scale(1.15);
+}
+.vgk-media img{
+  position:relative; z-index:1; width:100%; height:100%;
+  object-fit:contain; background:transparent !important; display:block;
+}
+.vgk-seal-disc{
+  position:absolute; z-index:2; top:10px; left:10px;
+  background:var(--amber); color:#1a1000; font-weight:900; font-size:.78rem;
+  border-radius:8px; padding:4px 8px;
+}
+.vgk-seal-new{
+  position:absolute; z-index:2; top:10px; right:10px;
+  background:rgba(25,230,193,.14); color:var(--mint);
+  border:1px solid rgba(25,230,193,.45); font-weight:900; font-size:.68rem;
+  letter-spacing:.06em; border-radius:999px; padding:4px 9px;
+}
+.vgk-info{padding:12px 13px 13px; display:flex; flex-direction:column; gap:6px; flex:1}
+.vgk-info .vgk-tag{font-size:.72rem; font-weight:800; letter-spacing:.06em; text-transform:uppercase; color:var(--purple-soft)}
+.vgk-info h3{margin:0; font-size:.98rem; line-height:1.25; color:#fff; cursor:pointer}
+.vgk-info .vgk-sub{margin:0; color:var(--muted); font-size:.82rem; line-height:1.4}
+.vgk-pricebar{
+  margin-top:auto; background:var(--pricebg); border:1px solid var(--line);
+  border-radius:10px; padding:9px 11px;
+  display:flex; align-items:center; gap:8px;
+}
+.vgk-pricebar .vgk-price{color:#fff; font-weight:900; font-size:19px; line-height:1}
+.vgk-pricebar .vgk-mx{color:#8a8a99; font-size:.8rem; text-decoration:line-through}
+.vgk-pricebar .vgk-add{
+  margin-left:auto; width:36px; height:36px; min-width:36px; border:0; border-radius:10px;
+  background:var(--purple-deep); color:#fff; font-size:1.25rem; font-weight:900; line-height:1;
+}
+.vgk-pricebar .vgk-add:hover{filter:brightness(1.15)}
+.vgk-pricebar .vgk-ver{
+  margin-left:auto; border:1px solid var(--line); background:transparent; color:var(--ink);
+  border-radius:10px; padding:9px 12px; font-size:.82rem; font-weight:800;
+}
+.vgk-empty{
+  grid-column:1/-1; border:1px dashed var(--line); border-radius:var(--radius);
+  padding:22px; text-align:center; color:var(--muted); font-size:.9rem;
+}
+.vgk-empty .vgk-btn{margin-top:12px}
+
+/* ── (9) Mosaicos de categorías ──────────────────────────────────── */
+.vgk-tiles{display:grid; gap:12px; grid-template-columns:repeat(4,minmax(0,1fr))}
+.vgk-tile{
+  display:flex; gap:12px; align-items:center; text-align:left;
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:12px; color:var(--ink);
+}
+.vgk-tile:hover{border-color:rgba(139,92,246,.55)}
+.vgk-tile .vgk-ico{
+  width:56px; height:56px; min-width:56px; border-radius:12px; overflow:hidden;
+  background:linear-gradient(135deg,#2a2140,#171327);
+  display:grid; place-items:center; font-size:1.5rem; color:var(--purple-soft);
+}
+.vgk-tile .vgk-ico img{width:100%; height:100%; object-fit:cover}
+.vgk-tile b{display:block; font-size:.95rem; color:#fff}
+.vgk-tile small{display:block; color:var(--muted); font-size:.8rem; line-height:1.4; margin-top:2px}
+.vgk-tile .vgk-cta{margin-left:auto; color:var(--mint); font-weight:900; font-size:1.1rem}
+
+/* ── (9) Bloques de confianza ────────────────────────────────────── */
+.vgk-trust{display:grid; gap:12px; grid-template-columns:repeat(3,minmax(0,1fr)); margin-top:14px}
+.vgk-trust article{
+  background:var(--surface); border:1px solid var(--line); border-radius:var(--radius);
+  padding:16px;
+}
+.vgk-trust b{display:block; color:#fff; font-size:.98rem; margin-bottom:4px}
+.vgk-trust p{margin:0; color:var(--muted); font-size:.86rem; line-height:1.5}
+
+/* ── Responsive ──────────────────────────────────────────────────── */
+@media (max-width:1020px){
+  .vgk-hero{grid-template-columns:minmax(0,1fr) 260px}
+  .vgk-promo-side{display:none}
+  .vgk-grid, .vgk-row, .vgk-tiles{grid-template-columns:repeat(3,minmax(0,1fr))}
+}
+@media (max-width:760px){
+  #vgInicioKinguin{padding:0 12px 8px}
+  .vgk-hero{grid-template-columns:minmax(0,1fr)}
+  .vgk-reco{display:none}
+  .vgk-carousel{min-height:300px}
+  .vgk-slide .vgk-slide-txt{padding:24px 20px; max-width:100%}
+  .vgk-topstrip .vgk-minis{display:none}
+  .vgk-grid, .vgk-row{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .vgk-tiles{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .vgk-trust{grid-template-columns:1fr}
+  .vgk-car-dots{left:20px}
+  .vgk-catpanel{grid-template-columns:1fr}
+}
+@media (max-width:420px){
+  .vgk-grid, .vgk-row{grid-template-columns:1fr}
+}
+</style>
+<script id="vg-inicio-kinguin-v1">
+/* Inicio estilo Kinguin v1 (vg-inicio-kinguin-v1).
+ *
+ * Overlay SOLO sobre #homeView. No toca marketView, carrito, pago,
+ * modal de producto, módulos de admin ni el módulo v2 de Xbox Cuentas.
+ * Reutiliza lo real de la página: buscador #globalSearch, carrito
+ * (#cartCount / openCart()), quickAddFirstOption(), openProduct(),
+ * showSection(), vgOpenCotizar(), y para Xbox Cuentas window.vgxrVer /
+ * window.vgxrAgregar del módulo v2 (con su regla interna, que
+ * se aplica al pagar y NUNCA se muestra aquí).
+ *
+ * Contenido editable desde el admin: /api/contenido-inicio (cinta,
+ * héroes, ofertas). Si falla o viene vacío, respaldo local. En ambos
+ * casos se filtra cualquier mención a la regla interna antes de
+ * pintar nada en público.
+ *
+ * El módulo v2 corre DESPUÉS de este script, así que las funciones
+ * window.vgxr* y window.vgRetroJuegos se consultan EN EL MOMENTO de
+ * usarlas (nunca se capturan al arrancar).
+ */
+(function () {
+  'use strict';
+  if (window.__vgInicioKinguinV1) return;
+  window.__vgInicioKinguinV1 = true;
+
+  var SECCIONES = { all: 1, gaming: 1, streaming: 1, software: 1, actas: 1, redes: 1, fortnite: 1, xbox: 1, retro: 1 };
+
+  /* Contenido por defecto (el de la muestra, SIN la regla interna). */
+  var POR_DEFECTO = {
+    cinta: [
+      'Entrega inmediata', 'Precios en MXN', 'Xbox Cuentas: 1,640 juegos',
+      'Fortnite: 485 artículos', 'Nunca pagas más que el precio de México',
+      'Atención por WhatsApp'
+    ],
+    heroes: [
+      { titulo: 'Xbox Cuentas', subtitulo: '1,640 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: '' },
+      { titulo: 'Fortnite', subtitulo: 'Skins, lotes y pases al mejor precio', enlace: 'fortnite', imagen: '' },
+      { titulo: 'CODPoints de Warzone', subtitulo: 'Recarga tu cuenta y juega hoy mismo', enlace: 'gaming', imagen: '' },
+      { titulo: 'Game Pass', subtitulo: 'Ultimate y Core desde $90 MXN', enlace: 'gaming', imagen: '' }
+    ],
+    ofertas: [
+      { titulo: 'Gears Of War 3', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 45, precio_mx: 57.25, enlace: 'retro', imagen: '' },
+      { titulo: 'Alan Wake', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 185, precio_mx: 529, enlace: 'retro', imagen: '' },
+      { titulo: 'Minecraft', subtitulo: 'Xbox One / Series · Cuenta nueva', precio: 400, precio_mx: 599, enlace: 'retro', imagen: '' },
+      { titulo: 'Netflix', subtitulo: 'Perfil 1 Mes · Streaming', precio: 90, precio_mx: 0, enlace: 'streaming', imagen: '' }
+    ]
+  };
+
+  /* La regla interna no se muestra jamás: se filtra aquí, valga lo
+     que valga que traiga la API, la tabla o el respaldo. */
+  var RE_PROHIBIDO = /m[ií]nim[oa]|300\s*try|liras/i; /* único sitio con esa palabra: el filtro mismo */
+  function limpio(t) { return !RE_PROHIBIDO.test(String(t || '')); }
+  function filtrarCinta(arr) {
+    var out = (arr || []).map(function (x) { return typeof x === 'string' ? x : (x && x.texto) || ''; })
+      .filter(function (t) { return t && limpio(t); });
+    return out.length ? out : POR_DEFECTO.cinta.slice();
+  }
+  function filtrarHeroes(arr) {
+    var out = (arr || []).filter(function (h) {
+      return h && h.titulo && limpio(h.titulo) && limpio(h.subtitulo || '');
+    });
+    return out.length ? out : POR_DEFECTO.heroes.slice();
+  }
+  function filtrarOfertas(arr) {
+    var out = (arr || []).filter(function (o) {
+      return o && o.titulo && limpio(o.titulo) && limpio(o.subtitulo || '') && Number(o.precio) > 0;
+    });
+    return out.length ? out : POR_DEFECTO.ofertas.slice();
+  }
+
+  function qs(s, r) { try { return (r || document).querySelector(s); } catch (e) { return null; } }
+  function esc(s) {
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function dinero(n) {
+    n = Number(n || 0);
+    return '$' + n.toLocaleString('es-MX', { maximumFractionDigits: 2 }) + ' MXN';
+  }
+  function dineroCorto(n) {
+    return '$' + Number(n || 0).toLocaleString('es-MX', { maximumFractionDigits: 2 });
+  }
+  function norm(t) {
+    return String(t || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function fetchJSON(url) {
+    return fetch(url, { headers: { Accept: 'application/json' } }).then(function (r) {
+      if (!r.ok) throw new Error('HTTP ' + r.status);
+      return r.json();
+    });
+  }
+
+  /* ── Acceso al catálogo real ─────────────────────────────────────── */
+  function servicios() {
+    try { if (typeof SERVICES !== 'undefined' && SERVICES && SERVICES.length) return SERVICES; } catch (e) {}
+    try { if (window.SERVICES && window.SERVICES.length) return window.SERVICES; } catch (e) {}
+    return [];
+  }
+  function servicioPorId(id) {
+    var list = servicios();
+    for (var i = 0; i < list.length; i++) if (Number(list[i].id) === Number(id)) return list[i];
+    return null;
+  }
+  function servicioPorTitulo(titulo) {
+    var n = norm(titulo), list = servicios();
+    for (var i = 0; i < list.length; i++) if (norm(list[i].title) === n) return list[i];
+    for (var j = 0; j < list.length; j++) if (norm(list[j].title).indexOf(n) === 0 || n.indexOf(norm(list[j].title)) === 0) return list[j];
+    return null;
+  }
+  function irA(dest) {
+    if (dest == null || dest === '') return;
+    if (typeof dest === 'number') {
+      if (typeof window.openProduct === 'function') window.openProduct(dest);
+      return;
+    }
+    var d = String(dest);
+    if (d === 'cotizar') {
+      if (typeof window.vgOpenCotizar === 'function') window.vgOpenCotizar();
+      return;
+    }
+    if (SECCIONES[d] && typeof window.showSection === 'function') { window.showSection(d); return; }
+    if (typeof window.showSection === 'function') window.showSection('all');
+  }
+  function agregarServicio(id) {
+    if (typeof window.quickAddFirstOption === 'function') { window.quickAddFirstOption(id); return; }
+    irA(id);
+  }
+  function toast(t, s) {
+    if (typeof window.showToast === 'function') { try { window.showToast(t, s); } catch (e) {} }
+  }
+
+  /* ── Imágenes reales del catálogo para el héroe ──────────────────── */
+  var IMG = {
+    retro: 'https://i.imgur.com/CwZeUfrh.jpg',      /* Servicios id 5 · Juegos Retro */
+    codpoints: 'https://i.imgur.com/NbxACqwh.jpg',  /* Servicios id 2 */
+    gamepass: 'https://i.imgur.com/soHmMpnh.jpg',   /* Servicios id 6 */
+    freefire: 'https://i.imgur.com/8zUIcAFh.jpg',   /* Servicios id 1 */
+    netflix: 'https://i.imgur.com/qCyFDLAh.jpg'     /* Servicios id 8 */
+  };
+  function imagenHero(h) {
+    if (h.imagen) return h.imagen;
+    var t = norm(h.titulo + ' ' + (h.subtitulo || ''));
+    if (/retro|cuenta/.test(t)) return IMG.retro;
+    if (/codpoints|warzone|call of duty/.test(t)) return IMG.codpoints;
+    if (/game pass/.test(t)) return IMG.gamepass;
+    if (/free fire|diamante/.test(t)) return IMG.freefire;
+    if (/netflix/.test(t)) return IMG.netflix;
+    return ''; /* Fortnite y resto: degradado con icono, como hace la página */
+  }
+  function iconoHero(h) {
+    var t = norm(h.titulo);
+    if (/fortnite/.test(t)) return '🪂';
+    if (/retro|cuenta/.test(t)) return '🎮';
+    if (/codpoints|warzone/.test(t)) return '🎯';
+    if (/game pass/.test(t)) return '✦';
+    return '★';
+  }
+
+  /* ── Tarjeta estilo Kinguin ────────────────────────────────────────
+   * Misma imagen desenfocada detrás (blur 16px, brightness .75,
+   * scale 1.15) y foto completa al centro con fondo TRANSPARENTE para
+   * que el blur se vea (la lección del efecto Kinguin: un fondo opaco
+   * en el <img> lo tapa todo). */
+  function tarjetaKinguin(o) {
+    var img = o.imagen || '';
+    var desc = (o.precio_mx && Number(o.precio_mx) > Number(o.precio))
+      ? Math.round((1 - Number(o.precio) / Number(o.precio_mx)) * 100) : 0;
+    var esCuenta = o.cuentaNueva || /cuenta nueva/i.test(o.subtitulo || '') || o.enlace === 'retro';
+    var media = img
+      ? '<div class="vgk-blur" style="background-image:url(&quot;' + esc(img) + '&quot;)"></div>' +
+        '<img loading="lazy" decoding="async" src="' + esc(img) + '" alt="' + esc(o.titulo) + '" onerror="this.style.visibility=\'hidden\'">'
+      : '<div class="vgk-blur" style="background:linear-gradient(135deg,#2a2140,#171327)"></div>' +
+        '<span style="position:relative;z-index:1;display:grid;place-items:center;height:100%;font-size:3rem;color:#a78bfa">' + esc(o.icono || '★') + '</span>';
+    var btnAdd = o.alAgregar
+      ? '<button class="vgk-add" type="button" title="Agregar al carrito" aria-label="Agregar ' + esc(o.titulo) + ' al carrito" data-vgk-add="' + esc(o.clave || '') + '">+</button>'
+      : '<button class="vgk-ver" type="button" data-vgk-ver="' + esc(o.clave || '') + '">Ver</button>';
+    return '<article class="vgk-card">' +
+      '<div class="vgk-media" data-vgk-ver="' + esc(o.clave || '') + '">' + media +
+        (desc > 0 ? '<span class="vgk-seal-disc">-' + desc + '%</span>' : '') +
+        (esCuenta ? '<span class="vgk-seal-new">CUENTA NUEVA</span>' : '') +
+      '</div>' +
+      '<div class="vgk-info">' +
+        (o.tag ? '<span class="vgk-tag">' + esc(o.tag) + '</span>' : '') +
+        '<h3 data-vgk-ver="' + esc(o.clave || '') + '">' + esc(o.titulo) + '</h3>' +
+        (o.subtitulo ? '<p class="vgk-sub">' + esc(o.subtitulo) + '</p>' : '') +
+        '<div class="vgk-pricebar"><span class="vgk-price">' + esc(dineroCorto(o.precio)) + '</span>' +
+        ((o.precio_mx && Number(o.precio_mx) > Number(o.precio)) ? '<span class="vgk-mx">' + esc(dineroCorto(o.precio_mx)) + '</span>' : '') +
+        btnAdd + '</div>' +
+      '</div></article>';
+  }
+
+  /* ── Estado ──────────────────────────────────────────────────────── */
+  var state = {
+    cinta: POR_DEFECTO.cinta.slice(),
+    heroes: POR_DEFECTO.heroes.slice(),
+    ofertas: POR_DEFECTO.ofertas.slice(),
+    fuente: 'respaldo',
+    tr: [], trTotal: 0, trFuente: '',
+    filtroOfertas: 'all',
+    slide: 0, timer: null
+  };
+
+  /* Catálogo TR para la fila de Xbox Cuentas y para resolver el "+"
+     de las ofertas. La API devuelve {juegos, total, fuente}. Si el
+     fetch falla, se usa window.vgRetroJuegos() (forma vieja: sin MX). */
+  var ORDEN_PLAT = { 'Xbox 360': 0, 'Clásico': 1, 'Xbox One': 2, 'Xbox One / Series': 3, 'Xbox Series': 4 };
+  function ordenarTR(list) {
+    return list.slice().sort(function (a, b) {
+      var pa = ORDEN_PLAT[a.platform] == null ? 9 : ORDEN_PLAT[a.platform];
+      var pb = ORDEN_PLAT[b.platform] == null ? 9 : ORDEN_PLAT[b.platform];
+      if (pa !== pb) return pa - pb;
+      return String(a.title).localeCompare(String(b.title), 'es');
+    });
+  }
+  function cargarTR() {
+    fetchJSON('/api/catalogo-retro-tr').then(function (d) {
+      if (d && Array.isArray(d.juegos) && d.juegos.length) {
+        state.tr = ordenarTR(d.juegos);
+        state.trTotal = d.total || d.juegos.length;
+        state.trFuente = d.fuente || 'api';
+        pintarFilaTR();
+      } else { trPorVentana(0); }
+    }).catch(function () { trPorVentana(0); });
+  }
+  function trPorVentana(intent) {
+    /* El módulo v2 corre después de este script: se espera a que
+       window.vgRetroJuegos devuelva los juegos TR (1,640). OJO: antes
+       de que v2 cargue sus datos, la misma función devuelve los juegos
+       retro VIEJOS (315): por eso el umbral es >1000 y no >300. */
+    var juegos = null;
+    try { if (typeof window.vgRetroJuegos === 'function') juegos = window.vgRetroJuegos(); } catch (e) {}
+    if (juegos && juegos.length > 1000) {
+      state.tr = ordenarTR(juegos.map(function (g) {
+        return { slug: g.id, title: g.name, platform: g.platform, image: g.image, mx: 0, venta_mxn: Number(g.price || 0) };
+      }));
+      state.trTotal = juegos.length;
+      state.trFuente = 'ventana';
+      pintarFilaTR();
+      return;
+    }
+    if (intent < 10) setTimeout(function () { trPorVentana(intent + 1); }, 600);
+    else pintarFilaTR();
+  }
+  function trPorTitulo(titulo) {
+    var n = norm(titulo);
+    for (var i = 0; i < state.tr.length; i++) if (norm(state.tr[i].title) === n) return state.tr[i];
+    return null;
+  }
+
+  /* ── Construcción del inicio ─────────────────────────────────────── */
+  function construir() {
+    var home = document.getElementById('homeView');
+    if (!home) return;
+    /* El héroe viejo (Fase 2, 4 banners) queda sustituido: se oculta
+       también en línea, por si alguna regla posterior lo re-muestra. */
+    var heroViejo = home.querySelector(':scope > .hero');
+    if (heroViejo) heroViejo.style.setProperty('display', 'none', 'important');
+
+    var root = document.createElement('div');
+    root.id = 'vgInicioKinguin';
+    root.innerHTML =
+      /* (1) Franja superior */
+      '<div class="vgk-topstrip"><h2>SUBE DE NIVEL<span>TU JUEGO</span></h2>' +
+        '<div class="vgk-minis" id="vgkMinis"></div>' +
+        '<button class="vgk-btn" type="button" data-vgk-scroll="vgkDestacados">Ver ofertas</button></div>' +
+      /* (3) Fila de navegación + panel de categorías */
+      '<div class="vgk-navrow">' +
+        '<button class="vgk-btn" type="button" id="vgkCatBtn" aria-expanded="false">☰ Categorías</button>' +
+        '<button class="vgk-navlink" type="button" data-vgk-ir="gaming">Gaming</button>' +
+        '<button class="vgk-navlink" type="button" data-vgk-ir="fortnite">Fortnite</button>' +
+        '<button class="vgk-navlink" type="button" data-vgk-ir="retro">Xbox Cuentas</button>' +
+        '<button class="vgk-navlink" type="button" data-vgk-ir="streaming">Streaming</button>' +
+        '<button class="vgk-navlink" type="button" data-vgk-ir="software">Software</button>' +
+        '<button class="vgk-navlink" type="button" data-vgk-ir="actas">Actas</button>' +
+        '<button class="vgk-navlink" type="button" data-vgk-ir="redes">Redes</button>' +
+        '<span class="vgk-spacer"></span>' +
+        '<button class="vgk-btn vgk-btn-amber" type="button" data-vgk-scroll="vgkDestacados">Ofertas del día</button>' +
+        '<div class="vgk-catpanel" id="vgkCatPanel"></div>' +
+      '</div>' +
+      /* (4) Héroe 3 columnas */
+      '<div class="vgk-hero">' +
+        '<aside class="vgk-promo-side" id="vgkPromoSide"></aside>' +
+        '<div class="vgk-carousel" id="vgkCarousel" aria-label="Promociones destacadas"></div>' +
+        '<aside class="vgk-reco"><h3>Recomendado para ti</h3><div class="vgk-reco-grid" id="vgkReco"></div></aside>' +
+      '</div>' +
+      /* (5) Cinta informativa */
+      '<div class="vgk-marquee" aria-hidden="true"><div class="vgk-marquee-track" id="vgkCinta"></div></div>' +
+      /* (6) Destacados */
+      '<section class="vgk-section" id="vgkDestacados"><div class="vgk-sec-head"><h2>Ofertas destacadas</h2>' +
+        '<span class="vgk-count" id="vgkFuente"></span></div>' +
+        '<div class="vgk-chips" id="vgkFiltros">' +
+          '<button class="vgk-chip vgk-on" type="button" data-vgk-filtro="all">Todos</button>' +
+          '<button class="vgk-chip" type="button" data-vgk-filtro="retro">Xbox Cuentas</button>' +
+          '<button class="vgk-chip" type="button" data-vgk-filtro="streaming">Streaming</button>' +
+          '<button class="vgk-chip" type="button" data-vgk-filtro="gaming">Gaming</button>' +
+        '</div>' +
+        '<div class="vgk-grid" id="vgkGridOfertas"></div></section>' +
+      /* (7) Xbox Cuentas */
+      '<section class="vgk-section"><div class="vgk-sec-head"><h2>Xbox Cuentas</h2>' +
+        '<p>Juegos en cuenta nueva, más baratos que en México</p>' +
+        '<span class="vgk-count" id="vgkTrCount"></span><span class="vgk-spacer"></span>' +
+        '<button class="vgk-btn vgk-btn-ghost" type="button" data-vgk-ir="retro">Ver todos</button></div>' +
+        '<div class="vgk-row" id="vgkGridTR"></div></section>' +
+      /* (8) Streaming */
+      '<section class="vgk-section"><div class="vgk-sec-head"><h2>Streaming</h2>' +
+        '<p>Netflix, Disney+, MAX, Prime Video y más</p><span class="vgk-spacer"></span>' +
+        '<button class="vgk-btn vgk-btn-ghost" type="button" data-vgk-ir="streaming">Ver todo</button></div>' +
+        '<div class="vgk-row" id="vgkGridStreaming"></div></section>' +
+      /* (9) Mosaicos de categorías + confianza */
+      '<section class="vgk-section"><div class="vgk-sec-head"><h2>Todo Vessel Games</h2>' +
+        '<p>Todos los servicios, cada uno en su sección</p></div>' +
+        '<div class="vgk-tiles" id="vgkTiles"></div>' +
+        '<div class="vgk-trust">' +
+          '<article><b>Entrega inmediata</b><p>Productos digitales con entrega rápida una vez confirmado el pago.</p></article>' +
+          '<article><b>Precios en MXN</b><p>El precio que ves es el precio que pagas. En Xbox Cuentas nunca pagas más que el precio de México.</p></article>' +
+          '<article><b>Atención por WhatsApp</b><p>Confirmación y seguimiento de tu pedido por WhatsApp.</p></article>' +
+        '</div></section>';
+    home.insertBefore(root, home.firstChild);
+    pintarMinis();
+    pintarPromoSide();
+    pintarReco();
+    pintarTiles();
+    pintarCinta();
+    pintarHeroes();
+    pintarOfertas();
+    pintarStreaming();
+    pintarFilaTR();
+    enlazar(root);
+    cargarContenido();
+    cargarTR();
+  }
+
+  /* (1) 7 mini portadas reales del catálogo. */
+  function pintarMinis() {
+    var ids = [1, 2, 6, 8, 9, 34, 43];
+    var box = qs('#vgkMinis');
+    if (!box) return;
+    box.innerHTML = ids.map(function (id) {
+      var s = servicioPorId(id);
+      if (!s) return '';
+      return '<button type="button" title="' + esc(s.title) + '" data-vgk-prod="' + id + '">' +
+        '<img loading="lazy" decoding="async" src="' + esc(s.image) + '" alt="' + esc(s.title) + '"></button>';
+    }).join('');
+  }
+
+  /* (4) Promo lateral: Free Fire, diamantes (producto real id 1). */
+  function pintarPromoSide() {
+    var box = qs('#vgkPromoSide');
+    var s = servicioPorId(1);
+    if (!box) return;
+    if (!s) { box.style.display = 'none'; return; }
+    box.innerHTML =
+      '<img loading="lazy" decoding="async" src="' + esc(s.image) + '" alt="' + esc(s.title) + '">' +
+      '<div class="vgk-body"><h3>Diamantes Free Fire</h3>' +
+      '<p>Recarga diamantes al mejor precio, con entrega rápida.</p>' +
+      '<span class="vgk-price">Desde ' + esc(s.priceLabel || '') + '</span>' +
+      '<button class="vgk-btn" type="button" data-vgk-prod="1">Ver diamantes</button></div>';
+  }
+
+  /* (4) Recomendado 2x2: productos reales con precio real. */
+  function pintarReco() {
+    var box = qs('#vgkReco');
+    if (!box) return;
+    var ids = [1, 8, 6, 2];
+    box.innerHTML = ids.map(function (id) {
+      var s = servicioPorId(id);
+      if (!s) return '';
+      var precio = (s.options && s.options[0]) ? dineroCorto(s.options[0].price) : esc(s.priceLabel || '');
+      return '<button class="vgk-reco-item" type="button" data-vgk-prod="' + id + '">' +
+        '<img loading="lazy" decoding="async" src="' + esc(s.image) + '" alt="' + esc(s.title) + '">' +
+        '<b>' + esc(s.title) + '</b><span>' + esc(precio) + '</span></button>';
+    }).join('');
+  }
+
+  /* (9) Mosaicos: TODOS los servicios de Miguel.
+     Con sección real (showSection) donde existe; donde el catálogo no
+     tiene sección ni producto (Certificados, Seguro médico), el mosaico
+     abre la cotización por WhatsApp (vgOpenCotizar) SIN inventar
+     producto ni precio. */
+  var TILES = [
+    { t: 'Gaming', d: 'Game Pass · Minecraft · Xbox One/Series', ir: 'gaming', img: 6, ico: '🎮' },
+    { t: 'Fortnite', d: 'Skins, lotes, bailes, picos y música', ir: 'fortnite', img: 0, ico: '🪂' },
+    { t: 'Free Fire', d: 'Diamantes desde $195 MXN', ir: 1, img: 1, ico: '💎' },
+    { t: 'Warzone', d: 'CODPoints para Xbox', ir: 2, img: 2, ico: '🎯' },
+    { t: 'Xbox Cuentas', d: '1,640 juegos en cuenta nueva', ir: 'retro', img: 5, ico: '🆕' },
+    { t: 'Xbox Retro', d: 'Xbox 360 y Clásico en cuenta nueva', ir: 'retro', img: 0, ico: '📀' },
+    { t: 'Streaming', d: 'Netflix, Disney+, MAX, Prime Video…', ir: 'streaming', img: 8, ico: '▶' },
+    { t: 'Software', d: 'Office, ChatGPT Plus, Canva, Adobe…', ir: 'software', img: 33, ico: '💻' },
+    { t: 'Actas Gob', d: 'Actas de nacimiento por estado', ir: 'actas', img: 54, ico: '📄' },
+    { t: 'Certificados', d: 'Preparatoria y universidad · Pide cotización', ir: 'cotizar', img: 0, ico: '🎓' },
+    { t: 'Seguro médico', d: 'Cotiza tu seguro por WhatsApp', ir: 'cotizar', img: 0, ico: '🩺' },
+    { t: 'Redes', d: 'Seguidores, likes, vistas y comentarios', ir: 'redes', img: 47, ico: '📈' }
+  ];
+  function pintarTiles() {
+    var box = qs('#vgkTiles');
+    if (!box) return;
+    box.innerHTML = TILES.map(function (t) {
+      var s = t.img ? servicioPorId(t.img) : null;
+      var ico = s ? '<img loading="lazy" decoding="async" src="' + esc(s.image) + '" alt="' + esc(t.t) + '">' : esc(t.ico);
+      var dest = (typeof t.ir === 'number') ? 'data-vgk-prod="' + t.ir + '"' : 'data-vgk-ir="' + esc(t.ir) + '"';
+      return '<button class="vgk-tile" type="button" ' + dest + '>' +
+        '<span class="vgk-ico">' + ico + '</span>' +
+        '<span><b>' + esc(t.t) + '</b><small>' + esc(t.d) + '</small></span>' +
+        '<span class="vgk-cta">›</span></button>';
+    }).join('');
+    /* Panel desplegable de categorías (misma lista, mismo destino). */
+    var panel = qs('#vgkCatPanel');
+    if (panel) {
+      panel.innerHTML = TILES.map(function (t) {
+        var s = t.img ? servicioPorId(t.img) : null;
+        var ico = s ? '<img loading="lazy" decoding="async" src="' + esc(s.image) + '" alt="">' : esc(t.ico);
+        var dest = (typeof t.ir === 'number') ? 'data-vgk-prod="' + t.ir + '"' : 'data-vgk-ir="' + esc(t.ir) + '"';
+        return '<button type="button" ' + dest + '><span class="vgk-ico">' + ico + '</span>' +
+          '<span>' + esc(t.t) + '<small>' + esc(t.d) + '</small></span></button>';
+      }).join('');
+    }
+  }
+
+  /* (5) Cinta. */
+  function pintarCinta() {
+    var track = qs('#vgkCinta');
+    if (!track) return;
+    var items = state.cinta.map(function (t) { return '<span>' + esc(t) + '</span>'; }).join('');
+    track.innerHTML = items + items; /* duplicado para el bucle continuo */
+  }
+
+  /* (4) Carrusel del héroe: rota cada 5.6 s, Ken Burns, puntos con
+     progreso, flechas, swipe y pausa al pasar el cursor. */
+  function pintarHeroes() {
+    var car = qs('#vgkCarousel');
+    if (!car) return;
+    var slides = state.heroes.map(function (h, i) {
+      var img = imagenHero(h);
+      var fondo = img
+        ? '<div class="vgk-slide-bg vgk-kenburns" style="background-image:url(&quot;' + esc(img) + '&quot;)"></div>'
+        : '<div class="vgk-slide-bg" style="background:linear-gradient(135deg,#241a45,#10101a 65%,#0c2b26)"></div>';
+      return '<div class="vgk-slide' + (i === state.slide ? ' vgk-on' : '') + '" data-vgk-hero="' + i + '">' + fondo +
+        '<div class="vgk-slide-grad"></div>' +
+        '<div class="vgk-slide-txt"><span class="vgk-kicker">' + esc(iconoHero(h)) + ' Promoción</span>' +
+        '<h3>' + esc(h.titulo) + '</h3><p>' + esc(h.subtitulo || '') + '</p>' +
+        '<span class="vgk-btn">Ver promoción</span></div></div>';
+    }).join('');
+    car.innerHTML = slides +
+      '<button class="vgk-car-arrow vgk-prev" type="button" aria-label="Anterior">‹</button>' +
+      '<button class="vgk-car-arrow vgk-next" type="button" aria-label="Siguiente">›</button>' +
+      '<div class="vgk-car-dots">' + state.heroes.map(function (h, i) {
+        return '<button type="button" data-vgk-dot="' + i + '" class="' + (i === state.slide ? 'vgk-on' : '') + '" aria-label="Ir a ' + esc(h.titulo) + '"><i></i></button>';
+      }).join('') + '</div>';
+    arrancarCarrusel();
+  }
+  function irSlide(n, manual) {
+    var car = qs('#vgkCarousel');
+    if (!car || !state.heroes.length) return;
+    state.slide = ((n % state.heroes.length) + state.heroes.length) % state.heroes.length;
+    var slides = car.querySelectorAll('.vgk-slide');
+    var dots = car.querySelectorAll('[data-vgk-dot]');
+    for (var i = 0; i < slides.length; i++) slides[i].classList.toggle('vgk-on', i === state.slide);
+    for (var j = 0; j < dots.length; j++) {
+      dots[j].classList.toggle('vgk-on', j === state.slide);
+      var bar = dots[j].querySelector('i');
+      if (bar) { bar.style.transition = 'none'; bar.style.width = j === state.slide ? '0%' : '0%'; }
+    }
+    /* Reinicia la barra de progreso del punto activo. */
+    var activo = dots[state.slide];
+    if (activo) {
+      var b = activo.querySelector('i');
+      if (b) { void b.offsetWidth; b.style.transition = 'width 5.6s linear'; b.style.width = '100%'; }
+    }
+    if (manual) arrancarCarrusel();
+  }
+  function arrancarCarrusel() {
+    var car = qs('#vgkCarousel');
+    if (!car) return;
+    if (state.timer) clearInterval(state.timer);
+    state.timer = setInterval(function () {
+      if (!document.hidden && qs('#homeView') && qs('#homeView').classList.contains('active')) irSlide(state.slide + 1, false);
+    }, 5600);
+    var activo = car.querySelector('[data-vgk-dot].vgk-on i');
+    if (activo) { activo.style.transition = 'width 5.6s linear'; activo.style.width = '100%'; }
+  }
+
+  /* (6) Destacados: ofertas del API (editables en admin) con filtros. */
+  function categoriaOferta(o) {
+    if (o.enlace === 'retro' || /cuenta nueva/i.test(o.subtitulo || '')) return 'retro';
+    var s = servicioPorTitulo(o.titulo);
+    if (s) return s.category === 'streaming' ? 'streaming' : 'gaming';
+    return (o.enlace === 'streaming') ? 'streaming' : 'gaming';
+  }
+  function pintarOfertas() {
+    var grid = qs('#vgkGridOfertas');
+    if (!grid) return;
+    var list = state.ofertas.filter(function (o) {
+      if (state.filtroOfertas === 'all') return true;
+      return categoriaOferta(o) === state.filtroOfertas;
+    });
+    var fuente = qs('#vgkFuente');
+    if (fuente) fuente.textContent = state.fuente === 'supabase' ? 'Contenido del panel admin' : 'Contenido destacado';
+    if (!list.length) {
+      grid.innerHTML = '<div class="vgk-empty">No hay ofertas en este filtro por ahora.' +
+        '<br><button class="vgk-btn" type="button" data-vgk-ir="all">Ver catálogo completo</button></div>';
+      return;
+    }
+    grid.innerHTML = list.map(function (o, i) {
+      var s = servicioPorTitulo(o.titulo);
+      var tr = trPorTitulo(o.titulo);
+      var img = o.imagen || (tr && tr.image) || (s && s.image) || '';
+      var tag = categoriaOferta(o) === 'retro' ? 'Xbox Cuentas' : (s ? s.categoryName : 'Vessel Games');
+      var clave = 'oferta:' + i;
+      return tarjetaKinguin({
+        titulo: o.titulo, subtitulo: o.subtitulo, precio: Number(o.precio),
+        precio_mx: Number(o.precio_mx || 0), imagen: img, tag: tag,
+        cuentaNueva: categoriaOferta(o) === 'retro',
+        clave: clave, alAgregar: !!(tr || s), icono: '★'
+      });
+    }).join('');
+  }
+
+  /* (7) Fila Xbox Cuentas: juegos TR con precio y MX tachado. El "+"
+     usa window.vgxrAgregar (módulo v2: carrito TR + regla interna al
+     pagar, sin mostrarla). La ficha usa window.vgxrVer. */
+  function pintarFilaTR() {
+    var grid = qs('#vgkGridTR');
+    if (!grid) return;
+    var count = qs('#vgkTrCount');
+    if (count) count.textContent = state.trTotal ? (state.trTotal.toLocaleString('es-MX') + ' juegos') : 'Xbox Cuentas';
+    if (!state.tr.length) {
+      grid.innerHTML = '<div class="vgk-empty">Cargando los juegos de Xbox Cuentas…' +
+        '<br><button class="vgk-btn" type="button" data-vgk-ir="retro">Ver la sección completa</button></div>';
+      return;
+    }
+    grid.innerHTML = state.tr.slice(0, 8).map(function (g) {
+      return tarjetaKinguin({
+        titulo: g.title, subtitulo: g.platform + ' · se entrega en una cuenta nueva y completa, solo tuya.',
+        precio: Number(g.venta_mxn || 0), precio_mx: Number(g.mx || 0),
+        imagen: g.image || '', tag: 'Xbox Cuentas', cuentaNueva: true,
+        clave: 'tr:' + g.slug, alAgregar: true, icono: '🎮'
+      });
+    }).join('');
+  }
+
+  /* (8) Fila Streaming: productos reales del catálogo. */
+  function pintarStreaming() {
+    var grid = qs('#vgkGridStreaming');
+    if (!grid) return;
+    var ids = [8, 9, 10, 11, 12, 31, 29, 19]; /* Netflix, Prime, MAX, Disney+, Crunchyroll, YouTube Premium, Spotify, Apple TV+ */
+    var cards = ids.map(function (id) {
+      var s = servicioPorId(id);
+      if (!s) return '';
+      var precio = (s.options && s.options[0]) ? Number(s.options[0].price) : 0;
+      return tarjetaKinguin({
+        titulo: s.title, subtitulo: s.description || 'Streaming',
+        precio: precio, precio_mx: 0, imagen: s.image || '',
+        tag: 'Streaming', cuentaNueva: false, clave: 'srv:' + id, alAgregar: true, icono: '▶'
+      });
+    }).join('');
+    grid.innerHTML = cards || '<div class="vgk-empty">Pronto verás aquí el streaming.</div>';
+  }
+
+  /* ── Contenido editable (API) ────────────────────────────────────── */
+  function cargarContenido() {
+    fetchJSON('/api/contenido-inicio').then(function (d) {
+      if (!d) return;
+      var cambio = false;
+      if (d.cinta) { state.cinta = filtrarCinta(d.cinta); cambio = true; }
+      if (d.heroes) { state.heroes = filtrarHeroes(d.heroes); state.slide = 0; cambio = true; }
+      if (d.ofertas) { state.ofertas = filtrarOfertas(d.ofertas); cambio = true; }
+      if (d.fuente) state.fuente = d.fuente;
+      if (cambio) { pintarCinta(); pintarHeroes(); pintarOfertas(); }
+    }).catch(function () { /* queda el respaldo local */ });
+  }
+
+  /* ── Acciones de las tarjetas ────────────────────────────────────── */
+  function resolverOferta(i) {
+    var o = state.ofertas[i];
+    if (!o) return null;
+    var tr = trPorTitulo(o.titulo);
+    if (tr) return { tipo: 'tr', tr: tr };
+    var s = servicioPorTitulo(o.titulo);
+    if (s) return { tipo: 'srv', srv: s };
+    return { tipo: 'ir', enlace: o.enlace || 'all' };
+  }
+  function alVer(clave) {
+    if (!clave) return;
+    var partes = String(clave).split(':');
+    if (partes[0] === 'tr') {
+      if (typeof window.vgxrVer === 'function') { window.vgxrVer(partes.slice(1).join(':')); return; }
+      irA('retro'); return;
+    }
+    if (partes[0] === 'srv') { irA(Number(partes[1])); return; }
+    if (partes[0] === 'oferta') {
+      var r = resolverOferta(Number(partes[1]));
+      if (!r) return;
+      if (r.tipo === 'tr' && typeof window.vgxrVer === 'function') { window.vgxrVer(r.tr.slug); return; }
+      if (r.tipo === 'srv') { irA(r.srv.id); return; }
+      irA(r.enlace || 'all');
+    }
+  }
+  function alAgregar(clave) {
+    if (!clave) return;
+    var partes = String(clave).split(':');
+    if (partes[0] === 'tr') {
+      if (typeof window.vgxrAgregar === 'function') { window.vgxrAgregar(partes.slice(1).join(':')); return; }
+      irA('retro'); return;
+    }
+    if (partes[0] === 'srv') { agregarServicio(Number(partes[1])); return; }
+    if (partes[0] === 'oferta') {
+      var r = resolverOferta(Number(partes[1]));
+      if (!r) return;
+      if (r.tipo === 'tr' && typeof window.vgxrAgregar === 'function') { window.vgxrAgregar(r.tr.slug); return; }
+      if (r.tipo === 'srv') { agregarServicio(r.srv.id); return; }
+      irA(r.enlace || 'all');
+    }
+  }
+
+  /* ── Eventos ─────────────────────────────────────────────────────── */
+  function enlazar(root) {
+    root.addEventListener('click', function (ev) {
+      var t = ev.target.closest('[data-vgk-ir],[data-vgk-prod],[data-vgk-scroll],[data-vgk-filtro],[data-vgk-dot],[data-vgk-hero],[data-vgk-ver],[data-vgk-add],#vgkCatBtn,.vgk-car-arrow');
+      if (!t) return;
+      if (t.id === 'vgkCatBtn') {
+        var panel = qs('#vgkCatPanel');
+        var abierto = panel && panel.classList.toggle('vgk-open');
+        t.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+        return;
+      }
+      if (t.classList.contains('vgk-car-arrow')) {
+        irSlide(state.slide + (t.classList.contains('vgk-prev') ? -1 : 1), true);
+        return;
+      }
+      if (t.hasAttribute('data-vgk-dot')) { irSlide(Number(t.getAttribute('data-vgk-dot')), true); return; }
+      if (t.hasAttribute('data-vgk-add')) { ev.stopPropagation(); alAgregar(t.getAttribute('data-vgk-add')); return; }
+      if (t.hasAttribute('data-vgk-hero')) { var h = state.heroes[Number(t.getAttribute('data-vgk-hero'))]; if (h) irA(h.enlace || 'all'); return; }
+      if (t.hasAttribute('data-vgk-ver')) { alVer(t.getAttribute('data-vgk-ver')); return; }
+      if (t.hasAttribute('data-vgk-prod')) { irA(Number(t.getAttribute('data-vgk-prod'))); return; }
+      if (t.hasAttribute('data-vgk-ir')) { irA(t.getAttribute('data-vgk-ir')); return; }
+      if (t.hasAttribute('data-vgk-filtro')) {
+        state.filtroOfertas = t.getAttribute('data-vgk-filtro');
+        var chips = root.querySelectorAll('[data-vgk-filtro]');
+        for (var i = 0; i < chips.length; i++) chips[i].classList.toggle('vgk-on', chips[i] === t);
+        pintarOfertas();
+        return;
+      }
+      if (t.hasAttribute('data-vgk-scroll')) {
+        var sec = document.getElementById(t.getAttribute('data-vgk-scroll'));
+        if (sec) sec.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        return;
+      }
+    });
+    /* Cerrar el panel de categorías al tocar fuera. */
+    document.addEventListener('click', function (ev) {
+      var panel = qs('#vgkCatPanel');
+      var btn = qs('#vgkCatBtn');
+      if (panel && panel.classList.contains('vgk-open') && !panel.contains(ev.target) && ev.target !== btn && !(btn && btn.contains(ev.target))) {
+        panel.classList.remove('vgk-open');
+        if (btn) btn.setAttribute('aria-expanded', 'false');
+      }
+    });
+    /* Carrusel: pausa al pasar el cursor, swipe en móvil. */
+    var car = qs('#vgkCarousel');
+    if (car) {
+      car.addEventListener('mouseenter', function () { if (state.timer) clearInterval(state.timer); state.timer = null; });
+      car.addEventListener('mouseleave', function () { if (!state.timer) arrancarCarrusel(); });
+      var x0 = null;
+      car.addEventListener('touchstart', function (e) { x0 = e.touches[0].clientX; }, { passive: true });
+      car.addEventListener('touchend', function (e) {
+        if (x0 == null) return;
+        var dx = e.changedTouches[0].clientX - x0;
+        if (Math.abs(dx) > 40) irSlide(state.slide + (dx < 0 ? 1 : -1), true);
+        x0 = null;
+      }, { passive: true });
+    }
+  }
+
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', construir);
+  } else {
+    construir();
+  }
+})();
+
+</script>
+<style id="vg-auditoria-v1">
+/* ============================================================
+   Vessel Games — Auditoría general 2026-11-24 (Fase 2)
+   Solo Prueba1. Overlay CSS al final del archivo: gana a las
+   reglas que lo necesitan sin tocar los bloques viejos.
+
+   1. Rejilla 7 columnas: la regla que mandaba era
+      #productsGrid.grid / #featuredGrid.grid con
+      repeat(auto-fill,minmax(216px,1fr)) (línea ~41866,
+      especificidad 0,2,0), que le ganaba a los repeat(7) de
+      Fase 1 y Fase 2 (html body #... = 0,1,2). Por eso a 1920px
+      salían 6 columnas en Destacados (1556px / 216px) y 5 en el
+      catálogo (1254px tras el sidebar de 280px). Aquí se usa
+      id + clase + :not() (0,3,2) para que el 6/7 por fin mande.
+      La vista de lista (.vg-list-view / .vg-a138-grid) queda
+      fuera con :not(), así que el botón de lista sigue en 1 col.
+   ============================================================ */
+@media(min-width:1024px){
+  html body #featuredGrid.grid:not(.vg-list-view):not(.vg-a138-grid),
+  html body #productsGrid.grid:not(.vg-list-view):not(.vg-a138-grid){
+    grid-template-columns:repeat(6,minmax(0,1fr)) !important;gap:14px !important
+  }
+}
+@media(min-width:1440px){
+  html body #featuredGrid.grid:not(.vg-list-view):not(.vg-a138-grid),
+  html body #productsGrid.grid:not(.vg-list-view):not(.vg-a138-grid){
+    grid-template-columns:repeat(7,minmax(0,1fr)) !important;gap:14px !important
+  }
+}
+</style>
 
 <style id="vg-retro-tr-v2">
 /* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
@@ -49802,6 +51027,720 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
 }
 </style>
 
+<style id="vg-admin-v3">
+/* ================================================================
+   vg-admin-v3 · Rediseño del panel admin, tercera versión (OSCURO)
+   ---------------------------------------------------------------
+   SUSTITUYE al bloque anterior de paleta clara (#eef1f7 / tarjetas
+   blancas), que se BORRA del archivo: no quedan dos bloques
+   compitiendo.
+   Este bloque es el ÚLTIMO <style> del documento (después de
+   vg-retro-tr-v2), así que en empate de especificidad gana por ir
+   después; además casi todas las reglas usan
+   "html body #vgAdminModal#vgAdminModal" (DOBLE ID) + !important,
+   y el h2 usa triple .active con doble ID, igual que hacía v2 para
+   ganar a la regla de la línea ~26902 (triple .active, 0.75rem).
+
+   PALETA = la de la tienda (oscuro + morado + menta):
+     fondo #0c0c13 · superficies #16161f / #1c1c28 · texto #f4f4f8
+     morado #8b5cf6 botones y elementos principales
+     menta #19e6c1 SOLO sellos, estados y detalles chicos
+     ámbar #f59e0b SOLO alertas / pendiente
+     precios en BLANCO y negrita. Nada de fondo claro ni tarjetas
+     blancas.
+
+   QUÉ CUBRE (mismo alcance que v2, en oscuro): variables --l-*,
+   panel a pantalla completa, cabecera, barra lateral (PC) /
+   pestañas deslizantes (móvil), contenido, estadísticas, cajas,
+   botones e inputs, Pedidos (lista | detalle | chat), Xbox /
+   catálogo, y móvil 390px sin desbordes.
+
+   SOLO PRESENTACIÓN. No toca lógica JS, textos, ids ni clases de
+   enganche. Los módulos nuevos (Xbox Cuentas vg-tr-admin-v1 e
+   Inicio vg-inicio-admin-v1) reutilizan .vg-admin-btn /
+   .vg-xbox-admin-row del panel, así que siguen su diseño; sus
+   reglas propias (p. ej. input:disabled, .vg-inicio-form) no se
+   tocan aquí.
+   ================================================================ */
+
+/* ── 0 · Variables: paleta oscura propia ── */
+html body #vgAdminModal#vgAdminModal{
+  --l-bg:#0c0c13!important;
+  --l-surface:#16161f!important;
+  --l-surface-2:#1c1c28!important;
+  --l-surface-3:#22222f!important;
+  --l-ink:#f4f4f8!important;
+  --l-ink-2:#d8dbe8!important;
+  --l-muted:#9aa0b5!important;
+  --l-faint:#7c8299!important;
+  --l-line:#262633!important;
+  --l-line-2:#33334a!important;
+  --l-accent:#8b5cf6!important;
+  --l-accent-ink:#c4b5fd!important;
+  --l-accent-wash:rgba(139,92,246,.16)!important;
+  --l-slate:#241b4d!important;
+  --l-ok:#19e6c1!important;
+  --l-ok-wash:rgba(25,230,193,.12)!important;
+  --l-warn:#f59e0b!important;
+  --l-warn-wash:rgba(245,158,11,.14)!important;
+  --l-crit:#f87171!important;
+  --l-crit-wash:rgba(248,113,113,.12)!important;
+  --l-info-wash:rgba(139,92,246,.14)!important;
+  --l-sobre:#16161f!important;
+  background:rgba(5,5,10,.72)!important;
+}
+html body #vgAdminModal#vgAdminModal.active{display:flex!important;}
+html body #vgAdminModal#vgAdminModal *,
+html body #vgAdminModal#vgAdminModal *::before,
+html body #vgAdminModal#vgAdminModal *::after{box-sizing:border-box!important;}
+html body #vgAdminModal#vgAdminModal img,
+html body #vgAdminModal#vgAdminModal video{max-width:100%!important;}
+
+/* ── 1 · Panel: pantalla completa, oscuro, sin brillos ── */
+html body #vgAdminModal#vgAdminModal .vg-admin-panel{
+  background:#0c0c13!important;
+  color:#f4f4f8!important;
+  width:100vw!important;
+  max-width:100vw!important;
+  height:100vh!important;
+  height:100dvh!important;
+  max-height:100dvh!important;
+  border-radius:0!important;
+  border:0!important;
+  box-shadow:none!important;
+  overflow:hidden!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-panel::before,
+html body #vgAdminModal#vgAdminModal .vg-admin-panel::after{display:none!important;background:none!important;}
+
+/* ── 2 · Cabecera: oscura, con línea morada, título GRANDE blanco ── */
+html body #vgAdminModal#vgAdminModal .vg-admin-head{
+  background:#16161f!important;
+  border-bottom:3px solid #8b5cf6!important;
+  padding:18px 28px!important;
+  min-height:78px!important;
+  display:flex!important;
+  align-items:center!important;
+  gap:16px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-head::before,
+html body #vgAdminModal#vgAdminModal .vg-admin-head::after{display:none!important;background:none!important;}
+html body #vgAdminModal#vgAdminModal.active.active.active .vg-admin-head h2,
+html body #vgAdminModal#vgAdminModal .vg-admin-head h2{
+  font-size:1.65rem!important;
+  line-height:1.15!important;
+  font-weight:900!important;
+  letter-spacing:-.02em!important;
+  color:#f4f4f8!important;
+  margin:0!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-head p{
+  font-size:.92rem!important;
+  line-height:1.4!important;
+  color:#9aa0b5!important;
+  margin:3px 0 0!important;
+  max-width:none!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-x{
+  position:static!important;
+  width:44px!important;
+  height:44px!important;
+  flex:none!important;
+  border-radius:12px!important;
+  border:2px solid #33334a!important;
+  background:#1c1c28!important;
+  color:#f4f4f8!important;
+  font-size:1.2rem!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-x:hover{
+  border-color:#8b5cf6!important;
+  color:#ffffff!important;
+}
+
+/* ── 3 · Barra lateral morada oscura (PC): pestañas verticales ── */
+@media(min-width:901px){
+  html body #vgAdminModal#vgAdminModal .vg-admin-panel{
+    display:grid!important;
+    grid-template-columns:248px minmax(0,1fr)!important;
+    grid-template-rows:auto minmax(0,1fr)!important;
+    grid-template-areas:"lateral cabecera" "lateral cuerpo"!important;
+    gap:0!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg-admin-head{grid-area:cabecera!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tabs{grid-area:lateral!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-content{grid-area:cuerpo!important;}
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
+  background:linear-gradient(180deg,#150e2e,#241b4d 55%,#150e2e)!important;
+  padding:20px 14px!important;
+  gap:4px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  border-right:0!important;
+  border-bottom:0!important;
+  flex-wrap:nowrap!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tabs::before{
+  content:"VESSEL GAMES · PANEL ADMIN"!important;
+  display:block!important;
+  color:#19e6c1!important;
+  font-size:.68rem!important;
+  font-weight:900!important;
+  letter-spacing:.14em!important;
+  padding:6px 12px 16px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tab,
+html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{
+  background:transparent!important;
+  border:0!important;
+  border-left:4px solid transparent!important;
+  border-radius:10px!important;
+  color:rgba(244,244,248,.85)!important;
+  padding:11px 14px!important;
+  min-height:44px!important;
+  font-size:.9rem!important;
+  font-weight:700!important;
+  text-align:left!important;
+  justify-content:flex-start!important;
+  white-space:normal!important;
+  letter-spacing:0!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-tab:hover,
+html body #vgAdminModal#vgAdminModal .vg-admin-tab-x:hover{
+  background:rgba(255,255,255,.08)!important;
+  border-color:transparent!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal.active .vg-admin-tab.active,
+html body #vgAdminModal#vgAdminModal .vg-admin-tab.active,
+html body #vgAdminModal#vgAdminModal.active .vg-admin-tab-x.active,
+html body #vgAdminModal#vgAdminModal .vg-admin-tab-x.active{
+  background:#8b5cf6!important;
+  color:#ffffff!important;
+  border-left-color:#19e6c1!important;
+  box-shadow:0 6px 18px rgba(0,0,0,.45)!important;
+}
+
+/* ── 4 · Contenido: fondo oscuro, aire ── */
+html body #vgAdminModal#vgAdminModal .vg-admin-content{
+  background:#0c0c13!important;
+  color:#f4f4f8!important;
+  padding:24px 28px 32px!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-section{
+  background:transparent!important;
+  border:0!important;
+  box-shadow:none!important;
+  color:#f4f4f8!important;
+  min-width:0!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-section h3,
+html body #vgAdminModal#vgAdminModal .vg-admin-section h4{
+  color:#f4f4f8!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-login-card,
+html body #vgAdminModal#vgAdminModal .vg-admin-private-card{
+  background:#16161f!important;
+  color:#f4f4f8!important;
+  border-radius:20px!important;
+  border:1px solid #33334a!important;
+  box-shadow:0 20px 60px rgba(0,0,0,.5)!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-private-badge{
+  background:rgba(25,230,193,.14)!important;
+  color:#19e6c1!important;
+  border:1px solid rgba(25,230,193,.35)!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-note{
+  background:#16161f!important;
+  color:#d8dbe8!important;
+  border:1px solid #33334a!important;
+  border-radius:14px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-note b{color:#f4f4f8!important;}
+html body #vgAdminModal#vgAdminModal a{color:#c4b5fd!important;}
+
+/* ── 5 · Stats: 4 tarjetas oscuras, número BLANCO grande ── */
+html body #vgAdminModal#vgAdminModal #vgAdminStats,
+html body #vgAdminModal#vgAdminModal .vg-admin-stats,
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-cards,
+html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:16px!important;
+  margin-bottom:20px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-stat,
+html body #vgAdminModal#vgAdminModal .vg17-stat{
+  background:#16161f!important;
+  border:1px solid #262633!important;
+  border-radius:16px!important;
+  padding:18px 20px!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.35)!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-stat span,
+html body #vgAdminModal#vgAdminModal .vg17-stat span{
+  color:#9aa0b5!important;
+  font-size:.72rem!important;
+  font-weight:800!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-stat b,
+html body #vgAdminModal#vgAdminModal .vg17-stat b{
+  color:#f4f4f8!important;
+  font-size:2rem!important;
+  line-height:1.1!important;
+  font-weight:900!important;
+  display:block!important;
+  margin-top:6px!important;
+}
+
+/* ── 6 · Cajas y tarjetas: oscuras, un solo ritmo ── */
+html body #vgAdminModal#vgAdminModal .vg17-box,
+html body #vgAdminModal#vgAdminModal .vg17-card,
+html body #vgAdminModal#vgAdminModal .vg-admin-card{
+  background:#16161f!important;
+  border:1px solid #262633!important;
+  border-radius:16px!important;
+  padding:18px 20px!important;
+  margin-bottom:16px!important;
+  color:#f4f4f8!important;
+  box-shadow:0 2px 10px rgba(0,0,0,.3)!important;
+  clip-path:none!important;
+}
+html body #vgAdminModal#vgAdminModal .vg17-box>span{
+  color:#c4b5fd!important;
+  font-size:.75rem!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+}
+html body #vgAdminModal#vgAdminModal .vg17-card h4{color:#f4f4f8!important;font-size:1rem!important;}
+html body #vgAdminModal#vgAdminModal .vg17-box p,
+html body #vgAdminModal#vgAdminModal .vg17-card p{color:#d8dbe8!important;}
+html body #vgAdminModal#vgAdminModal .vg17-row b{color:#f4f4f8!important;}
+html body #vgAdminModal#vgAdminModal .vg17-row span{color:#9aa0b5!important;}
+html body #vgAdminModal#vgAdminModal .vg-order-card{
+  background:#16161f!important;
+  border:1px solid #262633!important;
+  border-radius:16px!important;
+  padding:16px!important;
+  color:#f4f4f8!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-order-card b{color:#ffffff!important;}
+html body #vgAdminModal#vgAdminModal .vg-sql-block{
+  background:#0c0c13!important;
+  color:#d8dbe8!important;
+  border:1px solid #262633!important;
+}
+
+/* ── 7 · Botones e inputs: morado, legibles; Borrar discreto ── */
+html body #vgAdminModal#vgAdminModal .vg17-btn,
+html body #vgAdminModal#vgAdminModal .vg-admin-btn,
+html body #vgAdminModal#vgAdminModal .vg-dash-btn,
+html body #vgAdminModal#vgAdminModal .vg-notif-btn,
+html body #vgAdminModal#vgAdminModal .vg-csv-btn{
+  background:#1c1c28!important;
+  color:#f4f4f8!important;
+  border:1px solid #33334a!important;
+  border-radius:12px!important;
+  padding:12px 18px!important;
+  font-weight:900!important;
+  min-height:44px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg17-btn:hover,
+html body #vgAdminModal#vgAdminModal .vg-admin-btn:hover,
+html body #vgAdminModal#vgAdminModal .vg-dash-btn:hover{
+  border-color:#8b5cf6!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal .vg17-btn.primary,
+html body #vgAdminModal#vgAdminModal .vg-admin-btn.primary,
+html body #vgAdminModal#vgAdminModal .vg-dash-btn-primary{
+  background:linear-gradient(135deg,#7c3aed,#8b5cf6)!important;
+  color:#ffffff!important;
+  border:0!important;
+}
+/* Borrar / peligro: discreto, nunca protagonista */
+html body #vgAdminModal#vgAdminModal .vg17-btn.danger,
+html body #vgAdminModal#vgAdminModal .vg-admin-btn.danger,
+html body #vgAdminModal#vgAdminModal .vg17-btn.delete,
+html body #vgAdminModal#vgAdminModal .vg-admin-btn.delete{
+  background:transparent!important;
+  color:#9aa0b5!important;
+  border:1px solid #33334a!important;
+}
+html body #vgAdminModal#vgAdminModal input,
+html body #vgAdminModal#vgAdminModal select,
+html body #vgAdminModal#vgAdminModal textarea{
+  background:#0c0c13!important;
+  color:#f4f4f8!important;
+  border:1px solid #33334a!important;
+  border-radius:12px!important;
+}
+html body #vgAdminModal#vgAdminModal input::placeholder,
+html body #vgAdminModal#vgAdminModal textarea::placeholder{color:#7c8299!important;}
+html body #vgAdminModal#vgAdminModal input:focus,
+html body #vgAdminModal#vgAdminModal select:focus,
+html body #vgAdminModal#vgAdminModal textarea:focus{
+  border-color:#8b5cf6!important;
+  outline:none!important;
+  box-shadow:0 0 0 3px rgba(139,92,246,.25)!important;
+}
+html body #vgAdminModal#vgAdminModal select option{
+  background:#16161f!important;
+  color:#f4f4f8!important;
+}
+html body #vgAdminModal#vgAdminModal label{color:#d8dbe8!important;}
+html body #vgAdminModal#vgAdminModal .vg-admin-tools{
+  display:flex!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  margin-bottom:18px!important;
+  background:#16161f!important;
+  border:1px solid #262633!important;
+  border-radius:14px!important;
+  padding:12px!important;
+}
+/* Formularios de los módulos (Xbox Cuentas / Inicio): etiquetas y
+   campos alineados, sin tocar su rejilla ni sus ids */
+html body #vgAdminModal#vgAdminModal .vg-xbox-admin-form label,
+html body #vgAdminModal#vgAdminModal .vg-xbox-admin-row label{
+  color:#d8dbe8!important;
+  font-weight:700!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-xbox-admin-form input:disabled{
+  opacity:.55!important;
+  cursor:not-allowed!important;
+}
+html body #vgAdminModal#vgAdminModal #vgTrAdminStats{
+  margin:0 0 12px!important;
+  font-weight:700!important;
+  color:#f4f4f8!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-inicio-titulo{color:#f4f4f8!important;}
+html body #vgAdminModal#vgAdminModal .vg-inicio-check{color:#d8dbe8!important;}
+
+/* ── 8 · PEDIDOS: lista | detalle | chat, con aire ── */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
+  display:grid!important;
+  grid-template-columns:320px minmax(0,1fr) 360px!important;
+  gap:16px!important;
+  height:calc(100vh - 215px)!important;
+  min-height:480px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-col{
+  background:#16161f!important;
+  border:1px solid #262633!important;
+  border-radius:18px!important;
+  overflow:hidden!important;
+  box-shadow:0 2px 12px rgba(0,0,0,.35)!important;
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  height:auto!important;
+  max-height:none!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-colhead{
+  background:#241b4d!important;
+  color:#f4f4f8!important;
+  padding:13px 16px!important;
+  font-size:.72rem!important;
+  font-weight:900!important;
+  letter-spacing:.1em!important;
+  text-transform:uppercase!important;
+  border-bottom:0!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-colhead b{color:#19e6c1!important;font-size:.72rem!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-scroll{
+  padding:12px!important;
+  background:#16161f!important;
+  flex:1!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+}
+/* Tarjeta de pedido: respira (más aire, separación clara) */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row{
+  background:#1c1c28!important;
+  border:1px solid #2a2a3a!important;
+  border-radius:14px!important;
+  padding:16px!important;
+  margin-bottom:12px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row:hover{
+  background:#22222f!important;
+  border-color:#8b5cf6!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row.active{
+  background:rgba(139,92,246,.16)!important;
+  border:1px solid #8b5cf6!important;
+  box-shadow:0 4px 14px rgba(139,92,246,.25)!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowtop b{
+  color:#f4f4f8!important;
+  font-size:.95rem!important;
+  font-weight:800!important;
+}
+/* Precios en blanco y negrita, como en la tienda */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-amt,
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-amt.big,
+html body #vgAdminModal#vgAdminModal .vg-admin-table td b{
+  color:#ffffff!important;
+  font-weight:900!important;
+  font-size:.95rem!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-amt.big{font-size:1.4rem!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowsub{
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-rowfoot time{color:#9aa0b5!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-cup{
+  background:transparent!important;
+  color:#c4b5fd!important;
+  font-weight:800!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-order-id{
+  border:1px solid rgba(25,230,193,.35)!important;
+  background:rgba(25,230,193,.1)!important;
+  color:#d9fffa!important;
+}
+/* Estados: sello sólido legible (menta solo aquí y en sellos) */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip,
+html body #vgAdminModal#vgAdminModal .vg17-chip{
+  background:#8b5cf6!important;
+  color:#ffffff!important;
+  border:0!important;
+  border-radius:999px!important;
+  padding:4px 11px!important;
+  font-size:.72rem!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.04em!important;
+  white-space:nowrap!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.pendiente{background:#f59e0b!important;color:#2a1a00!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.proceso,
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.en_proceso{background:#8b5cf6!important;color:#ffffff!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.entregado{background:#19e6c1!important;color:#06281f!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-chip.cancelado{background:#ef4444!important;color:#ffffff!important;}
+/* Detalle: ficha morada oscura, total blanco grande */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idcard{
+  background:linear-gradient(135deg,rgba(139,92,246,.22),rgba(25,230,193,.08))!important;
+  border:1px solid #4c3a8f!important;
+  border-radius:16px!important;
+  padding:16px 18px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idtop b{
+  color:#f4f4f8!important;
+  font-size:1.15rem!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-idmeta{color:#d8dbe8!important;}
+/* Estado: píldoras oscuras, solo la activa es morada */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-quick button{
+  background:#1c1c28!important;
+  color:#d8dbe8!important;
+  border:1px solid #33334a!important;
+  border-radius:999px!important;
+  padding:9px 14px!important;
+  font-weight:800!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-quick button.on{
+  background:#8b5cf6!important;
+  color:#ffffff!important;
+  border-color:#8b5cf6!important;
+}
+/* Entregar: LA acción principal, grande, morada, a todo lo ancho */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver{
+  background:rgba(25,230,193,.07)!important;
+  border:2px solid rgba(25,230,193,.55)!important;
+  border-radius:16px!important;
+  padding:16px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver>span{
+  color:#19e6c1!important;
+  font-weight:900!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver p{color:#d8dbe8!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver textarea{
+  background:#0c0c13!important;
+  color:#f4f4f8!important;
+  border:1px solid #2e5a50!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver .vg17-btn,
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-deliver .vg-admin-btn{
+  width:100%!important;
+  height:52px!important;
+  background:linear-gradient(135deg,#7c3aed,#8b5cf6)!important;
+  color:#ffffff!important;
+  font-size:1rem!important;
+  font-weight:900!important;
+  border:0!important;
+  border-radius:14px!important;
+  margin-top:10px!important;
+}
+/* Chat: columna oscura, mensajes sobre superficie */
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat .vg17-msgs{
+  background:#101018!important;
+  border:1px solid #262633!important;
+  border-radius:14px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-msg{
+  background:#1c1c28!important;
+  color:#f4f4f8!important;
+  border:1px solid #2a2a3a!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg-proof-preview-img{max-height:300px!important;}
+/* Tabla de pedidos (vista clásica): oscura, total blanco */
+html body #vgAdminModal#vgAdminModal .vg-admin-table th{
+  color:#9aa0b5!important;
+  background:transparent!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-table td{
+  background:#16161f!important;
+  border-top:1px solid #262633!important;
+  border-bottom:1px solid #262633!important;
+  color:#e8edf8!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-table td:first-child,
+html body #vgAdminModal#vgAdminModal .vg-admin-table td:last-child{
+  border-color:#262633!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-table tr.vg-selected-order td{
+  border-color:rgba(25,230,193,.4)!important;
+  background:rgba(25,230,193,.06)!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-admin-mini-btn{
+  border:1px solid rgba(25,230,193,.3)!important;
+  background:rgba(25,230,193,.08)!important;
+  color:#d9fffa!important;
+}
+
+/* ── 9 · Xbox / Catálogo / resto: mismo ritmo oscuro ── */
+html body #vgAdminModal#vgAdminModal #vgAdminProductsList{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fill,minmax(340px,1fr))!important;
+  gap:16px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminSettings .vg-settings-grid{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(260px,1fr))!important;
+  gap:16px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-dash-grid{
+  gap:16px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-dash-cats,
+html body #vgAdminModal#vgAdminModal .vg-dash-changes,
+html body #vgAdminModal#vgAdminModal .vg-chart-wrap{
+  background:#16161f!important;
+  border:1px solid #262633!important;
+  color:#d8dbe8!important;
+}
+html body #vgAdminModal#vgAdminModal .vg-chart-title{color:#f4f4f8!important;}
+html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
+  gap:10px!important;
+}
+
+/* ── 10 · Pantallas medianas: chat baja, resto igual ── */
+@media(max-width:1300px) and (min-width:901px){
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
+    grid-template-columns:300px minmax(0,1fr)!important;
+    grid-template-rows:minmax(0,1fr) auto!important;
+    height:calc(100vh - 215px)!important;
+  }
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat{
+    grid-column:1/-1!important;
+    height:380px!important;
+  }
+}
+
+/* ── 11 · Móvil: una columna, nada tapado ── */
+@media(max-width:900px){
+  html body #vgAdminModal#vgAdminModal .vg-admin-panel{
+    display:block!important;
+    grid-template-columns:none!important;
+    grid-template-rows:none!important;
+    grid-template-areas:none!important;
+    height:auto!important;
+    min-height:100dvh!important;
+    overflow:visible!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg-admin-head{
+    padding:16px!important;
+    min-height:0!important;
+  }
+  html body #vgAdminModal#vgAdminModal.active.active.active .vg-admin-head h2,
+  html body #vgAdminModal#vgAdminModal .vg-admin-head h2{font-size:1.35rem!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
+    flex-direction:row!important;
+    flex-wrap:nowrap!important;
+    overflow-x:auto!important;
+    overflow-y:hidden!important;
+    padding:10px 12px!important;
+    background:linear-gradient(90deg,#150e2e,#241b4d)!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg-admin-tabs::before{display:none!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tab,
+  html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{
+    flex:none!important;
+    white-space:nowrap!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg-admin-content{padding:16px 12px 28px!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminStats,
+  html body #vgAdminModal#vgAdminModal .vg-admin-stats,
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-cards,
+  html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    gap:10px!important;
+  }
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-grid{
+    grid-template-columns:1fr!important;
+    grid-template-rows:none!important;
+    grid-auto-rows:min-content!important;
+    height:auto!important;
+    min-height:0!important;
+    gap:14px!important;
+  }
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-list{max-height:320px!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-chat{height:420px!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-detail .vgA-scroll{max-height:none!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tools{flex-direction:column!important;align-items:stretch!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminProductsList{grid-template-columns:1fr!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminOrdersList{overflow-x:auto!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-table{min-width:560px!important;}
+}
+
+/* ── 12 · Móvil chico (390px): sin desbordes horizontales ── */
+@media(max-width:480px){
+  html body #vgAdminModal#vgAdminModal .vg-admin-content{padding:14px 10px 24px!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-head{padding:14px 12px!important;gap:10px!important;}
+  html body #vgAdminModal#vgAdminModal.active.active.active .vg-admin-head h2,
+  html body #vgAdminModal#vgAdminModal .vg-admin-head h2{font-size:1.2rem!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-stat b,
+  html body #vgAdminModal#vgAdminModal .vg17-stat b{font-size:1.5rem!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-stat,
+  html body #vgAdminModal#vgAdminModal .vg17-stat{padding:14px!important;}
+  html body #vgAdminModal#vgAdminModal .vg17-box,
+  html body #vgAdminModal#vgAdminModal .vg17-card,
+  html body #vgAdminModal#vgAdminModal .vg-admin-card{padding:14px!important;}
+  html body #vgAdminModal#vgAdminModal .vg-admin-tab,
+  html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{padding:10px 12px!important;font-size:.85rem!important;}
+  html body #vgAdminModal#vgAdminModal input,
+  html body #vgAdminModal#vgAdminModal select,
+  html body #vgAdminModal#vgAdminModal textarea{max-width:100%!important;}
+  html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row{padding:14px!important;}
+}
+</style>
+
 <script id="vg-retro-tr-v2">
 /* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
  *
@@ -49949,9 +51888,28 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
       if (hay) q = ql;
     }
     busquedaTR = q;
+    /* Tope de la barra "Hasta $…" y rango del sidebar: filtradosTR no
+       los aplicaba; el tope solo escondía tarjetas ya pintadas (y
+       cualquier repintado directo —al agregar al carrito, al terminar
+       de cargar el catálogo— lo perdía). Ahora filtran a nivel de
+       datos, igual que hace la sección Xbox One/Series.
+       (Auditoría 2026-11-24.) */
+    var topePrecio = Infinity;
+    try {
+      var chipActivo = document.querySelector('.vg-filter-bar .vg-filter-chip.active');
+      var vTope = chipActivo && chipActivo.getAttribute('data-price');
+      if (vTope && vTope !== 'all') {
+        var nTope = Number(vTope);
+        if (isFinite(nTope) && nTope > 0) topePrecio = nTope;
+      } else if (typeof window.vgPriceMax === 'number' && isFinite(window.vgPriceMax)) {
+        topePrecio = window.vgPriceMax;
+      }
+    } catch (e) {}
     var list = state.juegos.filter(function (x) {
       if (filtroPlataforma !== 'all' && x.platform !== filtroPlataforma) return false;
       if (q && String(x.title).toLowerCase().indexOf(q) < 0) return false;
+      if (Number(x.venta_mxn || 0) > topePrecio) return false;
+      if (window.vgPaso2EnRango && !window.vgPaso2EnRango(Number(x.venta_mxn || 0))) return false;
       return true;
     });
     var s = document.getElementById('sortSelect');
