@@ -49683,6 +49683,11 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
   font-size:1.25rem !important;
   font-weight:800 !important;
 }
+/* La misma regla con el selector de la tienda (html body #productsGrid
+   .card .price-line .price) la deja en menta; sin el ID no gana. */
+html body #productsGrid .card.vg-tr-card .price-line .price{
+  color:#ffffff !important;
+}
 .vg-tr-card .price-line .option-count{
   color:#8b93a5 !important;
 }
@@ -50015,19 +50020,81 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
      La sección se llama "Xbox Cuentas": son juegos de todo tipo
      (360, Clásico, One y Series) en cuenta nueva. Se cambia el
      rótulo en CATEGORIES (fuente del menú lateral y del encabezado)
-     y el título cada vez que se abre la sección. */
+     y el título cada vez que se abre la sección.
+     OJO: el envoltorio de v112 busca el botón del menú con el texto
+     "xbox retro" para ponerle el conteo; al renombrar ya no lo
+     encuentra y el conteo queda en 0. Por eso aquí se pone el conteo
+     a mano en el botón "Xbox Cuentas". */
   function renombrarSeccion() {
     try {
+      var cambio = false;
       if (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) {
         for (var i = 0; i < CATEGORIES.length; i++) {
           if (CATEGORIES[i] && CATEGORIES[i].id === 'retro') {
-            CATEGORIES[i].label = 'Xbox Cuentas';
-            CATEGORIES[i].desc = 'Juegos de Xbox 360, Xbox Clásico, Xbox One y Xbox Series en cuenta nueva, solo para ti.';
+            if (CATEGORIES[i].label !== 'Xbox Cuentas') {
+              CATEGORIES[i].label = 'Xbox Cuentas';
+              cambio = true;
+            }
+            if (CATEGORIES[i].desc !== 'Juegos de Xbox 360, Xbox Clásico, Xbox One y Xbox Series en cuenta nueva, solo para ti.') {
+              CATEGORIES[i].desc = 'Juegos de Xbox 360, Xbox Clásico, Xbox One y Xbox Series en cuenta nueva, solo para ti.';
+              cambio = true;
+            }
           }
         }
       }
-      if (typeof window.renderNav === 'function') window.renderNav();
+      if (cambio && typeof window.renderNav === 'function') window.renderNav();
+      var n = null;
+      if (state.listo) n = state.juegos.length;
+      else {
+        try { n = (typeof window.vgRetroJuegos === 'function') ? window.vgRetroJuegos().length : null; } catch (e2) {}
+      }
+      if (n != null) {
+        var items = document.querySelectorAll('.side-item');
+        for (var k = 0; k < items.length; k++) {
+          if (/xbox cuentas/i.test(items[k].textContent || '')) {
+            var s = items[k].querySelector('span');
+            if (s) s.textContent = n || '·';
+          }
+        }
+      }
     } catch (e) {}
+  }
+
+  /* Encabezado de la sección (título, subtítulo y encabezado de la
+     rejilla). Solo se toca cuando la sección activa es esta. */
+  function corregirEncabezado() {
+    try {
+      if (typeof activeCategory === 'undefined' || activeCategory !== 'retro') return;
+      var e = null;
+      if (typeof CATEGORIES !== 'undefined' && Array.isArray(CATEGORIES)) {
+        for (var i = 0; i < CATEGORIES.length; i++) {
+          if (CATEGORIES[i] && CATEGORIES[i].id === 'retro') e = CATEGORIES[i];
+        }
+      }
+      if (!e) return;
+      var t = document.getElementById('productsTitle');
+      if (t) t.textContent = 'Juegos Xbox Cuentas';
+      var st = document.getElementById('sectionTitle');
+      if (st) st.innerHTML = (e.icon || '') + ' ' + e.label;
+      var sd = document.getElementById('sectionDesc');
+      if (sd) sd.textContent = e.desc || '';
+    } catch (err) {}
+  }
+
+  /* ── Guardia al cargar ──
+     La primera vez que se abre la sección (?seccion=retro en la URL),
+     showSection corre ANTES de que este módulo exista: el encabezado
+     queda con el nombre viejo y el repintado de v112 (overrides) llega
+     después del catálogo. Por eso se vigila la sección unos segundos:
+     si está activa y la rejilla aún no trae badges TR, se repinta y se
+     corrige el encabezado y el conteo del menú. Se apaga sola. */
+  function vigilarSeccion() {
+    try {
+      if (typeof activeCategory === 'undefined' || activeCategory !== 'retro') return;
+      renombrarSeccion();
+      corregirEncabezado();
+      if (state.listo) repintarSeguro();
+    } catch (err) {}
   }
 
   /* ── Envoltorios del flujo de la sección ── */
@@ -50037,8 +50104,7 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
     try {
       if (cat === 'retro') {
         renombrarSeccion();
-        var t = document.getElementById('productsTitle');
-        if (t) t.textContent = 'Juegos Xbox Cuentas';
+        corregirEncabezado();
         if (state.listo) pintarTR();
       }
     } catch (e) {}
@@ -50218,8 +50284,16 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
     pintar: pintarTR,
     enCarrito: trEnCarrito,
     renombrar: renombrarSeccion,
+    vigilar: vigilarSeccion,
   };
   renombrarSeccion();
+  vigilarSeccion();
+  var vigilancias = 0;
+  var vigilarTimer = setInterval(function () {
+    vigilancias++;
+    vigilarSeccion();
+    if (vigilancias >= 40) clearInterval(vigilarTimer);
+  }, 500);
 
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', cargar);
