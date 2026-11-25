@@ -2,8 +2,10 @@
  *
  * Repaso diario de la sección Cuenta Nueva: relee el precio de México y
  * de Turquía de cada juego de vg_xbox_tr, con el tipo de cambio vivo, y
- * recalcula la venta (70% del precio MX, ganancia mínima $15). El juego
- * que ya no deja ganancia se esconde; el que vuelve a dejarla, se publica.
+ * recalcula la venta con la regla v3 (ganancia 120% del costo entre $15
+ * y $400; MX < $60 a ~80% del precio MX; topes 90% MX y precio de la
+ * sección One/Series). El juego que ya no deja ganancia se esconde; el
+ * que vuelve a dejarla, se publica.
  *
  * Dos reglas que vienen del susto de los 300 juegos escondidos en la
  * sección de Kinguin:
@@ -53,9 +55,10 @@ module.exports = async (req, res) => {
 
     const conId = filas.filter((f) => f.ms_id);
     const sinId = filas.filter((f) => !f.ms_id);
-    const [mxMapa, trMapa] = await Promise.all([
+    const [mxMapa, trMapa, kingMapa] = await Promise.all([
       P.preciosDeMicrosoft(conId.map((f) => f.ms_id)).catch(() => ({ __fallidos: conId.map((f) => f.ms_id) })),
       T.preciosDeMicrosoftTR(conId.map((f) => f.ms_id)).catch(() => ({ __fallidos: conId.map((f) => f.ms_id) })),
+      T.mapaKinguin(conId.map((f) => f.ms_id)).catch(() => ({})),
     ]);
     const porTitulo = {};
     await P.enTanda(sinId, 4, async (f) => {
@@ -99,7 +102,7 @@ module.exports = async (req, res) => {
         msId = porTitulo[f.slug].id;
       }
       if (!(mx > 0) || !(tr > 0)) { sinPrecio++; continue; }
-      const v = T.precioVentaTR(mx, tr, tc);
+      const v = T.precioVentaTR(mx, tr, tc, f.ms_id ? kingMapa[f.ms_id] : 0);
       const status = v.publica ? 'active' : 'hidden';
       if (!v.publica && f.status !== 'hidden') ocultos++;
       if (v.publica && f.status === 'hidden') publicados++;
@@ -112,7 +115,7 @@ module.exports = async (req, res) => {
           mx: Number(mx), tr: Number(tr),
           costo_mxn: Math.round((Number(tr) * tc) * 100) / 100,
           venta_mxn: v.publica ? v.venta : Number(f.venta_mxn || 0),
-          ganancia: Math.round(((v.venta || 0) - Number(tr) * tc) * 100) / 100,
+          ganancia: Math.round(Number(v.ganancia != null ? v.ganancia : (v.venta || 0) - Number(tr) * tc) * 100) / 100,
           paquete: Number(tr) < T.CFG_TR.MINIMO_TRY,
           status, origen: f.origen || null,
           updated_at: new Date().toISOString(),

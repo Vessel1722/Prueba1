@@ -2,7 +2,9 @@
  *
  * Revalidación al momento de pagar: vuelve a leer el precio de México y
  * de Turquía de cada juego del pedido, con el tipo de cambio vivo, y
- * recalcula la venta con la regla del 70% y la ganancia mínima de $15.
+ * recalcula la venta con la regla v3 (ganancia 120% del costo entre $15
+ * y $400; MX < $60 a ~80% del precio MX; topes 90% MX y precio de la
+ * sección One/Series).
  *
  * La tienda lo llama antes de abrir el pago de un pedido Cuenta Nueva. Si
  * algo cambió (un juego ya no deja $15, se acabó la oferta en Turquía, o
@@ -61,12 +63,14 @@ module.exports = async (req, res) => {
       return res.status(404).json({ ok: false, error: 'Ningún juego del pedido está en el catálogo Cuenta Nueva.' });
     }
 
-    /* Precios vivos por ms_id; sin ficha, por nombre. */
+    /* Precios vivos por ms_id; sin ficha, por nombre. Y el precio de la
+       sección One/Series para el tope (nunca más caro que el código). */
     const conId = filas.filter((f) => f.ms_id);
     const sinId = filas.filter((f) => !f.ms_id);
-    const [mxMapa, trMapa] = await Promise.all([
+    const [mxMapa, trMapa, kingMapa] = await Promise.all([
       P.preciosDeMicrosoft(conId.map((f) => f.ms_id)).catch(() => ({})),
       T.preciosDeMicrosoftTR(conId.map((f) => f.ms_id)).catch(() => ({})),
+      T.mapaKinguin(conId.map((f) => f.ms_id)).catch(() => ({})),
     ]);
     const porTitulo = {};
     await P.enTanda(sinId, 4, async (f) => {
@@ -95,7 +99,7 @@ module.exports = async (req, res) => {
         todoOk = false;
         continue;
       }
-      const v = T.precioVentaTR(mx, tr, tc);
+      const v = T.precioVentaTR(mx, tr, tc, f.ms_id ? kingMapa[f.ms_id] : 0);
       if (!v.publica) {
         juegos.push({ slug: f.slug, ok: false, motivo: v.motivo || 'ya no deja ganancia', mx, tr });
         todoOk = false;
