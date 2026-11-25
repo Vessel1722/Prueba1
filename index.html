@@ -49778,10 +49778,27 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
   letter-spacing:.03em;
 }
 @media (min-width: 900px) {
+  /* Las 4 carátulas en abanico a la derecha, más grandes que las
+     de la tienda (72% de alto) para que se lean. El abanico
+     original usa pasos de 6.5%; con pasos anchos las portadas se
+     regaban por toda la tarjeta y se veían chiquitas. */
   #sectionHero.vg-tr-hero .vgfn-portada.cartas img{
-    max-width:28% !important;
-    right:calc(4% + var(--i) * 22%) !important;
+    height:72% !important;
+    max-width:22% !important;
+    right:calc(2% + var(--i) * 7%) !important;
   }
+}
+
+/* Nota del mínimo dentro del carrito (persistente). */
+.vg-tr-carrito-nota{
+  margin:10px 0 0;
+  padding:10px 12px;
+  border:1px solid rgba(25,230,193,.45);
+  border-radius:12px;
+  background:rgba(25,230,193,.08);
+  color:#d9fffa;
+  font-size:.88rem;
+  line-height:1.45;
 }
 </style>
 
@@ -50219,6 +50236,53 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
     } catch (e) {}
   }
 
+  /* El título viejo ("Juegos Xbox Retro") reaparece al navegar dentro
+     del sitio: algún camino interno vuelve a ponerlo después de
+     corregirlo y el vigilante de 20 s ya se apagó. Este observador lo
+     corrige en cuanto cambia, mientras la sección siga activa. */
+  function vigilarEncabezado() {
+    try {
+      var t = document.getElementById('productsTitle');
+      if (!t || typeof MutationObserver === 'undefined') return;
+      var obs = new MutationObserver(function () {
+        try {
+          if (typeof activeCategory === 'undefined' || activeCategory !== 'retro') return;
+          if (t.textContent !== 'Juegos Xbox Cuentas') t.textContent = 'Juegos Xbox Cuentas';
+        } catch (e) {}
+      });
+      obs.observe(t, { childList: true, characterData: true, subtree: true });
+    } catch (e) {}
+  }
+
+  /* Nota persistente del mínimo dentro del carrito: el aviso flotante
+     se pierde en segundos; esta nota se queda mientras el carrito no
+     llega a $200. */
+  function avisoMinimoCarrito() {
+    try {
+      var modal = document.getElementById('cartModal');
+      if (!modal) return;
+      var viejo = modal.querySelector('.vg-tr-carrito-nota');
+      if (viejo) viejo.remove();
+      var t = trEnCarrito();
+      if (!t.count) return;
+      if (t.totalMxn >= MINIMO_MXN) return;
+      var total = modal.querySelector('.cart-total');
+      if (!total) return;
+      var nota = document.createElement('div');
+      nota.className = 'vg-tr-carrito-nota';
+      nota.textContent = 'Compra mínima $200 MXN por cuenta · Te faltan ' + money(MINIMO_MXN - t.totalMxn) + ' para completar tu compra.';
+      total.parentNode.insertBefore(nota, total);
+    } catch (e) {}
+  }
+  var origRenderCart = window.renderCart;
+  if (typeof origRenderCart === 'function') {
+    window.renderCart = function () {
+      var r = origRenderCart.apply(this, arguments);
+      avisoMinimoCarrito();
+      return r;
+    };
+  }
+
   /* ── Guardia al cargar ──
      La primera vez que se abre la sección (?seccion=retro en la URL),
      showSection corre ANTES de que este módulo exista: el encabezado
@@ -50411,6 +50475,9 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
         'La compra mínima para cuentas Xbox es de $200 MXN. Te faltan ' + money(MINIMO_MXN - totalMxn) + ' para completar tu compra.');
       return;
     }
+    /* La revalidación tarda unos segundos (Microsoft); avisar antes
+       para que el cliente no crea que el botón no hizo nada. */
+    toast('Verificando precios', 'Confirmando el precio actual de tus juegos…');
     validarPedido(order)
       .then(function (ok) { if (typeof origPay === 'function') origPay(ok); })
       .catch(function (e) { toast('No se puede pagar aún', e && e.message ? e.message : 'No se pudo verificar el precio actual.'); });
@@ -50426,6 +50493,7 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
   };
   renombrarSeccion();
   vigilarSeccion();
+  vigilarEncabezado();
   var vigilancias = 0;
   var vigilarTimer = setInterval(function () {
     vigilancias++;
