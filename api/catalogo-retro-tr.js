@@ -72,8 +72,10 @@ module.exports = async (req, res) => {
     juegos,
     total: juegos.length,
     tipo_cambio: tc,
+    /* Compra mínima visible: $200 MXN por cuenta. El mínimo de 300 TRY
+       queda solo como referencia interna del dueño. */
     minimo_try: T.CFG_TR.MINIMO_TRY,
-    minimo_mxn: Math.ceil(T.CFG_TR.MINIMO_TRY * tc),
+    minimo_mxn: 200,
     fuente,
   });
 };
