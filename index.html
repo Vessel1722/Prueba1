@@ -49820,6 +49820,7 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
         try {
           if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') pintarTR();
         } catch (e) {}
+        setTimeout(repintarSeguro, 1500);
       })
       .catch(function () { state.listo = false; });
   }
@@ -50043,6 +50044,37 @@ html body #vgAdminModal#vgAdminModal .vg-order-card{
     } catch (e) {}
     return r;
   };
+
+  /* ── El repintado tardío de v112 ──
+     Al entrar a la sección, v112 pide los overrides del dueño y cuando
+     llegan repinta con pintar() (la rejilla vieja). Eso pisaba pintarTR()
+     aunque el catálogo ya estuviera listo: al cargar se veía la rejilla
+     vieja (con datos TR) y solo se volvía Cuenta Nueva al agregar algo
+     al carrito. Por eso aquí se envuelve vgRetroCargarOverrides: cuando
+     resuelve, se espera a que v112 repinte y se vuelve a pintar TR.
+     repintarSeguro solo actúa si la rejilla todavía no trae badges TR,
+     así que nunca reconstruye la rejilla ya correcta. */
+  function repintarSeguro() {
+    if (!state.listo) return;
+    try {
+      if (typeof activeCategory === 'undefined' || activeCategory !== 'retro') return;
+      var grid = document.getElementById('productsGrid');
+      if (!grid) return;
+      if (grid.querySelector('.vg-tr-badge')) return;
+      pintarTR();
+    } catch (e) {}
+  }
+  var origOverrides = window.vgRetroCargarOverrides;
+  if (typeof origOverrides === 'function') {
+    window.vgRetroCargarOverrides = function () {
+      var p = origOverrides.apply(this, arguments);
+      if (p && typeof p.then === 'function') {
+        p.then(function () { setTimeout(repintarSeguro, 150); },
+               function () { setTimeout(repintarSeguro, 150); });
+      }
+      return p;
+    };
+  }
 
   var origRP = window.renderProducts;
   window.renderProducts = function () {
