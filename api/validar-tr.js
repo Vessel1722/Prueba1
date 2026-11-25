@@ -7,9 +7,11 @@
  * sección One/Series).
  *
  * La tienda lo llama antes de abrir el pago de un pedido Cuenta Nueva. Si
- * algo cambió (un juego ya no deja $15, se acabó la oferta en Turquía, o
- * el pedido ya no suma 300 TRY), responde ok:false y la tienda no deja
- * pagar con los precios viejos.
+ * algo cambió (un juego ya no deja $15 o se acabó la oferta en Turquía),
+ * responde ok:false y la tienda no deja pagar con los precios viejos.
+ * El mínimo que decide si se puede pagar es $200 MXN por cuenta (lo
+ * aplica la tienda); el total en liras se reporta solo como referencia
+ * del dueño y ya no bloquea el pago.
  *
  * Si Microsoft no responde para un juego, ese juego se marca no válido:
  * no se vende a precio desactualizado. Falla cerrada, como el cron.
@@ -110,13 +112,16 @@ module.exports = async (req, res) => {
       juegos.push({ slug: f.slug, ok: true, venta_mxn: v.venta, mx, tr });
     }
 
+    /* El pago lo decide el mínimo de $200 MXN (lo aplica la tienda);
+       el total en liras es solo referencia del dueño. */
     const tryOk = tryTotal >= T.CFG_TR.MINIMO_TRY;
     res.status(200).json({
-      ok: todoOk && tryOk,
+      ok: todoOk,
       tipo_cambio: tc,
       try_total: Math.round(tryTotal * 100) / 100,
       try_ok: tryOk,
       minimo_try: T.CFG_TR.MINIMO_TRY,
+      minimo_mxn: 200,
       total_mxn: totalMxn,
       juegos,
     });
