@@ -49743,6 +49743,46 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
   margin:0 0 0 8px;
   vertical-align:middle;
 }
+
+/* ── Tarjeta de presentación de Xbox Cuentas ───────────────────
+   Nota de compra mínima y datos de la sección dentro del
+   encabezado, con los colores de la página (menta #19e6c1 y
+   morado #8b5cf6 sobre fondo oscuro). En PC la franja lleva 4
+   carátulas (una por plataforma); en móvil sigue con 3. */
+.vg-tr-minimo{
+  margin-top:14px;
+  padding:10px 14px;
+  border:1px solid rgba(25,230,193,.45);
+  border-radius:14px;
+  background:rgba(25,230,193,.08);
+  color:#d9fffa;
+  font-size:.92rem;
+  line-height:1.45;
+  max-width:560px;
+}
+.vg-tr-minimo b{
+  display:block;
+  color:#19e6c1;
+  font-size:.95rem;
+  letter-spacing:.02em;
+}
+.vg-tr-minimo span{
+  color:#c8d2e0;
+  font-size:.85rem;
+}
+.vg-tr-datos{
+  margin-top:10px;
+  color:#8b93a5;
+  font-size:.85rem;
+  font-weight:700;
+  letter-spacing:.03em;
+}
+@media (min-width: 900px) {
+  #sectionHero.vg-tr-hero .vgfn-portada.cartas img{
+    max-width:28% !important;
+    right:calc(4% + var(--i) * 22%) !important;
+  }
+}
 </style>
 
 <script id="vg-retro-tr-v2">
@@ -49760,10 +49800,13 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
  *     ({id, name, platform, price, status, image}), así los conteos,
  *     los chips, la búsqueda y la franja de la sección ya ven datos TR.
  *   · pintarTR() pinta la rejilla con badge Cuenta nueva, precio MX
- *     tachado y 360/Clásico primero. La regla de 300 TRY es INTERNA:
- *     nunca se muestra al cliente (ni barra, ni montos, ni la palabra
- *     "mínimo"); solo decide en silencio si un juego se vende solo o
- *     va al carrito y si el pedido se puede pagar.
+ *     tachado y 360/Clásico primero.
+ *   · COMPRA MÍNIMA $200 MXN: el cliente lo ve en la tarjeta de la
+ *     sección y el sistema lo aplica solo: un juego de menos de $200
+ *     no se compra solo (va al carrito) y el pago se bloquea mientras
+ *     el pedido no llegue a $200. La regla vieja de 300 TRY queda
+ *     solo como referencia interna (el total en liras se sigue
+ *     calculando en memoria para el dueño, pero ya no bloquea nada).
  *   · vgxrVer/vgxrAgregar/vgxrComprar envueltos: ficha con precio TR
  *     y revalidación antes de pagar.
  *   · Los artículos TR en el carrito llevan título "Cuenta Nueva · …"
@@ -49776,8 +49819,9 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
 (function () {
   'use strict';
 
-  var MINIMO_TRY = 300;
-  var state = { listo: false, juegos: [], tc: 0.38, minimoMxn: 115, fuente: '' };
+  var MINIMO_TRY = 300; /* referencia interna del dueño; ya no bloquea */
+  var MINIMO_MXN = 200; /* compra mínima visible para cuentas Xbox */
+  var state = { listo: false, juegos: [], tc: 0.38, minimoMxn: 200, fuente: '' };
   var filtroPlataforma = 'all';
   var busquedaTR = '';
 
@@ -49817,13 +49861,13 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
         if (!d || !Array.isArray(d.juegos) || !d.juegos.length) throw new Error('catálogo vacío');
         state.juegos = d.juegos;
         state.tc = Number(d.tipo_cambio || 0.38);
-        state.minimoMxn = Number(d.minimo_mxn || Math.ceil(MINIMO_TRY * state.tc));
+        state.minimoMxn = Number(d.minimo_mxn || MINIMO_MXN);
         state.fuente = d.fuente || '';
         state.listo = true;
         try { if (typeof window.renderNav === 'function') window.renderNav(); } catch (e) {}
         renombrarSeccion();
         try {
-          if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') pintarTR();
+          if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') { pintarTR(); mejorarPortada(); }
         } catch (e) {}
         setTimeout(repintarSeguro, 1500);
       })
@@ -49975,21 +50019,23 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
         '<p style="margin:6px 0 0">Borra la búsqueda de arriba o toca "Todos".</p></div>');
   }
 
-  /* ── Agregar y comprar desde la sección ── */
-  function agregarTR(g) {
+  /* ── Agregar y comprar desde la sección ──
+     Compra mínima $200 MXN por cuenta: un juego de menos de $200 no
+     se compra solo, va al carrito hasta completar los $200. */
+  function agregarTR(g, nota) {
     var c = elCarrito();
     if (!c) { alert('No se pudo agregar al carrito.'); return false; }
     c.push(itemTR(g));
     if (typeof window.updateCartCount === 'function') window.updateCartCount();
     cerrarFicha();
-    toast('Agregado al carrito', g.title + ' · ' + money(g.venta_mxn));
+    toast('Agregado al carrito', nota || (g.title + ' · ' + money(g.venta_mxn)));
     try {
       if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') pintarTR();
     } catch (e) {}
     return true;
   }
   function comprarTR(g) {
-    if (Number(g.tr || 0) >= MINIMO_TRY) {
+    if (Number(g.venta_mxn || 0) >= MINIMO_MXN) {
       cerrarFicha();
       window.openPaymentModal({
         items: [itemTR(g)], total: Number(g.venta_mxn || 0),
@@ -49997,7 +50043,11 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
       });
       return;
     }
-    agregarTR(g);
+    var enCarrito = trEnCarrito().totalMxn + Number(g.venta_mxn || 0);
+    var falta = MINIMO_MXN - enCarrito;
+    agregarTR(g, falta > 0
+      ? 'Te faltan ' + money(falta) + ' para la compra mínima de $200 MXN.'
+      : (g.title + ' · ' + money(g.venta_mxn)));
   }
 
   /* ── Ficha del juego (v112 la crea; aquí se rellenan los datos TR) ── */
@@ -50013,7 +50063,11 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
     var precio = f.querySelector('.vgxr-ficha-precio');
     if (precio) precio.innerHTML = esc(money(g.venta_mxn)) + ' <span class="vg-tr-mx">' + esc(money(g.mx)) + '</span>';
     var nota = f.querySelector('.vgxr-ficha-nota');
-    if (nota) nota.textContent = 'Juegos para cuenta nueva. El precio que ves ya incluye la ganancia.';
+    if (nota) {
+      nota.textContent = Number(g.venta_mxn || 0) >= MINIMO_MXN
+        ? 'Juegos para cuenta nueva. El precio que ves ya incluye la ganancia.'
+        : 'Compra mínima $200 MXN por cuenta. Agrega este juego al carrito y completa $200 para comprar.';
+    }
   }
 
   /* ── Nombre de la sección ──
@@ -50081,6 +50135,90 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
     } catch (err) {}
   }
 
+  /* ── Carga única y estable ──
+     El parpadeo al entrar venía de pintar la rejilla varias veces:
+     primero los juegos viejos, luego los TR, luego otra vez los
+     viejos (overrides) y otra vez los TR. Ahora, mientras el catálogo
+     no está listo, la rejilla muestra esqueletos (como el resto de la
+     tienda) y en cuanto llega se pinta TR una sola vez. */
+  function mostrarCargando() {
+    try {
+      var grid = document.getElementById('productsGrid');
+      if (!grid) return;
+      if (grid.querySelector('.vg-tr-badge')) return;
+      if (grid.querySelector('.vg-skeleton-card')) return;
+      if (typeof window.showSkeletons === 'function') window.showSkeletons('productsGrid', 12);
+      else grid.innerHTML = '<div class="vgxr-vacio"><b>Cargando juegos de Xbox Cuentas…</b></div>';
+    } catch (e) {}
+  }
+
+  /* ── Tarjeta de presentación ──
+     Nota de compra mínima + datos de la sección dentro de la tarjeta
+     del encabezado, y portada con más variedad: 4 carátulas en PC
+     (una por plataforma) y 3 en móvil. Se marca la tira para no
+     reconstruirla a cada rato; v112 la rehace con 3 al repintar. */
+  function mejorarPortada() {
+    try {
+      if (typeof activeCategory === 'undefined' || activeCategory !== 'retro') return;
+      if (!state.listo || !state.juegos.length) return;
+      var hero = document.querySelector('#marketView .section-hero');
+      if (!hero) return;
+      hero.classList.add('vg-tr-hero');
+      var cont = hero.querySelector('.section-hero-content');
+      if (cont && !cont.querySelector('.vg-tr-minimo')) {
+        var min = state.juegos.reduce(function (m, j) {
+          var v = Number(j.venta_mxn || 0);
+          return (v && v < m) ? v : m;
+        }, Infinity);
+        if (!isFinite(min)) min = 0;
+        var nota = document.createElement('div');
+        nota.className = 'vg-tr-minimo';
+        nota.innerHTML = '<b>Compra mínima $200 MXN por cuenta</b>' +
+          '<span>Agrega juegos hasta llegar a $200 para completar tu compra.</span>';
+        cont.appendChild(nota);
+        var datos = document.createElement('div');
+        datos.className = 'vg-tr-datos';
+        datos.textContent = state.juegos.length.toLocaleString('es-MX') + ' juegos · Desde ' + money(min) + ' · Xbox 360 y Clásico primero';
+        cont.appendChild(datos);
+      }
+      var tira = hero.querySelector('.vgfn-portada');
+      if (tira && tira.dataset.vgTrPortada !== '1') {
+        var cuantas = window.innerWidth >= 900 ? 4 : 3;
+        var plats = ['Xbox 360', 'Clásico', 'Xbox One', 'Xbox Series'];
+        var elegidas = [];
+        for (var p = 0; p < plats.length && elegidas.length < cuantas; p++) {
+          for (var i = 0; i < state.juegos.length; i++) {
+            if (state.juegos[i].platform === plats[p] && state.juegos[i].image) {
+              elegidas.push(state.juegos[i]);
+              break;
+            }
+          }
+        }
+        for (var j = 0; j < state.juegos.length && elegidas.length < cuantas; j++) {
+          if (elegidas.indexOf(state.juegos[j]) < 0 && state.juegos[j].image) elegidas.push(state.juegos[j]);
+        }
+        if (elegidas.length) {
+          tira.innerHTML = elegidas.map(function (g, k) {
+            return '<img src="' + esc(g.image) + '" alt="" loading="lazy" decoding="async" ' +
+              'referrerpolicy="no-referrer" style="--i:' + k + '" onerror="this.remove()">';
+          }).join('');
+          tira.dataset.vgTrPortada = '1';
+        }
+      }
+    } catch (e) {}
+  }
+  function quitarNotaMinimo() {
+    try {
+      var hero = document.querySelector('#marketView .section-hero');
+      if (!hero) return;
+      hero.classList.remove('vg-tr-hero');
+      var n = hero.querySelector('.vg-tr-minimo');
+      if (n) n.remove();
+      var d = hero.querySelector('.vg-tr-datos');
+      if (d) d.remove();
+    } catch (e) {}
+  }
+
   /* ── Guardia al cargar ──
      La primera vez que se abre la sección (?seccion=retro en la URL),
      showSection corre ANTES de que este módulo exista: el encabezado
@@ -50093,7 +50231,9 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
       if (typeof activeCategory === 'undefined' || activeCategory !== 'retro') return;
       renombrarSeccion();
       corregirEncabezado();
+      mejorarPortada();
       if (state.listo) repintarSeguro();
+      else mostrarCargando();
     } catch (err) {}
   }
 
@@ -50105,7 +50245,10 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
       if (cat === 'retro') {
         renombrarSeccion();
         corregirEncabezado();
-        if (state.listo) pintarTR();
+        if (state.listo) { pintarTR(); mejorarPortada(); }
+        else mostrarCargando();
+      } else {
+        quitarNotaMinimo();
       }
     } catch (e) {}
     return r;
@@ -50135,8 +50278,8 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
     window.vgRetroCargarOverrides = function () {
       var p = origOverrides.apply(this, arguments);
       if (p && typeof p.then === 'function') {
-        p.then(function () { setTimeout(repintarSeguro, 150); },
-               function () { setTimeout(repintarSeguro, 150); });
+        p.then(function () { setTimeout(repintarSeguro, 30); },
+               function () { setTimeout(repintarSeguro, 30); });
       }
       return p;
     };
@@ -50146,7 +50289,10 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
   window.renderProducts = function () {
     var r = (typeof origRP === 'function') ? origRP.apply(this, arguments) : undefined;
     try {
-      if (typeof activeCategory !== 'undefined' && activeCategory === 'retro' && state.listo) pintarTR();
+      if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') {
+        if (state.listo) pintarTR();
+        else mostrarCargando();
+      }
     } catch (e) {}
     return r;
   };
@@ -50234,9 +50380,6 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
           var msg = 'No se pudo confirmar el precio actual de ' +
             (malos.length ? malos.length + ' juego(s) de tu pedido' : 'tu pedido') +
             '. Vuelve a elegirlos; el precio pudo cambiar en la tienda.';
-          if (d && d.try_ok === false) {
-            msg = 'Tu pedido aún no se puede completar. Agrega más juegos Cuenta Nueva al carrito e inténtalo de nuevo.';
-          }
           throw new Error(msg);
         }
         var mapa = {};
@@ -50255,22 +50398,17 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
       });
   }
 
-  /* El pago de un pedido Cuenta Nueva pasa por el mínimo y la
-     revalidación. Los demás pedidos siguen su camino sin tocarlos. */
+  /* El pago de un pedido Cuenta Nueva pasa por el mínimo de $200 MXN
+     y la revalidación de precios. Los demás pedidos siguen su camino
+     sin tocarlos. */
   var origPay = window.openPaymentModal;
   window.openPaymentModal = function (order) {
     var esTR = !!order && (order.vg_tr || (order.items || []).some(function (it) { return it && it.vg_tr; }));
     if (!esTR) return (typeof origPay === 'function') ? origPay(order) : undefined;
-    var slugs = [];
-    (order.items || []).forEach(function (it) {
-      if (it && it.vg_tr && Array.isArray(it.tr_slugs)) slugs.push.apply(slugs, it.tr_slugs);
-    });
-    if (Array.isArray(order.tr_slugs)) slugs.push.apply(slugs, order.tr_slugs);
-    slugs = slugs.filter(function (v, i, a) { return a.indexOf(v) === i; });
-    var tryTotal = tryDe(slugs);
-    if (tryTotal < MINIMO_TRY) {
-      toast('Pedido incompleto',
-        'Tu pedido aún no se puede completar. Agrega más juegos Cuenta Nueva al carrito e inténtalo de nuevo.');
+    var totalMxn = (order.items || []).reduce(function (s, it) { return s + Number(it.price || 0); }, 0);
+    if (totalMxn < MINIMO_MXN) {
+      toast('Compra mínima $200 MXN',
+        'La compra mínima para cuentas Xbox es de $200 MXN. Te faltan ' + money(MINIMO_MXN - totalMxn) + ' para completar tu compra.');
       return;
     }
     validarPedido(order)
@@ -50295,11 +50433,10 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
     if (vigilancias >= 40) clearInterval(vigilarTimer);
   }, 500);
 
-  if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', cargar);
-  } else {
-    cargar();
-  }
+  /* El catálogo se pide desde que el módulo existe (antes de que la
+     página termine de cargar), no al abrir la sección: así cuando el
+     cliente entra, los datos ya van en camino o ya llegaron. */
+  cargar();
 })();
 </script>
 
