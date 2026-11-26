@@ -11525,6 +11525,36 @@ window.vgProofPick=function(fuente){
     };
   }
 
+  /* Normalización igual que norm() de vg-inicio-kinguin-v1 y normTxt()
+     de vg-retro-tr-v2: minúsculas, sin acentos, solo letras y números
+     separados por un espacio. Así los títulos coinciden exactos con
+     window.vgOfertasDestacadas. */
+  function normTitulo(s){
+    return String(s || '').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+
+  /* Productos destacados primero: los que están en las Ofertas
+     destacadas del inicio (los publica vg-inicio-kinguin-v1 en
+     window.vgOfertasDestacadas, sin nada fijo en este código) suben
+     al frente en el orden del buscador; el resto queda igual. Es la
+     misma regla que buscarTR aplica en la rejilla de resultados; sin
+     ella el desplegable y la rejilla no podían decir lo mismo: el
+     motor de relevancia pone "Gears 5" ($105) antes que
+     "Gears Of War 3" ($45) solo por tener el nombre más corto, y el
+     destacado quedaba 5º. Se ordena ANTES de cortar a 8, para que un
+     destacado no se pierda fuera del corte. */
+  function destacadosPrimero(lista){
+    try{
+      var destacados = window.vgOfertasDestacadas;
+      if(!destacados || !destacados.length || !lista || !lista.length) return lista;
+      var pri = [], resto = [];
+      lista.forEach(function(p){
+        (destacados.indexOf(normTitulo(p.title)) !== -1 ? pri : resto).push(p);
+      });
+      return pri.concat(resto);
+    }catch(e){ return lista; }
+  }
+
   function searchAllProducts(rawQuery){
     const q = sinAcentos(String(rawQuery || '').trim());
     if(!q) return [];
@@ -11537,15 +11567,15 @@ window.vgProofPick=function(fuente){
        es lo que espera cualquiera: las dos listas de la misma búsqueda
        no pueden decir cosas distintas. */
     if(window.vgBuscar){
-      return window.vgBuscar.buscar(getAllServices(), rawQuery, camposDe, expandedSearch(String(rawQuery || '').trim().toLowerCase())).slice(0, 8);
+      return destacadosPrimero(window.vgBuscar.buscar(getAllServices(), rawQuery, camposDe, expandedSearch(String(rawQuery || '').trim().toLowerCase()))).slice(0, 8);
     }
 
-    return getAllServices()
+    var ordenados = getAllServices()
       .map(p => ({ p, score: scoreProduct(p, q, expanded) }))
       .filter(x => x.score > 0)
       .sort((a,b) => b.score - a.score || ((typeof window.minPrice === 'function' ? window.minPrice(a.p) : 0) - (typeof window.minPrice === 'function' ? window.minPrice(b.p) : 0)))
-      .slice(0, 8)
       .map(x => x.p);
+    return destacadosPrimero(ordenados).slice(0, 8);
   }
 
   function closePanel(){
@@ -50356,7 +50386,6 @@ html body footer{padding-bottom:84px !important}
     ofertas: [
       { titulo: 'Gears Of War 3', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 45, precio_mx: 57.25, enlace: 'retro', imagen: '' },
       { titulo: 'Alan Wake', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 185, precio_mx: 529, enlace: 'retro', imagen: '' },
-      { titulo: 'Minecraft', subtitulo: 'Xbox One / Series · Cuenta nueva', precio: 400, precio_mx: 599, enlace: 'retro', imagen: '' },
       { titulo: 'Netflix', subtitulo: 'Perfil 1 Mes · Streaming', precio: 90, precio_mx: 0, enlace: 'streaming', imagen: '' }
     ]
   };
