@@ -54290,30 +54290,44 @@ html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso .vg6-btn:hover{
    rejilla está neutralizada y por eso en móvil se veía. El diseño v6
    es apilado (encabezado + 3 filas de pestañas + contenido) a TODOS
    los anchos. Estas reglas, con la especificidad v6 (2 IDs) y al final
-   del bloque, ganan a la rejilla vieja. No tocan el display de las
-   secciones (eso lo sigue mandando .active) ni la vista de login. */
-html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel{
-  display:flex!important;
-  flex-direction:column!important;
-  grid-template-areas:none!important;
-  grid-template-columns:none!important;
-  grid-template-rows:none!important;
-  height:auto!important;
-  min-height:100dvh!important;
-  overflow:visible!important;
-}
-html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-head,
-html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-tabs,
-html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-content,
-html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-section,
-html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso{
-  grid-area:auto!important;
-  position:static!important;
-  float:none!important;
-}
-html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-content{
-  overflow:visible!important;
-  max-height:none!important;
+   del bloque, ganan a la rejilla vieja. Solo ≥901px: en móvil se quedan
+   sus reglas probadas. No tocan el display de las secciones (eso lo
+   sigue mandando .active) ni la vista de login. */
+@media(min-width:901px){
+  html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel{
+    display:flex!important;
+    flex-direction:column!important;
+    grid-template-areas:none!important;
+    grid-template-columns:none!important;
+    grid-template-rows:none!important;
+    height:100dvh!important;
+    max-height:100dvh!important;
+    overflow:hidden!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-head,
+  html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-tabs,
+  html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-content,
+  html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-section,
+  html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso{
+    grid-area:auto!important;
+    position:static!important;
+    float:none!important;
+  }
+  /* Solo el contenido crece y desplaza por dentro: con
+     overflow:visible nada bajaba y el gesto de desplazar se convertía
+     en zoom (Miguel, 2026-11-26). */
+  html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel > :not(.vg-admin-content){
+    flex:none!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-content{
+    flex:1 1 auto!important;
+    min-height:0!important;
+    overflow-y:auto!important;
+    overflow-x:hidden!important;
+    -webkit-overflow-scrolling:touch!important;
+    touch-action:pan-y!important;
+    max-height:none!important;
+  }
 }
 </style>
 
