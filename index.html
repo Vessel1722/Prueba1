@@ -16671,12 +16671,22 @@ function fmt(n){return '$'+Number(n||0).toLocaleString('es-MX',{minimumFractionD
 /* ─────────────────────────────────────────
    PERSISTENT CART
 ───────────────────────────────────────── */
+/* El carrito real es el `cart` léxico del guion principal (10444).
+   NO se usa cartItems(): esa función vive dentro del IIFE de
+   vg-supabase-admin-app-v34 y desde aquí no existe — el ReferenceError
+   lo tragaba el try/catch y saveCart no guardaba nada (por eso el
+   carrito se vaciaba al recargar aunque la simulación con las
+   funciones sueltas pasara). Se resuelve aquí mismo, igual que
+   elCarrito() en vgc y en vg-retro-tr-v2. */
+function carritoReal(){
+  try{ if(typeof cart!=='undefined'&&Array.isArray(cart)) return cart; }catch(e){}
+  return Array.isArray(window.cart)?window.cart:[];
+}
 function saveCart(){
   try{
-    /* El carrito real es el `cart` léxico (cartItems() lo lee primero);
-       window.cart era un arreglo paralelo vacío. Se guarda el real y
-       window.cart se sincroniza a la misma referencia. */
-    var cartArr=cartItems();
+    /* Se guarda el carrito real y window.cart se sincroniza a la
+       misma referencia. */
+    var cartArr=carritoReal();
     window.cart=cartArr;
     localStorage.setItem('vg_cart_v2',JSON.stringify(cartArr));
   }catch(e){}
@@ -16698,7 +16708,7 @@ function loadCart(){
   /* window.cart queda sincronizado con el real (misma referencia): los
      caminos que empujan a window.cart (Colección Xbox Retro) y los que
      lo leen (itemsFromPending) ven el carrito de verdad. */
-  try{ window.cart=cartItems(); }catch(e){}
+  try{ window.cart=carritoReal(); }catch(e){}
   if(typeof window.updateCartCount==='function') window.updateCartCount();
 }
 window.loadCart=loadCart;
@@ -50335,7 +50345,6 @@ html body footer{padding-bottom:84px !important}
     var img = o.imagen || '';
     var desc = (o.precio_mx && Number(o.precio_mx) > Number(o.precio))
       ? Math.round((1 - Number(o.precio) / Number(o.precio_mx)) * 100) : 0;
-    var esCuenta = o.cuentaNueva || /cuenta nueva/i.test(o.subtitulo || '') || o.enlace === 'retro';
     var media = img
       ? '<div class="vgk-blur" style="background-image:url(&quot;' + esc(img) + '&quot;)"></div>' +
         '<img loading="lazy" decoding="async" src="' + esc(img) + '" alt="' + esc(o.titulo) + '" onerror="this.style.visibility=\'hidden\'">'
@@ -50347,7 +50356,6 @@ html body footer{padding-bottom:84px !important}
     return '<article class="vgk-card">' +
       '<div class="vgk-media" data-vgk-ver="' + esc(o.clave || '') + '">' + media +
         (desc > 0 ? '<span class="vgk-seal-disc">-' + desc + '%</span>' : '') +
-        (esCuenta ? '<span class="vgk-seal-new">CUENTA NUEVA</span>' : '') +
       '</div>' +
       '<div class="vgk-info">' +
         (o.tag ? '<span class="vgk-tag">' + esc(o.tag) + '</span>' : '') +
@@ -51053,37 +51061,63 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
   font-weight:700;
   letter-spacing:.03em;
 }
-@media (min-width: 900px) {
-  /* El strip de portadas lo redefinió vg-portadas-v77 como fila flex
-     (img estáticas, alto 104–200px, aspect-ratio 3/4, ancho limitado
-     por el 52% del héroe): por eso las 3 portadas se veían diminutas
-     aunque v2.3 fijara 72%/22%. Aquí se restaura el abanico original:
-     el strip vuelve a ser el contenedor absoluto y cada img se coloca
-     en abanico con su --i, más grande que las de la tienda. */
-  #sectionHero.vg-tr-hero .vgfn-portada{
-    display:block !important;
-    position:absolute !important;
-    inset:0 !important;
-    width:auto !important;
-    max-width:none !important;
-    margin:0 !important;
-    padding:0 !important;
-    opacity:1 !important;
-    gap:0 !important;
+/* ── Abanico del encabezado: tira PROPIA (.vg-tr-portada) ─────────
+   La tira .vgfn-portada la arma v62 solo desde SERVICES y en
+   'retro' no hay productos, así que nunca existía (el encabezado
+   quedaba como un panel verde oscuro vacío); y portada() la borra
+   en cada cambio de sección y al redimensionar. Esta tira la crea
+   mejorarPortada() y nadie más la toca: 4 carátulas en PC (una por
+   plataforma) y 3 en móvil, en abanico a la derecha del héroe. */
+#sectionHero.vg-tr-hero .vg-tr-portada{
+  display:block !important;
+  position:absolute !important;
+  inset:0 !important;
+  z-index:0 !important;
+  pointer-events:none !important;
+  overflow:hidden !important;
+}
+#sectionHero.vg-tr-hero .vg-tr-portada img{
+  display:block !important;
+  position:absolute !important;
+  bottom:12% !important;
+  height:78% !important;
+  width:auto !important;
+  max-width:24% !important;
+  aspect-ratio:auto !important;
+  object-fit:cover !important;
+  object-position:center !important;
+  border-radius:16px !important;
+  border:1px solid rgba(255,255,255,.14) !important;
+  box-shadow:0 14px 34px rgba(0,0,0,.55) !important;
+  right:calc(2% + var(--i) * 7%) !important;
+  transform:rotate(calc((var(--i) - 2) * 3deg)) !important;
+}
+@media (max-width: 899px) {
+  #sectionHero.vg-tr-hero .vg-tr-portada img{
+    bottom:8% !important;
+    height:64% !important;
+    max-width:30% !important;
+    right:calc(1% + var(--i) * 9%) !important;
   }
-  #sectionHero.vg-tr-hero .vgfn-portada.cartas img{
-    display:block !important;
-    position:absolute !important;
-    bottom:15% !important;
-    height:78% !important;
-    width:auto !important;
-    max-width:24% !important;
-    aspect-ratio:auto !important;
-    object-fit:cover !important;
-    border-radius:16px !important;
-    right:calc(2% + var(--i) * 7%) !important;
-    transform:rotate(calc((var(--i) - 2) * 3deg)) !important;
-  }
+}
+
+/* ── Etiqueta "Xbox Cuentas" de la tarjeta: una sola línea ────────
+   La regla tardía de .tag fija height:22px sin white-space:nowrap:
+   en tarjetas angostas el texto se partía en dos líneas dentro de
+   la pastilla y la segunda línea se salía encima del título. Aquí
+   la etiqueta no se parte nunca; si no cupiera, se recorta con
+   puntos suspensivos en vez de invadir el título. */
+.vg-tr-card .meta{
+  flex-wrap:nowrap !important;
+}
+.vg-tr-card .meta .tag{
+  white-space:nowrap !important;
+  max-width:100% !important;
+  overflow:hidden !important;
+  text-overflow:ellipsis !important;
+  letter-spacing:.06em !important;
+  flex:0 1 auto !important;
+  min-width:0 !important;
 }
 
 /* Nota del mínimo dentro del carrito (persistente). Igual que la del
@@ -52544,7 +52578,7 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
     c.push(itemTR(g));
     if (typeof window.updateCartCount === 'function') window.updateCartCount();
     /* Guardar de inmediato: el oyente de 'vg-cart-changed' llama a
-       window.saveCart (antes no existía en window y no guardaba nada). */
+       window.saveCart. */
     try { document.dispatchEvent(new CustomEvent('vg-cart-changed')); } catch (e) {}
     cerrarFicha();
     toast('Agregado al carrito', nota || (g.title + ' · ' + money(g.venta_mxn)));
@@ -52675,8 +52709,10 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
   /* ── Tarjeta de presentación ──
      Nota de compra mínima + datos de la sección dentro de la tarjeta
      del encabezado, y portada con más variedad: 4 carátulas en PC
-     (una por plataforma) y 3 en móvil. Se marca la tira para no
-     reconstruirla a cada rato; v112 la rehace con 3 al repintar. */
+     (una por plataforma) y 3 en móvil. La tira es propia
+     (.vg-tr-portada): la de v62 (.vgfn-portada) nunca existe en
+     'retro' porque SERVICES no tiene esa categoría, y portada() la
+     borraría al cambiar de sección o redimensionar. */
   function mejorarPortada() {
     try {
       if (typeof activeCategory === 'undefined' || activeCategory !== 'retro') return;
@@ -52701,30 +52737,46 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
         datos.textContent = state.juegos.length.toLocaleString('es-MX') + ' juegos · Desde ' + money(min) + ' · Xbox 360 y Clásico primero';
         cont.appendChild(datos);
       }
-      var tira = hero.querySelector('.vgfn-portada');
-      if (tira && tira.dataset.vgTrPortada !== '1') {
-        var cuantas = window.innerWidth >= 900 ? 4 : 3;
-        var plats = ['Xbox 360', 'Clásico', 'Xbox One', 'Xbox Series'];
-        var elegidas = [];
-        for (var p = 0; p < plats.length && elegidas.length < cuantas; p++) {
-          for (var i = 0; i < state.juegos.length; i++) {
-            if (state.juegos[i].platform === plats[p] && state.juegos[i].image) {
-              elegidas.push(state.juegos[i]);
-              break;
-            }
+      var tira = hero.querySelector('.vg-tr-portada');
+      /* ── La tira es NUESTRA (.vg-tr-portada), no la de v62 ──
+         portada() (v62) solo arma .vgfn-portada desde SERVICES y en
+         'retro' no hay ningún producto: urls queda vacío y la tira
+         nunca se crea (por eso el encabezado se veía como un panel
+         verde oscuro vacío). Y si existiera, portada() la borra en
+         cada cambio de sección y al redimensionar. Esta tira propia
+         no la toca nadie: se crea aquí y se quita al salir de la
+         sección (quitarNotaMinimo). */
+      if (tira && tira.querySelector('img')) return; /* ya está llena */
+      if (tira) {
+        /* Quedó vacía (las fotos fallaron): un solo reintento; si
+           también falla, se deja así para no reconstruirla sin fin. */
+        if (hero.dataset.vgTrPortadaRehecha === '1') return;
+        hero.dataset.vgTrPortadaRehecha = '1';
+        tira.remove();
+      }
+      var cuantas = window.innerWidth >= 900 ? 4 : 3;
+      var plats = ['Xbox 360', 'Clásico', 'Xbox One', 'Xbox Series'];
+      var elegidas = [];
+      for (var p = 0; p < plats.length && elegidas.length < cuantas; p++) {
+        for (var i = 0; i < state.juegos.length; i++) {
+          if (state.juegos[i].platform === plats[p] && state.juegos[i].image) {
+            elegidas.push(state.juegos[i]);
+            break;
           }
         }
-        for (var j = 0; j < state.juegos.length && elegidas.length < cuantas; j++) {
-          if (elegidas.indexOf(state.juegos[j]) < 0 && state.juegos[j].image) elegidas.push(state.juegos[j]);
-        }
-        if (elegidas.length) {
-          tira.innerHTML = elegidas.map(function (g, k) {
-            return '<img src="' + esc(g.image) + '" alt="" loading="lazy" decoding="async" ' +
-              'referrerpolicy="no-referrer" style="--i:' + k + '" onerror="this.remove()">';
-          }).join('');
-          tira.dataset.vgTrPortada = '1';
-        }
       }
+      for (var j = 0; j < state.juegos.length && elegidas.length < cuantas; j++) {
+        if (elegidas.indexOf(state.juegos[j]) < 0 && state.juegos[j].image) elegidas.push(state.juegos[j]);
+      }
+      if (!elegidas.length) return;
+      tira = document.createElement('div');
+      tira.className = 'vg-tr-portada';
+      tira.setAttribute('aria-hidden', 'true');
+      tira.innerHTML = elegidas.map(function (g, k) {
+        return '<img src="' + esc(g.image) + '" alt="" loading="lazy" decoding="async" ' +
+          'referrerpolicy="no-referrer" style="--i:' + k + '" onerror="this.remove()">';
+      }).join('');
+      hero.appendChild(tira);
     } catch (e) {}
   }
   function quitarNotaMinimo() {
@@ -52736,6 +52788,9 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
       if (n) n.remove();
       var d = hero.querySelector('.vg-tr-datos');
       if (d) d.remove();
+      var tira = hero.querySelector('.vg-tr-portada');
+      if (tira) tira.remove();
+      try { delete hero.dataset.vgTrPortadaRehecha; } catch (e2) {}
     } catch (e) {}
   }
 
@@ -52851,8 +52906,8 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
       if (state.listo) {
         var grid = document.getElementById('productsGrid');
         var hero = document.querySelector('#marketView .section-hero');
-        var tira = hero && hero.querySelector('.vgfn-portada');
-        var estable = !!(grid && grid.querySelector('.vg-tr-card') && tira && tira.dataset.vgTrPortada === '1');
+        var tira = hero && hero.querySelector('.vg-tr-portada');
+        var estable = !!(grid && grid.querySelector('.vg-tr-card') && tira && tira.querySelector('img'));
         if (estable) {
           vigilEstables++;
           if (vigilEstables >= 3 && typeof vigilarTimer !== 'undefined' && vigilarTimer) {
