@@ -29,7 +29,6 @@ const POR_DEFECTO = {
   ofertas: [
     { id: 'o1', titulo: 'Gears Of War 3', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 45, precio_mx: 57.25, enlace: 'retro', imagen: '' },
     { id: 'o2', titulo: 'Alan Wake', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 185, precio_mx: 529, enlace: 'retro', imagen: '' },
-    { id: 'o3', titulo: 'Minecraft', subtitulo: 'Xbox One / Series · Cuenta nueva', precio: 400, precio_mx: 599, enlace: 'retro', imagen: '' },
   ],
 };
 
