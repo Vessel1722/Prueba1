@@ -12391,6 +12391,28 @@ function isLogged(){return sessionStorage.getItem(ADMIN_SESSION_KEY)==='1';}
    donde se valida, y no dos. */
 function loginMarkup(){return `<div class="vg-admin-login-card vg-admin-private-card"><div class="vg-admin-private-badge">Admin VG</div><h3>Solo administradores de VG</h3><p>Entra con tu cuenta de administrador. El permiso lo confirma el servidor, no esta página.</p><button class="vg-admin-btn primary" onclick="vgAdminLogin()">Entrar con mi cuenta</button></div>`}
 window.vgAdminLogin=function(){
+  /* FIX botón login (2026-11-25): el formulario #vg10Auth (.vg10-overlay,
+     z-index 999998) se abría DETRÁS del modal admin (z-index inline
+     2147483000 puesto por forceAdminFullscreen) y Miguel no veía nada al
+     pulsar "Entrar con mi cuenta". Antes de abrirlo, bajamos el z-index
+     del modal por debajo del overlay; al cerrar el formulario sin entrar
+     se restaura solo con un MutationObserver. */
+  try{
+    var __vgAdminModal=document.getElementById('vgAdminModal');
+    var __vgAuthOverlay=document.getElementById('vg10Auth');
+    if(__vgAdminModal && __vgAuthOverlay){
+      __vgAdminModal.style.setProperty('z-index','999990','important');
+      if(typeof MutationObserver!=='undefined'){
+        var __vgLoginObs=new MutationObserver(function(){
+          if(!__vgAuthOverlay.classList.contains('active')){
+            __vgAdminModal.style.removeProperty('z-index');
+            __vgLoginObs.disconnect();
+          }
+        });
+        __vgLoginObs.observe(__vgAuthOverlay,{attributes:true,attributeFilter:['class']});
+      }
+    }
+  }catch(e){}
   if(typeof window.vgOpenAuth==='function') window.vgOpenAuth('admin');
   else alert('No se encontró el formulario de acceso.');
 };
