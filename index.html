@@ -3195,9 +3195,6 @@ if (typeof window.escapeHtml !== 'function') window.escapeHtml = window.VG.esc;
       linear-gradient(180deg, rgba(11,16,31,.98), rgba(6,10,20,.99)) !important;
     box-shadow:0 30px 90px rgba(0,0,0,.58), 0 0 0 1px rgba(255,255,255,.05) inset !important;
   }
-  #vgAdminModal .vg-admin-panel.vg-login-mode .vg-admin-tabs{
-    display:none !important;
-  }
   #vgAdminModal .vg-admin-panel.vg-login-mode .vg-admin-head{
     position:relative !important;
     z-index:3 !important;
@@ -5689,9 +5686,6 @@ if (typeof window.escapeHtml !== 'function') window.escapeHtml = window.VG.esc;
     grid-template-rows:auto minmax(0,1fr) !important;
   }
 
-  body #vgAdminModal.active .vg-admin-panel.vg-login-mode .vg-admin-tabs{
-    display:none !important;
-  }
 
   body #vgAdminModal.active .vg-admin-panel.vg-login-mode .vg-admin-content{
     display:grid !important;
@@ -11908,12 +11902,37 @@ window.vgProofPick=function(fuente){
 <div class="vg-admin-panel">
 <div class="vg-admin-head"><div><h2>Panel administrador Supabase</h2><p>Solo administradores de VG · Acceso privado y protegido.</p></div><button class="vg-admin-x" onclick="vgAdminClose()">×</button></div>
 <div class="vg-admin-tabs">
+<div class="vg5-grupo"><span class="vg5-grupo-titulo">Operación</span><div class="vg5-grupo-tabs">
+<button class="vg-admin-tab" data-tab="pedidos">📦 Pedidos<span class="vg17-dot" id="vg17ADot"></span></button>
+<button class="vg-admin-tab" data-tab="soporte">🛠 Soporte<span class="vg17-dot" id="vg17TDot"></span></button>
+<button class="vg-admin-tab" data-tab="hoy">⭑ Hoy</button>
 <button class="vg-admin-tab" data-tab="usuarios">👥 Usuarios</button>
 <button class="vg-admin-tab" data-tab="dashboard">📊 Dashboard</button>
+</div></div>
+<div class="vg5-grupo"><span class="vg5-grupo-titulo">Catálogo</span><div class="vg5-grupo-tabs">
+<button class="vg-admin-tab" data-tab="xboxcurrent">Xbox One / Series</button>
+<button class="vg-admin-tab" data-tab="cuentas">Xbox Cuentas</button>
+<button class="vg-admin-tab" data-tab="retro">Xbox Retro</button>
+<button class="vg-admin-tab" data-tab="inicio">Inicio</button>
+<button class="vg-admin-tab" data-tab="imagenes">🖼 Imágenes</button>
+</div></div>
+<div class="vg5-grupo"><span class="vg5-grupo-titulo">Sistema</span><div class="vg5-grupo-tabs">
+<button class="vg-admin-tab" data-tab="tokens">🪙 Tokens</button>
 <button class="vg-admin-tab" data-tab="setup">Supabase</button>
-<button class="vg-admin-tab" data-tab="export">Exportar</button><button class="vg-admin-tab" data-tab="debug">Diagnóstico</button><button class="vg-admin-tab" data-tab="settings">Ajustes rápidos</button>
+<button class="vg-admin-tab" data-tab="export">Exportar</button>
+<button class="vg-admin-tab" data-tab="debug">Diagnóstico</button>
+<button class="vg-admin-tab" data-tab="settings">Ajustes rápidos</button>
+<button class="vg-admin-tab" data-tab="analytics">Analítica</button>
+<button class="vg-admin-tab" data-tab="reviews">Recomendaciones</button>
+<button class="vg-admin-tab" data-tab="bitacora">📋 Bitácora</button>
+<button class="vg-admin-tab" data-tab="buscado">🔎 Lo que buscan</button>
+<button class="vg-admin-tab" data-tab="enlaces">🔗 Fotos rotas</button>
+</div></div>
 </div>
 <div class="vg-admin-content">
+<section class="vg-admin-section vg17-scope" id="vgAdminPedidos"></section>
+<section class="vg-admin-section vg17-scope" id="vgAdminSoporte"></section>
+<section class="vg-admin-section" id="vgAdminHoy"><div class="vghoy"><div class="vghoy-cargando">Cargando…</div></div></section>
 <section class="vg-admin-section" id="vgAdminUsuarios">
 <div class="vg-users-toolbar">
 <input class="vg-users-search" id="vgUsersSearch" oninput="vgFilterUsers(this.value)" placeholder="Buscar por nombre o telefono..."/>
@@ -11952,6 +11971,12 @@ window.vgProofPick=function(fuente){
 </div>
 </div>
 </section>
+<section class="vg-admin-section" id="vgAdminXboxcurrent"><div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox One / Series:</b> agrega aquí los juegos que tienes disponibles. Se muestran en la nueva ventana pública de Xbox One / Series.</div><div class="vg-xbox-admin-form"><input id="vgXboxAdminTitle" placeholder="Nombre del juego"><input id="vgXboxAdminEdicion" placeholder="Edición: Standard, Deluxe…"><select id="vgXboxAdminPlatform"><option>Xbox Series</option><option>Xbox One</option><option>Xbox One / Series</option></select><input id="vgXboxAdminPrice" type="number" min="0" placeholder="Tu precio MXN"><input id="vgXboxAdminLista" type="number" min="0" placeholder="Precio en Xbox (tachado)"><input id="vgXboxAdminCosto" type="number" min="0" placeholder="Tu costo Kinguin (MXN)" disabled><input id="vgXboxAdminRegion" placeholder="Región (Kinguin)" disabled><input id="vgXboxAdminImage" placeholder="URL de portada"><select id="vgXboxAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="saveXboxAdminGame()">Guardar</button></div><div class="vg-analytics-muted">Costo y región son solo lectura: los escribe el repaso diario en vg_xbox_costos. Para editarlos a mano falta confirmar en Supabase la política RLS de escritura y la clave única por slug.</div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="clearXboxAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="loadXboxGames(true)">Recargar juegos</button></div><div id="vgXboxAdminMessage" class="vg-analytics-muted"></div><div class="vg-xbox-admin-list" id="vgXboxAdminList"></div></section>
+<section class="vg-admin-section" id="vgAdminCuentas"><div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox Cuentas:</b> juegos en cuenta nueva, más baratos en Turquía que en México. Aquí puedes editar nombre, plataforma, precio de venta, precio de México, precio de Turquía, estado e imagen.</div><div id="vgTrAdminStats" class="vg-analytics-muted"></div><div class="vg-xbox-admin-form"><input id="vgTrAdminTitle" placeholder="Nombre del juego"><select id="vgTrAdminPlatform"><option>Xbox 360</option><option>Clásico</option><option>Xbox One</option><option>Xbox One / Series</option><option>Xbox Series</option></select><input id="vgTrAdminVenta" type="number" min="0" placeholder="Tu precio MXN"><input id="vgTrAdminMx" type="number" min="0" step="0.01" placeholder="Precio en Xbox MX"><input id="vgTrAdminTr" type="number" min="0" step="0.01" placeholder="Precio en Turquía (TRY)"><input id="vgTrAdminCosto" type="number" min="0" placeholder="Tu costo (MXN)" disabled><input id="vgTrAdminGanancia" type="number" min="0" placeholder="Ganancia (MXN)" disabled><input id="vgTrAdminImage" placeholder="URL de portada"><select id="vgTrAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="vgSaveTrAdminGame()">Guardar</button></div><div class="vg-analytics-muted">Costo y ganancia son solo lectura: los escribe el repaso diario con la regla de ganancia. Si cambias el precio de México o el de Turquía, pulsa "Recalcular precios" para que la venta se actualice. La compra mínima es de $200 MXN por cuenta.</div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="vgClearTrAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="loadTrAdmin()">Recargar juegos</button><button class="vg-admin-btn" onclick="vgRecalcularTr(false)">Recalcular precios (ensayo)</button><button class="vg-admin-btn primary" onclick="vgRecalcularTr(true)">Aplicar recálculo</button></div><div class="vg-retro-admin-search-v101"><input class="vg-admin-input" id="vgTrAdminSearch" placeholder="Buscar juego..." oninput="renderTrAdminList()"><select class="vg-admin-select" id="vgTrAdminFilter" onchange="renderTrAdminList()"><option value="all">Todas las plataformas</option><option value="Xbox 360">Xbox 360</option><option value="Clásico">Clásico</option><option value="Xbox One">Xbox One</option><option value="Xbox One / Series">Xbox One / Series</option><option value="Xbox Series">Xbox Series</option></select></div><div id="vgTrAdminMsg" class="vg-analytics-muted"></div><div id="vgTrAdminInforme" class="vg-analytics-muted" style="white-space:pre-line"></div><div class="vg-xbox-admin-list" id="vgTrAdminList"></div></section>
+<section class="vg-admin-section" id="vgAdminRetro"><div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox Retro:</b> aquí puedes editar nombre, plataforma, precio, estado e imagen de tus juegos Xbox 360 / Clásico.</div><div class="vg-retro-admin-form-v101"><input class="vg-admin-input" id="vgRetroAdminTitle" placeholder="Nombre del juego"><select class="vg-admin-select" id="vgRetroAdminPlatform"><option>Xbox 360</option><option>Clásico</option></select><input class="vg-admin-input" id="vgRetroAdminPrice" type="number" min="0" placeholder="Precio MXN"><input class="vg-admin-input" id="vgRetroAdminImage" placeholder="URL de portada directa"><select class="vg-admin-select" id="vgRetroAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="vgSaveRetroAdminGame()">Guardar</button></div><div class="vg-retro-admin-preview-v101" id="vgRetroAdminPreview"><img id="vgRetroAdminPreviewImg" src="portada.png" alt=""><span>Vista previa. Puedes pegar enlaces de Imgur o URL directa de imagen.</span></div><div class="vg-retro-admin-tools-v101"><button class="vg-admin-btn" onclick="vgClearRetroAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="vgTestRetroAdminImage()">Probar imagen</button><button class="vg-admin-btn" onclick="loadRetroAdmin()">Recargar juegos</button></div><div class="vg-retro-admin-search-v101"><input class="vg-admin-input" id="vgRetroAdminSearch" placeholder="Buscar juego retro..." oninput="renderRetroAdminList()"><select class="vg-admin-select" id="vgRetroAdminFilter" onchange="renderRetroAdminList()"><option value="all">Todas las plataformas</option><option value="Xbox 360">Xbox 360</option><option value="Clásico">Clásico</option></select></div><div id="vgRetroAdminMsg" class="vg-analytics-muted"></div><div class="vg-retro-admin-list-v101" id="vgRetroAdminList"></div></section>
+<section class="vg-admin-section" id="vgAdminInicio"><div class="vg-admin-note vg-admin-ok"><b>Contenido del inicio:</b> lo que se muestra en la página principal y que se edita aquí: la cinta informativa, las promociones del héroe y las ofertas destacadas. Los cambios se ven en la tienda al recargar (la cinta y el héroe se leen con /api/contenido-inicio).</div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="loadInicioAdmin()">Recargar contenido</button></div><div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Cinta informativa</h3><div class="vg-inicio-form"><input class="vg-admin-input" id="vgInicioCintaTexto" placeholder="Texto de la cinta..."><input class="vg-admin-input" id="vgInicioCintaOrden" placeholder="Orden" type="number"><label class="vg-inicio-check"><input type="checkbox" id="vgInicioCintaActivo" checked> Activa</label><button class="vg-admin-btn primary" onclick="vgSaveInicioFila('cinta')">Guardar en la cinta</button></div><div class="vg-xbox-admin-list" id="vgInicioListaCinta"></div></div><div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Promociones del héroe</h3><div class="vg-inicio-form"><input class="vg-admin-input" id="vgInicioHeroeTitulo" placeholder="Título (ej. Xbox Cuentas)"><input class="vg-admin-input" id="vgInicioHeroeSub" placeholder="Subtítulo"><input class="vg-admin-input" id="vgInicioHeroeImagen" placeholder="URL de imagen (opcional)"><input class="vg-admin-input" id="vgInicioHeroeEnlace" placeholder="Sección al pulsar (ej. retro)"><input class="vg-admin-input" id="vgInicioHeroeOrden" placeholder="Orden" type="number"><label class="vg-inicio-check"><input type="checkbox" id="vgInicioHeroeActivo" checked> Activa</label><button class="vg-admin-btn primary" onclick="vgSaveInicioFila('heroe')">Guardar promoción</button></div><div class="vg-xbox-admin-list" id="vgInicioListaHeroe"></div></div><div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Ofertas destacadas</h3><div class="vg-inicio-form"><input class="vg-admin-input" id="vgInicioOfertaTitulo" placeholder="Título (ej. Gears Of War 3)"><input class="vg-admin-input" id="vgInicioOfertaSub" placeholder="Subtítulo (ej. Xbox 360 · Cuenta nueva)"><input class="vg-admin-input" id="vgInicioOfertaPrecio" placeholder="Precio MXN" type="number"><input class="vg-admin-input" id="vgInicioOfertaMx" placeholder="Precio en México (tachado)" type="number"><input class="vg-admin-input" id="vgInicioOfertaImagen" placeholder="URL de imagen (opcional)"><input class="vg-admin-input" id="vgInicioOfertaEnlace" placeholder="Sección al pulsar (ej. retro)"><input class="vg-admin-input" id="vgInicioOfertaOrden" placeholder="Orden" type="number"><label class="vg-inicio-check"><input type="checkbox" id="vgInicioOfertaActivo" checked> Activa</label><button class="vg-admin-btn primary" onclick="vgSaveInicioFila('oferta')">Guardar oferta</button></div><div class="vg-xbox-admin-list" id="vgInicioListaOferta"></div></div><div id="vgInicioAdminMsg" class="vg-analytics-muted"></div></section>
+<section class="vg-admin-section vg17-scope" id="vgAdminImagenes"></section>
+<section class="vg-admin-section vg17-scope" id="vgAdminTokens"></section>
 <section class="vg-admin-section" id="vgAdminSetup">
 <div class="vg-admin-note"><b>Configura Supabase aquí.</b> Pega tu Project URL y tu anon public key. No pegues la service_role key en una página pública.</div>
 <div class="vg-admin-card">
@@ -11981,6 +12006,20 @@ window.vgProofPick=function(fuente){
 </div>
 <textarea class="vg-admin-textarea" id="vgDebugLog" placeholder="Aquí saldrá el diagnóstico..." style="min-height:320px"></textarea>
 </section>
+<section class="vg-admin-section" id="vgAdminSettings"><div class="vg-settings-grid"></div></section>
+<section class="vg-admin-section" id="vgAdminAnalytics"><div class="vg-admin-tools"><button class="vg-admin-btn primary" onclick="loadAnalyticsAdmin()">Actualizar analítica</button><button class="vg-admin-btn danger vg-danger-reset" onclick="resetAnalyticsAdmin()">Reiniciar analítica</button></div><div class="vg-admin-note vg-admin-ok">Este panel muestra datos internos guardados en Supabase: visitas, productos vistos, scroll y ciudad aproximada. Google Analytics real sigue disponible en GA4.</div><div id="vgAdminAnalyticsBody"></div></section>
+<section class="vg-admin-section" id="vgAdminReviews"><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="vgAdminLoadReviews()">Actualizar recomendaciones</button><select class="vg-admin-select" id="vgReviewAdminFilter" onchange="vgAdminRenderReviews()"><option value="all">Todas</option><option value="pendiente">Pendientes</option><option value="validado">Publicadas</option><option value="cancelado">Rechazadas</option></select></div><div id="vgAdminReviewsList"><div class="vg-empty-state">Cargando recomendaciones...</div></div></section>
+<section class="vg-admin-section" id="vgAdminBitacora"><div class="vgbit"><div class="vgbit-nada">Cargando…</div></div></section>
+<section class="vg-admin-section" id="vgAdminBuscado"><div class="vgbq"><div class="vgbq-nada">Cargando…</div></div></section>
+<section class="vg-admin-section" id="vgAdminEnlaces"><div class="vgel"></div></section>
+</div>
+<div id="vgAdminLoginView" hidden>
+<div class="vg-admin-login-card vg-admin-private-card">
+<div class="vg-admin-private-badge">Admin VG</div>
+<h3>Solo administradores de VG</h3>
+<p>Entra con tu cuenta de administrador. El permiso lo confirma el servidor, no esta página.</p>
+<button class="vg-admin-btn primary" onclick="vgAdminLogin()">Entrar con mi cuenta</button>
+</div>
 </div>
 </div>
 </div>
@@ -12540,9 +12579,11 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
   }
 
   function toggleAdminLoginView(){
-    const panel=document.querySelector('#vgAdminModal .vg-admin-panel');
-    const logged=sessionStorage.getItem(ADMIN_KEY)==='1';
-    if(panel) panel.classList.toggle('vg-login-mode', !logged);
+    /* vg-admin-v5: la clase vg-login-mode ya no existe. El login es
+       una vista propia (#vgAdminLoginView) que pone vgAdminOpen;
+       esto solo limpia cualquier resto viejo de la clase. */
+    var panel=document.querySelector('#vgAdminModal .vg-admin-panel');
+    if(panel) panel.classList.remove('vg-login-mode');
   }
 
   function mountOffersSection(){
@@ -13235,7 +13276,10 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
 
   function installWrapper(){
     const originalOpen=window.vgAdminOpen;
-    if(typeof originalOpen==='function' && !originalOpen.__vgFullFix){
+    /* vg-admin-v5: la función v5 NO se envuelve (ya es la única
+       vgAdminOpen; el fullscreen lo pone el MutationObserver de
+       este mismo bloque cuando el modal se activa). */
+    if(typeof originalOpen==='function' && !originalOpen.__vgFullFix && !originalOpen.__vg5){
       const wrapped=function(){
         syncSessionFlags();
         const result=originalOpen.apply(this, arguments);
@@ -23240,7 +23284,17 @@ function init(){
     history.replaceState({}, '', u.pathname + (u.search || '') + (u.hash || ''));
   }catch(e){}
 
-  abrirPanel();
+  /* vg-admin-v5: NO se abre en DOMContentLoaded. Se espera a que la
+     página termine de cargar y a un hueco libre, y el panel abre
+     perezoso (solo Pedidos): la ráfaga de antes (500 pedidos +
+     re-render del catálogo + analítica + realtime + 3 boots)
+     colgaba la pestaña. */
+  var abrirPerezoso = function(){
+    if(window.requestIdleCallback) window.requestIdleCallback(function(){ abrirPanel(); }, {timeout: 1500});
+    else setTimeout(function(){ abrirPanel(); }, 600);
+  };
+  if(document.readyState === 'complete') abrirPerezoso();
+  else window.addEventListener('load', abrirPerezoso);
 }
 if(document.readyState === 'loading') document.addEventListener('DOMContentLoaded', init);
 else init();
@@ -32215,7 +32269,23 @@ html body .nav a.brand > span > small{
     var tabs = modal.querySelector('.vg-admin-tabs');
     var cont = modal.querySelector('.vg-admin-content');
     if(!tabs || !cont) return false;
-    if(document.getElementById('vgAdminHoy')) return true;
+    if(document.getElementById('vgAdminHoy')){
+      /* vg-admin-v5: la pestaña y la sección ya son estáticas; solo
+         se ata el manejador al botón que ya existe. */
+      var b0 = tabs.querySelector('.vg-admin-tab[data-tab="hoy"]');
+      var s0 = document.getElementById('vgAdminHoy');
+      if(b0 && s0 && !b0.__vgHoyBound){
+        b0.__vgHoyBound = true;
+        b0.addEventListener('click', function(){
+          Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-tab'),
+            function(x){ x.classList.toggle('active', x === b0); });
+          Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-section'),
+            function(s){ s.classList.toggle('active', s === s0); });
+          cargarHoy();
+        });
+      }
+      return true;
+    }
 
     var sec = document.createElement('section');
     sec.className = 'vg-admin-section';
@@ -35200,7 +35270,27 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
     /* Si alguna vez se colaron varias pestañas, se queda la primera. */
     var yaHay = tabs.querySelectorAll('.vg-admin-tab[data-tab="bitacora"]');
     for(var i = 1; i < yaHay.length; i++) yaHay[i].remove();
-    if(yaHay.length || document.getElementById('vgAdminBitacora')) return;
+    if(yaHay.length || document.getElementById('vgAdminBitacora')){
+      /* vg-admin-v5: la pestaña y la sección ya son estáticas; solo
+         se ata el manejador al botón que ya existe. El rol se
+         comprueba una vez y se guarda: un operador no ve el registro. */
+      var b0 = tabs.querySelector('.vg-admin-tab[data-tab="bitacora"]');
+      var s0 = document.getElementById('vgAdminBitacora');
+      if(b0 && s0 && !b0.__vgBitBound){
+        b0.__vgBitBound = true;
+        averiguarRol().then(function(r){ b0.__vgRol = r; if(r === 'operador') b0.style.display = 'none'; }).catch(function(){});
+        b0.addEventListener('click', function(){
+          Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-tab'),
+            function(x){ x.classList.toggle('active', x === b0); });
+          Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-section'),
+            function(s){ s.classList.toggle('active', s === s0); });
+          if(b0.__vgRol === 'operador') return;
+          if(b0.__vgRol){ cargarBitacora(); return; }
+          averiguarRol().then(function(r){ b0.__vgRol = r; if(r === 'operador'){ b0.style.display = 'none'; return; } cargarBitacora(); }).catch(function(){ cargarBitacora(); });
+        });
+      }
+      return;
+    }
 
     /* Averiguar el rol tarda, y mientras tanto siguen llegando avisos
        del observador. Sin esta bandera, la comprobación de arriba mira
@@ -35788,7 +35878,26 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 
     var yaHay = tabs.querySelectorAll('.vg-admin-tab[data-tab="buscado"]');
     for(var i = 1; i < yaHay.length; i++) yaHay[i].remove();
-    if(yaHay.length || document.getElementById('vgAdminBuscado')) return;
+    if(yaHay.length || document.getElementById('vgAdminBuscado')){
+      /* vg-admin-v5: pestaña y sección estáticas; se ata el manejador
+         al botón que ya existe (cargar() es local a este bloque). */
+      var b0 = tabs.querySelector('.vg-admin-tab[data-tab="buscado"]');
+      var s0 = document.getElementById('vgAdminBuscado');
+      if(b0 && s0 && !b0.__vgBusBound){
+        b0.__vgBusBound = true;
+        esOperador().then(function(op){ b0.__vgOperador = op; if(op) b0.style.display = 'none'; }).catch(function(){});
+        b0.addEventListener('click', function(){
+          Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-tab'),
+            function(x){ x.classList.toggle('active', x === b0); });
+          Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-section'),
+            function(s){ s.classList.toggle('active', s === s0); });
+          if(b0.__vgOperador) return;
+          if(b0.__vgOperador === false){ cargar(); return; }
+          esOperador().then(function(op){ b0.__vgOperador = op; if(op){ b0.style.display = 'none'; return; } cargar(); }).catch(function(){ cargar(); });
+        });
+      }
+      return;
+    }
 
     if(montando) return;      /* la comprobación de rol tarda */
     montando = true;
@@ -36177,7 +36286,32 @@ html body.vgfn-activo #marketView .layout > aside.sidebar{ display:none !importa
 
     var yaHay = tabs.querySelectorAll('.vg-admin-tab[data-tab="enlaces"]');
     for(var i = 1; i < yaHay.length; i++) yaHay[i].remove();
-    if(yaHay.length || document.getElementById('vgAdminEnlaces')) return;
+    if(yaHay.length || document.getElementById('vgAdminEnlaces')){
+      /* vg-admin-v5: pestaña y sección estáticas; se ata el manejador
+         al botón que ya existe (engancharRaiz/inicio son locales). */
+      var b0 = tabs.querySelector('.vg-admin-tab[data-tab="enlaces"]');
+      var s0 = document.getElementById('vgAdminEnlaces');
+      if(b0 && s0 && !b0.__vgEnlBound){
+        b0.__vgEnlBound = true;
+        esOperador().then(function(op){ b0.__vgOperador = op; if(op) b0.style.display = 'none'; }).catch(function(){});
+        b0.addEventListener('click', function(){
+          Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-tab'),
+            function(x){ x.classList.toggle('active', x === b0); });
+          Array.prototype.forEach.call(modal.querySelectorAll('.vg-admin-section'),
+            function(s){ s.classList.toggle('active', s === s0); });
+          var raiz = s0.querySelector('.vgel');
+          var ir = function(){
+            if(b0.__vgOperador) return;
+            engancharRaiz(raiz);
+            if(!raiz.innerHTML.trim()) raiz.innerHTML = inicio();
+          };
+          if(b0.__vgOperador === false){ ir(); return; }
+          if(b0.__vgOperador){ return; }
+          esOperador().then(function(op){ b0.__vgOperador = op; if(op){ b0.style.display = 'none'; return; } ir(); }).catch(function(){ ir(); });
+        });
+      }
+      return;
+    }
 
     if(montando) return;
     montando = true;
@@ -50400,6 +50534,11 @@ html body footer{padding-bottom:84px !important}
         state.trTotal = d.total || d.juegos.length;
         state.trFuente = d.fuente || 'api';
         pintarFilaTR();
+        /* Las ofertas destacadas también resuelven su imagen desde el
+           catálogo TR (trPorTitulo en pintarOfertas), pero pintarOfertas
+           se corre al construir, antes de que el catálogo llegue: las
+           portadas quedaban en ★. Al llegar el catálogo se repintan. */
+        pintarOfertas();
       } else { trPorVentana(0); }
     }).catch(function () { trPorVentana(0); });
   }
@@ -50417,6 +50556,7 @@ html body footer{padding-bottom:84px !important}
       state.trTotal = juegos.length;
       state.trFuente = 'ventana';
       pintarFilaTR();
+      pintarOfertas();
       return;
     }
     if (intent < 10) setTimeout(function () { trPorVentana(intent + 1); }, 600);
@@ -50672,6 +50812,13 @@ html body footer{padding-bottom:84px !important}
   function pintarOfertas() {
     var grid = qs('#vgkGridOfertas');
     if (!grid) return;
+    /* Publicar los títulos destacados para que el buscador de
+       Xbox Cuentas pueda darles prioridad (productos destacados
+       primero, como en cualquier tienda). Se actualiza en cada
+       repintado, así sigue lo que el panel admin configure. */
+    try {
+      window.vgOfertasDestacadas = (state.ofertas || []).map(function (o) { return norm(o.titulo); }).filter(Boolean);
+    } catch (e0) {}
     var list = state.ofertas.filter(function (o) {
       if (state.filtroOfertas === 'all') return true;
       return categoriaOferta(o) === state.filtroOfertas;
@@ -51101,12 +51248,17 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
   }
 }
 
-/* ── Etiqueta "Xbox Cuentas" de la tarjeta: una sola línea ────────
+/* ── Etiqueta "Xbox Cuentas" de la tarjeta: completa en una línea ──
    La regla tardía de .tag fija height:22px sin white-space:nowrap:
    en tarjetas angostas el texto se partía en dos líneas dentro de
-   la pastilla y la segunda línea se salía encima del título. Aquí
-   la etiqueta no se parte nunca; si no cupiera, se recorta con
-   puntos suspensivos en vez de invadir el título. */
+   la pastilla y la segunda línea se salía encima del título. El
+   arreglo anterior (nowrap + ellipsis) evitó que se partiera, pero
+   la pastilla seguía siendo demasiado ancha para la rejilla de 7
+   columnas: a 12px "XBOX CUENTAS" ocupa ~134px y la meta solo tiene
+   ~125px (tarjeta ~153px menos el padding de .info), así que se
+   recortaba a "XBOX CUENT…". Con 10.5px, menos tracking y menos
+   padding ocupa ~105px y se lee completa; el ellipsis queda solo
+   como red de seguridad. */
 .vg-tr-card .meta{
   flex-wrap:nowrap !important;
 }
@@ -51115,7 +51267,9 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
   max-width:100% !important;
   overflow:hidden !important;
   text-overflow:ellipsis !important;
-  letter-spacing:.06em !important;
+  font-size:.66rem !important;
+  letter-spacing:.02em !important;
+  padding:4px 7px !important;
   flex:0 1 auto !important;
   min-width:0 !important;
 }
@@ -51479,54 +51633,55 @@ footer .vg-clean-footer-links a:hover{
   #offersShowcase .ff-packages{grid-template-columns:1fr!important;}
 }
 </style>
-<style id="vg-admin-v4">
+<style id="vg-admin-v5">
 /* ================================================================
-   vg-admin-v4 · Rediseño TOTAL del panel admin (consola)
+   vg-admin-v5 · Rediseño COMPLETO del panel admin (un solo módulo)
    ---------------------------------------------------------------
-   SUSTITUYE a vg-admin-v3, que se BORRA del archivo: no quedan dos
+   SUSTITUYE a vg-admin-v4, que se BORRA del archivo: no quedan dos
    bloques compitiendo. Este bloque es el ÚLTIMO <style> del
-   documento, así que en empate de especificidad gana por ir
-   después; casi todas las reglas usan
-   "html body #vgAdminModal#vgAdminModal" (DOBLE ID) + !important,
-   igual que hacía v3 para ganar a la regla de la línea ~26902
-   (triple .active, 0.75rem).
+   documento; casi todas las reglas usan
+   "html body #vgAdminModal#vgAdminModal" (DOBLE ID) + !important.
 
-   QUÉ CAMBIA DE ESTRUCTURA (no solo colores):
-   · v3 era barra lateral morada (248px, pestañas verticales) +
-     cabecera grande. v4 es CONSOLA: barra superior compacta (marca
-     VG + título + cerrar) y, debajo, una TIRA DE PESTAÑAS
-     horizontal y fija (sticky), AGRUPADA por área — Operación,
-     Catálogo y Sistema — con divisores entre grupos. Las 17
-     pestañas siguen todas; solo cambia el orden visual (CSS order
-     por data-tab; las que no se conocen van al final, order 50).
-   · Contenido centrado (máx. 1240px) con jerarquía de página:
-     título de sección grande con barra menta a la izquierda.
-   · Stats como TIRA ÚNICA (una sola fila con divisores), no 4
-     tarjetas sueltas.
-   · Tarjetas planas con BARRA DE ACENTO morada a la izquierda,
-     en vez de bordes completos y sombras.
-   · PEDIDOS se redistribuye: v3 eran 3 columnas iguales
-     (lista 320 | detalle | chat 360). v4 son 2 columnas: lista
-     (360px) a la izquierda, y a la derecha DETALLE arriba y
-     CONVERSACIÓN abajo a todo lo ancho (mejor para leer mensajes).
-     Las filas llevan BARRA DE ESTADO a la izquierda (st-pendiente
-     ámbar, st-proceso morado, st-entregado menta, st-cancelado
-     rojo) para ver el estado de un vistazo. Los botones de estado
-     (.vg17-quick) quedan como barra de filtros arriba del detalle.
-   · Los filtros por estado y la búsqueda de pedidos que ya existen
-     en el panel (.vg17-quick, #vgOrderSearch) se mantienen; este
-     bloque no añade controles nuevos (eso sería JS, no CSS).
+   POR QUÉ v5 (causa raíz del "solo sale Pedidos", 2026-11-25):
+   · El bloque vg-paneles-diseno-css-v123 (línea ~42522) ponía
+     #vgAdminModal .vg-admin-tab { width:100% !important } en
+     escritorio, y su contra-regla width:auto vivía dentro de
+     @media (max-width:900px). v4 NO declaraba width en las
+     pestañas, así que cada botón ocupaba el 100% de la tira:
+     solo se veía la primera (Pedidos) y las otras 19 quedaban
+     fuera de pantalla, sin indicador de scroll (la barra de
+     scroll estaba oculta). v5 declara
+     width:auto !important + flex:0 0 auto !important en la
+     pestaña, con (2,2,0) que gana a v123 (1,1,0).
+   · La barra de pestañas ya no es una tira con scroll oculto:
+     son 3 FILAS AGRUPADAS con rótulo (Operación / Catálogo /
+     Sistema) y las 20 pestañas son HTML ESTÁTICO (ya no las
+     inyecta JS con temporizadores). Se borra la regla order de
+     "inbox": esa pestaña NO existe (solo existía en v4).
+   · El panel es UN solo módulo (vg-admin-v5.js): un solo
+     vgAdminOpen, una sola bandera de sesión (vg_admin_v5), un
+     solo showAdminTab. La clase vg-login-mode y
+     toggleAdminLoginView() quedan neutralizados: el login es
+     una vista propia (#vgAdminLoginView), no un modo que
+     esconda la barra.
+   · La fila de resumen de Pedidos (.vgres, que v4 no cubría y
+     por eso se veía como 4 tarjetas sueltas) ahora es tira
+     única como el resto de stats, y el aviso "VENCEN ESTA
+     SEMANA" (.vgvence) tiene estilo propio.
 
-   PALETA = la de la tienda (oscuro + morado + menta), más
-   contenida que v3: fondo #0a0a10, superficies #12121a, morado
-   solo para la pestaña activa y acciones principales, menta solo
-   para entregado/éxito, ámbar solo pendiente. Precios en BLANCO
-   y negrita. Nada de fondo claro ni tarjetas blancas.
-
-   SOLO PRESENTACIÓN. No toca lógica JS, textos, ids ni clases de
-   enganche. Los módulos (Xbox Cuentas vg-tr-admin-v1 e Inicio
-   vg-inicio-admin-v1) reutilizan .vg-admin-btn / .vg-xbox-admin-row
-   del panel, así que siguen su diseño.
+   ESTRUCTURA (igual que v4, que ya era consola):
+   · Barra superior compacta (marca VG + título + cerrar).
+   · Tira de pestañas agrupada en 3 filas con rótulo.
+   · Contenido centrado (máx. 1240px), título de sección con
+     barra menta a la izquierda.
+   · Stats como TIRA ÚNICA con divisores.
+   · Tarjetas planas con BARRA DE ACENTO morada a la izquierda.
+   · PEDIDOS: 2 columnas (lista 360px | detalle arriba +
+     conversación abajo), filas con BARRA DE ESTADO.
+   PALETA = la de la tienda (oscuro + morado + menta): fondo
+   #0a0a10, superficies #12121a, morado solo para la pestaña
+   activa y acciones principales, menta solo para entregado/
+   éxito, ámbar solo pendiente. Precios en BLANCO y negrita.
    ================================================================ */
 
 /* ── 0 · Variables ── */
@@ -51572,10 +51727,9 @@ html body #vgAdminModal#vgAdminModal .vg-admin-panel{
   border:0!important;
   box-shadow:none!important;
   overflow:hidden!important;
-  display:flex!important;
-  flex-direction:column!important;
+  display:grid!important;
+  grid-template-rows:auto auto minmax(0,1fr)!important;
   grid-template-columns:none!important;
-  grid-template-rows:none!important;
   grid-template-areas:none!important;
 }
 html body #vgAdminModal#vgAdminModal .vg-admin-panel::before,
@@ -51641,11 +51795,12 @@ html body #vgAdminModal#vgAdminModal .vg-admin-x:hover{
   color:#ffffff!important;
 }
 
-/* ── 3 · Tira de pestañas horizontal, fija y AGRUPADA ──
-   Grupos por data-tab (order): Operación 10–19, Catálogo 20–29,
-   Sistema 30–39. Las pestañas que no están en la lista quedan con
-   order 50 (al final). Divisor vertical antes del primer tab de
-   cada grupo nuevo. */
+/* ── 3 · Tira de pestañas AGRUPADA EN 3 FILAS, sin scroll ──
+   Las 20 pestañas son HTML estático, agrupadas por área en 3
+   filas con rótulo (.vg5-grupo): Operación / Catálogo / Sistema.
+   Ya NO hay tira horizontal con overflow-x:auto ni barra de
+   scroll oculta: todo se ve de un vistazo. El orden lo da el DOM,
+   no reglas order (las de v4 se borran; "inbox" no existe). */
 html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
   background:#0e0e15!important;
   border-bottom:1px solid #262633!important;
@@ -51654,10 +51809,11 @@ html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
   gap:6px!important;
   display:flex!important;
   flex-direction:row!important;
-  flex-wrap:nowrap!important;
-  align-items:center!important;
-  overflow-x:auto!important;
-  overflow-y:hidden!important;
+  flex-wrap:wrap!important;
+  align-items:flex-start!important;
+  align-content:flex-start!important;
+  overflow-x:visible!important;
+  overflow-y:visible!important;
   flex:none!important;
   position:sticky!important;
   top:0!important;
@@ -51666,7 +51822,8 @@ html body #vgAdminModal#vgAdminModal .vg-admin-tabs{
 html body #vgAdminModal#vgAdminModal .vg-admin-tabs::before{display:none!important;content:none!important;}
 html body #vgAdminModal#vgAdminModal .vg-admin-tab,
 html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{
-  order:50!important;
+  width:auto!important;
+  flex:0 0 auto!important;
   background:transparent!important;
   border:1px solid transparent!important;
   border-radius:999px!important;
@@ -51679,7 +51836,6 @@ html body #vgAdminModal#vgAdminModal .vg-admin-tab-x{
   justify-content:center!important;
   white-space:nowrap!important;
   letter-spacing:0!important;
-  flex:none!important;
 }
 html body #vgAdminModal#vgAdminModal .vg-admin-tab:hover,
 html body #vgAdminModal#vgAdminModal .vg-admin-tab-x:hover{
@@ -51696,30 +51852,46 @@ html body #vgAdminModal#vgAdminModal .vg-admin-tab-x.active{
   border-color:#8b5cf6!important;
   box-shadow:0 4px 14px rgba(139,92,246,.35)!important;
 }
-/* Grupo Operación */
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="pedidos"]{order:10!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="soporte"]{order:11!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="hoy"]{order:12!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="usuarios"]{order:13!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="dashboard"]{order:14!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="inbox"]{order:15!important;}
-/* Grupo Catálogo */
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="xboxcurrent"]{order:20!important;margin-left:14px!important;padding-left:14px!important;border-left:1px solid #33334a!important;border-radius:0 999px 999px 0!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="cuentas"]{order:21!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="retro"]{order:22!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="inicio"]{order:23!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="imagenes"]{order:24!important;}
-/* Grupo Sistema */
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="tokens"]{order:30!important;margin-left:14px!important;padding-left:14px!important;border-left:1px solid #33334a!important;border-radius:0 999px 999px 0!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="setup"]{order:31!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="export"]{order:32!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="debug"]{order:33!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="settings"]{order:34!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="analytics"]{order:35!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="reviews"]{order:36!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="bitacora"]{order:37!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="buscado"]{order:38!important;}
-html body #vgAdminModal#vgAdminModal .vg-admin-tab[data-tab="enlaces"]{order:39!important;}
+/* Filas de grupo: rótulo pequeño a la izquierda, píldoras a la derecha */
+html body #vgAdminModal#vgAdminModal .vg5-grupo{
+  display:flex!important;
+  align-items:flex-start!important;
+  gap:12px!important;
+  width:100%!important;
+  flex:none!important;
+  padding:2px 0!important;
+}
+html body #vgAdminModal#vgAdminModal .vg5-grupo + .vg5-grupo{
+  border-top:1px solid #1c1c28!important;
+  margin-top:4px!important;
+  padding-top:8px!important;
+}
+html body #vgAdminModal#vgAdminModal .vg5-grupo-titulo{
+  flex:none!important;
+  width:86px!important;
+  padding-top:11px!important;
+  font-size:.66rem!important;
+  font-weight:900!important;
+  letter-spacing:.12em!important;
+  text-transform:uppercase!important;
+  color:#7c8299!important;
+  text-align:right!important;
+}
+html body #vgAdminModal#vgAdminModal .vg5-grupo-tabs{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+  flex:1!important;
+  min-width:0!important;
+}
+/* Pestaña activa: (2,3,2), gana a vg-paneles-carbon-v130 (2,3,0) */
+html body #vgAdminModal#vgAdminModal .vg-admin-tabs .vg-admin-tab.active,
+html body #vgAdminModal#vgAdminModal .vg-admin-tabs .vg-admin-tab-x.active{
+  background:#8b5cf6!important;
+  color:#ffffff!important;
+  border-color:#8b5cf6!important;
+  box-shadow:0 4px 14px rgba(139,92,246,.35)!important;
+}
 
 /* ── 4 · Contenido centrado, jerarquía de página ── */
 html body #vgAdminModal#vgAdminModal .vg-admin-content{
@@ -51765,6 +51937,50 @@ html body #vgAdminModal#vgAdminModal .vg-admin-private-badge{
   color:#19e6c1!important;
   border:1px solid rgba(25,230,193,.35)!important;
 }
+/* ── 4b · Vista de login PROPIA ──
+   El login ya no es un "modo" (vg-login-mode) que esconde la
+   barra de pestañas: es su propia vista dentro del panel.
+   .vg5-login solo se pone cuando NO hay sesión, y solo lo pone
+   vgAdminOpen de v5; al entrar se quita y aparece la barra. */
+html body #vgAdminModal#vgAdminModal .vg-admin-panel.vg5-login .vg-admin-tabs,
+html body #vgAdminModal#vgAdminModal .vg-admin-panel.vg5-login .vg-admin-content{
+  display:none!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminLoginView{
+  grid-row:2 / 4!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  display:flex!important;
+  align-items:center!important;
+  justify-content:center!important;
+  padding:32px 20px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminLoginView[hidden]{display:none!important;}
+html body #vgAdminModal#vgAdminModal #vgAdminLoginView .vg-admin-login-card{
+  width:100%!important;
+  max-width:440px!important;
+  padding:28px 26px!important;
+  text-align:left!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminLoginView .vg-admin-login-card h3{
+  font-size:1.3rem!important;
+  font-weight:900!important;
+  color:#f4f4f8!important;
+  margin:12px 0 6px!important;
+  border-left:0!important;
+  padding-left:0!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminLoginView .vg-admin-login-card p{
+  color:#9aa0b5!important;
+  font-size:.9rem!important;
+  line-height:1.5!important;
+  margin:0 0 18px!important;
+}
+html body #vgAdminModal#vgAdminModal #vgAdminLoginView .vg-admin-login-card .vg-admin-btn{
+  width:100%!important;
+  height:48px!important;
+  font-size:.95rem!important;
+}
 html body #vgAdminModal#vgAdminModal .vg-admin-note{
   background:#12121a!important;
   color:#d8dbe8!important;
@@ -51779,7 +51995,9 @@ html body #vgAdminModal#vgAdminModal a{color:#c4b5fd!important;}
 html body #vgAdminModal#vgAdminModal #vgAdminStats,
 html body #vgAdminModal#vgAdminModal .vg-admin-stats,
 html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vg17-cards,
-html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards{
+html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards,
+html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgres,
+html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vgres{
   display:flex!important;
   gap:0!important;
   margin-bottom:22px!important;
@@ -51789,7 +52007,8 @@ html body #vgAdminModal#vgAdminModal #vgAdminSoporte .vg17-cards{
   overflow:hidden!important;
 }
 html body #vgAdminModal#vgAdminModal .vg-admin-stat,
-html body #vgAdminModal#vgAdminModal .vg17-stat{
+html body #vgAdminModal#vgAdminModal .vg17-stat,
+html body #vgAdminModal#vgAdminModal .vgres-c{
   flex:1!important;
   min-width:0!important;
   background:transparent!important;
@@ -51799,11 +52018,13 @@ html body #vgAdminModal#vgAdminModal .vg17-stat{
   box-shadow:none!important;
 }
 html body #vgAdminModal#vgAdminModal .vg-admin-stat + .vg-admin-stat,
-html body #vgAdminModal#vgAdminModal .vg17-stat + .vg17-stat{
+html body #vgAdminModal#vgAdminModal .vg17-stat + .vg17-stat,
+html body #vgAdminModal#vgAdminModal .vgres-c + .vgres-c{
   border-left:1px solid #262633!important;
 }
 html body #vgAdminModal#vgAdminModal .vg-admin-stat span,
-html body #vgAdminModal#vgAdminModal .vg17-stat span{
+html body #vgAdminModal#vgAdminModal .vg17-stat span,
+html body #vgAdminModal#vgAdminModal .vgres-c span{
   color:#9aa0b5!important;
   font-size:.68rem!important;
   font-weight:800!important;
@@ -51811,7 +52032,8 @@ html body #vgAdminModal#vgAdminModal .vg17-stat span{
   letter-spacing:.1em!important;
 }
 html body #vgAdminModal#vgAdminModal .vg-admin-stat b,
-html body #vgAdminModal#vgAdminModal .vg17-stat b{
+html body #vgAdminModal#vgAdminModal .vg17-stat b,
+html body #vgAdminModal#vgAdminModal .vgres-c b{
   color:#f4f4f8!important;
   font-size:1.7rem!important;
   line-height:1.1!important;
@@ -51819,6 +52041,20 @@ html body #vgAdminModal#vgAdminModal .vg17-stat b{
   display:block!important;
   margin-top:4px!important;
 }
+/* Resumen de Pedidos: la celda de pendientes en ámbar cuando hay */
+html body #vgAdminModal#vgAdminModal .vgres-c.alerta b{color:#f59e0b!important;}
+html body #vgAdminModal#vgAdminModal .vgres-c.alerta span{color:#f59e0b!important;}
+/* Aviso "VENCEN ESTA SEMANA" del resumen de Pedidos */
+html body #vgAdminModal#vgAdminModal .vgvence{
+  background:rgba(245,158,11,.10)!important;
+  border:1px solid rgba(245,158,11,.45)!important;
+  border-left:3px solid #f59e0b!important;
+  border-radius:12px!important;
+  color:#ffd9a0!important;
+  padding:12px 16px!important;
+  margin:0 0 22px!important;
+}
+html body #vgAdminModal#vgAdminModal .vgvence b{color:#fbbf24!important;}
 
 /* ── 6 · Cajas planas con barra de acento ── */
 html body #vgAdminModal#vgAdminModal .vg17-box,
@@ -52229,6 +52465,15 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
     padding:8px 10px!important;
     position:static!important;
   }
+  html body #vgAdminModal#vgAdminModal .vg5-grupo{
+    flex-direction:column!important;
+    gap:6px!important;
+  }
+  html body #vgAdminModal#vgAdminModal .vg5-grupo-titulo{
+    width:auto!important;
+    padding-top:0!important;
+    text-align:left!important;
+  }
   html body #vgAdminModal#vgAdminModal .vg-admin-content{padding:18px 14px 28px!important;max-width:none!important;}
   html body #vgAdminModal#vgAdminModal #vgAdminStats,
   html body #vgAdminModal#vgAdminModal .vg-admin-stats,
@@ -52283,7 +52528,387 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
   html body #vgAdminModal#vgAdminModal textarea{max-width:100%!important;}
   html body #vgAdminModal#vgAdminModal #vgAdminPedidos .vgA-row{padding:12px!important;}
 }
+
 </style>
+
+<script id="vg-admin-v5">
+/* ═══════════════════════════════════════════════════════════════
+   vg-admin-v5 · EL panel admin como UN solo módulo
+   ---------------------------------------------------------------
+   Reemplaza el enredo de 11 definiciones/envueltas de vgAdminOpen
+   (12116, 12266, 12330, 12703, 13237, 14922, 16199, 21035, 21707,
+   25272, 49526, 49822) por UNA sola función, y la inyección de
+   pestañas por JS (ensureAdminTabs, ensureAdminSections,
+   ensureRetroAdmin, vg-tr-admin-v1, vg-inicio-admin-v1, montarHoy,
+   montarBitacora, montar buscado/enlaces...) por una BARRA
+   ESTÁTICA con las 20 pestañas reales en el HTML.
+
+   POR QUÉ (2026-11-25, captura de Miguel: solo salía Pedidos):
+   el bloque v123 ponía width:100% !important en cada pestaña en
+   escritorio y v4 no lo anulaba: cada botón ocupaba toda la tira
+   y solo se veía el primero. v5 lo anula en vg-admin-v5.css
+   (width:auto + flex:0 0 auto) y la barra ya no tiene scroll
+   oculto: son 3 filas agrupadas con rótulo.
+
+   QUÉ HACE ESTE MÓDULO (y nada más):
+   · window.vgAdminOpen (FINAL: se instala DESPUÉS del último
+     wrapper viejo, 49822, y ANTES de vg-retro-tr-v2, que sigue
+     siendo el último <script>). También se pone como
+     window.__vgClassicAdminOpen, para que nada llame al
+     clásico de 12330 (que BORRABA el contenido con loginMarkup
+     cuando no había sesión).
+   · UNA comprobación de sesión: sesión de Supabase Auth + la
+     función is_admin() del servidor. Si pasa, se marca la ÚNICA
+     bandera: sessionStorage 'vg_admin_v5' = '1'. Las banderas
+     viejas (vg_admin_ok, vg_admin_email_session_v52,
+     vg_admin_session) se marcan también por compatibilidad con
+     el código que las lee, pero NADA de v5 depende de ellas.
+   · Si NO hay sesión: el panel se abre en su VISTA DE LOGIN
+     propia (#vgAdminLoginView + clase .vg5-login). El botón
+     llama a window.vgAdminLogin() (vgOpenAuth('admin')); al
+     entrar, el flujo de auth vuelve a llamar a vgAdminOpen y
+     ya pasa. La clase vg-login-mode y toggleAdminLoginView()
+     quedan neutralizados (el toggle es un no-op que limpia la
+     clase; las reglas CSS que escondían la barra están borradas).
+   · Un solo cambio de pestaña (vgAdminMostrarTab): activa el
+     botón y su sección. La CARGA de cada pestaña la siguen
+     haciendo sus manejadores de siempre (bindTabs, el oyente
+     v116, los onclick de cada creador, los manejadores
+     parcheados de hoy/bitácora/buscado/enlaces): v5 no los
+     duplica; solo los REPARA si faltan, con una red de
+     seguridad al abrir (Pedidos) y al pulsar (si la sección
+     sigue vacía a los 1200 ms).
+   · Carga PEREZOSA: al abrir solo se carga Pedidos; el resto
+     carga al pulsar su pestaña. NO se llama a renderProducts()
+     en la ruta de apertura (eso era parte del cuelgue de
+     ?panel=1). El guardado de cada pestaña no se toca: Xbox
+     Cuentas guarda por upsert a vg_xbox_tr, Inicio por upsert
+     a vg_inicio_contenido, Xbox One/Series a vg_xbox_games.
+   · Realtime MÍNIMO (solo refresco): la suscripción de v17
+     (startAdminRealtime, con beep y avisos) era local a su IIFE
+     y solo la llamaba el flujo viejo; v5 se suscribe a los
+     mismos INSERT (orders, vg_live_chat_messages,
+     vg_support_tickets, vg_password_requests,
+     vg_token_redemptions) y, si el panel está abierto en una
+     pestaña de Operación, recarga esa pestaña. Sin beep ni
+     aviso: esas funciones eran locales a v17.
+   · Cerrar sesión real: vgAdminLogout se envuelve para cerrar
+     también la sesión de Supabase y limpiar la bandera v5 (el
+     viejo solo borraba una bandera y recargaba, y la sesión
+     seguía viva).
+
+   NO TOCA: los dos bloques vg-pro-system-js (login, dashboard
+   del cliente y referidos), ni vg-retro-tr-v2, ni la tienda.
+   ═══════════════════════════════════════════════════════════════ */
+(function(){
+  'use strict';
+
+  var FLAG = 'vg_admin_v5';
+  var CANAL = 'vg5-admin';
+
+  /* Las 20 pestañas reales, en el orden de la barra estática.
+     sec = id de la sección (#vgAdmin + nombre capitalizado). */
+  var TABS = ['pedidos','soporte','hoy','usuarios','dashboard',
+    'xboxcurrent','cuentas','retro','inicio','imagenes',
+    'tokens','setup','export','debug','settings','analytics',
+    'reviews','bitacora','buscado','enlaces'];
+  var V17 = ['pedidos','soporte','tokens','imagenes'];
+
+  /* Cargadores globales por pestaña (los que existen de verdad).
+     hoy / bitacora / buscado / enlaces los cargan sus propios
+     manejadores (parcheados en v5 para atarse al botón estático);
+     usuarios y dashboard se cargan a mano con su botón Actualizar;
+     setup / export / debug son estáticas. */
+  var CARGADORES = {
+    pedidos:    function(){ if(typeof window.vgAdminPestana17==='function') window.vgAdminPestana17('pedidos'); },
+    soporte:    function(){ if(typeof window.vgAdminPestana17==='function') window.vgAdminPestana17('soporte'); },
+    tokens:     function(){ if(typeof window.vgAdminPestana17==='function') window.vgAdminPestana17('tokens'); },
+    imagenes:   function(){ if(typeof window.vgAdminPestana17==='function') window.vgAdminPestana17('imagenes'); },
+    analytics:  function(){ if(typeof window.loadAnalyticsAdmin==='function') window.loadAnalyticsAdmin(); },
+    xboxcurrent:function(){ if(typeof window.loadXboxGames==='function') window.loadXboxGames(true); },
+    reviews:    function(){ if(typeof window.vgAdminLoadReviews==='function') window.vgAdminLoadReviews(); },
+    retro:      function(){ if(typeof window.loadRetroAdmin==='function') window.loadRetroAdmin(); },
+    cuentas:    function(){ if(typeof window.loadTrAdmin==='function') window.loadTrAdmin(); },
+    inicio:     function(){ if(typeof window.loadInicioAdmin==='function') window.loadInicioAdmin(); },
+    setup:      function(){ if(typeof window.vgAdminLoadConfig==='function') window.vgAdminLoadConfig(); }
+  };
+  /* Secciones "vacías" si su cargador no corrió (para la red de
+     seguridad): qué marca que ya cargó. */
+  var MARCA_CARGADO = {
+    pedidos:    function(s){ return s.textContent.trim().length > 40; },
+    soporte:    function(s){ return s.textContent.trim().length > 40; },
+    tokens:     function(s){ return s.textContent.trim().length > 40; },
+    imagenes:   function(s){ return s.textContent.trim().length > 40; },
+    analytics:  function(s){ var b=s.querySelector('#vgAdminAnalyticsBody'); return !!(b && b.textContent.trim()); },
+    xboxcurrent:function(s){ var b=s.querySelector('#vgXboxAdminList'); return !!(b && b.textContent.trim()); },
+    reviews:    function(s){ var b=s.querySelector('#vgAdminReviewsList'); return !!(b && b.textContent.trim() && b.textContent.indexOf('Cargando recomendaciones') < 0); },
+    retro:      function(s){ var b=s.querySelector('#vgRetroAdminList'); return !!(b && b.textContent.trim()); },
+    cuentas:    function(s){ var b=s.querySelector('#vgTrAdminList'); return !!(b && b.textContent.trim()); },
+    inicio:     function(s){ var b=s.querySelector('#vgInicioListaCinta'); return !!(b && b.textContent.trim()); },
+    setup:      function(s){ var u=s.querySelector('#vgSupabaseUrl'); return !!(u && u.value); }
+  };
+
+  var cargadoUnaVez = {};
+  var canalSuscr = false;
+  var aperturaEnCurso = false;
+
+  function qs(sel, root){ return (root || document).querySelector(sel); }
+  function qsa(sel, root){ return Array.prototype.slice.call((root || document).querySelectorAll(sel)); }
+  function secId(nombre){ return 'vgAdmin' + nombre.charAt(0).toUpperCase() + nombre.slice(1); }
+  function modal(){ return document.getElementById('vgAdminModal'); }
+  function panel(){ var m = modal(); return m ? m.querySelector('.vg-admin-panel') : null; }
+  function modalActivo(){ var m = modal(); return !!(m && m.classList.contains('active')); }
+  function tabActivo(){
+    var b = qs('#vgAdminModal .vg-admin-tab.active');
+    return b ? (b.getAttribute('data-tab') || '') : '';
+  }
+
+  /* ── Cliente de Supabase (el compartido, con sesión de Auth) ── */
+  function clienteSB(){
+    try{
+      if(typeof window.vgGetSB === 'function'){ var c = window.vgGetSB(); if(c) return c; }
+    }catch(e){}
+    try{
+      var url = window.VG_SUPABASE_URL, anon = window.VG_SUPABASE_ANON_KEY;
+      if(window.supabase && url && anon){
+        return window.supabase.createClient(url, anon, {
+          auth: { persistSession: true, autoRefreshToken: true, storageKey: 'vg_sb_auth' }
+        });
+      }
+    }catch(e){}
+    return null;
+  }
+
+  /* ── La ÚNICA comprobación de sesión ── */
+  async function verificarAdmin(){
+    var c = clienteSB();
+    if(!c || !c.auth || !c.auth.getSession) return false;
+    try{
+      var s = await c.auth.getSession();
+      if(!s || !s.data || !s.data.session) return false;
+      var r = await c.rpc('is_admin');
+      return !r.error && r.data === true;
+    }catch(e){ return false; }
+  }
+  function marcarSesion(){
+    try{ sessionStorage.setItem(FLAG, '1'); }catch(e){}
+    /* Compatibilidad: el código viejo lee estas dos; v5 no depende
+       de ellas, pero se marcan para que nada crea que no hay sesión. */
+    try{ sessionStorage.setItem('vg_admin_ok', '1'); }catch(e){}
+    try{ sessionStorage.setItem('vg_admin_email_session_v52', '1'); }catch(e){}
+    try{ sessionStorage.setItem('vg_admin_session', '1'); }catch(e){}
+  }
+
+  /* ── Vistas: login propia / panel ── */
+  function mostrarLogin(){
+    var m = modal(); if(!m) return;
+    m.classList.add('active');
+    var p = panel();
+    if(p){ p.classList.add('vg5-login'); p.classList.remove('vg-login-mode'); }
+    var v = document.getElementById('vgAdminLoginView');
+    if(v) v.hidden = false;
+  }
+  function mostrarPanel(){
+    var m = modal(); if(!m) return;
+    m.classList.add('active');
+    var p = panel();
+    if(p){ p.classList.remove('vg5-login'); p.classList.remove('vg-login-mode'); }
+    var v = document.getElementById('vgAdminLoginView');
+    if(v) v.hidden = true;
+  }
+
+  /* ── Botón "Cerrar sesión" (el viejo solo lo ponía el flujo
+     clásico, hoy muerto: ensureLogout solo se llamaba desde 12330) ── */
+  function asegurarBotonSalir(){
+    if(document.getElementById('vgAdminLogoutBtn')) return;
+    var head = qs('.vg-admin-head > div');
+    if(!head) return;
+    var b = document.createElement('button');
+    b.id = 'vgAdminLogoutBtn';
+    b.className = 'vg-admin-btn danger';
+    b.textContent = 'Cerrar sesión';
+    b.onclick = function(){ if(typeof window.vgAdminLogout === 'function') window.vgAdminLogout(); };
+    head.appendChild(b);
+  }
+
+  /* ── Un solo cambio de pestaña (solo lo VISUAL) ──
+     La CARGA de cada pestaña la siguen haciendo sus manejadores
+     de siempre (bindTabs, el oyente v116, los onclick de cada
+     creador, los manejadores parcheados de hoy/bitácora/buscado/
+     enlaces): v5 no duplica esas llamadas. La única excepción es
+     al ABRIR (no hay clic: el oyente v116 no se dispara), donde
+     v5 carga Pedidos directamente. Si un cargador habitual
+     faltara, la red de seguridad (redSeguridad) lo repara. */
+  function mostrarTab(nombre){
+    var m = modal(); if(!m) return false;
+    var btn = qs('.vg-admin-tab[data-tab="' + nombre + '"]', m);
+    var sec = document.getElementById(secId(nombre));
+    if(!btn || !sec) return false;
+    qsa('.vg-admin-tab', m).forEach(function(b){ b.classList.toggle('active', b === btn); });
+    qsa('.vg-admin-section', m).forEach(function(s){ s.classList.toggle('active', s === sec); });
+    return true;
+  }
+
+  /* Carga perezosa: solo la primera vez que se abre la pestaña
+     (las 4 de v17 recargan en cada clic, como siempre: su lista
+     cambia con cada pedido nuevo). */
+  function cargarTab(nombre){
+    var f = CARGADORES[nombre];
+    if(!f) return;
+    if(V17.indexOf(nombre) >= 0){ try{ f(); }catch(e){} return; }
+    if(cargadoUnaVez[nombre]) return;
+    cargadoUnaVez[nombre] = true;
+    try{ f(); }catch(e){ cargadoUnaVez[nombre] = false; }
+  }
+
+  /* Red de seguridad: si a los 1200 ms la sección sigue vacía es
+     que su cargador habitual no se ató (o no existe): se llama
+     al cargador global directamente. Solo cubre las pestañas con
+     cargador global; hoy/bitacora/buscado/enlaces dependen de sus
+     manejadores parcheados (sus cargadores son locales). */
+  function redSeguridad(nombre){
+    setTimeout(function(){
+      if(!modalActivo()) return;
+      if(tabActivo() !== nombre) return;
+      var sec = document.getElementById(secId(nombre));
+      var marca = MARCA_CARGADO[nombre];
+      if(!sec || !marca || !CARGADORES[nombre]) return;
+      try{
+        if(!marca(sec)){ cargadoUnaVez[nombre] = false; cargarTab(nombre); }
+      }catch(e){}
+    }, 1200);
+  }
+
+  /* ── Sondeo para montarBitacora / montar (buscado/enlaces) ──
+     Esos tres montadores solo corren cuando un MutationObserver
+     del modal detecta un cambio (se instalan tarde, tras load +
+     idle/timeout, y el cambio de clase de la apertura puede
+     llegar antes de que estén). Sin sondeo, la primera pulsación
+     en Bitácora/Buscado/Enlaces solo cambiaría la vista (el
+     manejador se ataría con esa misma pulsación y cargaría a la
+     segunda). El sondeo alterna una clase inocua en el modal
+     hasta que los tres botones tengan su manejador atado (los
+     montadores son idempotentes y el parche tiene su propio
+     guard __vg*Bound, así que repetir es inocuo). */
+  function sondeoMontar(){
+    var m = modal(); if(!m) return;
+    var PENDIENTES = [['bitacora','__vgBitBound'],['buscado','__vgBusBound'],['enlaces','__vgEnlBound']];
+    var n = 0;
+    var id = setInterval(function(){
+      n++;
+      if(!modalActivo() || n > 20){ clearInterval(id); return; }
+      var faltan = PENDIENTES.filter(function(p){
+        var b = qs('.vg-admin-tab[data-tab="' + p[0] + '"]');
+        return b && !b[p[1]];
+      });
+      if(!faltan.length){ clearInterval(id); return; }
+      m.classList.toggle('vg5-sondeo');
+    }, 400);
+  }
+
+  /* ── Realtime mínimo (solo refresco) ── */
+  function suscribirRealtime(){
+    if(canalSuscr) return;
+    var c = clienteSB();
+    if(!c || !c.channel) return;
+    try{
+      var ch = c.channel(CANAL);
+      ['orders','vg_live_chat_messages','vg_support_tickets','vg_password_requests','vg_token_redemptions']
+        .forEach(function(tabla){
+          ch.on('postgres_changes', {event:'INSERT', schema:'public', table:tabla}, function(){
+            if(!modalActivo()) return;
+            var act = tabActivo();
+            if(V17.indexOf(act) >= 0) cargarTab(act);
+          });
+        });
+      ch.subscribe();
+      canalSuscr = true;
+    }catch(e){}
+  }
+
+  /* ── El ÚNICO vgAdminOpen ── */
+  async function vgAdminOpenV5(){
+    var m = modal();
+    if(!m) return;
+    if(aperturaEnCurso) return;
+    aperturaEnCurso = true;
+    try{
+      var ok = await verificarAdmin();
+      if(!ok){
+        mostrarLogin();
+        return;
+      }
+      marcarSesion();
+      mostrarPanel();
+      asegurarBotonSalir();
+      /* Solo Pedidos al abrir; el resto carga al pulsar su pestaña.
+         Sin clic no hay oyente v116: Pedidos se carga aquí, una
+         sola vez. NUNCA renderProducts() aquí: era parte del cuelgue. */
+      mostrarTab('pedidos');
+      try{ if(CARGADORES.pedidos) CARGADORES.pedidos(); }catch(e){}
+      redSeguridad('pedidos');
+      sondeoMontar();
+      suscribirRealtime();
+    }finally{
+      aperturaEnCurso = false;
+    }
+  }
+
+  /* Clic delegado en la barra: el cambio visual es idempotente
+     con los manejadores que ya existen (bindTabs, v116, onclick
+     de cada creador); la carga la hacen ellos, no v5 (para no
+     duplicar llamadas). La red de seguridad repara el caso en
+     que el cargador habitual de esa pestaña no se haya atado. */
+  function atarBarra(){
+    var tabs = qs('#vgAdminModal .vg-admin-tabs');
+    if(!tabs || tabs.__vg5bound) return;
+    tabs.__vg5bound = true;
+    tabs.addEventListener('click', function(ev){
+      var b = ev.target && ev.target.closest ? ev.target.closest('.vg-admin-tab') : null;
+      if(!b || !tabs.contains(b)) return;
+      var nombre = b.getAttribute('data-tab');
+      if(!nombre) return;
+      mostrarTab(nombre);
+      redSeguridad(nombre);
+    });
+  }
+
+  /* Cerrar sesión de verdad: Supabase + bandera v5 + la vieja. */
+  function envolverLogout(){
+    var orig = window.vgAdminLogout;
+    if(typeof orig !== 'function' || orig.__vg5) return;
+    var env = function(){
+      try{ sessionStorage.removeItem(FLAG); }catch(e){}
+      try{ sessionStorage.removeItem('vg_admin_ok'); }catch(e){}
+      try{ sessionStorage.removeItem('vg_admin_email_session_v52'); }catch(e){}
+      try{ sessionStorage.removeItem('vg_admin_session'); }catch(e){}
+      var c = clienteSB();
+      if(c && c.auth && c.auth.signOut){
+        try{ c.auth.signOut().catch(function(){}); }catch(e){}
+      }
+      return orig.apply(this, arguments);
+    };
+    env.__vg5 = true;
+    window.vgAdminLogout = env;
+  }
+
+  /* ── Instalación (la ÚLTIMA palabra sobre vgAdminOpen) ── */
+  window.vgAdminOpen = vgAdminOpenV5;
+  window.vgAdminOpen.__vg5 = true;
+  /* Defensa: el clásico de 12330 (que borraba el contenido con
+     loginMarkup) y adminGate/openAdminPanel llamaban a
+     __vgClassicAdminOpen; que apunten al nuevo. */
+  window.__vgClassicAdminOpen = vgAdminOpenV5;
+  window.vgAdminMostrarTab = mostrarTab;
+  window.vgAdminV5 = { version: '5', tabs: TABS.slice(), flag: FLAG };
+
+  envolverLogout();
+  atarBarra();
+  if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', atarBarra);
+  }
+})();
+</script>
 
 <script id="vg-retro-tr-v2">
 /* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
@@ -52321,7 +52946,7 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
 
   var MINIMO_TRY = 300; /* referencia interna del dueño; ya no bloquea */
   var MINIMO_MXN = 200; /* compra mínima visible para cuentas Xbox */
-  var state = { listo: false, juegos: [], tc: 0.38, minimoMxn: 200, fuente: '' };
+  var state = { listo: false, cargando: false, cargandoP: null, juegos: [], tc: 0.38, minimoMxn: 200, fuente: '' };
   var filtroPlataforma = 'all';
   var busquedaTR = '';
 
@@ -52355,13 +52980,18 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
 
   /* ── Carga del catálogo ── */
   function cargar() {
+    /* Una sola descarga en curso: la búsqueda la pide si el cliente
+       escribe antes de que llegue el catálogo, y el arranque del
+       módulo también la pide. Sin la guarda se pedía dos veces. */
+    if (state.cargando) return state.cargandoP || Promise.resolve();
+    state.cargando = true;
     /* Fresco siempre: la API guarda el catálogo en el borde 10 minutos
        (s-maxage=600) y la tienda pintaba el precio viejo tras un cambio
        en el panel. ?fresco=1 le pide a la API no-store y el sello de
        tiempo hace que la URL sea única, así que ni el borde puede
        devolver una copia vieja aunque la API desplegada aún no tenga
        la rama fresco. */
-    return fetch('/api/catalogo-retro-tr?fresco=1&_=' + Date.now(), { headers: { 'Accept': 'application/json' } })
+    state.cargandoP = fetch('/api/catalogo-retro-tr?fresco=1&_=' + Date.now(), { headers: { 'Accept': 'application/json' } })
       .then(function (r) { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
       .then(function (d) {
         if (!d || !Array.isArray(d.juegos) || !d.juegos.length) throw new Error('catálogo vacío');
@@ -52370,14 +53000,23 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
         state.minimoMxn = Number(d.minimo_mxn || MINIMO_MXN);
         state.fuente = d.fuente || '';
         state.listo = true;
+        state.cargando = false;
         try { if (typeof window.renderNav === 'function') window.renderNav(); } catch (e) {}
         renombrarSeccion();
         try {
           if (typeof activeCategory !== 'undefined' && activeCategory === 'retro') { pintarTR(); mejorarPortada(); }
         } catch (e) {}
         setTimeout(repintarSeguro, 1500);
+        /* Si el cliente ya estaba buscando cuando llegó el catálogo,
+           la búsqueda se repite con los datos reales: antes de esto
+           la rejilla se quedaba con solo los resultados de SERVICES. */
+        try {
+          var g = document.getElementById('globalSearch');
+          if (g && g.value && g.value.trim() && typeof window.renderProducts === 'function') window.renderProducts();
+        } catch (e2) {}
       })
-      .catch(function () { state.listo = false; });
+      .catch(function () { state.listo = false; state.cargando = false; });
+    return state.cargandoP;
   }
 
   /* ── Costura con la sección v112: los juegos TR con la forma vieja ── */
@@ -52505,7 +53144,7 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
         '<div class="price-line"><div>' +
           '<div class="from">Precio</div>' +
           '<div class="price">' + esc(money(g.venta_mxn)) + '</div>' +
-          '<span class="vg-tr-mx">' + esc(money(g.mx)) + '</span>' +
+          (Number(g.mx) > 0 ? '<span class="vg-tr-mx">' + esc(money(g.mx)) + '</span>' : '') +
           '<small class="option-count">1 juego · cuenta nueva</small>' +
         '</div></div>' +
         '<div class="premium-actions">' +
@@ -53158,6 +53797,159 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
         toast('No se puede pagar aún', e && e.message ? e.message : 'No se pudo verificar el precio actual.');
       });
   };
+
+  /* ── Búsqueda: incluir el catálogo TR ──────────────────────────
+     El buscador principal solo leía SERVICES (y el desplegable sumaba
+     Fortnite + el retro VIEJO de v103 + Xbox One/Series de fase98):
+     "Gears of War 3" y "Alan Wake" contestaban "No encontré productos"
+     aunque existen a $45 y $185 en Xbox Cuentas. Este módulo es el
+     ÚLTIMO script, así que envuelve por fuera:
+       · renderProducts: con búsqueda, a los resultados de SERVICES se
+         les suman los juegos TR (misma tarjeta que en la sección, con
+         precio, MX tachado y plataforma; "Ver juego" abre la ficha
+         TR). Sin búsqueda o sin coincidencias TR, todo sigue igual.
+         Durante la búsqueda NO se aplica el filtro de precio del
+         sidebar a los TR, igual que tampoco se le aplica a SERVICES
+         (el envoltorio de sinónimos lo ignora cuando hay consulta).
+       · vgExtraSearchIndex: el desplegable rápido también recibe los
+         juegos TR; con el catálogo cargado, las entradas retro VIEJAS
+         (mismos títulos, precios viejos, modal viejo) se quitan para
+         no duplicar. Al pulsar un resultado TR se abre su ficha.
+     Los ids sintéticos del desplegable usan la base 9000000, libre
+     (v103 usa 9100000/9200000, fase98 9300000, y su envoltorio trata
+     como Xbox todo id >= 9300000). */
+  var BASE_TR_BUSCADOR = 9000000;
+  var trPorIdBuscador = {};
+  function normTxt(s) {
+    return String(s == null ? '' : s).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/[^a-z0-9]+/g, ' ').trim();
+  }
+  function buscarTR(q) {
+    var query = String(q == null ? '' : q).trim();
+    if (!query || !state.listo || !state.juegos.length) return [];
+    /* La búsqueda es global (catálogo) o dentro de Xbox Cuentas; en
+       otra sección no se mezclan juegos TR con sus productos. */
+    try {
+      if (typeof activeCategory !== 'undefined' && activeCategory !== 'all' && activeCategory !== 'retro') return [];
+    } catch (e) {}
+    var res = [];
+    if (window.vgBuscar && typeof window.vgBuscar.buscar === 'function') {
+      res = window.vgBuscar.buscar(state.juegos, query, function (g) {
+        return { titulo: g.title, texto: (g.platform || '') + ' Xbox Cuentas cuenta nueva' };
+      });
+    } else {
+      var palabras = normTxt(query).split(/\s+/).filter(Boolean);
+      res = state.juegos.filter(function (g) {
+        var t = normTxt(g.title + ' ' + (g.platform || ''));
+        var ws = t.split(/\s+/);
+        return palabras.every(function (w) { return ws.some(function (x) { return x.indexOf(w) === 0; }); });
+      });
+    }
+    /* Productos destacados primero: los que están en las Ofertas
+       destacadas del inicio (los publica vg-inicio-kinguin-v1 en
+       window.vgOfertasDestacadas, sin nada fijo en este código)
+       suben al frente en el orden del buscador; el resto queda
+       igual. Así "gears" pone primero Gears Of War 3 ($45), el
+       destacado, y no Gears 5 ($105), que el motor de relevancia
+       pone antes solo por tener el nombre más corto. */
+    try {
+      var destacados = window.vgOfertasDestacadas;
+      if (destacados && destacados.length) {
+        var pri = [], resto = [];
+        res.forEach(function (g) {
+          (destacados.indexOf(normTxt(g.title)) !== -1 ? pri : resto).push(g);
+        });
+        res = pri.concat(resto);
+      }
+    } catch (e3) {}
+    try {
+      var sort = (document.getElementById('sortSelect') || {}).value || 'default';
+      if (sort === 'priceAsc') res.sort(function (a, b) { return Number(a.venta_mxn || 0) - Number(b.venta_mxn || 0); });
+      else if (sort === 'priceDesc') res.sort(function (a, b) { return Number(b.venta_mxn || 0) - Number(a.venta_mxn || 0); });
+      else if (sort === 'name') res.sort(function (a, b) { return String(a.title).localeCompare(String(b.title), 'es'); });
+    } catch (e2) {}
+    return res.slice(0, 24);
+  }
+  var origRenderProductsTR = window.renderProducts;
+  window.renderProducts = function () {
+    var q = '';
+    try { var inp = document.getElementById('globalSearch'); q = inp ? String(inp.value || '').trim() : ''; } catch (e) {}
+    if (!q) return (typeof origRenderProductsTR === 'function') ? origRenderProductsTR.apply(this, arguments) : undefined;
+    /* Si el catálogo aún no llegó, se pide (una sola vez, por la guarda
+       de cargar) y se buscará de nuevo cuando llegue (ver cargar). */
+    if (!state.listo && !state.cargando) { try { cargar(); } catch (e2) {} }
+    var tr = buscarTR(q);
+    if (!tr.length) return (typeof origRenderProductsTR === 'function') ? origRenderProductsTR.apply(this, arguments) : undefined;
+    var list = [];
+    try { list = (typeof window.filteredServices === 'function') ? (window.filteredServices() || []) : []; } catch (e3) {}
+    var grid = document.getElementById('productsGrid');
+    if (!grid) return (typeof origRenderProductsTR === 'function') ? origRenderProductsTR.apply(this, arguments) : undefined;
+    var htmlServ = '';
+    try { if (typeof window.cardHTML === 'function') htmlServ = list.map(window.cardHTML).join(''); } catch (e4) {}
+    grid.innerHTML = htmlServ + tr.map(tarjetaTR).join('');
+    var vacio = document.getElementById('emptyState');
+    if (vacio) vacio.style.display = (list.length || tr.length) ? 'none' : 'block';
+    try { if (typeof window.renderNav === 'function') window.renderNav(); } catch (e5) {}
+  };
+  function entradasTRBuscador() {
+    var salida = [];
+    trPorIdBuscador = {};
+    if (!state.listo || !state.juegos.length) return salida;
+    for (var i = 0; i < state.juegos.length; i++) {
+      var g = state.juegos[i];
+      if (!g || !g.title) continue;
+      var id = BASE_TR_BUSCADOR + 1 + i;
+      trPorIdBuscador[id] = g.slug;
+      salida.push({
+        id: id, title: g.title, displayTitle: g.title,
+        description: (g.platform || 'Xbox') + ' · cuenta nueva',
+        categoryName: 'Xbox Cuentas', category: 'gaming',
+        image: g.image || 'portada.png', alt: g.title,
+        options: [{ name: g.platform || 'Xbox Cuentas', price: Number(g.venta_mxn || 0) }],
+        priceLabel: money(g.venta_mxn),
+        _vgBuscador: true, _vgTR: true
+      });
+    }
+    return salida;
+  }
+  if (typeof window.vgExtraSearchIndex === 'function' && !window.vgExtraSearchIndex.__vgTR) {
+    var origIndiceTR = window.vgExtraSearchIndex;
+    var nuevoIndiceTR = function () {
+      var base = [];
+      try { base = origIndiceTR() || []; } catch (e) {}
+      if (!state.listo) return base;
+      /* Con el catálogo TR cargado, las entradas retro VIEJAS de v103
+         (mismos títulos, precios viejos, modal viejo) duplicarían a
+         los juegos TR: se quitan los juegos (se deja la entrada de
+         sección, id exacto 9100000). */
+      var sinViejos = base.filter(function (en) {
+        return !en || !(en.id > 9100000 && en.id < 9200000);
+      });
+      return sinViejos.concat(entradasTRBuscador());
+    };
+    nuevoIndiceTR.__vgTR = true;
+    window.vgExtraSearchIndex = nuevoIndiceTR;
+  }
+  if (typeof window.openSearchResultProduct === 'function' && !window.openSearchResultProduct.__vgTR) {
+    var origAbrirTR = window.openSearchResultProduct;
+    var nuevoAbrirTR = function (id) {
+      var n = Number(id);
+      if (n >= BASE_TR_BUSCADOR && n < 9100000) {
+        var slug = trPorIdBuscador[n];
+        var caja = document.getElementById('globalSearch');
+        if (caja) { caja.value = ''; caja.blur(); }
+        /* Igual que hace fase98 con los retro viejos: a la sección y
+           la ficha se abre con un poco de espera, ya pintada. */
+        if (typeof window.showSection === 'function') window.showSection('retro');
+        if (slug && typeof window.vgxrVer === 'function') {
+          setTimeout(function () { try { window.vgxrVer(slug); } catch (e) {} }, 320);
+        }
+        return;
+      }
+      return origAbrirTR.apply(this, arguments);
+    };
+    nuevoAbrirTR.__vgTR = true;
+    window.openSearchResultProduct = nuevoAbrirTR;
+  }
 
   window.vgTR = {
     state: state,
