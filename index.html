@@ -52985,8 +52985,12 @@ html body #vgAdminModal#vgAdminModal.vg6 a:hover{color:#ffffff!important;}
 /* ── 5 · Vista de login propia ── */
 html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg6-login .vg-admin-tabs,
 html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg6-login .vg-admin-content,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg6-login .vg-admin-head,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg6-login .vg6-aviso,
 html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg5-login .vg-admin-tabs,
-html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg5-login .vg-admin-content{
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg5-login .vg-admin-content,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg5-login .vg-admin-head,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg5-login .vg6-aviso{
   display:none!important;
 }
 html body #vgAdminModal#vgAdminModal.vg6 #vgAdminLoginView{
@@ -54091,12 +54095,16 @@ html body #vgAdminModal#vgAdminModal.vg6 .vg6-vacio{
 }
 html body #vgAdminModal#vgAdminModal.vg6 .vg6-vacio b{color:#f5f5fa!important;}
 /* Aviso de pedido nuevo: banner fijo arriba del contenido, con
-   punto menta pulsante y botón para silenciar / ir al pedido */
+   punto menta pulsante y botón para silenciar / ir al pedido.
+   Sin display aquí a propósito: la visibilidad la manda el estilo
+   inline (none al crearse, flex al llegar un pedido). Un
+   display:flex!important en esta regla dejaba la píldora vacía
+   siempre visible y el botón × / el temporizador no podían
+   ocultarla (verificación visual 2026-11-26). */
 html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso{
   position:sticky!important;
   top:0!important;
   z-index:20!important;
-  display:flex!important;
   align-items:center!important;
   gap:12px!important;
   padding:13px 16px!important;
@@ -54273,7 +54281,6 @@ html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso .vg6-btn:hover{
   html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-btn,
   html body #vgAdminModal#vgAdminModal.vg6 .vg6-btn{transition:none!important;}
 }
-
 </style>
 
 <script id="vg-admin-v5">
