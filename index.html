@@ -54281,6 +54281,40 @@ html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso .vg6-btn:hover{
   html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-btn,
   html body #vgAdminModal#vgAdminModal.vg6 .vg6-btn{transition:none!important;}
 }
+
+/* ── 20 · Escritorio (≥901px): neutralizar la rejilla vieja ── */
+/* A 768px el panel se ve perfecto y en escritorio quedaba en negro
+   (Miguel, 2026-11-26). Causa: la rejilla vieja @media(min-width:901px)
+   convierte el panel en grid 232px lateral + 1fr (pestañas en barra
+   lateral, contenido en "cuerpo", overflow:hidden); en ≤900px esa
+   rejilla está neutralizada y por eso en móvil se veía. El diseño v6
+   es apilado (encabezado + 3 filas de pestañas + contenido) a TODOS
+   los anchos. Estas reglas, con la especificidad v6 (2 IDs) y al final
+   del bloque, ganan a la rejilla vieja. No tocan el display de las
+   secciones (eso lo sigue mandando .active) ni la vista de login. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel{
+  display:flex!important;
+  flex-direction:column!important;
+  grid-template-areas:none!important;
+  grid-template-columns:none!important;
+  grid-template-rows:none!important;
+  height:auto!important;
+  min-height:100dvh!important;
+  overflow:visible!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-head,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-tabs,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-content,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-section,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso{
+  grid-area:auto!important;
+  position:static!important;
+  float:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-content{
+  overflow:visible!important;
+  max-height:none!important;
+}
 </style>
 
 <script id="vg-admin-v5">
@@ -55071,6 +55105,32 @@ CARGADORES.inicio = function(sec){
 
 /* ── El ÚNICO vgAdminOpen ── */
 var aperturaEnCurso = false;
+/* Error visible si la apertura se atora ANTES de pintar Pedidos:
+   nunca negro silencioso. Pinta en .vg-admin-content (lo único
+   visible cuando ninguna sección está activa) y no duplica: si la
+   sección Pedidos ya tiene contenido (Cargando… o su propio error),
+   no pinta nada. Lección 2026-11-26: la pestaña de Miguel mostró
+   tabs sin contenido ni error. */
+function pintarErrorApertura(msg){
+  try{
+    var sec = secEl('pedidos');
+    /* Si la sección ya tiene un error o contenido real, no duplicar.
+       Un "Cargando…" solitario NO cuenta como contenido: el error sí pinta. */
+    if(sec && sec.querySelector('.vg6-error')) return;
+    if(sec && (sec.textContent || '').trim() && !sec.querySelector('.vg6-cargando')) return;
+    var cont = qs('#vgAdminModal .vg-admin-content');
+    if(!cont || cont.querySelector('.vg6-error-apertura')) return;
+    var d = document.createElement('div');
+    d.className = 'vg6-error vg6-error-apertura';
+    d.innerHTML = '<b>⚠ El panel no pudo cargar.</b><span></span><button type="button" class="vg6-btn vg6-btn-primary">Reintentar</button>';
+    var sp = d.querySelector('span');
+    if(sp) sp.textContent = ' ' + (msg || 'Inténtalo de nuevo.');
+    var b = d.querySelector('button');
+    if(b) b.onclick = function(){ try{ d.remove(); }catch(e){} vgAdminOpenV6(); };
+    cont.appendChild(d);
+  }catch(e){}
+}
+
 async function vgAdminOpenV6(){
   var m = modal(); if(!m) return;
   if(aperturaEnCurso) return;
@@ -55080,17 +55140,32 @@ async function vgAdminOpenV6(){
     if(!ok){ mostrarLogin(); return; }
     marcarSesion();
     mostrarPanel();
-    asegurarBotonesEncabezado();
+    /* "Cargando…" desde ya: si esOperador tarda (tope 5 s), el
+       usuario ve carga, nunca negro. */
+    try{ pintarCargando(secEl('pedidos')); }catch(e){}
+    try{ asegurarBotonesEncabezado(); }catch(e){}
     try{
-      var op = await esOperador();
+      /* esOperador con tope de 5 s: si la consulta se cuelga, el
+         panel sigue abriendo (rol operador = false, vista admin). */
+      var op = await Promise.race([
+        esOperador(),
+        new Promise(function(res){ setTimeout(function(){ res(false); }, 5000); })
+      ]);
       ['bitacora','buscado','enlaces'].forEach(function(t){
         var b = qs('.vg-admin-tab[data-tab="' + t + '"]', m);
         if(b) b.style.display = op ? 'none' : '';
       });
     }catch(e){}
-    mostrarTab('pedidos');
-    cargarTab('pedidos');
-    suscribirRealtime();
+    var tabOk = false;
+    try{ tabOk = mostrarTab('pedidos'); }catch(e){ tabOk = false; }
+    if(!tabOk){
+      pintarErrorApertura('No se pudo mostrar la pestaña Pedidos (botón o sección no encontrados).');
+      return;
+    }
+    try{ cargarTab('pedidos'); }catch(e){ /* cargarTab ya pinta su propio error */ }
+    try{ suscribirRealtime(); }catch(e){}
+  }catch(e){
+    pintarErrorApertura((e && e.message) ? e.message : String(e || 'Error desconocido al abrir el panel.'));
   }finally{
     aperturaEnCurso = false;
   }
