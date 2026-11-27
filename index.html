@@ -54969,6 +54969,800 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row em{
   color:#6a6a82!important;
 }
 
+/* ── 22 · Filas y tarjetas que pintan los cargadores v6 (fix 2026-11-26) ──
+   Causa raíz de las dos capturas de Miguel: los cargadores de v6
+   pintan clases (.vg6-pedido-fila, .vg6-row, .vg6-pedidos-grid…)
+   que ningún CSS cubría. La sección 13 cubría solo .vg6-fila,
+   .vg6-detalle, .vg6-chat y .vgA-* (v17), nombres que el JS de v6
+   ya no usa. Sin regla, el botón de pedido era la píldora BLANCA
+   nativa del navegador y las filas eran divs sin separación: texto
+   pegado («Código MXFrancisco…», «52331453426829 oct…») y filas
+   que se salían por el borde derecho. Esta sección cubre TODAS las
+   clases reales que usa el JS de v6 (auditoría 2026-11-26: 55 clases
+   sin CSS) con el mismo lenguaje visual de la sección 13. */
+
+/* ── 22.1 · Pedidos: rejilla lista | detalle | chat ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-grid{
+  display:grid!important;
+  grid-template-columns:minmax(0,360px) minmax(0,1fr) minmax(0,340px)!important;
+  gap:14px!important;
+  align-items:start!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-lista{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  min-width:0!important;
+  max-height:calc(100dvh - 380px)!important;
+  overflow-y:auto!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-detalle,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-chat{
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-detalle h3,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-chat h3{
+  color:#f5f5fa!important;
+  font-size:1.05rem!important;
+  font-weight:800!important;
+  margin:0 0 12px!important;
+}
+/* La fila de pedido es un <button>: sin esto el navegador le pone
+   su cara blanca nativa (la píldora blanca de la captura 1). */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-fila{
+  display:flex!important;
+  flex-direction:column!important;
+  align-items:stretch!important;
+  gap:3px!important;
+  width:100%!important;
+  box-sizing:border-box!important;
+  text-align:left!important;
+  cursor:pointer!important;
+  font-family:inherit!important;
+  font-size:.9rem!important;
+  color:#f5f5fa!important;
+  background:#1a1a28!important;
+  border:1px solid #2a2a3a!important;
+  border-top:3px solid #34344e!important;
+  border-radius:12px!important;
+  padding:12px 14px!important;
+  margin:0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-fila:hover{
+  background:#20202f!important;
+  border-color:#8b5cf6!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-fila.vg6-activo{
+  background:rgba(139,92,246,.16)!important;
+  border:1px solid #8b5cf6!important;
+  border-top:3px solid #8b5cf6!important;
+  box-shadow:0 6px 18px rgba(139,92,246,.28)!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-titulo{
+  display:block!important;
+  font-weight:800!important;
+  color:#ffffff!important;
+  font-size:.92rem!important;
+  line-height:1.4!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-meta{
+  display:block!important;
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+  line-height:1.45!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-meta b{color:#ffffff!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-chips{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:6px!important;
+  margin-top:5px!important;
+}
+/* ── 22.2 · Detalle y chat del pedido / ticket ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-detalle-bloque{
+  padding:12px 0!important;
+  border-bottom:1px dashed #26263a!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-detalle-bloque:last-child{border-bottom:0!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-detalle-bloque>span{
+  display:block!important;
+  font-size:.68rem!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+  color:#c4b5fd!important;
+  margin-bottom:6px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-detalle-bloque p{
+  color:#d9dbe8!important;
+  line-height:1.55!important;
+  margin:4px 0!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-detalle-bloque p b{color:#ffffff!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-meta{
+  color:#9aa0b5!important;
+  font-size:.85rem!important;
+  line-height:1.5!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-meta b{color:#ffffff!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-ayuda{
+  display:block!important;
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+  line-height:1.5!important;
+  margin:8px 0 0!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-acciones,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-actions{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  margin-top:12px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-acciones .vg6-input,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-actions .vg6-input{
+  flex:1 1 200px!important;
+  min-width:160px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cupon{border-top-color:#19e6c1!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cupon>span{
+  display:block!important;
+  font-size:.68rem!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+  color:#19e6c1!important;
+  margin-bottom:6px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-comprobante{
+  max-width:100%!important;
+  border-radius:12px!important;
+  display:block!important;
+  margin-top:8px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-chat-lista{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  padding:12px!important;
+  background:#0d0d16!important;
+  border:1px solid #26263a!important;
+  border-radius:12px!important;
+  max-height:420px!important;
+  overflow-y:auto!important;
+  margin:10px 0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-chat-img{
+  max-width:220px!important;
+  border-radius:10px!important;
+  display:block!important;
+  margin-top:8px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-msg p{margin:0!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-msg-quien{
+  display:block!important;
+  font-size:.7rem!important;
+  opacity:.75!important;
+  margin-bottom:4px!important;
+}
+/* El JS emite vg6-msg-admin / vg6-msg-cliente (con guion); la
+   sección 13 solo cubría .vg6-msg.admin (dos clases). */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-msg-admin{
+  align-self:flex-end!important;
+  background:linear-gradient(135deg,#7c3aed,#8b5cf6)!important;
+  border-color:transparent!important;
+  color:#ffffff!important;
+  border-bottom-right-radius:4px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-msg-cliente{
+  align-self:flex-start!important;
+  border-bottom-left-radius:4px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-respuestas{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:8px!important;
+  margin:12px 0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-respuestas .vg6-btn{
+  padding:7px 12px!important;
+  font-size:.78rem!important;
+}
+/* ── 22.3 · Fila genérica (Lo que buscan, Hoy, Bitácora, cupones,
+   Analítica, Retro, Fotos rotas): la fila de la captura 2 ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  flex-wrap:wrap!important;
+  padding:13px 14px!important;
+  margin-bottom:10px!important;
+  background:#14141f!important;
+  border:1px solid #26263a!important;
+  border-top:3px solid #34344e!important;
+  border-radius:14px!important;
+  color:#f5f5fa!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row:last-child{margin-bottom:0!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row>*{min-width:0!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row>div{
+  flex:1 1 auto!important;
+  min-width:0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row>b{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  color:#ffffff!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row>span:last-child{
+  flex:none!important;
+  color:#9aa0b5!important;
+  font-size:.85rem!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row small{
+  display:block!important;
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+  line-height:1.45!important;
+  margin-top:2px!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row time{
+  flex:none!important;
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+  white-space:nowrap!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row img{flex:none!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row>.vg6-btn,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row>button{
+  flex:none!important;
+  margin-left:auto!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row>.vg6-actions{
+  flex:none!important;
+  flex-direction:row!important;
+  margin-top:0!important;
+  margin-left:auto!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row-side{
+  flex:none!important;
+  margin-left:auto!important;
+  text-align:right!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row-side i{
+  display:block!important;
+  font-style:normal!important;
+  font-weight:900!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row-side em{
+  display:block!important;
+  font-style:normal!important;
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+  margin-top:2px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row-x{
+  flex:none!important;
+  color:#ef4444!important;
+  font-weight:900!important;
+  font-size:1.1rem!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-veces{
+  flex:none!important;
+  min-width:54px!important;
+  text-align:center!important;
+  font-size:1.25rem!important;
+  font-weight:900!important;
+  color:#ffffff!important;
+  line-height:1.1!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-veces small{
+  display:block!important;
+  font-size:.62rem!important;
+  letter-spacing:.08em!important;
+  color:#9aa0b5!important;
+  font-weight:800!important;
+  margin-top:2px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row.vg6-atenuado{opacity:.55!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-row.vg6-baja{border-top-color:#26263a!important;}
+/* ── 22.4 · Mini-filas y subtítulos dentro de tarjetas ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-mov{
+  display:flex!important;
+  align-items:center!important;
+  gap:12px!important;
+  padding:10px 0!important;
+  border-bottom:1px dashed #26263a!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-mov:last-child{border-bottom:0!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-mov>div{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-mov small{
+  display:block!important;
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+  margin-top:2px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-mov .vg6-chip{flex:none!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-subtitulo{
+  font-weight:800!important;
+  color:#f5f5fa!important;
+  margin:16px 0 10px!important;
+  padding-top:14px!important;
+  border-top:1px dashed #26263a!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-ticket,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-canje,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cliente{
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-ticket p,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-canje p,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cliente p{
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pw-datos{
+  white-space:pre-wrap!important;
+  background:#0b0b13!important;
+  border:1px solid #26263a!important;
+  border-radius:10px!important;
+  padding:12px!important;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+  font-size:.82rem!important;
+  line-height:1.55!important;
+  color:#f5f5fa!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pw-res{
+  margin-top:12px!important;
+  padding:12px 14px!important;
+  background:rgba(25,230,193,.07)!important;
+  border:1px solid rgba(25,230,193,.4)!important;
+  border-radius:12px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pw-res>span{
+  display:block!important;
+  font-size:.68rem!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+  color:#19e6c1!important;
+  margin-bottom:8px!important;
+}
+/* ── 22.5 · Usuarios y Dashboard ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-usuarios-barra{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  margin-bottom:12px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-contador{
+  color:#9aa0b5!important;
+  font-size:.85rem!important;
+  font-weight:800!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-tabla-scroll{
+  overflow-x:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-saldo{
+  font-weight:900!important;
+  color:#ffffff!important;
+  white-space:nowrap!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-input.vg6-input-chico{width:110px!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-dash-fila{
+  display:flex!important;
+  justify-content:space-between!important;
+  align-items:baseline!important;
+  gap:12px!important;
+  padding:10px 0!important;
+  border-bottom:1px dashed #26263a!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-dash-fila:last-child{border-bottom:0!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-dash-fila span{
+  color:#d9dbe8!important;
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-dash-fila b{
+  color:#ffffff!important;
+  white-space:nowrap!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-stats .vg6-stat-numero,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-dash-grid .vg6-stat-numero{
+  display:block!important;
+  font-size:1.6rem!important;
+  font-weight:900!important;
+  color:#ffffff!important;
+  line-height:1.1!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-stats .vg6-stat-etiqueta,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-dash-grid .vg6-stat-etiqueta{
+  display:block!important;
+  color:#9aa0b5!important;
+  font-size:.68rem!important;
+  font-weight:900!important;
+  text-transform:uppercase!important;
+  letter-spacing:.08em!important;
+  margin-top:4px!important;
+}
+/* ── 22.6 · Encabezado de tarjeta (Hoy, Recomendaciones) ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-card-head{
+  display:flex!important;
+  align-items:flex-start!important;
+  justify-content:space-between!important;
+  gap:10px!important;
+  margin-bottom:12px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-card-head b{color:#ffffff!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-card-head small{
+  display:block!important;
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+  margin-top:2px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-card-head .vg6-chip{flex:none!important;}
+/* ── 22.7 · Formularios y herramientas (Xbox, Retro, Ajustes…) ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-form{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  margin-bottom:14px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-tools{
+  display:flex!important;
+  gap:10px!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  margin-bottom:16px!important;
+  background:#14141f!important;
+  border:1px solid #26263a!important;
+  border-radius:14px!important;
+  padding:12px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-tools:empty{display:none!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-tools .vg6-input{
+  flex:1 1 240px!important;
+  min-width:200px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-tools .vg6-informe{
+  flex:1 1 100%!important;
+}
+/* ── 22.8 · Lista Xbox One / Series: el contenedor es solo
+   #vgXboxAdminList (sin clase) y las filas .vg-xbox-admin-row
+   tampoco tenían CSS: mismo problema que Pedidos. ── */
+html body #vgAdminModal#vgAdminModal.vg6 #vgXboxAdminList{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:10px!important;
+  min-width:0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-xbox-admin-row{
+  display:flex!important;
+  gap:14px!important;
+  align-items:flex-start!important;
+  padding:14px 16px!important;
+  background:#14141f!important;
+  border:1px solid #26263a!important;
+  border-top:3px solid #34344e!important;
+  border-radius:14px!important;
+  color:#f5f5fa!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-xbox-admin-row>*{min-width:0!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-xbox-admin-row img{
+  width:64px!important;
+  height:84px!important;
+  object-fit:cover!important;
+  border-radius:10px!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-xbox-admin-row>div{
+  flex:1 1 auto!important;
+  min-width:0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-xbox-admin-row b{
+  color:#ffffff!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-xbox-admin-row small{
+  display:block!important;
+  color:#9aa0b5!important;
+  font-size:.8rem!important;
+  line-height:1.45!important;
+  margin-top:3px!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cuentas{
+  display:flex!important;
+  flex-wrap:wrap!important;
+  gap:4px 14px!important;
+  margin-top:8px!important;
+  align-items:baseline!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cuentas>span:first-child{
+  font-size:1.05rem!important;
+  font-weight:900!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cuentas span{
+  color:#d9dbe8!important;
+  font-size:.85rem!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cuentas span b{color:#ffffff!important;}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-x92-vivo{
+  display:inline-block!important;
+  width:8px!important;
+  height:8px!important;
+  border-radius:50%!important;
+  background:#19e6c1!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-alerta{
+  margin-top:8px!important;
+  padding:8px 12px!important;
+  border-radius:10px!important;
+  background:rgba(239,68,68,.12)!important;
+  border:1px solid rgba(239,68,68,.4)!important;
+  color:#fca5a5!important;
+  font-size:.82rem!important;
+  font-weight:700!important;
+  line-height:1.45!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-informe{
+  white-space:pre-wrap!important;
+  background:#0b0b13!important;
+  border:1px solid #26263a!important;
+  border-radius:10px!important;
+  padding:12px!important;
+  font-size:.8rem!important;
+  line-height:1.5!important;
+  color:#d9dbe8!important;
+  overflow-wrap:anywhere!important;
+  margin:10px 0 0!important;
+  max-height:300px!important;
+  overflow-y:auto!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-informe:empty{display:none!important;}
+/* ── 22.9 · Imágenes, Fotos rotas, cupones, Analítica, WhatsApp ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-barra{
+  height:10px!important;
+  background:#1c1c2c!important;
+  border:1px solid #26263a!important;
+  border-radius:999px!important;
+  overflow:hidden!important;
+  margin:10px 0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-barra-progreso,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-barra>i,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-barra>div{
+  display:block!important;
+  height:100%!important;
+  background:linear-gradient(90deg,#8b5cf6,#19e6c1)!important;
+  border-radius:999px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-log{
+  min-height:180px!important;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+  font-size:.8rem!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-codigo{
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+  font-weight:900!important;
+  color:#ffffff!important;
+  background:#1c1c2c!important;
+  border:1px solid #34344e!important;
+  border-radius:8px!important;
+  padding:6px 10px!important;
+  white-space:nowrap!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-cols{
+  display:grid!important;
+  grid-template-columns:repeat(auto-fit,minmax(280px,1fr))!important;
+  gap:14px!important;
+  margin-bottom:14px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-wa-box{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:8px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-wa-box label{
+  font-size:.8rem!important;
+  font-weight:800!important;
+  color:#d9dbe8!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-sql-pre{
+  white-space:pre-wrap!important;
+  background:#0b0b13!important;
+  border:1px solid #26263a!important;
+  border-radius:10px!important;
+  padding:12px!important;
+  font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace!important;
+  font-size:.78rem!important;
+  line-height:1.5!important;
+  color:#d9dbe8!important;
+  overflow-wrap:anywhere!important;
+  max-height:420px!important;
+  overflow-y:auto!important;
+}
+/* ── 22.10 · Chips que faltaban y aviso de pedido nuevo ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-chip.cupon{
+  background:transparent!important;
+  color:#c4b5fd!important;
+  border:1px solid rgba(139,92,246,.55)!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-chip.nuevo,
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-chip.urge{
+  background:#ef4444!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-chip.hay{
+  background:#f59e0b!important;
+  color:#2a1a00!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-chip.cero{
+  background:#34344e!important;
+  color:#9aa0b5!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso-texto{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  overflow-wrap:anywhere!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-toast{
+  position:fixed!important;
+  left:50%!important;
+  bottom:28px!important;
+  transform:translateX(-50%)!important;
+  z-index:999999!important;
+  background:#1c1c2c!important;
+  color:#f5f5fa!important;
+  border:1px solid #8b5cf6!important;
+  border-radius:12px!important;
+  padding:12px 18px!important;
+  font-weight:700!important;
+  font-size:.9rem!important;
+  box-shadow:0 10px 28px rgba(0,0,0,.5)!important;
+  max-width:min(90vw,480px)!important;
+  text-align:center!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-error-apertura{
+  display:flex!important;
+  gap:12px!important;
+  align-items:center!important;
+  flex-wrap:wrap!important;
+  margin:16px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-error-apertura span{
+  flex:1 1 auto!important;
+  min-width:0!important;
+}
+/* ── 22.11 · Rejilla de Pedidos en pantallas medianas y móvil ── */
+@media (max-width:1300px){
+  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-grid{
+    grid-template-columns:minmax(0,320px) minmax(0,1fr)!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-chat{
+    grid-column:1 / -1!important;
+  }
+}
+@media (max-width:900px){
+  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-grid{
+    grid-template-columns:minmax(0,1fr)!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-lista{
+    max-height:420px!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-chat{
+    grid-column:auto!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg6-row time{
+    white-space:normal!important;
+  }
+}
+/* ── 22.12 · Tema claro para las superficies nuevas ── */
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-fila{
+  background:#ffffff!important;
+  border-color:#e2e2ea!important;
+  border-top-color:#c9c9d6!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-fila:hover{
+  background:#f4f2ff!important;
+  border-color:#8b5cf6!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-fila.vg6-activo{
+  background:rgba(139,92,246,.10)!important;
+  border-color:#8b5cf6!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-titulo,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-meta b,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row b,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-veces,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row-side i,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-dash-fila b,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stats .vg6-stat-numero,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-dash-grid .vg6-stat-numero,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-card-head b,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-xbox-admin-row b,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-cuentas>span:first-child,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-saldo{
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-meta,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row time,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row small,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-veces small,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row-side em,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-meta,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-ayuda,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-mov small,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-card-head small,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-xbox-admin-row small,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-dash-fila span,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-contador,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stats .vg6-stat-etiqueta,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-dash-grid .vg6-stat-etiqueta{
+  color:#6a6a82!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-chat-lista{
+  background:#f2f2f7!important;
+  border-color:#e2e2ea!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-detalle-bloque{
+  border-bottom-color:#e2e2ea!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-detalle-bloque p,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-detalle-bloque p b,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-mov,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-dash-fila span{
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-xbox-admin-row{
+  background:#ffffff!important;
+  border-color:#e2e2ea!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-cuentas span{
+  color:#3a3a4e!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-tools{
+  background:#ffffff!important;
+  border-color:#e2e2ea!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-alerta{
+  background:rgba(239,68,68,.08)!important;
+  color:#b91c1c!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-informe,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-sql-pre,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pw-datos{
+  background:#ffffff!important;
+  border-color:#e2e2ea!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-codigo{
+  background:#f2f2f7!important;
+  border-color:#e2e2ea!important;
+  color:#1c1c28!important;
+}
+
 </style>
 
 <script id="vg-admin-v5">
@@ -60048,7 +60842,7 @@ async function vg6R_enlacesLanzar(sec){
     return;
   }
   sec.innerHTML = cab + malas.map(function(x){
-    return '<div class="vg6-row"><div>✕</div>' +
+    return '<div class="vg6-row"><div class="vg6-row-x">✕</div>' +
       '<div><b>' + esc(x.donde) + '</b><small>' + esc(x.url) + '</small></div>' +
       '<button type="button" class="vg6-btn" data-vg6-el-ver="' + vg6R_attr(x.url) + '">Abrirla</button></div>';
   }).join('');
@@ -60196,6 +60990,7 @@ instalarV6();
 
 })();
 </script>
+
 
 
 <script id="vg-retro-tr-v2">
