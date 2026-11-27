@@ -10070,7 +10070,7 @@ window.vgBingSize = function(){
 <div class="wrap">
 <div class="section-hero" id="sectionHero"><div class="section-hero-content"><span class="badge" id="sectionBadge">Catálogo</span><h2 id="sectionTitle">Catálogo</h2><p id="sectionDesc">Explora los servicios disponibles.</p></div></div>
 <div class="market-head"><div><h2 id="productsTitle">Productos</h2><p id="productsSubtitle">Cada tarjeta conserva foto, nombre, opciones y precios de tu catálogo original.</p></div><div class="tools"><select id="sortSelect" onchange="renderProducts()"><option value="default">Orden recomendado</option><option value="priceAsc">Precio menor</option><option value="priceDesc">Precio mayor</option><option value="name">Nombre A-Z</option></select></div></div>
-<div class="layout"><aside class="sidebar"><div class="side-title">Secciones</div><div class="side-list" id="sideList"></div><div class="vg-paso2-filtros"><div class="side-title">Precio</div><div class="vg-paso2-rango"><label>Desde $<input type="number" id="vgPrecioMin" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="Precio mínimo en pesos"></label><label>Hasta $<input type="number" id="vgPrecioMax" min="0" step="1" inputmode="numeric" placeholder="Sin límite" aria-label="Precio máximo en pesos"></label></div><div class="vg-paso2-chips" role="group" aria-label="Rangos de precio rápidos"><button type="button" class="vg-paso2-chip" data-min="" data-max="99">Menos de $100</button><button type="button" class="vg-paso2-chip" data-min="100" data-max="300">$100 – $300</button><button type="button" class="vg-paso2-chip" data-min="300" data-max="500">$300 – $500</button><button type="button" class="vg-paso2-chip" data-min="501" data-max="">Más de $500</button></div><button type="button" class="vg-paso2-limpiar" id="vgLimpiarFiltros">Limpiar filtros</button></div></aside><div><div class="grid" id="productsGrid"></div><div class="empty" id="emptyState" style="display:none">No encontré productos con esa búsqueda.</div></div></div>
+<div class="layout"><div class="vg-side-col"><aside class="sidebar"><div class="side-title">Secciones</div><div class="side-list" id="sideList"></div><div class="vg-paso2-filtros"><div class="side-title">Precio</div><div class="vg-paso2-rango"><label>Desde $<input type="number" id="vgPrecioMin" min="0" step="1" inputmode="numeric" placeholder="0" aria-label="Precio mínimo en pesos"></label><label>Hasta $<input type="number" id="vgPrecioMax" min="0" step="1" inputmode="numeric" placeholder="Sin límite" aria-label="Precio máximo en pesos"></label></div><div class="vg-paso2-chips" role="group" aria-label="Rangos de precio rápidos"><button type="button" class="vg-paso2-chip" data-min="" data-max="99">Menos de $100</button><button type="button" class="vg-paso2-chip" data-min="100" data-max="300">$100 – $300</button><button type="button" class="vg-paso2-chip" data-min="300" data-max="500">$300 – $500</button><button type="button" class="vg-paso2-chip" data-min="501" data-max="">Más de $500</button></div><button type="button" class="vg-paso2-limpiar" id="vgLimpiarFiltros">Limpiar filtros</button></div></aside></div><div><div class="grid" id="productsGrid"></div><div class="empty" id="emptyState" style="display:none">No encontré productos con esa búsqueda.</div></div></div>
 </div>
 </section>
 </main>
@@ -56283,6 +56283,121 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
 }
 
 </style>
+<style id="vg-lateral-fijo-v1">
+/* ============================================================
+   vg-lateral-fijo-v1 · Lateral fijo + estilo A (Compacto fijo)
+   Frente A de la mejora lateral/ofertas (mockup
+   mejora-lateral-ofertas-mockup.html, estilo A elegido por Miguel
+   2026-11-27). Base: index.html Prueba1 HEAD 70e5fc3, md5
+   02d7fb45830e49e908e8c3e88e468a1f, 63,278 líneas.
+
+   PROBLEMA: .sidebar tenía position:sticky declarado (línea 283,
+   top:128px, y línea 48369 con !important dentro de
+   @media(min-width:1024px) de vg-redesign-kinguin-pc-v3), pero era
+   INERTE: .layout{display:grid;align-items:start} colapsa la caja
+   del ítem a la altura del propio aside, así que el sticky no
+   tenía recorrido. Causa raíz secundaria: body{display:grid}.
+
+   FIX: el aside DEJA de ser el grid item directo. El inyector
+   envuelve <aside class="sidebar"> en <div class="vg-side-col">;
+   la columna es el grid item (align-self:stretch → mide toda la
+   fila, la altura la marca el catálogo) y el aside hace sticky
+   DENTRO de ella: top:132px (header fijo 120px + 12px),
+   max-height:calc(100vh - 148px) con scroll interno.
+
+   CASCADA: este <style> va ÚLTIMO en el documento (después del
+   bloque de vg-admin-v6, línea 56285) y el selector del sticky
+   es #marketView .layout>.vg-side-col>.sidebar (1 id + 3 clases,
+   con !important): gana a .sidebar{...!important} de la línea
+   48369 (0,1,0) y a la de la línea 283. El sticky vive dentro de
+   @media(min-width:981px) para NO pelear con el
+   .sidebar{position:static !important} de ≤980px (línea 8302) ni
+   con el display:none de ≤820px: en móvil el lateral queda como
+   hoy. La regla vgfn-activo de la línea 32596
+   (.layout>aside.sidebar{display:none}) ya no alcanza al aside
+   tras el envoltorio: se replica aquí para .vg-side-col.
+
+   ESTILO A: filas compactas con conteos en blanco y negrita,
+   secciones colapsables (<details open> con summary
+   "Secciones · N", lo arma vg-lateral-fijo-v1.js), chips de precio
+   en rejilla 2×2 y rango Desde/Hasta (ya existían: se reutilizan
+   #sideList, .vg-paso2-chips, #vgLimpiarFiltros), pie con el total.
+
+   PALETA: fondo oscuro, morado #8b5cf6 solo botones/lo
+   importante, menta #19e6c1 solo detalles, ámbar solo descuentos,
+   precios blancos en negrita.
+   ============================================================ */
+
+/* ── 1 · Columna envolvente + sticky con recorrido (solo escritorio) ── */
+@media (min-width:981px){
+  #marketView .layout > .vg-side-col{
+    align-self:stretch;          /* vence al align-items:start de .layout */
+    min-width:0;
+    min-height:0;
+  }
+  #marketView .layout > .vg-side-col > .sidebar{
+    position:sticky !important;  /* gana a la línea 48369 (0,1,0 + !imp) */
+    top:132px !important;        /* header fijo 120px + 12px de margen */
+    max-height:calc(100vh - 148px);
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(139,92,246,.55) transparent;
+  }
+  #marketView .layout > .vg-side-col > .sidebar::-webkit-scrollbar{width:6px}
+  #marketView .layout > .vg-side-col > .sidebar::-webkit-scrollbar-thumb{
+    background:rgba(139,92,246,.55);border-radius:999px}
+}
+
+/* ── 2 · Estilo A: filas compactas con conteos ── */
+#marketView .sidebar .side-item{
+  padding:9px 11px !important;
+  font-size:.9rem !important;
+}
+#marketView .sidebar .side-item > span{
+  color:#fff !important;         /* vence al style inline color:var(--soft) */
+  font-weight:900;
+}
+
+/* ── 3 · Secciones colapsables (details que arma el JS) ── */
+#marketView .sidebar details.vg-side-sec{margin:0 0 4px}
+#marketView .sidebar details.vg-side-sec > summary{
+  list-style:none;
+  cursor:pointer;
+  font-size:.72rem;
+  font-weight:900;
+  letter-spacing:.14em;
+  text-transform:uppercase;
+  color:#8b93a7;
+  padding:2px 8px 10px;
+  display:flex;
+  align-items:center;
+  gap:6px;
+}
+#marketView .sidebar details.vg-side-sec > summary::-webkit-details-marker{display:none}
+#marketView .sidebar details.vg-side-sec > summary::after{
+  content:'▾';
+  margin-left:auto;
+  font-size:.8rem;
+  color:var(--muted);
+  transition:transform .18s;
+}
+#marketView .sidebar details.vg-side-sec[open] > summary::after{transform:rotate(180deg)}
+
+/* ── 4 · Pie con el total ── */
+#marketView .sidebar .vg-side-foot{
+  margin:14px 8px 2px;
+  padding-top:12px;
+  border-top:1px solid var(--line);
+  font-size:.8rem;
+  line-height:1.5;
+  color:var(--muted);
+}
+#marketView .sidebar .vg-side-foot b{color:#fff;font-weight:900}
+
+/* ── 5 · Paridad vgfn-activo: el aside ya no es hijo directo de
+   .layout (línea 32596), así que se oculta la columna entera ── */
+html body.vgfn-activo #marketView .layout > .vg-side-col{display:none !important}
+</style>
 
 <script id="vg-admin-v5">
 /* ═══════════════════════════════════════════════════════════════
@@ -57301,6 +57416,741 @@ if(window.MutationObserver){
 }
 document.addEventListener('DOMContentLoaded',function(){ setTimeout(schedule,300); });
 setTimeout(schedule,800);
+})();
+</script>
+<script id="vg-lateral-fijo-v1">
+/* ============================================================
+   vg-lateral-fijo-v1 · Lateral fijo (estilo A) + Todos = suma
+   Frente A de la mejora lateral/ofertas (mockup
+   mejora-lateral-ofertas-mockup.html, estilo A elegido por Miguel
+   2026-11-27). Se inserta ANTES del script vg-admin-v6, así
+   que corre DESPUÉS de que v138 (~47836) defina su wrapper de
+   renderNav y ANTES de que vg-retro-tr-v2 (último <script>, ~62205)
+   envuelva renderNav con __vgTR.
+
+   OJO · ORDEN REAL DE LOS WRAPPERS (verificado en jsdom
+   2026-11-27): v62 (~33920), v112 (~39670) y v91 (~46519) NO
+   instalan su envoltorio al parsear: su envolver() corre en
+   DOMContentLoaded, DESPUÉS de este script, así que quedan POR
+   FUERA de mi envoltorio y sus parches (Fortnite 535, Retro,
+   Xbox 2,708) corren DESPUÉS de mi corrección síncrona dentro de
+   la misma llamada a renderNav. Por eso la corrección se hace
+   DOS veces: una síncrona tras llamar al original, y otra
+   diferida un tick (setTimeout 0) con corregirTodosPronto(),
+   cuando el DOM ya trae todos los conteos parchados. La diferida
+   es la que deja el número final; la síncrona es solo para que
+   nunca se vea el valor viejo más de un tick. Sin la diferida,
+   "Todos" quedaba en 76 (la suma de los conteos crudos de
+   SERVICES) en vez de la suma real. Además v91 re-envuelve a
+   +800/+2200 ms y v138 a +900/+2400 ms: sus guardias no ven las
+   banderas enterradas dentro de la cadena, pero re-envolver
+   conserva mi envoltorio dentro (lo verificó el probe: mi
+   contador siguió corriendo tras los re-envoltorios), así que no
+   hace falta reinstalarme.
+
+   HACE 3 COSAS, sin tocar renderNav original ni los wrappers:
+   1. Estructura estilo A (idempotente): envuelve #sideList en
+      <details open class="vg-side-sec"> con <summary>Secciones · N
+      </summary> (quita el .side-title estático "Secciones", que el
+      summary sustituye) y añade al pie del aside
+      <div class="vg-side-foot" id="vgSideFoot">.
+   2. Envuelve window.renderNav (guardia __vgLatFijo): tras llamar
+      al original, recalcula "Todos" como la SUMA de los conteos
+      visibles de las demás filas de #sideList (lee los números ya
+      pintados en los <span>, quitando comas y saltando los '·'),
+      actualiza el summary ("Secciones · N") y el pie
+      ("4,962 productos en total (suma de secciones)"), y programa
+      una segunda pasada diferida un tick (corregirTodosPronto),
+      que es la que ve los parches de v62/v112/v91.
+      Barato e idempotente: puro recálculo en cada renderNav, sin
+      acumular nada; renderNav se llama en cada cambio de sección
+      y cuando cada catálogo termina de cargar.
+   3. Corre la corrección una vez al instalarse.
+
+   NO toca: showSection, renderProducts, los filtros de precio
+   (vg-fase2-paso2: #vgPrecioMin/#vgPrecioMax, .vg-paso2-chip,
+   #vgLimpiarFiltros), el carrito ni el panel admin.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  function fmt(n){
+    try{ return Number(n).toLocaleString('es-MX'); }
+    catch(e){ return String(n); }
+  }
+
+  /* "1,639" o "1639" -> 1639; "·" o vacío -> null (no suma). */
+  function leerNumero(txt){
+    if(txt == null) return null;
+    var d = String(txt).replace(/[^\d]/g, '');
+    if(d === '') return null;
+    var n = parseInt(d, 10);
+    return isFinite(n) ? n : null;
+  }
+
+  /* 1 · Estructura estilo A (idempotente). */
+  function armarEstructura(){
+    try{
+      var sideList = document.getElementById('sideList');
+      if(!sideList) return false;
+      if(!sideList.__vgLatFijo){
+        var tit = sideList.previousElementSibling;
+        if(tit && tit.classList && tit.classList.contains('side-title')
+            && /secciones/i.test(tit.textContent || '')){
+          tit.remove(); /* el summary "Secciones · N" lo sustituye */
+        }
+        var det = document.createElement('details');
+        det.className = 'vg-side-sec';
+        det.setAttribute('open', '');
+        var sum = document.createElement('summary');
+        sum.className = 'vg-side-sec-sum';
+        sum.textContent = 'Secciones';
+        det.appendChild(sum);
+        sideList.parentNode.insertBefore(det, sideList);
+        det.appendChild(sideList);
+        sideList.__vgLatFijo = true;
+      }
+      if(!document.getElementById('vgSideFoot')){
+        var aside = document.querySelector('#marketView .sidebar')
+          || document.querySelector('.sidebar');
+        if(aside){
+          var foot = document.createElement('div');
+          foot.className = 'vg-side-foot';
+          foot.id = 'vgSideFoot';
+          aside.appendChild(foot);
+        }
+      }
+      return true;
+    }catch(e){ return false; }
+  }
+
+  /* 2 · "Todos" = suma de los conteos visibles de las demás filas.
+     Se llama (a) síncrona tras el original y (b) diferida un tick
+     con corregirTodosPronto(): los wrappers v62/v112/v91 quedan
+     por fuera de este envoltorio (instalan en DOMContentLoaded) y
+     sus parches corren después de (a) en la misma llamada; la
+     pasada (b) lee el DOM ya parchado y deja el número final. */
+  var prontoPendiente = false;
+  function corregirTodosPronto(){
+    if(prontoPendiente) return;
+    prontoPendiente = true;
+    setTimeout(function(){
+      prontoPendiente = false;
+      corregirTodos();
+    }, 0);
+  }
+  function corregirTodos(){
+    try{
+      var sideList = document.getElementById('sideList');
+      if(!sideList) return;
+      var rows = sideList.querySelectorAll('.side-item');
+      if(!rows.length) return;
+      var idxTodos = -1;
+      for(var i = 0; i < rows.length; i++){
+        if(/todos/i.test(rows[i].textContent || '')){ idxTodos = i; break; }
+      }
+      if(idxTodos < 0) return; /* sin fila Todos no hay nada que corregir */
+      var total = 0;
+      for(var j = 0; j < rows.length; j++){
+        if(j === idxTodos) continue;
+        var s = rows[j].querySelector('span');
+        var v = s ? leerNumero(s.textContent) : null;
+        if(v !== null) total += v;
+      }
+      var spanTodos = rows[idxTodos].querySelector('span');
+      if(spanTodos){
+        var txt = fmt(total);
+        if(spanTodos.textContent !== txt) spanTodos.textContent = txt;
+      }
+      var sumEl = document.querySelector(
+        '#marketView .sidebar summary.vg-side-sec-sum');
+      if(sumEl){
+        var t2 = 'Secciones \u00b7 ' + rows.length;
+        if(sumEl.textContent !== t2) sumEl.textContent = t2;
+      }
+      var foot = document.getElementById('vgSideFoot');
+      if(foot){
+        var html = '<b>' + fmt(total) +
+          ' productos</b> en total (suma de secciones)';
+        if(foot.innerHTML !== html) foot.innerHTML = html;
+      }
+    }catch(e){ /* nunca romper el nav por un conteo */ }
+  }
+
+  /* 3 · Instalación: estructura + envoltorio de renderNav.
+     Si renderNav aún no es función (no debería pasar: el script
+     principal lo define al parsear), se reintenta en
+     DOMContentLoaded y con un intervalo corto. */
+  function envolverRenderNav(){
+    if(typeof window.renderNav !== 'function') return false;
+    if(window.renderNav.__vgLatFijo) return true;
+    var orig = window.renderNav;
+    var env = function(){
+      var r = orig.apply(this, arguments);
+      corregirTodos();
+      corregirTodosPronto();
+      return r;
+    };
+    env.__vgLatFijo = true;
+    window.renderNav = env;
+    window.__vgLatFijoV1 = true; /* marca de instalado (sobrevive
+      a los re-envoltorios de v91/v138: va en window, no en la fn) */
+    return true;
+  }
+  function instalar(){
+    armarEstructura();
+    if(!envolverRenderNav()){
+      var n = 0;
+      var t = setInterval(function(){
+        if(envolverRenderNav() || ++n >= 20){ clearInterval(t); }
+      }, 250);
+      if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', envolverRenderNav);
+      }
+    }
+    corregirTodos();
+    corregirTodosPronto();
+  }
+
+  if(document.getElementById('sideList')){
+    instalar(); /* el script va al final del body: el DOM ya existe */
+  }else if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', instalar);
+  }else{
+    instalar();
+  }
+})();
+</script>
+<style id="vg-oferta-resto-v1">
+/* ════════════════════════════════════════════════════════════════════
+   vg-oferta-resto-v1 · Frente B
+   Oferta compacta Free Fire + fusión confianza/referidos +
+   testimonios carrusel + FAQ 2 columnas + condiciones colapsadas.
+   Paleta aprobada: oscuro, morado #8b5cf6 solo botones/lo importante,
+   menta #19e6c1 solo detalles, ámbar solo descuentos, precios blancos.
+   Este bloque va ANTES del script vg-admin-v6 (penúltimo script)
+   y DESPUÉS de todos los estilos viejos, así gana los empates.
+   No toca la lógica de compra, tokens ni referidos: solo marcado/CSS.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── 0 · Contención del desbordamiento horizontal del inicio ──────────
+   Sospechoso (ver informe): #offersShowcase .ff-only-wrapper con
+   grid-template-columns:340px minmax(0,1fr)!important sin media query
+   (línea 51764, vg-inicio-abajo-v1) anulaba la regla ≤1180px que lo
+   ponía a 1fr (línea 3453). La tarjeta compacta ya no usa ese wrapper,
+   pero se anula igual por si quedara marcado viejo, y se contiene el
+   .wrap del inicio. overflow-x:clip NO crea contenedor de scroll, así
+   que no rompe los sticky del resto de la página. */
+#homeView > .wrap{overflow-x:clip !important;min-width:0 !important;}
+#offersShowcase .ff-only-wrapper{grid-template-columns:1fr !important;}
+#offersShowcase .offer-freefire{grid-template-columns:1fr !important;}
+
+/* ── 1 · OFERTA COMPACTA ───────────────────────────────────────────── */
+#offersShowcase .vg-or-compact{
+  display:grid !important;grid-template-columns:230px minmax(0,1fr) !important;
+  gap:0 !important;border:1px solid #262633 !important;border-radius:16px !important;
+  overflow:hidden !important;background:#181822 !important;box-shadow:none !important;
+  padding:0 !important;
+}
+#offersShowcase .vg-or-media{
+  min-height:220px !important;background-size:cover !important;background-position:center !important;
+  position:relative !important;
+}
+#offersShowcase .vg-or-media span{
+  position:absolute !important;top:10px !important;left:10px !important;
+  background:#19e6c1 !important;color:#052e26 !important;font-weight:900 !important;
+  font-size:.72rem !important;border-radius:999px !important;padding:4px 10px !important;
+}
+#offersShowcase .vg-or-body{padding:16px 18px !important;min-width:0 !important;}
+#offersShowcase .vg-or-tag{
+  display:inline-block !important;font-size:.72rem !important;font-weight:800 !important;
+  letter-spacing:.06em !important;color:#19e6c1 !important;
+  border:1px solid rgba(25,230,193,.35) !important;background:rgba(25,230,193,.08) !important;
+  border-radius:999px !important;padding:4px 10px !important;
+}
+#offersShowcase .vg-or-body h3{margin:8px 0 4px !important;font-size:1.2rem !important;color:#f4f4f8 !important;}
+#offersShowcase .vg-or-body p{margin:0 0 12px !important;color:#9aa0b5 !important;font-size:.9rem !important;line-height:1.5 !important;}
+#offersShowcase .vg-or-body p b{color:#d8dbe8 !important;}
+#offersShowcase .vg-or-feat{display:flex !important;align-items:center !important;gap:12px !important;flex-wrap:wrap !important;}
+#offersShowcase .vg-or-price{color:#fff !important;font-weight:900 !important;font-size:1.45rem !important;}
+#offersShowcase .vg-or-feat small{color:#9aa0b5 !important;font-size:.85rem !important;}
+#offersShowcase .vg-or-buy{
+  margin-left:auto !important;border:0 !important;cursor:pointer !important;
+  background:linear-gradient(135deg,#7c3aed,#8b5cf6) !important;color:#fff !important;
+  font-weight:800 !important;font-size:.9rem !important;border-radius:10px !important;
+  padding:10px 18px !important;font-family:inherit !important;
+}
+#offersShowcase .vg-or-chips{display:flex !important;gap:8px !important;flex-wrap:wrap !important;margin:12px 0 !important;}
+#offersShowcase .vg-or-chips button{
+  border:1px solid #33334a !important;background:#12121a !important;color:#f4f4f8 !important;
+  border-radius:999px !important;padding:8px 12px !important;font-size:.83rem !important;
+  font-weight:700 !important;cursor:pointer !important;font-family:inherit !important;
+}
+#offersShowcase .vg-or-chips button:hover{border-color:#8b5cf6 !important;}
+#offersShowcase .vg-or-chips button.vg-or-on{border-color:#8b5cf6 !important;background:rgba(139,92,246,.16) !important;}
+#offersShowcase .vg-or-chips button b{color:#fff !important;}
+#offersShowcase .vg-or-links{display:flex !important;gap:16px !important;flex-wrap:wrap !important;font-size:.88rem !important;font-weight:700 !important;}
+#offersShowcase .vg-or-links a{color:#c4b5fd !important;text-decoration:none !important;cursor:pointer !important;background:none !important;border:0 !important;padding:0 !important;font:inherit !important;}
+#offersShowcase .vg-or-links a:hover{text-decoration:underline !important;}
+#offersShowcase .vg-or-lista{margin-top:14px !important;border-top:1px solid #262633 !important;padding-top:12px !important;display:grid !important;gap:8px !important;}
+#offersShowcase .vg-or-lista[hidden]{display:none !important;}
+#offersShowcase .vg-or-row{
+  display:flex !important;align-items:center !important;gap:10px !important;
+  background:#12121a !important;border:1px solid #262633 !important;border-radius:12px !important;
+  padding:10px 12px !important;
+}
+#offersShowcase .vg-or-row.vg-or-on{border-color:#8b5cf6 !important;background:rgba(139,92,246,.10) !important;}
+#offersShowcase .vg-or-row b{color:#fff !important;font-size:.92rem !important;}
+#offersShowcase .vg-or-row span{color:#9aa0b5 !important;font-size:.8rem !important;}
+#offersShowcase .vg-or-row em{margin-left:auto !important;color:#fff !important;font-weight:900 !important;font-style:normal !important;}
+#offersShowcase .vg-or-row button{
+  border:0 !important;cursor:pointer !important;background:linear-gradient(135deg,#7c3aed,#8b5cf6) !important;
+  color:#fff !important;font-weight:800 !important;font-size:.82rem !important;border-radius:9px !important;
+  padding:8px 12px !important;font-family:inherit !important;flex:none !important;
+}
+@media(max-width:760px){
+  #offersShowcase .vg-or-compact{grid-template-columns:1fr !important;}
+  #offersShowcase .vg-or-media{min-height:150px !important;}
+  #offersShowcase .vg-or-buy{margin-left:0 !important;}
+}
+
+/* ── 2 · FUSIÓN CONFIANZA + REFERIDOS ────────────────────────────────
+   El wrapper agrupa #vgPorQue (FASE 43) y #vgtkHost (FASE 24) sin
+   mover sus nodos funcionales: #vgtkHost sigue siendo el contenedor
+   que repinta pintarSeccion(), así que saldo, copiar y canje sobreviven.
+   La segunda explicación de tokens (.vgpq-tokens, FASE 43) se oculta;
+   su nota clave (.vgpq-clave) se mueve al final de la fusión por JS. */
+#vgOrFusion{margin:26px 0 !important;}
+#vgOrFusion #vgPorQue{margin:0 0 14px !important;}
+#vgOrFusion #vgPorQue .vgpq-eyebrow{color:#8ff5e3 !important;}
+#vgOrFusion .vgpq-tokens{display:none !important;}
+/* La tira de tokens (FASE 24) pasa de 2 columnas grandes a tira compacta */
+#vgOrFusion #vgtkSeccion{margin:0 !important;border-radius:16px !important;}
+#vgOrFusion .vgtk-grid{display:block !important;}
+#vgOrFusion .vgtk-left{padding:18px 20px 6px !important;}
+#vgOrFusion .vgtk-left .vgtk-badge,
+#vgOrFusion .vgtk-left h2,
+#vgOrFusion .vgtk-left .vgtk-lead{display:none !important;}
+#vgOrFusion .vgtk-reglas{display:flex !important;gap:10px !important;flex-wrap:wrap !important;margin-bottom:12px !important;}
+#vgOrFusion .vgtk-regla{flex:1 1 180px !important;}
+#vgOrFusion .vgtk-premios{display:flex !important;gap:8px !important;flex-wrap:wrap !important;}
+#vgOrFusion .vgtk-right{padding:6px 20px 18px !important;border:0 !important;background:none !important;}
+#vgOrFusion .vgtk-saldo{padding:12px !important;margin-bottom:10px !important;}
+#vgOrFusion .vgtk-saldo b{font-size:1.9rem !important;}
+#vgOrFusion .vgtk-mini{margin-bottom:10px !important;}
+#vgOrFusion .vgtk-linkbox{margin-bottom:10px !important;}
+#vgOrFusion .vgtk-btn.crear{margin-top:0 !important;}
+#vgOrFusion .vg-or-nota{
+  margin:12px 0 0 !important;padding:12px 14px !important;
+  border-left:3px solid #19e6c1 !important;background:rgba(25,230,193,.08) !important;
+  color:#cfeee8 !important;font-size:.88rem !important;line-height:1.5 !important;
+  border-radius:0 12px 12px 0 !important;
+}
+#vgOrFusion .vg-or-nota b{color:#8ff5e3 !important;}
+#vgOrFusion #vgLiveBadges{display:flex !important;gap:8px !important;flex-wrap:wrap !important;margin:14px 0 0 !important;}
+/* La versión estática del footer ya la oculta FASE 24 (línea 27006);
+   se deja oculta aquí también para que no resucite. */
+#vgRefBanner{display:none !important;}
+
+/* ── 3 · TESTIMONIOS EN CARRUSEL ───────────────────────────────────── */
+#homeView .reviews-section #vgReviewsPublicGrid{
+  display:flex !important;gap:12px !important;overflow-x:auto !important;
+  padding-bottom:8px !important;scroll-snap-type:x mandatory !important;
+  grid-template-columns:none !important;
+}
+#homeView .reviews-section #vgReviewsPublicGrid .vg-real-review-card{
+  flex:0 0 300px !important;scroll-snap-align:start !important;min-height:0 !important;
+}
+#homeView .reviews-section .vg-reviews-layout{display:block !important;}
+/* Formulario oculto hasta picar el botón (el form y su submit no se tocan) */
+#homeView .reviews-section .vg-review-form-card{display:none !important;}
+#homeView .reviews-section.vg-or-form-open .vg-review-form-card{display:block !important;margin-top:14px !important;position:relative !important;top:0 !important;}
+#homeView .vg-or-reco-btn{
+  margin-top:14px !important;border:0 !important;cursor:pointer !important;
+  background:linear-gradient(135deg,#7c3aed,#8b5cf6) !important;color:#fff !important;
+  font-weight:800 !important;font-size:.9rem !important;border-radius:10px !important;
+  padding:11px 18px !important;font-family:inherit !important;
+}
+/* Respaldo estático (si el JS de reseñas no llega a mejorar la sección) */
+#homeView .reviews-section .reviews-grid{
+  display:flex !important;gap:12px !important;overflow-x:auto !important;
+  padding-bottom:8px !important;scroll-snap-type:x mandatory !important;
+}
+#homeView .reviews-section .reviews-grid .review-card{flex:0 0 300px !important;scroll-snap-align:start !important;}
+
+/* ── 4 · FAQ EN 2 COLUMNAS ─────────────────────────────────────────── */
+#homeView .vg-faq-list{
+  display:grid !important;grid-template-columns:1fr 1fr !important;gap:10px !important;
+}
+#homeView .vg-faq-list .vg-faq-item{min-width:0 !important;}
+@media(max-width:760px){
+  #homeView .vg-faq-list{grid-template-columns:1fr !important;}
+}
+
+/* ── 5 · CONDICIONES COLAPSADAS ────────────────────────────────────── */
+#condiciones-servicio .vg-or-cond{
+  border:1px solid rgba(255,255,255,.09) !important;border-radius:16px !important;
+  background:rgba(255,255,255,.03) !important;padding:14px 16px !important;margin-top:14px !important;
+}
+#condiciones-servicio .vg-or-cond summary{
+  cursor:pointer !important;font-weight:800 !important;font-size:.95rem !important;color:#f4f4f8 !important;
+  list-style:none !important;display:flex !important;justify-content:space-between !important;
+  align-items:center !important;gap:10px !important;
+}
+#condiciones-servicio .vg-or-cond summary::-webkit-details-marker{display:none !important;}
+#condiciones-servicio .vg-or-cond summary::after{content:"+";color:#19e6c1 !important;font-weight:900 !important;font-size:1.15rem !important;flex:none !important;}
+#condiciones-servicio .vg-or-cond[open ] summary::after{content:"–";}
+#condiciones-servicio .vg-or-cond .conditions-service-grid{margin-top:14px !important;}
+#condiciones-servicio .vg-or-cond .conditions-service-note{margin-top:14px !important;}
+</style>
+<script id="vg-oferta-resto-v1">
+/* ════════════════════════════════════════════════════════════════════
+   vg-oferta-resto-v1 · Frente B
+   Oferta compacta + fusión confianza/referidos + testimonios carrusel
+   + FAQ 2 columnas + condiciones colapsadas.
+
+   REGLAS DE ESTE MÓDULO
+   - No reescribe la compra: los 9 paquetes usan window.openPaymentModal
+     con el MISMO pedido que vg-freefire-payment-admin-v56 (source
+     'free-fire-oferta', items con title/option/price/image). Si el modal
+     no existe, cae al WhatsApp de la v55 con el mismo mensaje.
+   - No toca la lógica de tokens: #vgtkHost sigue siendo el contenedor
+     que repinta FASE 24; solo se mueve de sitio y se reestila por CSS.
+     Saldo #vgtkSaldo, copiar link #vgtkCopiar y canje #vgtkVerTokens
+     conservan sus IDs y sus handlers.
+   - La oferta viva es la v55: rebuildOffers() reescribe #offersShowcase
+     y pone dataset.ffOnlyReady='1'. Este módulo espera a ese flag para
+     no ser borrado por la v55, y conserva el mismo <section> (con su
+     dataset) reemplazando solo su innerHTML.
+   - Idempotente: cada parte marca su dataset y no se repite.
+   ════════════════════════════════════════════════════════════════════ */
+(function () {
+  'use strict';
+  if (window.__VG_OFERTA_RESTO_V1__) return;
+  window.__VG_OFERTA_RESTO_V1__ = true;
+
+  var WA_NUMBER = '526611078412';
+  var FF_IMG_DEFAULT = 'https://i.imgur.com/8zUIcAFh.jpg';
+  var PACKS = [
+    ['1,166', 161], ['2,398', 325], ['2,970', 425], ['3,564', 492],
+    ['4,136', 569], ['4,796', 631], ['5,302', 723], ['5,368', 733],
+    ['12,320', 1477]
+  ];
+  /* Atajos de la tarjeta compacta: índices en PACKS (2,398 / 5,302 / 12,320) */
+  var ATAJOS = [1, 6, 8];
+
+  var TESTIMONIOS = [
+    { n: 'Angel pacheco', s: 'Crunchyroll Fijo', f: '03 ago 2026',
+      t: 'Todo bien, la cuenta funciona sin problemas' },
+    { n: 'Manuel Torres', s: 'Free Fire 5k diamantes', f: '01 jun 2026',
+      t: 'Me llegaron en el mismo rato que los pedí, servicio de 10!' },
+    { n: 'Jose T', s: 'NETFLIX', f: '31 may 2026',
+      t: 'Vine de su publicidad de facebook y si cumplen, recomendado. Nuevo cliente' }
+  ];
+  /* Nombres del respaldo del archivo (líneas 14860-14864): si la rejilla
+     solo trae estos, es el placeholder y se sustituye por los 3 reales
+     del mockup. Si Supabase trae otros aprobados, se dejan. */
+  var FALLBACK_NAMES = ['Luis M.', 'Karla R.', 'Diego A.'];
+
+  function $(s, r) { try { return (r || document).querySelector(s); } catch (e) { return null; } }
+  function $all(s, r) { try { return Array.prototype.slice.call((r || document).querySelectorAll(s)); } catch (e) { return []; } }
+  function fmtMXN(n) { return '$' + Number(n || 0).toLocaleString('es-MX', { maximumFractionDigits: 0 }) + ' MXN'; }
+  function esc(t) {
+    return String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;')
+      .replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  /* ── Compra: mismo pedido que v56 (bindFreeFireOffer, líneas 13229-13245) ── */
+  function comprarPaquete(idx, img) {
+    var pack = PACKS[idx] || PACKS[0];
+    var opt = pack[0] + ' diamantes · Recarga vía ID directo de Garena';
+    var order = {
+      source: 'free-fire-oferta',
+      total: Number(pack[1]),
+      product_name: 'Oferta Diamantes Free Fire',
+      product_option: opt,
+      items: [{ title: 'Oferta Diamantes Free Fire', option: opt, price: Number(pack[1]), image: img || FF_IMG_DEFAULT }]
+    };
+    if (typeof window.openPaymentModal === 'function') {
+      window.openPaymentModal(order);
+      return;
+    }
+    var msg = 'Hola, quiero comprar la oferta de Free Fire: ' + pack[0] +
+      ' diamantes por ' + fmtMXN(pack[1]) + '. La recarga sería vía ID directos de Garena.';
+    window.open('https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+  function pedirMayor() {
+    var msg = 'Hola, quiero cotizar una cantidad mayor de diamantes Free Fire por privado.';
+    window.open('https://wa.me/' + WA_NUMBER + '?text=' + encodeURIComponent(msg), '_blank');
+  }
+
+  /* ── 1 · OFERTA COMPACTA ─────────────────────────────────────────── */
+  var ofertaHecha = false;
+  function hacerOferta() {
+    if (ofertaHecha) return true;
+    var root = document.getElementById('offersShowcase');
+    if (!root) return false;
+    /* Esperar a la v55: si aún no reescribió, volver en el siguiente tick. */
+    if (root.dataset.ffOnlyReady !== '1') return false;
+    var img = FF_IMG_DEFAULT;
+    var oldImg = root.querySelector('.offer-freefire img, .ff-only-media img, img');
+    if (oldImg && oldImg.src) img = oldImg.src;
+    if (img === FF_IMG_DEFAULT) {
+      try {
+        if (typeof SERVICES !== 'undefined') {
+          var ff = SERVICES.find(function (s) { return /free fire/i.test(s.title || ''); });
+          if (ff && ff.image) img = ff.image;
+        }
+      } catch (e) {}
+    }
+
+    var chips = ATAJOS.map(function (i) {
+      return '<button type="button" class="vg-or-chip" data-i="' + i + '"><b>' +
+        PACKS[i][0] + '</b> diamantes · ' + fmtMXN(PACKS[i][1]) + '</button>';
+    }).join('');
+    var filas = PACKS.map(function (p, i) {
+      return '<div class="vg-or-row' + (i === 0 ? ' vg-or-on' : '') + '" data-i="' + i + '">' +
+        '<div><b>' + p[0] + ' diamantes</b><br><span>Recarga directa a tu cuenta</span></div>' +
+        '<em>' + fmtMXN(p[1]) + '</em>' +
+        '<button type="button" data-comprar="' + i + '">Comprar</button></div>';
+    }).join('');
+
+    root.innerHTML =
+      '<div class="offers-head"><div>' +
+        '<span class="badge ff-offer-badge-animated">OFERTAS</span>' +
+        '<h2 class="ff-week-title">Ofertas especiales de la semana</h2>' +
+      '</div></div>' +
+      '<article class="vg-or-compact">' +
+        '<div class="vg-or-media" style="background-image:url(&quot;' + esc(img) + '&quot;)">' +
+          '<span>SOLO ESTA SEMANA</span></div>' +
+        '<div class="vg-or-body">' +
+          '<span class="vg-or-tag">VÍA ID DIRECTOS DE GARENA</span>' +
+          '<h3>Diamantes Free Fire</h3>' +
+          '<p>Recargas <b>vía ID directos de Garena</b>. Elige el paquete que quieras y recíbelo de forma directa. También manejamos <b>cantidades mayores por privado</b>.</p>' +
+          '<div class="vg-or-feat"><span class="vg-or-price" id="vgOrFeat">1,166 diamantes · $161 MXN</span>' +
+            '<small>Recarga directa a tu cuenta</small>' +
+            '<button type="button" class="vg-or-buy" id="vgOrBuy">Comprar</button></div>' +
+          '<div class="vg-or-chips">' + chips + '</div>' +
+          '<div class="vg-or-links">' +
+            '<a id="vgOrVerTodas" role="button" tabindex="0">Ver todas las recargas →</a>' +
+            '<a id="vgOrMayor" role="button" tabindex="0">Pedir cantidad mayor</a>' +
+          '</div>' +
+          '<div class="vg-or-lista" id="vgOrLista" hidden>' + filas + '</div>' +
+        '</div>' +
+      '</article>';
+    root.dataset.vgOrCompacta = '1';
+
+    var sel = 0;
+    var feat = $('#vgOrFeat', root);
+    function seleccionar(i) {
+      sel = i;
+      if (feat) feat.textContent = PACKS[i][0] + ' diamantes · ' + fmtMXN(PACKS[i][1]);
+      $all('.vg-or-chip', root).forEach(function (b) {
+        b.classList.toggle('vg-or-on', Number(b.dataset.i) === i);
+      });
+      $all('.vg-or-row', root).forEach(function (r) {
+        r.classList.toggle('vg-or-on', Number(r.dataset.i) === i);
+      });
+    }
+    $all('.vg-or-chip', root).forEach(function (b) {
+      b.addEventListener('click', function () { seleccionar(Number(b.dataset.i || 0)); });
+    });
+    $all('[data-comprar]', root).forEach(function (b) {
+      b.addEventListener('click', function () {
+        var i = Number(b.dataset.comprar || 0);
+        seleccionar(i);
+        comprarPaquete(i, img);
+      });
+    });
+    var buy = $('#vgOrBuy', root);
+    if (buy) buy.addEventListener('click', function () { comprarPaquete(sel, img); });
+    var ver = $('#vgOrVerTodas', root);
+    var lista = $('#vgOrLista', root);
+    if (ver && lista) {
+      var toggleLista = function () {
+        var abierta = lista.hasAttribute('hidden');
+        if (abierta) { lista.removeAttribute('hidden'); ver.textContent = 'Ocultar recargas ↑'; }
+        else { lista.setAttribute('hidden', ''); ver.textContent = 'Ver todas las recargas →'; }
+      };
+      ver.addEventListener('click', toggleLista);
+      ver.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggleLista(); } });
+    }
+    var mayor = $('#vgOrMayor', root);
+    if (mayor) {
+      mayor.addEventListener('click', pedirMayor);
+      mayor.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); pedirMayor(); } });
+    }
+    seleccionar(0);
+    ofertaHecha = true;
+    return true;
+  }
+
+  /* ── 1b · DEDUP: Free Fire fuera de "Ofertas destacadas" ───────────
+     El respaldo del archivo (Gears, Alan Wake, Netflix) no lo trae, pero
+     el admin puede agregarlo por /api/contenido-inicio. Se quita del DOM
+     y de la lista de prioridad del buscador, y se vigila cada repintado. */
+  var dedupObs = null;
+  function dedupDestacados() {
+    var grid = document.getElementById('vgkGridOfertas');
+    if (grid) {
+      $all(':scope > *', grid).forEach(function (card) {
+        if (/free\s*fire|diamantes/i.test(card.textContent || '')) card.remove();
+      });
+      if (!dedupObs && typeof MutationObserver === 'function') {
+        dedupObs = new MutationObserver(function () { dedupDestacados(); });
+        dedupObs.observe(grid, { childList: true });
+      }
+    }
+    try {
+      if (Array.isArray(window.vgOfertasDestacadas)) {
+        window.vgOfertasDestacadas = window.vgOfertasDestacadas.filter(function (t) {
+          return !/free fire|diamante/.test(String(t || ''));
+        });
+      }
+    } catch (e) {}
+  }
+
+  /* ── 2 · FUSIÓN CONFIANZA + REFERIDOS ────────────────────────────── */
+  var fusionHecha = false;
+  function hacerFusion() {
+    if (fusionHecha) return true;
+    var pq = document.getElementById('vgPorQue');
+    var host = document.getElementById('vgtkHost');
+    if (!pq || !host) return false;
+    var sec = document.createElement('section');
+    sec.className = 'vg-or-fusion';
+    sec.id = 'vgOrFusion';
+    sec.setAttribute('aria-label', 'Compra aquí y gana tokens');
+    pq.parentNode.insertBefore(sec, pq);
+    sec.appendChild(pq);
+    sec.appendChild(host);
+    /* Título único de la sección fusionada */
+    var h2 = pq.querySelector('h2');
+    if (h2) h2.innerHTML = 'Compra aquí y gana <em>tokens</em>';
+    var eye = pq.querySelector('.vgpq-eyebrow');
+    if (eye) eye.textContent = 'Compra con confianza';
+    /* La nota clave sale del bloque duplicado de tokens (que el CSS
+       oculta) y queda visible al final de la fusión. */
+    var clave = pq.querySelector('.vgpq-clave');
+    if (clave) {
+      clave.classList.add('vg-or-nota');
+      sec.appendChild(clave);
+    }
+    /* Los chips en vivo (pedidos del mes, entrega, pago seguro) se
+       mudan al final de la fusión. El contador sigue siendo el real
+       (#vgBadgeOrders); no se inventa el 887 del mockup. */
+    var badges = document.getElementById('vgLiveBadges');
+    if (badges) sec.appendChild(badges);
+    fusionHecha = true;
+    return true;
+  }
+
+  /* ── 3 · TESTIMONIOS EN CARRUSEL ─────────────────────────────────── */
+  var testiHecho = false;
+  var seeding = false;
+  function tarjetaTesti(t) {
+    return '<article class="vg-real-review-card">' +
+      '<div class="vg-real-review-head"><div>' +
+        '<span class="vg-real-review-name">' + esc(t.n) + '</span>' +
+        '<span class="vg-real-review-service">' + esc(t.s) + '</span>' +
+      '</div><div class="vg-real-review-stars">★★★★★</div></div>' +
+      '<p>“' + esc(t.t) + '”</p>' +
+      '<span class="vg-real-review-date">' + esc(t.f) + '</span></article>';
+  }
+  function sembrarTestimonios(grid) {
+    seeding = true;
+    grid.innerHTML = TESTIMONIOS.map(tarjetaTesti).join('');
+    seeding = false;
+  }
+  function hacerTestimonios() {
+    var section = $('.reviews-section');
+    var grid = document.getElementById('vgReviewsPublicGrid');
+    if (!section || !grid) return false;
+    if (!testiHecho) {
+      /* Formulario detrás de un botón: el form y su submit no se tocan. */
+      var formCard = section.querySelector('.vg-review-form-card');
+      if (!formCard) return false;
+      if (!section.querySelector('.vg-or-reco-btn')) {
+        var btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'vg-or-reco-btn';
+        btn.textContent = 'Deja tu recomendación';
+        btn.setAttribute('aria-expanded', 'false');
+        btn.addEventListener('click', function () {
+          var abierto = section.classList.toggle('vg-or-form-open');
+          btn.textContent = abierto ? 'Ocultar formulario' : 'Deja tu recomendación';
+          btn.setAttribute('aria-expanded', abierto ? 'true' : 'false');
+        });
+        formCard.parentNode.insertBefore(btn, formCard);
+      }
+      /* Si la rejilla trae solo el respaldo del archivo, se siembran
+         los 3 testimonios reales del mockup. */
+      var txt = grid.textContent || '';
+      var tieneMock = /Angel pacheco|Manuel Torres|Jose T/.test(txt);
+      var esFallback = FALLBACK_NAMES.some(function (n) { return txt.indexOf(n) !== -1; });
+      if (!tieneMock && esFallback) sembrarTestimonios(grid);
+      /* Si Supabase repinta después con aprobados reales, se dejan y
+         solo se cuida el carrusel; si vuelve a pintar el respaldo,
+         se resiembra. */
+      if (typeof MutationObserver === 'function') {
+        new MutationObserver(function () {
+          if (seeding) return;
+          var t2 = grid.textContent || '';
+          var mock2 = /Angel pacheco|Manuel Torres|Jose T/.test(t2);
+          var fb2 = FALLBACK_NAMES.some(function (n) { return t2.indexOf(n) !== -1; });
+          if (!mock2 && fb2) sembrarTestimonios(grid);
+        }).observe(grid, { childList: true });
+      }
+      testiHecho = true;
+    }
+    return true;
+  }
+
+  /* ── 5 · CONDICIONES COLAPSADAS ──────────────────────────────────── */
+  var condHecha = false;
+  function hacerCondiciones() {
+    if (condHecha) return true;
+    var sec = document.getElementById('condiciones-servicio');
+    if (!sec) return false;
+    var grid = sec.querySelector('.conditions-service-grid');
+    if (!grid || sec.dataset.vgOrCond === '1') return true;
+    var note = sec.querySelector('.conditions-service-note');
+    var det = document.createElement('details');
+    det.className = 'vg-or-cond';
+    det.id = 'vgOrCondDetails';
+    var sum = document.createElement('summary');
+    sum.textContent = 'Condiciones del servicio — leer antes de pagar';
+    det.appendChild(sum);
+    det.appendChild(grid);
+    if (note) det.appendChild(note);
+    sec.appendChild(det);
+    sec.dataset.vgOrCond = '1';
+    condHecha = true;
+    return true;
+  }
+
+  function runParts() {
+    try { hacerOferta(); } catch (e) {}
+    try { dedupDestacados(); } catch (e) {}
+    try { hacerFusion(); } catch (e) {}
+    try { hacerTestimonios(); } catch (e) {}
+    try { hacerCondiciones(); } catch (e) {}
+  }
+
+  function boot() {
+    runParts();
+    var n = 0;
+    var t = setInterval(function () {
+      n++;
+      runParts();
+      /* La oferta v55 tarda ~200-400 ms; tokens y reseñas dependen de
+         red/Supabase. 20 s es más que suficiente; después se deja de
+         vigilar salvo los MutationObserver ya instalados. */
+      if (n > 80) clearInterval(t);
+    }, 250);
+  }
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
 })();
 </script>
 <script id="vg-admin-v6">
