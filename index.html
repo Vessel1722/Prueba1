@@ -8466,17 +8466,6 @@ html,body { margin:0 !important; padding:0 !important; }
 header.topbar { margin-top:0 !important; padding-top:0 !important; }
 body > * { box-sizing:border-box; }
 
-/* ── Navbar smart hide/show ── */
-.topbar {
-  transition: transform .30s cubic-bezier(.4,0,.2,1), opacity .30s ease !important;
-  will-change: transform !important;
-}
-.topbar.vg-nav-hidden {
-  transform: translateY(-110%) !important;
-  opacity: 0 !important;
-  pointer-events: none !important;
-}
-
 /* ── Admin Dashboard tab ── */
 .vg-dash-grid {
   display: grid;
@@ -11358,19 +11347,68 @@ window.vgProofPick=function(fuente){
 <script id="vg-search-filters-whatsapp-v10">
 (function(){
   'use strict';
+  /* Abreviaturas de juegos, sacadas de los títulos REALES del
+     catálogo (Xbox Cuentas TR y One/Series): gta -> Grand Theft Auto,
+     rdr -> Red Dead, ac -> Assassin's Creed, gow -> Gears of War,
+     mk -> Mortal Kombat, fc/fifa -> EA SPORTS FC y FIFA, re ->
+     Resident Evil, f1 -> F1. OJO: God of War NO existe en el catálogo
+     (0 juegos), así que gow es solo Gears of War; y no se inventa
+     ningún juego (valorant, apex, pubg, spider-man, zelda, mario y
+     gran turismo tampoco existen: 0 en los dos catálogos). */
   const SYNONYMS = {
     "cod":"codpoints call of duty warzone","warzone":"codpoints call of duty","call of duty":"codpoints cod",
     "pelis":"netflix disney max prime video streaming","peliculas":"netflix disney max prime video streaming","series":"netflix disney max prime video streaming",
     "xbox":"game pass juegos retro xbox 360 clasico","musica":"spotify youtube premium","música":"spotify youtube premium","vpn":"nord vpn express vpn",
     "insta":"instagram ig seguidores likes","instagram":"ig seguidores likes redes","face":"facebook seguidores reacciones vistas",
-    "free":"free fire diamantes","diamantes":"free fire","roblox":"robux","robox":"robux"
+    "free":"free fire diamantes","diamantes":"free fire","roblox":"robux","robox":"robux",
+    "gta":"grand theft auto","rdr":"red dead redemption","ac":"assassin's creed","gow":"gears of war",
+    "mk":"mortal kombat","fc":"ea sports fc","fifa":"ea sports fc fifa","re":"resident evil","f1":"formula 1"
   };
+  /* FASE 139b · Antes era substring (clean.includes(key)): con claves
+     cortas como "ac" o "re" eso disparaba dentro de cualquier palabra
+     ("black ops" contiene "ac", "free" contiene "re") y metía sinónimos
+     de juegos que nadie pidió. Ahora cada clave tiene que aparecer como
+     palabra completa (o frase completa, para "call of duty"), sin
+     acentos, en lo escrito. */
   function expandQuery(q){
     const clean=String(q||'').toLowerCase().trim();
+    const llano=clean.normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const conEspacios=' '+llano.replace(/\s+/g,' ')+' ';
     let expanded=clean;
-    Object.entries(SYNONYMS).forEach(([key,value])=>{ if(clean.includes(key)) expanded+=' '+value; });
+    Object.entries(SYNONYMS).forEach(([key,value])=>{
+      const k=String(key).toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '').trim();
+      if(k && conEspacios.indexOf(' '+k+' ')>=0) expanded+=' '+value;
+    });
     return expanded;
   }
+  /* FASE 139b · Alias de juegos primero.
+     Cuando lo escrito ES una abreviatura conocida (gta, ac, rdr...),
+     la expansión es lo que el cliente quiere decir, no un sinónimo de
+     segunda: esos juegos van primero, por delante de lo que coincide
+     literalmente con la abreviatura ("ac" también empieza "ACTA DE
+     NACIMIENTO" y "Academy"). Sin alias en la consulta, la búsqueda es
+     exactamente la de antes. */
+  /* 'fifa' no va aquí: lo literal ("fifa" al principio de palabra)
+     ya pone FIFA primero, y el merge lo bajaría detrás de FC. */
+  const ALIAS_JUEGOS = ['gta','rdr','ac','gow','mk','fc','re','f1'];
+  function expansionAlias(q){
+    const llano=String(q||'').toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+    const expansiones=[];
+    llano.split(/\s+/).filter(Boolean).forEach(function(p){
+      if(ALIAS_JUEGOS.indexOf(p)>=0 && SYNONYMS[p]) expansiones.push(SYNONYMS[p]);
+    });
+    return expansiones.length ? expansiones.join(' ') : '';
+  }
+  window.vgBuscarConAlias = function(lista, consulta, campos, sinonimos){
+    if(!window.vgBuscar || typeof window.vgBuscar.buscar !== 'function') return null;
+    const normal = window.vgBuscar.buscar(lista, consulta, campos, sinonimos);
+    const exp = expansionAlias(consulta);
+    if(!exp) return normal;
+    const primeros = window.vgBuscar.buscar(lista, exp, campos);
+    if(!primeros.length) return normal;
+    const vistos = new Set(primeros);
+    return primeros.concat(normal.filter(function(x){ return !vistos.has(x); }));
+  };
   function serviceText(s){
     return [s.title,s.displayTitle,s.description,s.categoryName,(s.options||[]).map(o=>o.name).join(' ')].join(' ').toLowerCase();
   }
@@ -11405,7 +11443,9 @@ window.vgProofPick=function(fuente){
          que coincide de verdad, que es su sitio: nadie tiene "pelis"
          escrito en la ficha y aun así hay que contestar Netflix. */
       list = window.vgBuscar
-        ? window.vgBuscar.buscar(list, q, campos, expandQuery(q.toLowerCase()))
+        ? (window.vgBuscarConAlias
+            ? window.vgBuscarConAlias(list, q, campos, expandQuery(q.toLowerCase()))
+            : window.vgBuscar.buscar(list, q, campos, expandQuery(q.toLowerCase())))
         : list.filter(s => serviceText(s).includes(q.toLowerCase()));
       const sort=document.getElementById('sortSelect')?.value||'default';
       if(typeof window.minPrice === 'function'){
@@ -11567,7 +11607,11 @@ window.vgProofPick=function(fuente){
        es lo que espera cualquiera: las dos listas de la misma búsqueda
        no pueden decir cosas distintas. */
     if(window.vgBuscar){
-      return destacadosPrimero(window.vgBuscar.buscar(getAllServices(), rawQuery, camposDe, expandedSearch(String(rawQuery || '').trim().toLowerCase()))).slice(0, 8);
+      const buscarAlias = window.vgBuscarConAlias;
+      const hallados = buscarAlias
+        ? buscarAlias(getAllServices(), rawQuery, camposDe, expandedSearch(String(rawQuery || '').trim().toLowerCase()))
+        : window.vgBuscar.buscar(getAllServices(), rawQuery, camposDe, expandedSearch(String(rawQuery || '').trim().toLowerCase()));
+      return destacadosPrimero(hallados).slice(0, 8);
     }
 
     var ordenados = getAllServices()
@@ -11944,6 +11988,7 @@ window.vgProofPick=function(fuente){
 <button class="vg-admin-tab" data-tab="cuentas">Xbox Cuentas</button>
 <button class="vg-admin-tab" data-tab="retro">Xbox Retro</button>
 <button class="vg-admin-tab" data-tab="inicio">Inicio</button>
+<button class="vg-admin-tab" data-tab="actas">Actas Gob</button>
 <button class="vg-admin-tab" data-tab="imagenes">🖼 Imágenes</button>
 </div></div>
 <div class="vg5-grupo"><span class="vg5-grupo-titulo">Sistema</span><div class="vg5-grupo-tabs">
@@ -12005,6 +12050,7 @@ window.vgProofPick=function(fuente){
 <section class="vg-admin-section" id="vgAdminCuentas"><div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox Cuentas:</b> juegos en cuenta nueva, más baratos en Turquía que en México. Aquí puedes editar nombre, plataforma, precio de venta, precio de México, precio de Turquía, estado e imagen.</div><div id="vgTrAdminStats" class="vg-analytics-muted"></div><div class="vg-xbox-admin-form"><input id="vgTrAdminTitle" placeholder="Nombre del juego"><select id="vgTrAdminPlatform"><option>Xbox 360</option><option>Clásico</option><option>Xbox One</option><option>Xbox One / Series</option><option>Xbox Series</option></select><input id="vgTrAdminVenta" type="number" min="0" placeholder="Tu precio MXN"><input id="vgTrAdminMx" type="number" min="0" step="0.01" placeholder="Precio en Xbox MX"><input id="vgTrAdminTr" type="number" min="0" step="0.01" placeholder="Precio en Turquía (TRY)"><input id="vgTrAdminCosto" type="number" min="0" placeholder="Tu costo (MXN)" disabled><input id="vgTrAdminGanancia" type="number" min="0" placeholder="Ganancia (MXN)" disabled><input id="vgTrAdminImage" placeholder="URL de portada"><select id="vgTrAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="vgSaveTrAdminGame()">Guardar</button></div><div class="vg-analytics-muted">Costo y ganancia son solo lectura: los escribe el repaso diario con la regla de ganancia. Si cambias el precio de México o el de Turquía, pulsa "Recalcular precios" para que la venta se actualice. La compra mínima es de $200 MXN por cuenta.</div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="vgClearTrAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="loadTrAdmin()">Recargar juegos</button><button class="vg-admin-btn" onclick="vgRecalcularTr(false)">Recalcular precios (ensayo)</button><button class="vg-admin-btn primary" onclick="vgRecalcularTr(true)">Aplicar recálculo</button></div><div class="vg-retro-admin-search-v101"><input class="vg-admin-input" id="vgTrAdminSearch" placeholder="Buscar juego..." oninput="renderTrAdminList()"><select class="vg-admin-select" id="vgTrAdminFilter" onchange="renderTrAdminList()"><option value="all">Todas las plataformas</option><option value="Xbox 360">Xbox 360</option><option value="Clásico">Clásico</option><option value="Xbox One">Xbox One</option><option value="Xbox One / Series">Xbox One / Series</option><option value="Xbox Series">Xbox Series</option></select></div><div id="vgTrAdminMsg" class="vg-analytics-muted"></div><div id="vgTrAdminInforme" class="vg-analytics-muted" style="white-space:pre-line"></div><div class="vg-xbox-admin-list" id="vgTrAdminList"></div></section>
 <section class="vg-admin-section" id="vgAdminRetro"><div class="vg-admin-note vg-admin-ok"><b>Catálogo Xbox Retro:</b> aquí puedes editar nombre, plataforma, precio, estado e imagen de tus juegos Xbox 360 / Clásico.</div><div class="vg-retro-admin-form-v101"><input class="vg-admin-input" id="vgRetroAdminTitle" placeholder="Nombre del juego"><select class="vg-admin-select" id="vgRetroAdminPlatform"><option>Xbox 360</option><option>Clásico</option></select><input class="vg-admin-input" id="vgRetroAdminPrice" type="number" min="0" placeholder="Precio MXN"><input class="vg-admin-input" id="vgRetroAdminImage" placeholder="URL de portada directa"><select class="vg-admin-select" id="vgRetroAdminStatus"><option value="active">Activo</option><option value="soldout">Agotado</option><option value="hidden">Oculto</option></select><button class="vg-admin-btn primary" onclick="vgSaveRetroAdminGame()">Guardar</button></div><div class="vg-retro-admin-preview-v101" id="vgRetroAdminPreview"><img id="vgRetroAdminPreviewImg" src="portada.png" alt=""><span>Vista previa. Puedes pegar enlaces de Imgur o URL directa de imagen.</span></div><div class="vg-retro-admin-tools-v101"><button class="vg-admin-btn" onclick="vgClearRetroAdminForm()">Limpiar formulario</button><button class="vg-admin-btn" onclick="vgTestRetroAdminImage()">Probar imagen</button><button class="vg-admin-btn" onclick="loadRetroAdmin()">Recargar juegos</button></div><div class="vg-retro-admin-search-v101"><input class="vg-admin-input" id="vgRetroAdminSearch" placeholder="Buscar juego retro..." oninput="renderRetroAdminList()"><select class="vg-admin-select" id="vgRetroAdminFilter" onchange="renderRetroAdminList()"><option value="all">Todas las plataformas</option><option value="Xbox 360">Xbox 360</option><option value="Clásico">Clásico</option></select></div><div id="vgRetroAdminMsg" class="vg-analytics-muted"></div><div class="vg-retro-admin-list-v101" id="vgRetroAdminList"></div></section>
 <section class="vg-admin-section" id="vgAdminInicio"><div class="vg-admin-note vg-admin-ok"><b>Contenido del inicio:</b> lo que se muestra en la página principal y que se edita aquí: la cinta informativa, las promociones del héroe y las ofertas destacadas. Los cambios se ven en la tienda al recargar (la cinta y el héroe se leen con /api/contenido-inicio).</div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="loadInicioAdmin()">Recargar contenido</button></div><div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Cinta informativa</h3><div class="vg-inicio-form"><input class="vg-admin-input" id="vgInicioCintaTexto" placeholder="Texto de la cinta..."><input class="vg-admin-input" id="vgInicioCintaOrden" placeholder="Orden" type="number"><label class="vg-inicio-check"><input type="checkbox" id="vgInicioCintaActivo" checked> Activa</label><button class="vg-admin-btn primary" onclick="vgSaveInicioFila('cinta')">Guardar en la cinta</button></div><div class="vg-xbox-admin-list" id="vgInicioListaCinta"></div></div><div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Promociones del héroe</h3><div class="vg-inicio-form"><input class="vg-admin-input" id="vgInicioHeroeTitulo" placeholder="Título (ej. Xbox Cuentas)"><input class="vg-admin-input" id="vgInicioHeroeSub" placeholder="Subtítulo"><input class="vg-admin-input" id="vgInicioHeroeImagen" placeholder="URL de imagen (opcional)"><input class="vg-admin-input" id="vgInicioHeroeEnlace" placeholder="Sección al pulsar (ej. retro)"><input class="vg-admin-input" id="vgInicioHeroeOrden" placeholder="Orden" type="number"><label class="vg-inicio-check"><input type="checkbox" id="vgInicioHeroeActivo" checked> Activa</label><button class="vg-admin-btn primary" onclick="vgSaveInicioFila('heroe')">Guardar promoción</button></div><div class="vg-xbox-admin-list" id="vgInicioListaHeroe"></div></div><div class="vg-inicio-sec"><h3 class="vg-inicio-titulo">Ofertas destacadas</h3><div class="vg-inicio-form"><input class="vg-admin-input" id="vgInicioOfertaTitulo" placeholder="Título (ej. Gears Of War 3)"><input class="vg-admin-input" id="vgInicioOfertaSub" placeholder="Subtítulo (ej. Xbox 360 · Cuenta nueva)"><input class="vg-admin-input" id="vgInicioOfertaPrecio" placeholder="Precio MXN" type="number"><input class="vg-admin-input" id="vgInicioOfertaMx" placeholder="Precio en México (tachado)" type="number"><input class="vg-admin-input" id="vgInicioOfertaImagen" placeholder="URL de imagen (opcional)"><input class="vg-admin-input" id="vgInicioOfertaEnlace" placeholder="Sección al pulsar (ej. retro)"><input class="vg-admin-input" id="vgInicioOfertaOrden" placeholder="Orden" type="number"><label class="vg-inicio-check"><input type="checkbox" id="vgInicioOfertaActivo" checked> Activa</label><button class="vg-admin-btn primary" onclick="vgSaveInicioFila('oferta')">Guardar oferta</button></div><div class="vg-xbox-admin-list" id="vgInicioListaOferta"></div></div><div id="vgInicioAdminMsg" class="vg-analytics-muted"></div></section>
+<section class="vg-admin-section" id="vgAdminActas"><div class="vg-admin-note vg-admin-ok"><b>Precios de Actas Gob:</b> los precios que se muestran en la sección Actas Gob de la tienda. Los cambios se ven en la tienda al recargar (la sección lee la tabla al abrirse). Si la tabla aún no existe, la tienda sigue mostrando los precios del código.</div><div class="vg-admin-tools"><button class="vg-admin-btn" onclick="loadActasAdmin()">Recargar precios</button><button class="vg-admin-btn primary" onclick="vgActasGuardarTodo()">Guardar todos los cambios</button></div><div id="vgActasLista"></div><div id="vgActasAdminMsg" class="vg-analytics-muted"></div></section>
 <section class="vg-admin-section vg17-scope" id="vgAdminImagenes"></section>
 <section class="vg-admin-section vg17-scope" id="vgAdminTokens"></section>
 <section class="vg-admin-section" id="vgAdminSetup">
@@ -38203,7 +38249,10 @@ html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
 
   /* ── Sinónimos ──
      Nadie escribe "V-Bucks" en México: escribe "pavos". Y quien busca
-     "360" quiere el catálogo retro. Se respeta lo que ya hubiera. */
+     "360" quiere el catálogo retro. Se respeta lo que ya hubiera.
+     Abreviaturas de juegos (mismas que en v10, títulos reales del
+     catálogo): gta, rdr, ac, gow (solo Gears of War: God of War no
+     existe en el catálogo), mk, fc/fifa, re, f1. */
   var EXTRA = {
     'pavo':     'fortnite pavos vbucks',
     'pavos':    'fortnite pavos vbucks',
@@ -38215,7 +38264,16 @@ html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
     'battle':   'fortnite pase',
     '360':      'xbox retro 360',
     'retro':    'xbox retro 360 clasico',
-    'clasico':  'xbox retro clasico'
+    'clasico':  'xbox retro clasico',
+    'gta':      'grand theft auto',
+    'rdr':      'red dead redemption',
+    'ac':       "assassin's creed",
+    'gow':      'gears of war',
+    'mk':       'mortal kombat',
+    'fc':       'ea sports fc',
+    'fifa':     'ea sports fc fifa',
+    're':       'resident evil',
+    'f1':       'formula 1'
   };
 
   /* Con códigos y no con los acentos de verdad: son caracteres
@@ -47240,15 +47298,49 @@ button.vg119-incompleto{
     background:linear-gradient(180deg,rgba(20,26,45,.92),rgba(12,16,30,.92));
     box-shadow:0 10px 26px rgba(3,6,16,.35);
     transition:transform .18s ease, border-color .18s ease;
+    overflow:hidden;
   }
   .vg-a138-card:hover{ transform:translateY(-2px); border-color:rgba(25,230,193,.34); }
+
+  /* Estilo Kinguin (2026-11-26): foto con blur detrás + imagen
+     nítida a sangre, como prueba de que es ese servicio. La foto es
+     de referencia por grupo de trámite (acta, CURP, SAT, IMSS,
+     Infonavit, tenencia, CFE). */
+  .vg-a138-media{
+    position:relative;
+    aspect-ratio:16/10;
+    overflow:hidden;
+    margin:-16px -17px 0;
+    border-radius:20px 20px 0 0;
+    background:linear-gradient(135deg,#151528 0%,#0d0d1a 100%);
+    border-bottom:1px solid #262640;
+  }
+  .vg-a138-blur{
+    position:absolute;inset:0;
+    background-size:cover;background-position:center;
+    filter:blur(16px) brightness(.75);
+    transform:scale(1.15);
+  }
+  .vg-a138-foto{
+    position:absolute;inset:0;
+    width:100%;height:100%;
+    object-fit:contain;
+  }
+  .vg-a138-ref{
+    position:absolute;top:8px;right:8px;z-index:2;
+    background:rgba(10,10,22,.82);
+    border:1px solid #19e6c1;
+    color:#19e6c1;
+    font-size:.66rem;font-weight:700;letter-spacing:.04em;
+    padding:3px 8px;border-radius:999px;
+  }
 
   .vg-a138-top{ display:flex; align-items:flex-start; justify-content:space-between; gap:12px; }
   .vg-a138-nombre{
     font-weight:900; font-size:0.9375rem; line-height:1.28;
     color:#e9eefc; letter-spacing:.005em; margin:0;
   }
-  .vg-a138-precio{ font-weight:900; font-size:1.0625rem; color:#19e6c1; white-space:nowrap; }
+  .vg-a138-precio{ font-weight:900; font-size:1.25rem; color:#fff; white-space:nowrap; }
 
   .vg-a138-tags{ display:flex; gap:6px; flex-wrap:wrap; }
   .vg-a138-tag{
@@ -47304,6 +47396,7 @@ button.vg119-incompleto{
   @media(max-width:560px){
     #productsGrid.vg-a138-grid{ grid-template-columns:1fr !important; }
     .vg-a138-card{ padding:14px; border-radius:16px; }
+    .vg-a138-media{ margin:-14px -14px 0; border-radius:16px 16px 0 0; }
     .vg-a138-nombre{ font-size:0.875rem; }
   }
 
@@ -47313,6 +47406,8 @@ button.vg119-incompleto{
     box-shadow:0 8px 20px rgba(15,23,42,.07) !important;
   }
   body.vg-light .vg-a138-nombre{ color:#111827 !important; }
+  body.vg-light .vg-a138-precio{ color:#0f172a !important; }
+  body.vg-light .vg-a138-media{ border-bottom-color:rgba(0,0,0,.08) !important; }
   body.vg-light .vg-a138-tag{ color:#5b6577 !important; border-color:rgba(0,0,0,.12) !important; }
   body.vg-light .vg-a138-add{ background:rgba(0,0,0,.04) !important; color:#1f2937 !important; border-color:rgba(0,0,0,.12) !important; }
   body.vg-light .vg-a138-chip{ background:rgba(0,0,0,.03) !important; border-color:rgba(0,0,0,.11) !important; color:#374151 !important; }
@@ -47361,7 +47456,7 @@ button.vg119-incompleto{
 
   var GRUPOS = [
     { id:'actas',      label:'Actas',             re:/^\s*ACTA DE /i },
-    { id:'constancias',label:'Constancias',       re:/ANTECEDENTES|CONSTANCIA|CERTIFICADO/i },
+    { id:'constancias',label:'Constancias',       re:/ANTECEDENTES|CONSTANCIA|CERTIFICADO|^CURP/i },
     { id:'sat',        label:'SAT y RFC',         re:/\bRFC\b|\bCSF\b|IDCIF|OPINI[ÓO]N DE CUMPLIMIENTO/i },
     { id:'imss',       label:'IMSS',              re:/\bIMSS\b|SEMANAS COTIZADAS|\bNSS\b|RECETA/i },
     { id:'infonavit',  label:'Infonavit y Afore', re:/INFONAVIT|AFORE|SINDOS/i },
@@ -47375,6 +47470,71 @@ button.vg119-incompleto{
     return { id:'otros', label:'Otros' };
   }
 
+  /* Imágenes de referencia por grupo, como prueba de que es ese
+     servicio (Miguel, 2026-11-26). Son enlaces públicos estables de
+     medios (no firmados, no expiran); el sitio ya usa hotlinks para
+     todas sus portadas. Si una falla, el <img> se oculta y la tarjeta
+     queda con el fondo oscuro, sin icono de imagen rota.
+     Fuentes: acta de nacimiento (cloudfront), CURP (municipiospuebla),
+     CSF SAT (tumomento), semanas cotizadas IMSS (telediario),
+     Infonavit (milenio), tenencia (mediotiempo), recibo CFE
+     (dineroenimagen). */
+  var IMAGENES = {
+    actas:       { url:'https://d22jn00zjrk7sl.cloudfront.net/wp-content/uploads/2023/04/registro-civil-1.jpg',
+                   alt:'Muestra de acta de nacimiento mexicana' },
+    constancias: { url:'https://m.municipiospuebla.mx/_next/image?url=https%3A%2F%2Fnm25.municipiospuebla.mx%2Fsites%2Fdefault%2Ffiles%2F2026-04%2Fcurp.jpg&w=2048&q=75',
+                   alt:'Ejemplo de CURP actualizada' },
+    sat:         { url:'https://tumomento.com.mx/wp-content/uploads/2025/07/CSF-SAT-850x560.png',
+                   alt:'Ejemplo de Constancia de Situación Fiscal del SAT' },
+    imss:        { url:'https://cdn2.telediario.mx/uploads/media/2026/07/27/tramite-solicitar-constancia-semanas-cotizadas.jpg',
+                   alt:'Trámite de semanas cotizadas del IMSS' },
+    infonavit:   { url:'https://cdn.milenio.com/uploads/media/2025/11/05/infonavit-permite-consultar-saldo-tienes.jpeg',
+                   alt:'Consulta de saldo Infonavit' },
+    vehicular:   { url:'https://cdn2.mediotiempo.com/uploads/media/2026/01/23/puedes-pagar-tenencia-vehicular-linea.jpg',
+                   alt:'Pago de tenencia vehicular en línea' },
+    otros:       { url:'https://www.dineroenimagen.com/800x600/filters:format(webp):quality(75)/media/dinero/images/2017/11/recibo-luz.jpg',
+                   alt:'Ejemplo de recibo de luz CFE' }
+  };
+  function imagenDe(grupoId){ return IMAGENES[grupoId] || IMAGENES.otros; }
+
+  /* ── Precios editables desde el admin ──────────────────────────
+     Los precios base viven en el servicio 54 (código). Si existe la
+     tabla vg_actas_precios en Supabase, sus filas mandan (lectura
+     pública por RLS, con la clave anónima). Si la tabla no existe
+     todavía —falta correr crear-tabla-actas-precios.sql— o la red
+     falla, se sigue con los precios del código: nada se rompe y la
+     sección nunca se queda vacía. */
+  var PRECIOS = {};
+  var preciosCargados = false;
+  function precioDe(nombre, base){
+    var v = PRECIOS[String(nombre || '').toUpperCase()];
+    return (v != null && !isNaN(v)) ? Number(v) : Number(base || 0);
+  }
+  function cargarPrecios(){
+    var url = window.VG_SUPABASE_URL, anon = window.VG_SUPABASE_ANON_KEY;
+    if(!url || !anon || typeof fetch !== 'function') return Promise.resolve(false);
+    return fetch(url + '/rest/v1/vg_actas_precios?select=tramite,precio', {
+      headers: { apikey: anon, Authorization: 'Bearer ' + anon, Accept: 'application/json' }
+    }).then(function(r){ if(!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
+    .then(function(rows){
+      if(!Array.isArray(rows)) return false;
+      rows.forEach(function(f){ if(f && f.tramite) PRECIOS[String(f.tramite).toUpperCase()] = Number(f.precio || 0); });
+      preciosCargados = true;
+      if(typeof activeCategory !== 'undefined' && activeCategory === 'actas') pintar();
+      return true;
+    }).catch(function(){ return false; });
+  }
+  /* Lista de trámites con el precio vigente (base o de la tabla),
+     para el panel admin (vg-actas-admin-v1). */
+  window.vgActasTramites = function(){
+    return tramites().map(function(t){
+      return { nombre: t.nombre, grupo: t.grupo, grupoLabel: t.grupoLabel,
+               precio: t.precio, precioBase: Number((producto().options || [])[t.i].price || 0),
+               clon: t.clon, indice: t.i };
+    });
+  };
+  window.vgActasRefrescarPrecios = function(){ return cargarPrecios(); };
+
   /* Cada opción del producto, con su índice original: es el que hay que
      guardar en el pedido, así que no se puede perder al ordenar ni al
      filtrar. */
@@ -47387,7 +47547,7 @@ button.vg119-incompleto{
       return {
         i: i,
         nombre: nombre,
-        precio: Number(o.price || 0),
+        precio: precioDe(nombre, Number(o.price || 0)),
         grupo: g.id,
         grupoLabel: g.label,
         clon: /\bCLON\b/i.test(nombre)
@@ -47420,7 +47580,13 @@ button.vg119-incompleto{
   }
 
   function tarjeta(t){
+    var img = imagenDe(t.grupo);
     return '<article class="vg-a138-card">' +
+      '<div class="vg-a138-media">' +
+        '<div class="vg-a138-blur" style="background-image:url(\'' + esc(img.url) + '\')"></div>' +
+        '<img class="vg-a138-foto" src="' + esc(img.url) + '" alt="' + esc(img.alt) + '" loading="lazy" onerror="this.style.display=\'none\'">' +
+        '<span class="vg-a138-ref">Imagen de referencia</span>' +
+      '</div>' +
       '<div class="vg-a138-top">' +
         '<h3 class="vg-a138-nombre">' + esc(t.nombre) + '</h3>' +
         '<span class="vg-a138-precio">' + esc(precio(t.precio)) + '</span>' +
@@ -47443,9 +47609,10 @@ button.vg119-incompleto{
   window.vgActasAlCarrito = function(i){
     var p = producto(); if(!p) return;
     var o = (p.options || [])[i]; if(!o) return;
+    var pf = precioDe(o.name, Number(o.price || 0));
     try{
       cart.push({
-        title: p.title, option: o.name, price: Number(o.price || 0),
+        title: p.title, option: o.name, price: pf,
         image: p.image, product_id: p.id, option_index: i
       });
       if(typeof updateCartCount === 'function') updateCartCount();
@@ -47457,12 +47624,13 @@ button.vg119-incompleto{
     var p = producto(); if(!p) return;
     var o = (p.options || [])[i]; if(!o) return;
     if(typeof window.openPaymentModal !== 'function') return;
+    var pf = precioDe(o.name, Number(o.price || 0));
     window.openPaymentModal({
       items: [{
-        title: p.title, option: o.name, price: Number(o.price || 0),
+        title: p.title, option: o.name, price: pf,
         image: p.image, product_id: p.id, option_index: i
       }],
-      total: Number(o.price || 0),
+      total: pf,
       source: 'producto'
     });
   };
@@ -47560,6 +47728,50 @@ button.vg119-incompleto{
   }
 
   /* ── Enganches ───────────────────────────────────────────────── */
+
+  /* Ids propios para el desplegable, lejos de los del catálogo y de
+     los de Fortnite (92xxxxx), Retro (91xxxxx) y TR (90xxxxx). */
+  var BASE_ACTAS_BUSCADOR = 9400000;
+  /* El envoltorio del índice se pone UNA sola vez: envolver() se
+     repite con temporizador y el módulo TR envuelve por encima, así
+     que sin esta bandera las entradas de Actas se duplicarían. */
+  var indiceActasYa = false;
+
+  /* Entradas de Actas para el índice del desplegable rápido: una de
+     sección + una por trámite. Sin esto, buscar "curp" o "acta" no
+     enseñaba ningún trámite. */
+  function entradasActasBuscador(){
+    var lista = tramites();
+    var salida = [{
+      id: BASE_ACTAS_BUSCADOR,
+      title: 'Trámites de actas y servicios GOB',
+      displayTitle: 'Trámites de actas y servicios GOB',
+      description: 'Actas de nacimiento, CURP, SAT, IMSS, Infonavit, tenencia y más. ' + lista.length + ' trámites.',
+      categoryName: 'Actas Gob',
+      category: 'actas',
+      image: 'portada.png',
+      alt: 'Trámites de actas y servicios GOB',
+      options: [{ name: 'Ver los ' + lista.length + ' trámites', price: 0 }],
+      _vgBuscador: true
+    }];
+    for(var i = 0; i < lista.length; i++){
+      var t = lista[i];
+      salida.push({
+        id: BASE_ACTAS_BUSCADOR + 1 + i,
+        title: t.nombre,
+        displayTitle: t.nombre,
+        description: t.grupoLabel + ' · trámite GOB',
+        categoryName: 'Actas Gob',
+        category: 'actas',
+        image: 'portada.png',
+        alt: t.nombre,
+        options: [{ name: precio(t.precio), price: Number(t.precio || 0) }],
+        _vgBuscador: true
+      });
+    }
+    return salida;
+  }
+
   function envolver(){
     if(typeof window.showSection === 'function' && !window.showSection.__vg138){
       var origS = window.showSection;
@@ -47630,6 +47842,44 @@ button.vg119-incompleto{
       nuevaN.__vg138 = true;
       window.renderNav = nuevaN;
     }
+
+    /* El desplegable rápido arma su índice con vgExtraSearchIndex
+       (v103, fase98, TR): aquí se suman los trámites. Al pulsar uno,
+       la búsqueda queda escrita en #globalSearch porque la sección
+       filtra por ella; al pulsar la entrada de sección se limpia y se
+       ven los 31 trámites. */
+    if(!indiceActasYa && typeof window.vgExtraSearchIndex === 'function'){
+      var origIndiceA138 = window.vgExtraSearchIndex;
+      var nuevoIndiceA138 = function(){
+        var base = [];
+        try{ base = origIndiceA138() || []; }catch(e){}
+        return base.concat(entradasActasBuscador());
+      };
+      nuevoIndiceA138.__vg138 = true;
+      window.vgExtraSearchIndex = nuevoIndiceA138;
+      indiceActasYa = true;
+    }
+
+    if(typeof window.openSearchResultProduct === 'function' && !window.openSearchResultProduct.__vg138){
+      var origAbrirA138 = window.openSearchResultProduct;
+      var nuevoAbrirA138 = function(id){
+        var n = Number(id);
+        if(n >= BASE_ACTAS_BUSCADOR && n < 9500000){
+          var caja = document.getElementById('globalSearch');
+          if(n === BASE_ACTAS_BUSCADOR){
+            if(caja) caja.value = '';
+          }else{
+            var t = tramites()[n - BASE_ACTAS_BUSCADOR - 1];
+            if(caja && t) caja.value = t.nombre;
+          }
+          if(typeof window.showSection === 'function') window.showSection('actas');
+          return;
+        }
+        return origAbrirA138.apply(this, arguments);
+      };
+      nuevoAbrirA138.__vg138 = true;
+      window.openSearchResultProduct = nuevoAbrirA138;
+    }
   }
 
   /* OJO con el momento de envolver.
@@ -47651,6 +47901,7 @@ button.vg119-incompleto{
 
   function arrancar(){
     envolver();
+    cargarPrecios();
     setTimeout(envolver, 900);
     setTimeout(envolver, 2400);
     /* Si alguien llega con la sección ya abierta (enlace directo), se
@@ -49553,6 +49804,23 @@ button.vg119-incompleto{
 }
 </style>
 
+<style id="vg-actas-admin-v1">
+/* Panel admin: Actas Gob (vg-actas-admin-v1).
+ * Solo lo que no cubren las clases del panel: el título de cada
+ * grupo y el ancho del campo de precio. Las filas reutilizan
+ * .vg-xbox-admin-row y los botones .vg-admin-btn del panel. */
+.vg-actas-grupo-titulo{
+  margin:18px 0 10px;
+  color:#fff;
+  font-size:1rem;
+}
+.vg-actas-grupo-titulo:first-child{ margin-top:4px; }
+.vg-actas-precio{
+  width:120px !important;
+  min-width:0 !important;
+}
+</style>
+
 <script id="vg-inicio-admin-v1">
 /* Panel admin: Inicio (vg-inicio-admin-v1).
  *
@@ -49806,6 +50074,240 @@ button.vg119-incompleto{
       return r;
     };
     window.vgAdminOpen.__vgInicioAdminV1 = true;
+  }
+  if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', boot);
+  } else {
+    boot();
+  }
+})();
+</script>
+
+<script id="vg-actas-admin-js-v1">
+/* Panel admin: Actas Gob (vg-actas-admin-v1).
+ *
+ * Pestaña "Actas Gob" en el panel admin: los precios de los trámites
+ * de la sección Actas Gob, que Miguel edita sin tocar código.
+ *
+ * Los datos viven en la tabla vg_actas_precios (clave = nombre exacto
+ * del trámite, valor = precio en MXN). La lectura va directo a
+ * Supabase con el cliente del panel (sesión del administrador); el
+ * guardado hace upsert por trámite con esa misma sesión. Si la tabla
+ * no existe todavía es que falta correr
+ * ~/workspace/retro-tr/crear-tabla-actas-precios.sql en el editor SQL
+ * de Supabase (una sola vez: crea la tabla y las políticas de lectura
+ * pública y escritura del admin). Mientras tanto la tienda sigue
+ * mostrando los precios fijos del código (servicio 54) y este panel
+ * lo avisa: nada se rompe.
+ *
+ * La tienda lee los precios con /rest/v1/vg_actas_precios (lectura
+ * pública por RLS, clave anónima) desde el módulo de la sección
+ * (vg-actas-seccion-v138), con respaldo a los precios del código. */
+(function () {
+  'use strict';
+  if (window.__vgActasAdminV1) return;
+  window.__vgActasAdminV1 = true;
+
+  var TABLA = 'vg_actas_precios';
+  var ORDEN_GRUPOS = ['actas', 'constancias', 'sat', 'imss', 'infonavit', 'vehicular', 'otros'];
+  var state = { tramites: [], overrides: {}, tablaExiste: null };
+
+  function qs(s, r) { try { return (r || document).querySelector(s); } catch (e) { return null; } }
+  function qsa(s, r) { try { return Array.prototype.slice.call((r || document).querySelectorAll(s)); } catch (e) { return []; } }
+  function esc(s) {
+    if (typeof window.esc === 'function') return window.esc(s);
+    return String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  function attr(s) { return esc(s); }
+  function money(v) {
+    if (typeof window.money === 'function') return window.money(v);
+    return '$' + Number(v || 0).toLocaleString('es-MX', { maximumFractionDigits: 2 }) + ' MXN';
+  }
+
+  var sbClient = null, sbSig = '';
+  function clienteSB() {
+    var url = window.VG_SUPABASE_URL, anon = window.VG_SUPABASE_ANON_KEY;
+    if (!window.supabase || !url || !anon) return null;
+    var sig = url + '|' + String(anon).slice(0, 16);
+    if (!sbClient || sbSig !== sig) {
+      sbClient = window.supabase.createClient(url, anon, {
+        auth: { persistSession: true, autoRefreshToken: true, storageKey: 'vg_sb_auth' },
+      });
+      sbSig = sig;
+    }
+    return sbClient;
+  }
+
+  function mostrarPestana(name) {
+    qsa('#vgAdminModal .vg-admin-tab').forEach(function (b) { b.classList.toggle('active', b.dataset.tab === name); });
+    qsa('#vgAdminModal .vg-admin-section').forEach(function (sec) { sec.classList.remove('active'); });
+    var sec = qs('#vgAdmin' + name.charAt(0).toUpperCase() + name.slice(1));
+    if (sec) sec.classList.add('active');
+  }
+
+  /* ── Pestaña y sección ── */
+  var SECCION_HTML =
+    '<div class="vg-admin-note vg-admin-ok"><b>Precios de Actas Gob:</b> los precios que se muestran en la sección Actas Gob de la tienda. Los cambios se ven en la tienda al recargar (la sección lee la tabla al abrirse). Si la tabla aún no existe, la tienda sigue mostrando los precios del código.</div>' +
+    '<div class="vg-admin-tools"><button class="vg-admin-btn" onclick="loadActasAdmin()">Recargar precios</button>' +
+    '<button class="vg-admin-btn primary" onclick="vgActasGuardarTodo()">Guardar todos los cambios</button></div>' +
+    '<div id="vgActasLista"></div>' +
+    '<div id="vgActasAdminMsg" class="vg-analytics-muted"></div>';
+
+  function ensureActasAdmin() {
+    var tabs = qs('#vgAdminModal .vg-admin-tabs'), content = qs('#vgAdminModal .vg-admin-content');
+    if (!tabs || !content) return;
+    var tab = qs('.vg-admin-tab[data-tab="actas"]', tabs);
+    if (!tab) {
+      tab = document.createElement('button');
+      tab.className = 'vg-admin-tab';
+      tab.dataset.tab = 'actas';
+      tab.textContent = 'Actas Gob';
+      tabs.appendChild(tab);
+    }
+    tab.onclick = function () { mostrarPestana('actas'); window.loadActasAdmin(); };
+    var sec = qs('#vgAdminActas', content);
+    if (!sec) {
+      sec = document.createElement('section');
+      sec.className = 'vg-admin-section';
+      sec.id = 'vgAdminActas';
+      content.appendChild(sec);
+    }
+    if (sec.dataset.vgActasReady === '1') return;
+    sec.dataset.vgActasReady = '1';
+    if (!sec.innerHTML.trim()) sec.innerHTML = SECCION_HTML;
+  }
+
+  function precioVigente(t) {
+    var v = state.overrides[String(t.nombre).toUpperCase()];
+    return (v != null && !isNaN(v)) ? Number(v) : Number(t.precioBase || 0);
+  }
+
+  function filaHTML(t, i) {
+    var vig = precioVigente(t);
+    var editado = state.tablaExiste && String(vig) !== String(Number(t.precioBase || 0));
+    var det = esc(t.grupoLabel) +
+      ' · precio del código ' + money(t.precioBase) +
+      (editado ? ' · <b>editado en Supabase</b>' : '') +
+      (t.clon ? ' · <b>No oficial (CLON)</b>' : '');
+    return '<div class="vg-xbox-admin-row">' +
+      '<div><b>' + esc(t.nombre) + '</b><small>' + det + '</small></div>' +
+      '<div class="vg-xbox-admin-actions">' +
+      '<input class="vg-admin-input vg-actas-precio" id="vgActasPrecio' + i + '" type="number" min="0" step="1" value="' + vig + '" data-i="' + i + '">' +
+      '<button class="vg-admin-btn primary" onclick="vgSaveActasPrecio(' + i + ')">Guardar</button></div></div>';
+  }
+
+  function pintarLista() {
+    var box = qs('#vgActasLista');
+    if (!box) return;
+    if (!state.tramites.length) {
+      box.innerHTML = '<div class="vg-admin-note">No se encontró la lista de trámites (falta el módulo de la sección Actas Gob).</div>';
+      return;
+    }
+    var html = '';
+    ORDEN_GRUPOS.forEach(function (g) {
+      var list = state.tramites.map(function (t, i) { return { t: t, i: i }; })
+        .filter(function (x) { return x.t.grupo === g; });
+      if (!list.length) return;
+      html += '<h3 class="vg-actas-grupo-titulo">' + esc(list[0].t.grupoLabel) + ' (' + list.length + ')</h3>' +
+        '<div class="vg-xbox-admin-list">' + list.map(function (x) { return filaHTML(x.t, x.i); }).join('') + '</div>';
+    });
+    box.innerHTML = html;
+    var m = qs('#vgActasAdminMsg');
+    if (m) {
+      m.textContent = state.tablaExiste === false
+        ? 'Tabla vg_actas_precios aún no existe: se muestran los precios del código. Corre crear-tabla-actas-precios.sql en el editor SQL de Supabase para poder editarlos.'
+        : 'Precios cargados: ' + state.tramites.length + ' trámites' +
+          (state.tablaExiste ? ' (tabla vg_actas_precios)' : '') + '.';
+    }
+  }
+
+  window.loadActasAdmin = async function () {
+    ensureActasAdmin();
+    var base = [];
+    try {
+      if (typeof window.vgActasTramites === 'function') base = window.vgActasTramites() || [];
+    } catch (e) { base = []; }
+    state.tramites = base;
+    state.overrides = {};
+    state.tablaExiste = null;
+    var client = clienteSB();
+    if (client) {
+      var res = await client.from(TABLA).select('tramite,precio');
+      if (!res.error && Array.isArray(res.data)) {
+        state.tablaExiste = true;
+        res.data.forEach(function (f) { if (f && f.tramite) state.overrides[String(f.tramite).toUpperCase()] = Number(f.precio || 0); });
+      } else if (res.error) {
+        state.tablaExiste = false;
+      }
+    }
+    pintarLista();
+  };
+
+  function valorInput(i) {
+    var el = qs('#vgActasPrecio' + i);
+    return el ? Number(el.value || 0) : null;
+  }
+
+  async function guardarUno(i) {
+    var t = state.tramites[i];
+    if (!t) return false;
+    var precio = valorInput(i);
+    if (precio == null || isNaN(precio) || precio < 0) { alert('Escribe un precio válido para ' + t.nombre + '.'); return false; }
+    var client = clienteSB();
+    if (!client) { alert('No hay cliente de Supabase en esta página.'); return false; }
+    var res = await client.from(TABLA).upsert(
+      { tramite: t.nombre, precio: precio, updated_at: new Date().toISOString() },
+      { onConflict: 'tramite' });
+    if (res.error) {
+      alert('No se pudo guardar: ' + res.error.message +
+        ((res.error.code === '42501' || res.error.code === '42P01' || String(res.error.message || '').indexOf('row-level security') >= 0 || String(res.error.message || '').indexOf('does not exist') >= 0)
+          ? ' Falta correr crear-tabla-actas-precios.sql en el editor SQL de Supabase (una sola vez).'
+          : ''));
+      return false;
+    }
+    state.overrides[String(t.nombre).toUpperCase()] = precio;
+    state.tablaExiste = true;
+    return true;
+  }
+
+  window.vgSaveActasPrecio = async function (i) {
+    ensureActasAdmin();
+    if (await guardarUno(i)) {
+      if (typeof window.vgActasRefrescarPrecios === 'function') { try { await window.vgActasRefrescarPrecios(); } catch (e) {} }
+      await window.loadActasAdmin();
+    }
+  };
+
+  window.vgActasGuardarTodo = async function () {
+    ensureActasAdmin();
+    var cambiados = [];
+    state.tramites.forEach(function (t, i) {
+      var v = valorInput(i);
+      if (v != null && !isNaN(v) && v >= 0 && String(v) !== String(precioVigente(t))) cambiados.push(i);
+    });
+    if (!cambiados.length) { alert('No hay cambios por guardar.'); return; }
+    var ok = 0;
+    for (var k = 0; k < cambiados.length; k++) { if (await guardarUno(cambiados[k])) ok++; }
+    if (ok) {
+      if (typeof window.vgActasRefrescarPrecios === 'function') { try { await window.vgActasRefrescarPrecios(); } catch (e) {} }
+      await window.loadActasAdmin();
+      alert('Precios guardados: ' + ok + ' de ' + cambiados.length + '.');
+    }
+  };
+
+  function boot() {
+    ensureActasAdmin();
+    if (qs('#vgAdminActas.active')) window.loadActasAdmin();
+  }
+  var oldOpenAdmin = window.vgAdminOpen;
+  if (typeof oldOpenAdmin === 'function' && !oldOpenAdmin.__vgActasAdminV1) {
+    window.vgAdminOpen = function () {
+      var r = oldOpenAdmin.apply(this, arguments);
+      setTimeout(boot, 300);
+      setTimeout(function () { if (qs('#vgAdminActas.active')) window.loadActasAdmin(); }, 700);
+      return r;
+    };
+    window.vgAdminOpen.__vgActasAdminV1 = true;
   }
   if (document.readyState === 'loading') {
     document.addEventListener('DOMContentLoaded', boot);
@@ -56042,17 +56544,23 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
      vg-navbar-scroll-only v1 (vg-navbar-hidden/visible), que peleaban
      entre sí con dos clases distintas y un contador de modales que podía
      quedarse atorado y dejar la barra escondida.
-     - Bajar (y > 120 y diff > 8) → se oculta.
-     - Subir (diff < -6) o estar arriba (y <= 24) → aparece.
+     DISTANCIA ACUMULADA por dirección (no delta por cuadro): el scroll
+     real con rueda mueve pocos px por cuadro, así que un umbral por
+     cuadro (>6 px) nunca disparaba al subir despacio y la barra no
+     volvía hasta arriba del todo (fallo en vivo 2026-11-26 21:18).
+     - Bajar acumulado >= 120 px (y > 120) → se oculta.
+     - Subir acumulado >= 50 px → aparece.
+     - Cerca de arriba (y <= 24) → siempre aparece.
+     - Al cambiar de dirección se resetea el acumulado contrario.
      - Nunca se oculta mientras se escribe/busca en ella, ni se pelea con
        los modales: si hay un modal abierto, este bloque no toca la barra
        (la esconde el CSS de vg-header-fast-modal-v67). */
   if (window.__vgHeaderScrollV2) return;
   window.__vgHeaderScrollV2 = true;
 
-  var HIDE_AFTER = 120;  /* px bajados antes de permitir ocultar */
-  var HIDE_DIFF = 8;     /* px hacia abajo en un cuadro para ocultar */
-  var SHOW_DIFF = 6;     /* px hacia arriba en un cuadro para mostrar */
+  var HIDE_AFTER = 120;  /* px de scroll antes de permitir ocultar */
+  var HIDE_ACCUM = 120;  /* px acumulados hacia abajo para ocultar */
+  var SHOW_ACCUM = 50;   /* px acumulados hacia arriba para mostrar */
   var TOP_ZONE = 24;     /* cerca de arriba: siempre visible */
 
   function ready(fn){
@@ -56069,6 +56577,8 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
 
     var root = document.documentElement;
     var lastY = Math.max(0, window.pageYOffset || root.scrollTop || 0);
+    var accUp = 0;    /* px subidos desde el último cambio de dirección */
+    var accDown = 0;  /* px bajados desde el último cambio de dirección */
     var ticking = false;
 
     function currentY(){
@@ -56107,16 +56617,34 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
     function sync(){
       var y = currentY();
       var diff = y - lastY;
-      if (modalOpen()) {
-        /* No pelear con el modal: dejamos las clases como están. */
-      } else if (y <= TOP_ZONE || searchActive()) {
-        show();
-      } else if (y > HIDE_AFTER && diff > HIDE_DIFF) {
-        hide();
-      } else if (diff < -SHOW_DIFF) {
-        show();
-      }
       lastY = y;
+      if (modalOpen()) {
+        /* No pelear con el modal: dejamos las clases como están y se
+           descarta la distancia acumulada, para no esconder/mostrar de
+           golpe al cerrarlo con un acumulado viejo. */
+        accUp = 0; accDown = 0;
+        return;
+      }
+      if (y <= TOP_ZONE || searchActive()) {
+        show();
+        accUp = 0; accDown = 0;
+        return;
+      }
+      if (diff > 0) {
+        /* Bajando: se acumula; al cambiar de dirección se resetea. */
+        accDown += diff; accUp = 0;
+        if (y > HIDE_AFTER && accDown >= HIDE_ACCUM) {
+          hide();
+          accDown = 0;
+        }
+      } else if (diff < 0) {
+        /* Subiendo: se acumula; al cambiar de dirección se resetea. */
+        accUp += -diff; accDown = 0;
+        if (accUp >= SHOW_ACCUM) {
+          show();
+          accUp = 0;
+        }
+      }
     }
 
     function onScroll(){
@@ -56269,7 +56797,7 @@ async function esOperador(){
 
 /* ── Pestañas ── */
 var TABS = ['pedidos','soporte','hoy','usuarios','dashboard',
-  'xboxcurrent','cuentas','retro','inicio','imagenes',
+  'xboxcurrent','cuentas','retro','inicio','actas','imagenes',
   'tokens','setup','export','debug','settings','analytics',
   'reviews','bitacora','buscado','enlaces'];
 var V17 = ['pedidos','soporte','tokens','imagenes'];
@@ -56582,6 +57110,11 @@ CARGADORES.inicio = function(sec){
   pintarError(sec, new Error('No se encontró el módulo de Inicio (vg-inicio-admin-v1).'), function(){ cargarTab('inicio'); });
   return Promise.resolve(false);
 };
+CARGADORES.actas = function(sec){
+  if(typeof window.loadActasAdmin === 'function') return window.loadActasAdmin();
+  pintarError(sec, new Error('No se encontró el módulo de Actas Gob (vg-actas-admin-v1).'), function(){ cargarTab('actas'); });
+  return Promise.resolve(false);
+};
 
 /* ── El ÚNICO vgAdminOpen ── */
 var aperturaEnCurso = false;
@@ -56694,20 +57227,20 @@ var vg7Pendientes = 0;         /* pendientes conocidos por el resumen */
 var VG7_ETIQUETAS = {
   pedidos: 'Pedidos', soporte: 'Soporte', hoy: 'Hoy', usuarios: 'Usuarios',
   dashboard: 'Dashboard', xboxcurrent: 'Xbox One / Series', cuentas: 'Xbox Cuentas',
-  retro: 'Xbox Retro', inicio: 'Inicio', imagenes: 'Imágenes', tokens: 'Tokens',
+  retro: 'Xbox Retro', inicio: 'Inicio', actas: 'Actas Gob', imagenes: 'Imágenes', tokens: 'Tokens',
   setup: 'Supabase', export: 'Exportar', debug: 'Diagnóstico',
   settings: 'Ajustes rápidos', analytics: 'Analítica', reviews: 'Recomendaciones',
   bitacora: 'Bitácora', buscado: 'Lo que buscan', enlaces: 'Fotos rotas'
 };
 var VG7_MONOGRAMA = {
   pedidos: 'PE', soporte: 'SO', hoy: 'HO', usuarios: 'US', dashboard: 'DA',
-  xboxcurrent: 'X1', cuentas: 'XC', retro: 'XR', inicio: 'IN', imagenes: 'IM',
+  xboxcurrent: 'X1', cuentas: 'XC', retro: 'XR', inicio: 'IN', actas: 'AG', imagenes: 'IM',
   tokens: 'TO', setup: 'SU', export: 'EX', debug: 'DI', settings: 'AJ',
   analytics: 'AN', reviews: 'RE', bitacora: 'BI', buscado: 'BU', enlaces: 'FO'
 };
 var VG7_GRUPOS = [
   { nombre: 'Operación', tabs: ['pedidos', 'soporte', 'hoy', 'usuarios', 'dashboard'] },
-  { nombre: 'Catálogo', tabs: ['xboxcurrent', 'cuentas', 'retro', 'inicio', 'imagenes'] },
+  { nombre: 'Catálogo', tabs: ['xboxcurrent', 'cuentas', 'retro', 'inicio', 'actas', 'imagenes'] },
   { nombre: 'Sistema', tabs: ['tokens', 'setup', 'export', 'debug', 'settings', 'analytics', 'reviews', 'bitacora', 'buscado', 'enlaces'] }
 ];
 var VG7_GRUPO_DE = {};
