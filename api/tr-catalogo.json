@@ -13888,20 +13888,6 @@
     "origen": "one-series"
   },
   {
-    "slug": "minecraft-standard",
-    "title": "Minecraft",
-    "platform": "Xbox One / Series",
-    "ms_id": "9MVXMVT8ZKWC",
-    "image": "https://store-images.s-microsoft.com/image/apps.6631.13850085746326678.06e2dc5c-7997-46e9-a8e6-0e48b57cb13b.53ca896e-c3c3-460b-b9ee-70cc217b041c?w=480&h=480&format=jpg",
-    "mx": 403.49,
-    "tr": 1133.99,
-    "costo_mxn": 440.82,
-    "venta_mxn": 400,
-    "ganancia": -80.82,
-    "paquete": false,
-    "origen": "one-series"
-  },
-  {
     "slug": "minecraft-deluxe-collection-2-deluxe",
     "title": "Minecraft Deluxe Collection 2",
     "platform": "Xbox One / Series",
