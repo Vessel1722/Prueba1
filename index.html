@@ -57853,59 +57853,248 @@ setTimeout(schedule,800);
    en orden a la regla !important de la línea ~4257 (mismo selector).
    ════════════════════════════════════════════════════════════════════ */
 html, body{overflow-x:clip !important;}
-</style>
-<style id="vg-card-boton-v1">
+</style><style id="vg-lateral-fijo-v3">
 /* ════════════════════════════════════════════════════════════════════
-   vg-card-boton-v1 · «Ver opciones» CABE ENTERO en las tarjetas
-   Ronda 3 (2026-11-27): fallo en vivo 06:42 PST («'er opcione» en
-   TODAS las tarjetas del catálogo).
+   vg-lateral-fijo-v3 · EL LATERAL QUEDA FIJO EN TODO EL CATÁLOGO
+   Ronda 4 — Frente A (2026-11-27). Solo CSS, sin JS nuevo.
    ────────────────────────────────────────────────────────────────────
-   CAUSA RAÍZ (geometría medida en el archivo + fuente real Inter):
-   a 1920px la tarjeta mide 197px (rejilla de 6 en una columna de
-   1252px: wrap 1600 − lateral 280 − gap 24 − 5×14 de gaps), .info
-   tiene padding 16px (línea ~41956, .card .info, especificidad 0,2,0),
-   así que la fila de botones mide 165px. La rejilla .premium-actions
-   es 1fr 44px (líneas ~48357/~48429) y el botón rápido — INVISIBLE
-   (opacity:0) pero con display:grid y 48px de ancho (línea ~7676) —
-   reserva su pista de 44px: al botón «Ver opciones» le quedan 113px
-   de pista y 93px de caja para un texto de 88px (Inter 700 a 13.12px
-   + letter-spacing .02em, medido con la fuente real: 85.0px + 3.1px).
-   Solo 5px de margen: cualquier ventana un poco más angosta que
-   ~1571px de viewport, o la fuente de respaldo si Inter no carga,
-   recorta el texto por los dos lados (nowrap + overflow:hidden +
-   centrado). En jsdom «cabía» por 5px; en vivo no.
-   FIX: en reposo la rejilla es 1fr (el botón ocupa todo el ancho de
-   .info: caja 149px, 61px de margen) y el botón rápido se esconde.
-   Al pasar el cursor la rejilla vuelve a 1fr 40px y el botón rápido
-   reaparece (40px), con el botón principal a .78rem para que el texto
-   siga cabiendo también en hover (caja 101px, texto ~81px, 20px de
-   margen). Con esto el texto cabe hasta viewport ≈1235px (antes
-   ≈1571px). Se aplica a #productsGrid y a #featuredGrid (mismo botón,
-   misma rejilla); las tarjetas de Xbox/Retro usan otra maqueta y no
-   se tocan. No se usa ellipsis: el texto debe leerse completo.
+   CAUSA RAÍZ (re-diagnóstico desde cero, con evidencia del archivo;
+   las hipótesis de las rondas 1–3 quedan DESCARTADAS):
+
+   (a) El envoltorio NO se pierde al navegar. Hay UN solo .layout y UN
+       solo aside.sidebar en el DOM (línea 10073, estático, ya con
+       <div class="vg-side-col">). renderNav (línea 10451) solo hace
+       innerHTML de #sideList y #catRow; ningún wrapper (v62/v112/v91/
+       v138/TR) toca .layout, .sidebar ni .vg-side-col (grep de
+       .sidebar/.layout/sideList en todo el archivo). El wrapper está
+       presente DESPUÉS de renderizar el catálogo (verificado en jsdom).
+   (b) NINGÚN ancestro bloquea el sticky. Cadena completa en jsdom a
+       1920 tras showSection('all'): aside sticky top 132 → .vg-side-col
+       static, overflow visible, align-self:stretch → .layout grid
+       280px 1fr, overflow visible → .wrap static visible → #marketView
+       static visible (la animación fade termina en transform:none) →
+       main relative visible → body display:grid overflow-x:clip,
+       overflow-y:auto → html overflow-x:clip, overflow-y:visible. Sin
+       transform/filter/will-change/contain en toda la cadena; el
+       overflow-y:auto de body PROPAGA a la ventana (html visible en y),
+       así que el scrollport ya era la ventana. El fix v2 (clip) está
+       bien y se queda, pero no era el problema: con html overflow-x ya
+       no visible, el overflow-x:hidden de body no creaba el contenedor
+       de scroll que decía la ronda 3.
+   (c) La columna SÍ estira (align-self:stretch computado), PERO el
+       sticky solo puede viajar dentro de su bloque contenedor, y ese
+       bloque es LA FILA DEL .layout: su altura es la altura de la
+       rejilla de productos. Y la rejilla es CORTA en casi todas las
+       secciones (datos del propio archivo, SERVICES línea 10418,
+       medido en jsdom tras showSection):
+         sección     tarjetas  filas(@6col)  alto rejilla*  recorrido**
+         all         46        8             ~3.390px       ~2.610px
+         gaming      7         2             ~840px         ~60px
+         streaming   16        3             ~1.260px       ~480px
+         software    12        2             ~840px         ~60px
+         actas       31        6             ~2.540px       ~1.760px
+         redes       10        2             ~840px         ~60px
+       * tarjeta ≈ 410px (imgbox 178 + info/paddings/mínimos, reglas
+         líneas 283–292; rango 380–440px, la conclusión no cambia).
+       ** recorrido = alto rejilla − alto lateral (~780px: 9 filas +
+       filtros de precio + pie; tope max-height 932px). En gaming,
+       software y redes el recorrido es ≈ 0: el lateral NUNCA se fija,
+       baja 1:1 con la página desde el primer píxel. En 'all' aguanta
+       ~2,5 pantallas y luego se suelta y la zona izquierda queda
+       vacía y negra. ESO es exactamente el fallo en vivo 08:15 PST
+       («a 2-3 pantallas desaparece»). jsdom no podía verlo: no hace
+       layout, todas las alturas son 0, así que el sticky «pasaba»
+       27/27 y 36/36 mientras en vivo fallaba.
+       Conclusión: NINGÚN arreglo con position:sticky dentro de
+       .layout puede cumplir «lateral fijo durante TODO el scroll»,
+       porque el bloque contenedor termina donde termina la rejilla.
+       El lateral tiene que salir del bloque contenedor → fixed.
+
+   FIX (v3): el aside pasa a position:fixed en escritorio (≥981px),
+   colgado de la ventana: top 132px (header fijo 120px + 12px),
+   max-height calc(100vh − 148px) con scroll interno, ancho y left
+   iguales a la columna que ocupa hoy (sin max() para no depender del
+   soporte del motor CSS: el .wrap es full-width hasta 1600px, así
+   que left es 22px hasta ahí y calc(50vw − 778px) a partir de 1601px):
+     · 981–1023px: columna 260px (línea 283), .wrap max-width 1480px
+       (línea 48159) → left 22px (el viewport nunca llega a 1480).
+     · 1024–1600px: columna 280px (línea 48368), .wrap max-width
+       1600px, padding 22px (línea 48321) → left 22px.
+     · ≥1601px: columna 280px, .wrap centrado de 1600px → left =
+       50vw − 800px + 22px = calc(50vw − 778px) (a 1920px: 182px).
+   La columna .vg-side-col QUEDA en la rejilla como espaciador vacío
+   de 260/280px (la regla v1 align-self:stretch sigue, inofensiva),
+   así la rejilla de productos no se mueve ni un píxel. No se toca
+   nada de v1 (estilo A, details, pie, regla vgfn-activo que oculta
+   la columna en Fortnite) ni de v2 (overflow-x:clip). La regla v3 va
+   DESPUÉS de la v1 en el documento, mismo selector, con !important:
+   gana por orden. En ≤980px el fixed no existe (media min-width:
+   981px): el lateral queda como hoy (static ≤980, display:none
+   ≤820). Cuando #marketView no está activa (inicio), el aside está
+   dentro de un display:none y no se pinta; con vgfn-activo la
+   columna se oculta por la regla v1.
+   TRANSITORIO CONOCIDO (confirmar en vivo): al entrar al catálogo,
+   .view.active corre la animación fade (transform translateY 6px →
+   none, 220ms); mientras dura, #marketView es el bloque contenedor
+   del fixed y el lateral aparece ~120px más abajo, y al terminar la
+   animación sube a top:132px. El fade (opacidad 0→1) lo enmascara;
+   si en vivo se nota un salto, el seguimiento es animar solo la
+   opacidad de .view, fuera del alcance de este fix.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── Fijo colgado de la ventana (solo escritorio) ── */
+@media (min-width:981px){
+  #marketView .layout > .vg-side-col > .sidebar{
+    position:fixed !important;   /* sale del bloque contenedor .layout:
+                                    ya no depende de la altura de la rejilla */
+    top:132px !important;        /* header fijo 120px + 12px de margen */
+    z-index:40;                  /* bajo la barra (z 60) y los modales (80+) */
+    max-height:calc(100vh - 148px);
+    overflow-y:auto;
+    scrollbar-width:thin;
+    scrollbar-color:rgba(139,92,246,.55) transparent;
+  }
+  #marketView .layout > .vg-side-col > .sidebar::-webkit-scrollbar{width:6px}
+  #marketView .layout > .vg-side-col > .sidebar::-webkit-scrollbar-thumb{
+    background:rgba(139,92,246,.55);border-radius:999px}
+}
+
+/* ── 981–1023px: columna 260px, .wrap max-width 1480px → left 22px ── */
+@media (min-width:981px) and (max-width:1023px){
+  #marketView .layout > .vg-side-col > .sidebar{
+    width:260px !important;
+    left:22px !important;
+  }
+}
+
+/* ── 1024–1600px: columna 280px, .wrap full-width con padding 22px ── */
+@media (min-width:1024px) and (max-width:1600px){
+  #marketView .layout > .vg-side-col > .sidebar{
+    width:280px !important;
+    left:22px !important;
+  }
+}
+
+/* ── ≥1601px: columna 280px, .wrap centrado de 1600px ── */
+@media (min-width:1601px){
+  #marketView .layout > .vg-side-col > .sidebar{
+    width:280px !important;
+    left:calc(50vw - 778px) !important;  /* 50vw − 800px + 22px; a 1920px: 182px */
+  }
+}
+</style>
+<style id="vg-card-boton-v2">
+/* ════════════════════════════════════════════════════════════════════
+   vg-card-boton-v2 · «Ver opciones» CABE ENTERO también en HOVER
+   Ronda 4 (2026-11-27): fallo en vivo 08:15 PST («/er opciones» en
+   hover a 1920px; en reposo se leía completo; en Retro «Ver juegos»
+   sí cabía). La v1 NO aguantó en vivo.
+   ────────────────────────────────────────────────────────────────────
+   CAUSA RAÍZ (medida desde el archivo, no desde jsdom):
+   1) La ronda 3 supuso 6 columnas a 1920px (tarjeta 197px), pero en
+      un navegador real son 7: la regla que manda es vg-auditoria-v1
+      (líneas ~51389-51390, especificidad 1,3,2 — id + .grid + 2×:not
+      —, @media min-width:1440px, ÚLTIMA regla de columnas del
+      archivo). jsdom NO lo vio: no implementa matchMedia y evalúa
+      los @media con su viewport por defecto (1024×768), así que el
+      harness R3 midió 6 columnas y 197px en una «1920» ficticia.
+      Geometría real a 1920px: wrap 1600−44=1556; columna
+      1556−280−22=1254; tarjeta (1254−6×14)/7=167.1px; fila de
+      botones 167.1−32 (padding .info 16px, línea ~41955)=135.1px.
+   2) Con la v1, en hover la rejilla era 1fr 40px (gap 8px): pista
+      del botón 135.1−40−8=87.1px de caja EXTERNA, y la caja de
+      CONTENIDO es 87.1−16 (padding 9px 8px)=71.1px. El informe R3
+      comparó la caja externa (101px, y encima a 6 columnas) con el
+      texto: el margen real era 71.1−83.9=−12.7px. Texto centrado +
+      nowrap + overflow:hidden ⇒ recorte por los dos lados: la «V»
+      (~7px) desaparece y se lee «/er opciones». Con la fuente de
+      respaldo (DejaVu Sans Bold, 94.2px a 12.48px) el déficit es
+      de 23.0px. «Ver juegos» (68.4px a 12.48px) cabe por 2.7px: por
+      eso Retro se veía bien. A 1366px (6 columnas) el déficit v1
+      es aún peor: 21.6px. Un lado a lado a 7 columnas es imposible
+      con la fuente de respaldo: 135.1−94.2=41.0px no dejan sitio
+      para un botón de 40px + padding + margen.
+   3) Descartadas: (a) el width:48px !important del botón rápido
+      (línea ~7676, especificidad 0,1,0) NO le gana al width:40px
+      !important del hover v1 (1,4,2): el rápido medía 40px y cabía
+      en su pista; (d) el selector hover SÍ casa con el markup real
+      (cardHTML, línea ~10588: article.card > .info >
+      .premium-actions > button.detail-btn + button.quick-add-btn).
+   TEXTOS MEDIDOS (fontTools; Inter variable wght 700 opsz 14;
+   DejaVu Sans Bold; + letter-spacing .02em):
+   «Ver opciones» Inter 13.12px=88.2, 12.48px=83.9; DejaVu
+   13.12px=99.0, 12.48px=94.2. «Ver juegos» Inter 13.12px=71.9,
+   12.48px=68.4; DejaVu 12.48px=77.7.
+   FIX v2: el botón rápido ya NO ocupa pista de rejilla en hover:
+   .premium-actions sigue en 1fr y el botón principal conserva
+   TODO el ancho (reposo y hover idénticos: caja de contenido
+   119.1px a 1920, margen 31.0px Inter / 20.2px DejaVu; 110.3px a
+   1366, margen 22.2px / 11.4px). En hover el rápido FLOTA con
+   position:absolute sobre la banda del precio (bottom:100% +
+   8px, a la derecha, z-index 3, 40×40px, clicable, fondo sólido
+   para que no se transparente el precio si lo roza). La banda del
+   precio está vacía a la derecha: el precio termina como muy tarde
+   en 91.8px («$1,234» a 21.6px) y el flotante empieza en 95.1px;
+   solo precios ≥ $10,000 («$12,345» termina en 105.8px) lo rozan,
+   y ahí el fondo sólido lo deja como pastilla deliberada.
+   RESIDUALES: (i) en reposo a viewport < ~1233px el texto ya no
+   cabe ni a 1fr (preexistente, fuera de esta ronda); (ii) en vista
+   de lista (.vg-list-view, tarjetas a lo ancho) se conserva el
+   lado a lado v1, que ahí sí cabe.
+   Se aplica a #productsGrid y #featuredGrid (misma plantilla
+   cardHTML) y a #vgFavoritesGrid (misma plantilla, tarjetas
+   ≥210px; en v1 quedaba fuera y su rápido desbordaba 4px su pista
+   de 44px). Xbox One/Series (.vg-x113-acciones, botón «Comprar»)
+   y Retro (.retro-game, sin botón) usan otra maqueta y no se
+   tocan. Sin ellipsis: el texto debe leerse completo.
    ════════════════════════════════════════════════════════════════════ */
 @media (min-width:1024px){
-  /* Reposo: el botón ocupa todo el ancho de la tarjeta. */
+  /* Reposo: IGUAL que v1 (ya pasa en vivo a 1920). La única adición
+     es position:relative en .premium-actions: es el ancla del
+     botón flotante en hover. */
   html body #productsGrid .card .premium-actions,
-  html body #featuredGrid .card .premium-actions{
+  html body #featuredGrid .card .premium-actions,
+  html body #vgFavoritesGrid .card .premium-actions{
     grid-template-columns:1fr !important;
+    position:relative !important;
   }
   html body #productsGrid .card .premium-actions .quick-add-btn,
-  html body #featuredGrid .card .premium-actions .quick-add-btn{
+  html body #featuredGrid .card .premium-actions .quick-add-btn,
+  html body #vgFavoritesGrid .card .premium-actions .quick-add-btn{
     display:none !important;
   }
   html body #productsGrid .card .premium-actions .detail-btn,
-  html body #featuredGrid .card .premium-actions .detail-btn{
+  html body #featuredGrid .card .premium-actions .detail-btn,
+  html body #vgFavoritesGrid .card .premium-actions .detail-btn{
     min-width:0 !important;
     padding:9px 8px !important;
   }
-  /* Hover: el botón rápido reaparece sin robarle el texto al botón. */
-  html body #productsGrid .card:hover .premium-actions,
-  html body #featuredGrid .card:hover .premium-actions{
+  /* HOVER NORMAL: el rápido flota sobre la banda del precio, SIN
+     pista de rejilla. El botón principal NO cambia de tamaño ni de
+     fuente en hover: conserva la caja de contenido del reposo. */
+  html body #productsGrid:not(.vg-list-view) .card:hover .premium-actions .quick-add-btn,
+  html body #featuredGrid .card:hover .premium-actions .quick-add-btn,
+  html body #vgFavoritesGrid .card:hover .premium-actions .quick-add-btn{
+    display:grid !important;
+    position:absolute !important;
+    right:0 !important;
+    bottom:100% !important;
+    margin-bottom:8px !important;
+    width:40px !important;
+    min-width:40px !important;
+    height:40px !important;
+    min-height:40px !important;
+    opacity:1 !important;
+    z-index:3 !important;
+    background:rgba(13,43,38,.97) !important;
+    box-shadow:0 6px 18px rgba(0,0,0,.45) !important;
+  }
+  /* HOVER LISTA: vista de lista a lo ancho; ahí el lado a lado v1
+     sí cabe y se conserva tal cual. */
+  html body #productsGrid.vg-list-view .card:hover .premium-actions{
     grid-template-columns:1fr 40px !important;
   }
-  html body #productsGrid .card:hover .premium-actions .quick-add-btn,
-  html body #featuredGrid .card:hover .premium-actions .quick-add-btn{
+  html body #productsGrid.vg-list-view .card:hover .premium-actions .quick-add-btn{
     display:grid !important;
     width:40px !important;
     min-width:40px !important;
@@ -57913,8 +58102,7 @@ html, body{overflow-x:clip !important;}
     min-height:40px !important;
     opacity:1 !important;
   }
-  html body #productsGrid .card:hover .premium-actions .detail-btn,
-  html body #featuredGrid .card:hover .premium-actions .detail-btn{
+  html body #productsGrid.vg-list-view .card:hover .premium-actions .detail-btn{
     font-size:.78rem !important;
     padding:9px 8px !important;
   }
