@@ -9,6 +9,14 @@
  * de la muestra del inicio estilo Kinguin) para que el inicio nunca
  * se quede vacío. La escritura no pasa por aquí: el panel admin
  * escribe directo a Supabase con la sesión del administrador.
+ *
+ * ARREGLO AUD-H5 (2026-11-27): los 4 héroes por defecto ahora traen
+ * imagen y precio reales. OJO: esta semilla SOLO se usa si la tabla
+ * está vacía o no responde; en vivo mandan las filas de
+ * vg_inicio_contenido, que hay que actualizar con
+ * vg-arreglo-aud-h5-supabase.sql (o desde el panel admin, pestaña
+ * Inicio). El módulo del héroe (vg-inicio-kinguin-v1) además normaliza
+ * los textos viejos al pintar, por si la tabla aún no se actualiza.
  */
 
 const SUPA_URL = process.env.SUPABASE_URL || '';
@@ -21,10 +29,10 @@ const POR_DEFECTO = {
     { id: 'd3', texto: 'Diamantes Free Fire y CODPoints al mejor precio' },
   ],
   heroes: [
-    { id: 'h1', titulo: 'Xbox Cuentas', subtitulo: '1,639 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: '' },
-    { id: 'h2', titulo: 'Fortnite', subtitulo: 'Skins, lotes y pases al mejor precio', enlace: 'fortnite', imagen: '' },
-    { id: 'h3', titulo: 'CODPoints de Warzone', subtitulo: 'Recarga tu cuenta y juega hoy mismo', enlace: 'gaming', imagen: '' },
-    { id: 'h4', titulo: 'Game Pass', subtitulo: 'Ultimate y Core desde $90 MXN', enlace: 'gaming', imagen: '' },
+    { id: 'h1', titulo: 'Xbox Cuentas', subtitulo: '1,639 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: 'https://i.imgur.com/CwZeUfrh.jpg' },
+    { id: 'h2', titulo: 'Fortnite', subtitulo: 'Skins, lotes y pases desde $20 MXN', enlace: 'fortnite', imagen: 'https://fortnite-api.com/images/cosmetics/br/character_fondaim/featured.png' },
+    { id: 'h3', titulo: 'CODPoints de Warzone', subtitulo: 'Recarga tu cuenta desde $200 MXN \u00b7 2,400 CP', enlace: 'gaming', imagen: 'https://i.imgur.com/NbxACqwh.jpg' },
+    { id: 'h4', titulo: 'Game Pass', subtitulo: 'Game Pass Ultimate desde $90 MXN', enlace: 'gaming', imagen: 'https://i.imgur.com/soHmMpnh.jpg' },
   ],
   ofertas: [
     { id: 'o1', titulo: 'Gears Of War 3', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 45, precio_mx: 57.25, enlace: 'retro', imagen: '' },
