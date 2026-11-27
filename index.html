@@ -55778,6 +55778,68 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-codigo{
   color:#1c1c28!important;
 }
 
+/* ── 23 · Vista completa de pedido (overlay al picar una fila, 2026-11-26) ──
+   Al picar un pedido, el detalle y el chat se mueven a esta vista fija
+   para verlos completos y mandar mensajes sin tener que bajar. Al cerrar
+   vuelven a su sitio apilado. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-vista{
+  position:fixed!important;
+  inset:0!important;
+  z-index:100!important;
+  display:flex!important;
+  flex-direction:column!important;
+  background:#0b0b14!important;
+  color:#d9dbe8!important;
+  overflow:hidden!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-vista[hidden]{
+  display:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-vista-barra{
+  flex:none!important;
+  display:flex!important;
+  flex-wrap:wrap!important;
+  align-items:center!important;
+  gap:10px!important;
+  padding:12px 14px!important;
+  background:#12121e!important;
+  border-bottom:1px solid #34344e!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-vista-titulo{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+  color:#ffffff!important;
+  font-size:1rem!important;
+  font-weight:800!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-vista-cuerpo{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  -webkit-overflow-scrolling:touch!important;
+  touch-action:pan-y!important;
+  padding:14px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedido-vista-cuerpo>.vg6-card{
+  max-width:980px!important;
+  width:auto!important;
+  margin:0 auto 14px auto!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista{
+  background:#f4f4f8!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-barra{
+  background:#ffffff!important;
+  border-bottom-color:#e2e2ea!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
+  color:#1c1c28!important;
+}
+
 </style>
 
 <script id="vg-admin-v5">
@@ -57362,6 +57424,14 @@ function vg6PintarPedidos(sec) {
       '</div>' +
       '<div class="vg6-card vg6-pedidos-detalle" data-vg6="detalle"></div>' +
       '<div class="vg6-card vg6-pedidos-chat" data-vg6="chat"></div>' +
+    '</div>' +
+    '<div class="vg6-pedido-vista" data-vg6="vista" hidden>' +
+      '<div class="vg6-pedido-vista-barra">' +
+        '<button type="button" class="vg6-btn vg6-btn-ghost" data-accion="cerrar-vista">← Pedidos</button>' +
+        '<b class="vg6-pedido-vista-titulo" data-vg6="vista-titulo"></b>' +
+        '<button type="button" class="vg6-btn vg6-btn-ghost" data-accion="cerrar-vista" aria-label="Cerrar">✕</button>' +
+      '</div>' +
+      '<div class="vg6-pedido-vista-cuerpo" data-vg6="vista-cuerpo"></div>' +
     '</div>';
   sec.onclick = function (ev) { vg6PedidosClick(sec, ev); };
   /* v7: la tira de resumen usa estos mismos datos. */
@@ -57376,6 +57446,8 @@ async function vg6PedidosClick(sec, ev) {
   try {
     if (accion === 'ver-pedido') {
       await vg6AbrirPedido(sec, id, true);
+    } else if (accion === 'cerrar-vista') {
+      vg6CerrarVistaPedido(sec);
     } else if (accion === 'estado') {
       var estado = t.getAttribute('data-estado');
       if (!await confirmar('¿Cambiar el estado del pedido a «' + estado + '»?')) return;
@@ -57433,6 +57505,39 @@ async function vg6AbrirPedido(sec, id, marcarLeido) {
   }
   vg6PintarDetallePedido(sec, o);
   await vg6PintarChatPedido(sec, id);
+  /* Al picar la fila se abre la vista completa (detalle + chat) encima,
+     sin tener que bajar. La apertura inicial (marcarLeido=false) no. */
+  if (marcarLeido) vg6AbrirVistaPedido(sec, o);
+}
+
+/* Vista completa del pedido: el detalle y el chat se MUEVEN a la vista
+   (overlay) y al cerrar vuelven a su sitio apilado. La vista vive dentro
+   de la sección, así que todos los qs(..., sec) del click (chat, entrega,
+   comprobante) siguen encontrando sus campos. Si la sección se repinta
+   (cambiar estado, entregar), la vista se recrea oculta y el detalle
+   vuelve a su sitio: comportamiento seguro, sin referencias colgadas. */
+function vg6AbrirVistaPedido(sec, o) {
+  var vista = qs('[data-vg6="vista"]', sec);
+  var cuerpo = qs('[data-vg6="vista-cuerpo"]', sec);
+  var det = qs('[data-vg6="detalle"]', sec);
+  var chat = qs('[data-vg6="chat"]', sec);
+  if (!vista || !cuerpo || !det || !chat) return;
+  var tit = qs('[data-vg6="vista-titulo"]', sec);
+  if (tit) tit.textContent = vg6TituloPedido(o) + ' · ' + vg6IdCorto(o.id);
+  cuerpo.appendChild(det);
+  cuerpo.appendChild(chat);
+  vista.hidden = false;
+  cuerpo.scrollTop = 0;
+}
+function vg6CerrarVistaPedido(sec) {
+  var vista = qs('[data-vg6="vista"]', sec);
+  var grid = qs('.vg6-pedidos-grid', sec);
+  var det = qs('[data-vg6="detalle"]', sec);
+  var chat = qs('[data-vg6="chat"]', sec);
+  if (!vista || !grid) return;
+  if (det) grid.appendChild(det);
+  if (chat) grid.appendChild(chat);
+  vista.hidden = true;
 }
 
 function vg6PintarDetallePedido(sec, o) {
@@ -61005,6 +61110,7 @@ instalarV6();
 
 })();
 </script>
+
 
 
 
