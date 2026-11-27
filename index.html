@@ -38146,7 +38146,9 @@ html body #homeTiles .vg-carrusel-encaja .service-carousel-info{
       id: BASE_RETRO,
       title: 'Juegos Retro (Xbox)',
       displayTitle: 'Juegos Retro (Xbox)',
-      description: 'Catálogo de Xbox 360 y clásicos. Llevando 3 o más, 10% de descuento.',
+      description: (window.__vgTRListo
+        ? 'Catálogo de Xbox 360 y clásicos en cuenta nueva.'
+        : 'Catálogo de Xbox 360 y clásicos. Llevando 3 o más, 10% de descuento.'),
       categoryName: 'Xbox Retro',
       category: 'gaming',
       image: 'portada.png',
@@ -39331,17 +39333,23 @@ body.vg-light :where(a[href], button, input, select, textarea, summary, [tabinde
         'onclick="window.vgxrFiltrar(\'' + id + '\')">' + txt +
         ' <span style="opacity:.6">' + n + '</span></button>';
     };
+    /* Cuenta Nueva (TR) activo: el 10% viejo NO aplica a estos juegos
+       (el precio TR ya es el precio final), así que la franja del
+       combo no se pinta. Sin TR, el flujo retro viejo sigue con su 10%. */
+    var comboHtml = (typeof window !== 'undefined' && window.__vgTRListo)
+      ? ''
+      : '<div class="vgxr-combo">' +
+        '<div class="vgxr-combo-txt"><b>¿Vas a llevar 3 o más?</b>' +
+          'Van todos en una sola cuenta y el 10% se descuenta solo en el carrito.</div>' +
+        '<span class="vgxr-aviso" id="vgxrAviso"></span>' +
+      '</div>';
     return '<div class="vgxr-barra">' +
       '<div class="vgxr-chips">' +
         chip('all', 'Todos', cuenta('all')) +
         chip('360', 'Xbox 360', cuenta('360')) +
         chip('clasico', 'Xbox Clásico', cuenta('clasico')) +
       '</div>' +
-      '<div class="vgxr-combo">' +
-        '<div class="vgxr-combo-txt"><b>¿Vas a llevar 3 o más?</b>' +
-          'Van todos en una sola cuenta y el 10% se descuenta solo en el carrito.</div>' +
-        '<span class="vgxr-aviso" id="vgxrAviso"></span>' +
-      '</div>' +
+      comboHtml +
     '</div>';
   }
 
@@ -49433,7 +49441,7 @@ button.vg119-incompleto{
  * lista con buscador y filtro por plataforma, "Recargar juegos" y
  * "Recalcular precios" (repaso diario de Turquía).
  *
- * Los datos viven en la tabla vg_xbox_tr (1,640 juegos). La lectura
+ * Los datos viven en la tabla vg_xbox_tr (1,639 juegos). La lectura
  * va por /api/catalogo-retro-tr (no necesita cliente de Supabase).
  * El guardado usa el cliente del panel (sesión del administrador,
  * storageKey 'vg_sb_auth') y hace upsert por slug. Si Supabase
@@ -50681,12 +50689,12 @@ html body footer{padding-bottom:84px !important}
   /* Contenido por defecto (el de la muestra, SIN la regla interna). */
   var POR_DEFECTO = {
     cinta: [
-      'Entrega inmediata', 'Precios en MXN', 'Xbox Cuentas: 1,640 juegos',
+      'Entrega inmediata', 'Precios en MXN', 'Xbox Cuentas: 1,639 juegos',
       'Fortnite: 485 artículos', 'Nunca pagas más que el precio de México',
       'Atención directa en la página'
     ],
     heroes: [
-      { titulo: 'Xbox Cuentas', subtitulo: '1,640 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: '' },
+      { titulo: 'Xbox Cuentas', subtitulo: '1,639 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: '' },
       { titulo: 'Fortnite', subtitulo: 'Skins, lotes y pases al mejor precio', enlace: 'fortnite', imagen: '' },
       { titulo: 'CODPoints de Warzone', subtitulo: 'Recarga tu cuenta y juega hoy mismo', enlace: 'gaming', imagen: '' },
       { titulo: 'Game Pass', subtitulo: 'Ultimate y Core desde $90 MXN', enlace: 'gaming', imagen: '' }
@@ -50881,7 +50889,7 @@ html body footer{padding-bottom:84px !important}
   }
   function trPorVentana(intent) {
     /* El módulo v2 corre después de este script: se espera a que
-       window.vgRetroJuegos devuelva los juegos TR (1,640). OJO: antes
+       window.vgRetroJuegos devuelva los juegos TR (1,639). OJO: antes
        de que v2 cargue sus datos, la misma función devuelve los juegos
        retro VIEJOS (315): por eso el umbral es >1000 y no >300. */
     var juegos = null;
@@ -51040,7 +51048,7 @@ html body footer{padding-bottom:84px !important}
     { t: 'Fortnite', d: 'Skins, lotes, bailes, picos y música', ir: 'fortnite', img: 0, ico: '🪂' },
     { t: 'Free Fire', d: 'Diamantes desde $195 MXN', ir: 1, img: 1, ico: '💎' },
     { t: 'Warzone', d: 'CODPoints para Xbox', ir: 2, img: 2, ico: '🎯' },
-    { t: 'Xbox Cuentas', d: '1,640 juegos en cuenta nueva', ir: 'retro', img: 5, ico: '🆕' },
+    { t: 'Xbox Cuentas', d: '1,639 juegos en cuenta nueva', ir: 'retro', img: 5, ico: '🆕' },
     { t: 'Xbox Retro', d: 'Los clásicos: Xbox 360 y Clásico en cuenta nueva', ir: 'retro', filtro: 'retro', img: 0, ico: '📀' },
     { t: 'Streaming', d: 'Netflix, Disney+, MAX, Prime Video…', ir: 'streaming', img: 8, ico: '▶' },
     { t: 'Software', d: 'Office, ChatGPT Plus, Canva, Adobe…', ir: 'software', img: 33, ico: '💻' },
@@ -52894,6 +52902,104 @@ header.topbar.vg-hs-visible{
   .topbar{ transition:none !important; }
 }
 
+</style>
+<style id="vg-cliente-mejora-v1">
+/* ════════════════════════════════════════════════════════════════
+   VESSEL GAMES — Mejora del panel de cliente v1 (OVERLAY)
+   No toca los bloques vg-pro-system-js ni ningún otro módulo:
+   solo añade botones, estados vacíos y estilos dentro de
+   #vg17Client (panel v17) y #vgUserDashModal (modal viejo).
+   Paleta aprobada: oscuro + morado #8b5cf6 (botones/importante) +
+   menta #19e6c1 (detalles pequeños) + ámbar solo descuentos.
+   ════════════════════════════════════════════════════════════════ */
+
+/* ── Acciones por pedido (v17 y modal viejo) ── */
+.vgcm-actions{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.vgcm-act{
+  appearance:none;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);color:#eef0fa;
+  font-size:0.8125rem;font-weight:700;line-height:1;
+  padding:10px 14px;border-radius:12px;cursor:pointer;
+  font-family:inherit;transition:.15s ease;
+}
+.vgcm-act:hover{border-color:rgba(139,92,246,.60);background:rgba(139,92,246,.16)}
+.vgcm-act.primary{background:#8b5cf6;border-color:#8b5cf6;color:#fff}
+.vgcm-act.primary:hover{background:#7c4dff;border-color:#7c4dff}
+.vgcm-act:disabled{opacity:.5;cursor:wait}
+#vg17Client .vg17-card .vgcm-actions{margin-top:12px;padding-top:12px;border-top:1px solid rgba(255,255,255,.07)}
+#vgUserDashModal .vg-order-row{flex-wrap:wrap}
+#vgUserDashModal .vg-order-row .vgcm-actions{flex-basis:100%;margin-top:2px}
+
+/* ── Detalle expandible (modal viejo) ── */
+.vgcm-detail{
+  flex-basis:100%;margin:4px 0 2px;padding:12px 14px;border-radius:14px;
+  background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.28);
+  font-size:0.875rem;line-height:1.55;color:#c4cee6;
+}
+.vgcm-detail b{color:#fff}
+.vgcm-detail .vgcm-detail-price{color:#fff;font-weight:900}
+.vgcm-detail .vgcm-detail-status{margin-left:6px}
+
+/* ── Estado vacío amable (modal viejo) ── */
+.vgcm-empty{text-align:center;padding:32px 16px;color:#8b93b0;font-size:0.875rem;line-height:1.6}
+.vgcm-empty b{display:block;color:#fff;font-size:1rem;margin-bottom:6px}
+.vgcm-empty .vgcm-act{margin-top:16px}
+
+/* ── Editar perfil ── */
+.vgcm-edit-btn{
+  appearance:none;border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);color:#c4cee6;
+  font-size:0.75rem;font-weight:700;padding:7px 12px;border-radius:999px;
+  cursor:pointer;font-family:inherit;white-space:nowrap;
+}
+.vgcm-edit-btn:hover{border-color:rgba(139,92,246,.60);color:#fff}
+.vgcm-form{
+  display:flex;flex-wrap:wrap;gap:8px;align-items:center;
+  padding:12px 14px;margin:10px 0;border-radius:14px;
+  background:rgba(139,92,246,.08);border:1px solid rgba(139,92,246,.28);
+}
+.vgcm-form input{
+  flex:1;min-width:160px;background:#0d0f1a;color:#fff;
+  border:1px solid rgba(255,255,255,.16);border-radius:12px;
+  padding:11px 12px;font-size:0.875rem;font-family:inherit;outline:none;
+}
+.vgcm-form input:focus{border-color:rgba(139,92,246,.65);box-shadow:0 0 0 3px rgba(139,92,246,.15)}
+.vgcm-form .vgcm-act{padding:11px 16px}
+.vgcm-form small{flex-basis:100%;color:#8b93b0;font-size:0.75rem}
+#vgUserDashModal .vg-dh-info{position:relative}
+#vgUserDashModal .vgcm-edit-btn{margin-top:8px}
+
+/* ── Código de referido (v17 · Mis tokens) ── */
+.vgcm-codebox{
+  display:flex;flex-wrap:wrap;gap:10px;align-items:center;
+  margin-top:12px;padding:12px 14px;border-radius:14px;
+  background:rgba(0,0,0,.30);border:1px solid rgba(255,255,255,.10);
+}
+.vgcm-codebox span{font-size:0.75rem;color:#8b93b0;text-transform:uppercase;letter-spacing:.08em;font-weight:700}
+.vgcm-codebox code{
+  font-family:ui-monospace,Menlo,Consolas,monospace;font-size:0.875rem;
+  color:#fff;font-weight:900;letter-spacing:.06em;
+}
+.vgcm-codebox .vgcm-act{margin-left:auto}
+.vgcm-copied{color:#19e6c1 !important}
+
+/* ── Móvil (390px): acciones a lo ancho y pestañas deslizables ── */
+@media(max-width:900px){
+  #vg17Client .vg17-tabs{
+    display:flex;flex-wrap:nowrap;overflow-x:auto;
+    scrollbar-width:none;-webkit-overflow-scrolling:touch;
+  }
+  #vg17Client .vg17-tabs::-webkit-scrollbar{display:none}
+  #vg17Client .vg17-tab{flex:0 0 auto}
+  #vg17Client .vg17-card .vgcm-actions .vgcm-act{flex:1 1 44%;text-align:center}
+  #vgUserDashModal .vgcm-actions .vgcm-act{flex:1 1 44%;text-align:center}
+}
+@media(max-width:420px){
+  #vg17Client .vg17-card .vgcm-actions .vgcm-act,
+  #vgUserDashModal .vgcm-actions .vgcm-act{flex:1 1 100%}
+  .vgcm-codebox .vgcm-act{margin-left:0;width:100%}
+  .vgcm-form .vgcm-act{flex:1 1 40%;text-align:center}
+}
 </style>
 <style id="vg-admin-v6">
 /* ================================================================
@@ -56554,7 +56660,23 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
      - Al cambiar de dirección se resetea el acumulado contrario.
      - Nunca se oculta mientras se escribe/busca en ella, ni se pelea con
        los modales: si hay un modal abierto, este bloque no toca la barra
-       (la esconde el CSS de vg-header-fast-modal-v67). */
+       (la esconde el CSS de vg-header-fast-modal-v67).
+     FIX 2026-11-26 22:13 (causa raíz del fallo en vivo, verificada en
+     jsdom con la página completa): la clase
+     body.vg-service-window-open-v67 la pone vg-header-fast-modal-v67
+     cuando un modal está abierto, y su CSS esconde la barra con
+     visibility:hidden. La regla vg-hs-visible de v2 NO toca visibility,
+     así que si esa clase se queda ATASCADA (cierre de modal no
+     detectado por v67), show() cambia las clases pero la barra sigue
+     invisible, y modalOpen() hace early-return en cada sync y la barra
+     queda congelada escondida: ni subir despacio (2.200 px) ni pulsar
+     '/' la muestran. La cura: si ningún modal está REALMENTE activo,
+     la clase del body es un resto atascado y se quita (v67 la vuelve a
+     poner si se abre un modal de verdad). Con modal real abierto no se
+     toca nada: la barra la sigue gobernando el CSS del modal.
+     INSTRUMENTACIÓN TEMPORAL: con ?vgdebug=1 en la URL, cada sync y
+     cada show()/hide() escriben el estado en document.title para
+     leerlo en vivo con el navegador. Sin ?vgdebug=1 no cambia nada. */
   if (window.__vgHeaderScrollV2) return;
   window.__vgHeaderScrollV2 = true;
 
@@ -56562,6 +56684,10 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
   var HIDE_ACCUM = 120;  /* px acumulados hacia abajo para ocultar */
   var SHOW_ACCUM = 50;   /* px acumulados hacia arriba para mostrar */
   var TOP_ZONE = 24;     /* cerca de arriba: siempre visible */
+
+  /* Solo con ?vgdebug=1: sin él, dbg() es un no-op y no cambia nada. */
+  var DEBUG = /[?&]vgdebug=1(?:&|#|$)/.test(window.location.search || '');
+  var heals = 0; /* nº de veces que se curó una clase modal atascada */
 
   function ready(fn){
     if (document.readyState === 'loading') {
@@ -56580,20 +56706,42 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
     var accUp = 0;    /* px subidos desde el último cambio de dirección */
     var accDown = 0;  /* px bajados desde el último cambio de dirección */
     var ticking = false;
+    var lastDiff = 0;
 
     function currentY(){
       return Math.max(0, window.pageYOffset || root.scrollTop || document.body.scrollTop || 0);
     }
 
+    /* ¿Qué modal real está abierto? Devuelve el elemento o null.
+       Cubre los 5 modales de servicio, el admin y cualquier otro
+       elemento .modal/.cart con clase active. */
+    function activeModalEl(){
+      var admin = document.getElementById('vgAdminModal');
+      if (admin && admin.classList.contains('active')) return admin;
+      return document.querySelector(
+        '#productModal.active, #cartModal.active, #paymentModal.active, #retroModal.active, .modal.active, .cart.active'
+      );
+    }
+
+    /* Si la clase del body está puesta pero ningún modal está realmente
+       activo, es un resto atascado: se quita para no dejar la barra
+       congelada. v67 la vuelve a poner si se abre un modal de verdad. */
+    function healStaleModalClass(){
+      if (!document.body.classList.contains('vg-service-window-open-v67')) return false;
+      if (activeModalEl()) return false; /* modal real: no tocar */
+      document.body.classList.remove('vg-service-window-open-v67');
+      heals++;
+      return true;
+    }
+
     /* ¿Hay un modal de producto/carrito/pago o el panel admin abierto?
        Si sí, no tocamos la barra: la gobierna el CSS del modal. */
     function modalOpen(){
-      if (document.body.classList.contains('vg-service-window-open-v67')) return true;
-      var admin = document.getElementById('vgAdminModal');
-      if (admin && admin.classList.contains('active')) return true;
-      return !!document.querySelector(
-        '#productModal.active, #cartModal.active, #paymentModal.active, #retroModal.active, .modal.active, .cart.active'
-      );
+      if (activeModalEl()) return true;
+      /* Solo queda la clase del body: si es un resto atascado, curarla
+         y seguir como si no hubiera modal. */
+      healStaleModalClass();
+      return false;
     }
 
     /* ¿El cliente está escribiendo o viendo resultados en el buscador? */
@@ -56604,30 +56752,70 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
       return !!(dd && dd.classList.contains('active'));
     }
 
+    function shortTr(t){
+      if (!t || t === 'none') return '0';
+      var m = /matrix(?:3d)?\(([^)]*)\)/.exec(t);
+      if (m) {
+        var parts = m[1].split(',');
+        var ty = parts.length >= 6 ? parseFloat(parts[5]) : 0;
+        return 'ty' + (isNaN(ty) ? 0 : Math.round(ty));
+      }
+      return String(t).slice(0, 24);
+    }
+
+    /* Instrumentación temporal (?vgdebug=1): estado en document.title.
+       Nunca debe romper el header: todo va en try/catch. */
+    function dbg(where){
+      if (!DEBUG) return;
+      try {
+        var y = currentY();
+        var cs = window.getComputedStyle ? window.getComputedStyle(bar) : null;
+        var cls = bar.classList.contains('vg-hs-hidden') ? 'vg-hs-hidden'
+          : (bar.classList.contains('vg-hs-visible') ? 'vg-hs-visible' : 'sin-clase');
+        var m = activeModalEl();
+        var modalTxt = m ? ('1:' + (m.id || String(m.className).split(' ')[0] || '?'))
+          : (document.body.classList.contains('vg-service-window-open-v67') ? '1:body-stuck' : '0');
+        var bodyCls = String(document.body.className || '').slice(0, 60);
+        document.title = 'VG-HDR ' + (where || 'sync')
+          + ' y=' + y + ' d=' + lastDiff + ' up=' + accUp + ' dn=' + accDown
+          + ' cls=' + cls + ' modal=' + modalTxt + ' srch=' + (searchActive() ? 1 : 0)
+          + ' n=' + document.querySelectorAll('header.topbar').length
+          + ' tr=' + shortTr(cs ? cs.transform : '') + ' op=' + (cs ? cs.opacity : '?')
+          + ' vis=' + (cs ? cs.visibility : '?') + ' heal=' + heals
+          + (bodyCls ? ' body=' + bodyCls : '');
+      } catch (e) { /* la instrumentación nunca rompe el header */ }
+    }
+
     function show(){
+      healStaleModalClass(); /* '/' y focusin no pasan por modalOpen() */
       bar.classList.remove('vg-hs-hidden');
       bar.classList.add('vg-hs-visible');
+      dbg('show');
     }
 
     function hide(){
       bar.classList.add('vg-hs-hidden');
       bar.classList.remove('vg-hs-visible');
+      dbg('hide');
     }
 
     function sync(){
       var y = currentY();
       var diff = y - lastY;
+      lastDiff = diff;
       lastY = y;
       if (modalOpen()) {
         /* No pelear con el modal: dejamos las clases como están y se
            descarta la distancia acumulada, para no esconder/mostrar de
            golpe al cerrarlo con un acumulado viejo. */
         accUp = 0; accDown = 0;
+        dbg('sync-modal');
         return;
       }
       if (y <= TOP_ZONE || searchActive()) {
         show();
         accUp = 0; accDown = 0;
+        dbg('sync-top');
         return;
       }
       if (diff > 0) {
@@ -56645,6 +56833,7 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
           accUp = 0;
         }
       }
+      dbg('sync');
     }
 
     function onScroll(){
@@ -56674,6 +56863,355 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
 })();
 </script>
 
+<script id="vg-cliente-mejora-v1">
+/* ════════════════════════════════════════════════════════════════
+   VESSEL GAMES — Mejora del panel de cliente v1 (OVERLAY)
+   No redefine ni toca ninguna función existente (ni los dos bloques
+   vg-pro-system-js): solo OBSERVA el DOM y AÑADE botones, estados
+   vacíos y un formulario de perfil dentro de #vg17Client (panel v17,
+   el que abre vgProOpen) y #vgUserDashModal (modal viejo del bloque 2).
+   Todo funciona con los datos reales que esos paneles ya exponen:
+   no inventa pedidos, saldos ni códigos. Si no hay datos, muestra
+   el estado vacío. Cada mejora va en try/catch: si algo falla, el
+   resto del panel sigue igual.
+   ════════════════════════════════════════════════════════════════ */
+(function(){
+'use strict';
+if(window.__vgClienteMejoraV1) return;
+window.__vgClienteMejoraV1 = true;
+
+var SESSION_KEYS = ['vg_auth_session_v1','vg_pro_session_v2','vg_pro_session','vg_user'];
+var FALLBACK_REDEEM = [
+  {id:'vix',        name:'VIX',         cost:5,  icon:'V'},
+  {id:'paramount',  name:'PARAMOUNT',   cost:7,  icon:'P'},
+  {id:'max',        name:'MAX',         cost:9,  icon:'M'},
+  {id:'crunchyroll',name:'CRUNCHYROLL', cost:10, icon:'C'},
+  {id:'netflix',    name:'NETFLIX',     cost:20, icon:'N'}
+];
+
+function qs(s,r){ return (r||document).querySelector(s); }
+function qsa(s,r){ return Array.prototype.slice.call((r||document).querySelectorAll(s)); }
+function esc(v){ return String(v==null?'':v).replace(/[&<>"']/g,function(m){ return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[m]; }); }
+function toast(m){ try{ if(typeof window.showToast==='function'){ window.showToast(m); return; } }catch(e){} }
+function mkBtn(label, cls, fn){
+  var b=document.createElement('button');
+  b.type='button'; b.className='vgcm-act'+(cls?' '+cls:''); b.textContent=label;
+  b.addEventListener('click',fn);
+  return b;
+}
+function waitFor(sel, timeout){
+  return new Promise(function(res){
+    var t0=Date.now();
+    (function poll(){
+      var el=qs(sel);
+      if(el) return res(el);
+      if(Date.now()-t0>(timeout||2500)) return res(null);
+      setTimeout(poll,100);
+    })();
+  });
+}
+
+/* ── Sesión (las mismas 4 claves que ya usa la página) ── */
+function getSession(){
+  for(var i=0;i<SESSION_KEYS.length;i++){
+    try{
+      var o=JSON.parse(localStorage.getItem(SESSION_KEYS[i])||'null');
+      if(o && (o.name||o.phone)){
+        return { id:o.id||null, name:o.name||'', phone:o.phone||'', email:o.email||'',
+          tokens:Number(o.tokens||0), referral_code:o.referral_code||'', total_purchases:Number(o.total_purchases||0) };
+      }
+    }catch(e){}
+  }
+  return null;
+}
+function saveSessionName(name){
+  name=String(name||'').trim();
+  if(name.length<2) return false;
+  SESSION_KEYS.forEach(function(k){
+    try{
+      var o=JSON.parse(localStorage.getItem(k)||'null');
+      if(o && typeof o==='object'){ o.name=name; localStorage.setItem(k, JSON.stringify(o)); }
+    }catch(e){}
+  });
+  var first=name.charAt(0).toUpperCase();
+  [['#vgDashName',name],['#vgDashAvatar',first],['#vgUserName',name],['#vgUserAvatar',first],
+   ['#vgAbLabel',name],['#vgAbAvatar',first]].forEach(function(p){
+    var el=qs(p[0]); if(el) el.textContent=p[1];
+  });
+  var h=qs('#vg17Client .vg17-head-l h2'); if(h) h.textContent=name;
+  /* Guardar también en vg_users cuando haya cliente Supabase.
+     Best-effort: si la RLS lo rechaza, el nombre local ya quedó. */
+  try{
+    var s=getSession();
+    var c=(typeof window.vgGetSB==='function')?window.vgGetSB():null;
+    if(c && s && s.id){
+      var p=c.from('vg_users').update({name:name}).eq('id',s.id);
+      if(p && typeof p.then==='function') p.then(function(){},function(){});
+    }
+  }catch(e){}
+  return true;
+}
+
+/* ── Portapapeles con respaldo ── */
+function fallbackCopy(text){
+  try{
+    var ta=document.createElement('textarea');
+    ta.value=text; ta.style.position='fixed'; ta.style.opacity='0';
+    document.body.appendChild(ta); ta.select();
+    document.execCommand('copy'); document.body.removeChild(ta);
+  }catch(e){}
+}
+function copyText(text, btn){
+  var done=function(){
+    if(!btn) return;
+    var old=btn.textContent;
+    btn.textContent='Copiado'; btn.classList.add('vgcm-copied');
+    setTimeout(function(){ btn.textContent=old; btn.classList.remove('vgcm-copied'); },1800);
+  };
+  try{
+    if(navigator.clipboard && navigator.clipboard.writeText){
+      navigator.clipboard.writeText(text).then(done).catch(function(){ fallbackCopy(text); done(); });
+      return;
+    }
+  }catch(e){}
+  fallbackCopy(text); done();
+}
+
+/* ── Abrir Cotizar / Reportar falla del v17 con datos del pedido ── */
+function abrirCotizarCon(title){
+  var tab=qs('#vg17Client .vg17-tab[data-v="cotizar"]');
+  if(!tab){ toast('No se pudo abrir la cotización'); return; }
+  tab.click();
+  waitFor('#cz_que',2500).then(function(inp){
+    if(!inp) return;
+    if(title){ inp.value=title; try{ inp.focus(); }catch(e){} }
+  });
+}
+function abrirTicketsCon(orderId){
+  var tab=qs('#vg17Client .vg17-tab[data-v="tickets"]');
+  if(!tab){ toast('No se pudo abrir el soporte'); return; }
+  tab.click();
+  waitFor('#t_prod',2500).then(function(sel){
+    if(!sel || !orderId) return;
+    var opt=sel.querySelector('option[value="'+orderId+'"]');
+    if(opt){
+      sel.value=orderId;
+      try{ sel.dispatchEvent(new Event('change',{bubbles:true})); }catch(e){}
+    }
+  });
+}
+
+/* ── Formularios de perfil ── */
+function profileForm(idPrefix, initialName, onSave){
+  var form=document.createElement('div');
+  form.className='vgcm-form'; form.id=idPrefix+'Form';
+  form.innerHTML='<input id="'+idPrefix+'NameInput" maxlength="40" placeholder="Tu nombre" value="'+esc(initialName||'')+'">'
+    +'<button type="button" class="vgcm-act primary" id="'+idPrefix+'SaveProfile">Guardar</button>'
+    +'<button type="button" class="vgcm-act" id="'+idPrefix+'CancelProfile">Cancelar</button>'
+    +'<small>Solo cambia el nombre que se muestra en tu cuenta y en tus pedidos.</small>';
+  qs('#'+idPrefix+'CancelProfile',form).onclick=function(){ form.remove(); };
+  qs('#'+idPrefix+'SaveProfile',form).onclick=function(){
+    var v=qs('#'+idPrefix+'NameInput',form).value;
+    if(String(v).trim().length<2){ toast('Escribe tu nombre'); return; }
+    if(saveSessionName(v)){ toast('Nombre actualizado'); if(typeof onSave==='function') onSave(); form.remove(); }
+  };
+  return form;
+}
+
+/* ══════════════ PANEL V17 (#vg17Client) ══════════════ */
+function enhanceV17(){
+  var root=qs('#vg17Client');
+  if(!root || !root.classList.contains('active')) return;
+
+  /* Editar perfil en el encabezado */
+  var headR=qs('.vg17-head-r',root);
+  if(headR && !qs('#vgcmEditProfile',root)){
+    var eb=document.createElement('button');
+    eb.type='button'; eb.id='vgcmEditProfile'; eb.className='vgcm-edit-btn'; eb.textContent='Editar perfil';
+    eb.onclick=function(){
+      var old=qs('#vgcmProfileForm',root);
+      if(old){ old.remove(); return; }
+      var s=getSession();
+      var form=profileForm('vgcm', s?s.name:'');
+      var top=qs('.vg17-top',root);
+      if(top && top.parentNode) top.parentNode.insertBefore(form, top.nextSibling);
+      else root.appendChild(form);
+      var inp=qs('#vgcmNameInput',form); if(inp) inp.focus();
+    };
+    var salir=qs('#vg17CSalir',headR);
+    if(salir) headR.insertBefore(eb,salir); else headR.appendChild(eb);
+  }
+
+  /* Acciones por pedido */
+  qsa('.vg17-card[data-o]',root).forEach(function(card){
+    if(card.querySelector('.vgcm-actions')) return;
+    var id=card.getAttribute('data-o')||'';
+    var title=((qs('h4',card)||{}).textContent||'Pedido').trim();
+    var box=document.createElement('div'); box.className='vgcm-actions';
+    box.appendChild(mkBtn('Ver detalle','',function(ev){
+      ev.stopPropagation();
+      card.click();
+      var d=qs('#vg17CDetail');
+      if(d && d.scrollIntoView) { try{ d.scrollIntoView({behavior:'smooth',block:'start'}); }catch(e){} }
+    }));
+    box.appendChild(mkBtn('Contactar','',function(ev){ ev.stopPropagation(); abrirTicketsCon(id); }));
+    box.appendChild(mkBtn('Volver a pedir','primary',function(ev){ ev.stopPropagation(); abrirCotizarCon(title); }));
+    card.appendChild(box);
+  });
+
+  /* Código de referido con botón copiar (pestaña Mis tokens) */
+  var copyBtn=qs('#vgtkCopiaPanel',root);
+  if(copyBtn && !qs('#vgcmRefCode',root)){
+    var s=getSession();
+    if(s && s.referral_code){
+      var wrap=document.createElement('div'); wrap.className='vgcm-codebox';
+      wrap.innerHTML='<span>Tu código</span><code id="vgcmRefCode">'+esc(s.referral_code)+'</code>';
+      var cb=document.createElement('button');
+      cb.type='button'; cb.id='vgcmCopyCode'; cb.className='vgcm-act'; cb.textContent='Copiar código';
+      cb.onclick=function(){ copyText(s.referral_code, cb); };
+      wrap.appendChild(cb);
+      var box=copyBtn.closest('.vg17-box');
+      if(box) box.appendChild(wrap);
+    }
+  }
+}
+
+/* ══════════════ MODAL VIEJO (#vgUserDashModal) ══════════════ */
+function toggleOldDetail(row, title, price, status){
+  var old=row.querySelector(':scope > .vgcm-detail');
+  if(old){ old.remove(); return; }
+  var d=document.createElement('div');
+  d.className='vgcm-detail';
+  var timeline='';
+  try{ if(typeof window.vgRenderOrderTimeline==='function') timeline=window.vgRenderOrderTimeline(status)||''; }catch(e){}
+  d.innerHTML='<b>'+esc(title)+'</b> · <span class="vgcm-detail-price">'+esc(price)+'</span>'
+    +'<span class="vgcm-detail-status vg-order-status">'+esc(status)+'</span>'
+    +timeline
+    +'<div style="margin-top:8px">Si necesitas ayuda con este pedido, usa el botón Contactar y te atendemos por WhatsApp.</div>';
+  row.appendChild(d);
+}
+function fillVisibleRedeemGrid(grid){
+  var s=getSession();
+  var tokens=s?s.tokens:0;
+  var cat=(window.REDEEM_CATALOG && window.REDEEM_CATALOG.length)?window.REDEEM_CATALOG:FALLBACK_REDEEM;
+  grid.innerHTML=cat.map(function(r){
+    var ok=tokens>=r.cost;
+    return '<div class="vg-redeem-card'+(ok?'':' locked')+'" data-vgcm-redeem="'+esc(r.id)+'" title="'+(ok?'Canjear':'Necesitas '+r.cost+' tokens')+'">'
+      +'<div class="vg-redeem-icon">'+esc(r.icon||String(r.name||'?').charAt(0))+'</div>'
+      +'<div class="vg-redeem-name">'+esc(r.name)+'</div>'
+      +'<div class="vg-redeem-cost"><span>'+esc(r.cost)+'</span> tokens</div>'
+      +(ok?'<div style="font-size:0.75rem;color:#19e6c1;margin-top:6px">Tap para canjear</div>':'')
+      +'</div>';
+  }).join('');
+  grid.dataset.vgcmFilled='1';
+  qsa('[data-vgcm-redeem]',grid).forEach(function(card){
+    card.addEventListener('click',function(){
+      if(card.classList.contains('locked')) return;
+      if(typeof window.vgRedeem==='function'){ try{ window.vgRedeem(card.getAttribute('data-vgcm-redeem')); }catch(e){} }
+    });
+  });
+}
+function enhanceOld(){
+  var modal=qs('#vgUserDashModal');
+  if(!modal) return;
+
+  /* Garantía: la pestaña "Canjear Premios" siempre cambia de sección */
+  if(!modal.dataset.vgcmTabBound){
+    modal.dataset.vgcmTabBound='1';
+    modal.addEventListener('click',function(ev){
+      var btn=ev.target && ev.target.closest ? ev.target.closest('.vg-dt[data-dt="redeem"]') : null;
+      if(btn && typeof window.vgDashTab==='function'){ try{ window.vgDashTab(btn); }catch(e){} }
+    });
+  }
+
+  /* Editar perfil junto al nombre */
+  if(qs('#vgDashName',modal) && !qs('#vgcmEditProfileOld',modal)){
+    var eb=document.createElement('button');
+    eb.type='button'; eb.id='vgcmEditProfileOld'; eb.className='vgcm-edit-btn'; eb.textContent='Editar perfil';
+    eb.onclick=function(){
+      var old=qs('#vgcmProfileFormOld',modal);
+      if(old){ old.remove(); return; }
+      var s=getSession();
+      var form=profileForm('vgcmOld', s?s.name:'');
+      var dh=qs('.vg-dh',modal);
+      if(dh && dh.parentNode) dh.parentNode.insertBefore(form, dh.nextSibling);
+      else modal.appendChild(form);
+      var inp=qs('#vgcmOldNameInput',form); if(inp) inp.focus();
+    };
+    var badges=qs('.vg-dh-badges',modal);
+    if(badges && badges.parentNode) badges.parentNode.insertBefore(eb, badges.nextSibling);
+    else qs('#vgDashName',modal).parentNode.appendChild(eb);
+  }
+
+  /* Acciones por pedido */
+  qsa('#vgDashOrdersList .vg-order-row',modal).forEach(function(row){
+    if(row.querySelector('.vgcm-actions')) return;
+    var title=((qs('b',row)||{}).textContent||'Pedido').trim();
+    var priceEl=qsa('div',row).filter(function(d){ return d.style && d.style.fontWeight==='700'; })[0];
+    var price=priceEl?priceEl.textContent.trim():'';
+    var statusEl=qs('.vg-order-status',row);
+    var status=statusEl?statusEl.textContent.trim():'pendiente';
+    var idText=((qs('span',row)||{}).textContent||'').trim();
+    var box=document.createElement('div'); box.className='vgcm-actions';
+    box.appendChild(mkBtn('Ver detalle','',function(){ toggleOldDetail(row,title,price,status); }));
+    box.appendChild(mkBtn('Contactar','',function(){
+      var num=window.WHATSAPP_NUMBER||'526611078412';
+      var msg='Hola, tengo una duda sobre mi pedido '+title+' ('+idText+')';
+      window.open('https://wa.me/'+num+'?text='+encodeURIComponent(msg),'_blank');
+    }));
+    box.appendChild(mkBtn('Volver a pedir','primary',function(){
+      if(typeof window.closeDashboard==='function'){ try{ window.closeDashboard(); }catch(e){} }
+      modal.classList.remove('active'); document.body.style.overflow='';
+      setTimeout(function(){
+        if(typeof window.vgProOpen==='function'){ try{ window.vgProOpen(); }catch(e){} }
+        setTimeout(function(){ abrirCotizarCon(title); },600);
+      },300);
+    }));
+    row.appendChild(box);
+  });
+
+  /* Estado vacío amable en Pedidos */
+  var list=qs('#vgDashOrdersList',modal);
+  if(list && !qs('.vgcm-empty',list) && /Sin pedidos/.test(list.textContent)){
+    list.innerHTML='<div class="vgcm-empty"><b>Aún no tienes pedidos</b>'
+      +'Cuando hagas tu primera compra aparecerá aquí, con su estado y su chat de entrega.'
+      +'<br><button type="button" class="vgcm-act primary" id="vgcmGoShopOld">Ver catálogo</button></div>';
+    var go=qs('#vgcmGoShopOld',list);
+    if(go) go.onclick=function(){
+      if(typeof window.closeDashboard==='function'){ try{ window.closeDashboard(); }catch(e){} }
+      modal.classList.remove('active'); document.body.style.overflow='';
+    };
+  }
+
+  /* Rejilla de canje VISIBLE en Wallet (renderWallet escribe en otra) */
+  var walletSec=qs('#vgDashWallet',modal);
+  if(walletSec && walletSec.classList.contains('active')){
+    var grid=qs('#vgRedeemGridWallet',modal);
+    if(grid && !grid.children.length && !grid.dataset.vgcmFilled){
+      try{ fillVisibleRedeemGrid(grid); }catch(e){}
+    }
+  }
+}
+
+/* ── Observador: realza los paneles cuando aparecen o se re-renderizan ── */
+var _t=null;
+function schedule(){
+  if(_t) return;
+  _t=setTimeout(function(){
+    _t=null;
+    try{ enhanceV17(); }catch(e){}
+    try{ enhanceOld(); }catch(e){}
+  },120);
+}
+if(window.MutationObserver){
+  var mo=new MutationObserver(schedule);
+  if(document.body) mo.observe(document.body,{childList:true,subtree:true});
+  else document.addEventListener('DOMContentLoaded',function(){ mo.observe(document.body,{childList:true,subtree:true}); });
+}
+document.addEventListener('DOMContentLoaded',function(){ setTimeout(schedule,300); });
+setTimeout(schedule,800);
+})();
+</script>
 <script id="vg-admin-v6">
 (function(){
 'use strict';
@@ -61610,6 +62148,11 @@ instalarV6();
   var MINIMO_TRY = 300; /* referencia interna del dueño; ya no bloquea */
   var MINIMO_MXN = 200; /* compra mínima visible para cuentas Xbox */
   var state = { listo: false, cargando: false, cargandoP: null, juegos: [], tc: 0.38, minimoMxn: 200, fuente: '' };
+  /* Bandera pública: Cuenta Nueva (TR) activo. La leen v112 (barra) y
+     v103 (deRetro) para NO prometer el 10% viejo: con TR activo el precio
+     TR ya es el precio final y el 10% no aplica. Sin TR, el flujo retro
+     viejo sigue con su 10% y la franja se muestra. */
+  window.__vgTRListo = false;
   var filtroPlataforma = 'all';
   var busquedaTR = '';
 
@@ -61663,6 +62206,7 @@ instalarV6();
         state.minimoMxn = Number(d.minimo_mxn || MINIMO_MXN);
         state.fuente = d.fuente || '';
         state.listo = true;
+        window.__vgTRListo = true;
         state.cargando = false;
         try { if (typeof window.renderNav === 'function') window.renderNav(); } catch (e) {}
         renombrarSeccion();
@@ -61678,7 +62222,7 @@ instalarV6();
           if (g && g.value && g.value.trim() && typeof window.renderProducts === 'function') window.renderProducts();
         } catch (e2) {}
       })
-      .catch(function () { state.listo = false; state.cargando = false; });
+      .catch(function () { state.listo = false; window.__vgTRListo = false; state.cargando = false; });
     return state.cargandoP;
   }
 
@@ -61837,8 +62381,8 @@ instalarV6();
       '</div>' +
     '</div>';
   }
-  /* La rejilla se pagina: pintar las 1,640 tarjetas de golpe dejaba
-     la sección pesada (DOM enorme, 1,640 imágenes). Se pintan las
+  /* La rejilla se pagina: pintar las 1,639 tarjetas de golpe dejaba
+     la sección pesada (DOM enorme, 1,639 imágenes). Se pintan las
      primeras 60 y el botón "Ver más" suma 60 cada vez. El límite se
      reinicia solo cuando cambia el filtro (la firma de la lista).
      Las imágenes ya llevan loading="lazy" en la tarjeta. */
