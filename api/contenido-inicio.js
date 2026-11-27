@@ -17,11 +17,11 @@ const SUPA_ANON = process.env.SUPABASE_ANON_KEY || '';
 const POR_DEFECTO = {
   cinta: [
     { id: 'd1', texto: 'Entrega inmediata · Precios en MXN' },
-    { id: 'd2', texto: 'Xbox Cuentas: 1,640 juegos en cuenta nueva, más baratos que en México' },
+    { id: 'd2', texto: 'Xbox Cuentas: 1,639 juegos en cuenta nueva, más baratos que en México' },
     { id: 'd3', texto: 'Diamantes Free Fire y CODPoints al mejor precio' },
   ],
   heroes: [
-    { id: 'h1', titulo: 'Xbox Cuentas', subtitulo: '1,640 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: '' },
+    { id: 'h1', titulo: 'Xbox Cuentas', subtitulo: '1,639 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: '' },
     { id: 'h2', titulo: 'Fortnite', subtitulo: 'Skins, lotes y pases al mejor precio', enlace: 'fortnite', imagen: '' },
     { id: 'h3', titulo: 'CODPoints de Warzone', subtitulo: 'Recarga tu cuenta y juega hoy mismo', enlace: 'gaming', imagen: '' },
     { id: 'h4', titulo: 'Game Pass', subtitulo: 'Ultimate y Core desde $90 MXN', enlace: 'gaming', imagen: '' },
