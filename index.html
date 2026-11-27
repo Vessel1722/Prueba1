@@ -56836,6 +56836,13 @@ html body.vgfn-activo #marketView .layout > .vg-side-col{display:none !important
      la propia altura de la barra, sin px fijos. El z-index 9998 deja la
      barra por encima del contenido y por debajo de la barra de progreso
      de scroll (9999), los toasts (12000) y los modales.
+     FIX v2.2 2026-11-27 (fallo en vivo 06:42: la barra NO se ocultaba
+     EN EL CATÁLOGO, en la principal sí): searchActive() devolvía true
+     con CUALQUIER foco dentro de la barra. Entrar al catálogo picando
+     la píldora «Catálogo» del header dejaba el foco en ella (renderNav
+     no la recrea) y srch=1 congelaba la barra en visible a cualquier
+     altura. Ahora solo el input #globalSearch o el panel de resultados
+     congelan la barra; el resto de botones del header ya no lo hacen.
      INSTRUMENTACIÓN TEMPORAL: con ?vgdebug=1 en la URL, cada sync y
      cada show()/hide() escriben el estado en document.title para
      leerlo en vivo con el navegador. Sin ?vgdebug=1 no cambia nada. */
@@ -56934,12 +56941,25 @@ html body.vgfn-activo #marketView .layout > .vg-side-col{display:none !important
       return false;
     }
 
-    /* ¿El cliente está escribiendo o viendo resultados en el buscador? */
+    /* ¿El cliente está escribiendo o viendo resultados en el buscador?
+       v2.2 (2026-11-27): ANTES era `bar.contains(document.activeElement)`,
+       o sea CUALQUIER foco dentro de la barra (píldora «Catálogo»,
+       botones de categoría, moneda, carrito, cuenta) congelaba la barra
+       en visible. Entrar al catálogo picando «Catálogo» en el header
+       dejaba el foco en esa píldora (renderNav no la recrea, a diferencia
+       de los cat-btn) y la barra no se ocultaba nunca en el catálogo
+       (srch=1 a cualquier altura: 0.25, 0.5, 1 y 3 pantallas — fallo en
+       vivo 06:42 PST). En la principal funcionaba porque al cargar no
+       hay foco dentro de la barra. Ahora solo congela el buscador de
+       verdad: el input #globalSearch con foco, o el panel de resultados
+       abierto o con foco. */
     function searchActive(){
       var a = document.activeElement;
-      if (a && bar.contains(a)) return true;
+      if (a && a.id === 'globalSearch') return true;
       var dd = document.getElementById('searchResultsPanel');
-      return !!(dd && dd.classList.contains('active'));
+      if (dd && dd.classList.contains('active')) return true;
+      if (dd && a && dd.contains(a)) return true;
+      return false;
     }
 
     function shortTr(t){
@@ -57802,6 +57822,103 @@ setTimeout(schedule,800);
 #condiciones-servicio .vg-or-cond[open ] summary::after{content:"–";}
 #condiciones-servicio .vg-or-cond .conditions-service-grid{margin-top:14px !important;}
 #condiciones-servicio .vg-or-cond .conditions-service-note{margin-top:14px !important;}
+</style>
+<style id="vg-lateral-fijo-v2">
+/* ════════════════════════════════════════════════════════════════════
+   vg-lateral-fijo-v2 · EL LATERAL SE QUEDA FIJO AL BAJAR EN EL CATÁLOGO
+   Ronda 3 (2026-11-27): fallo en vivo 06:42 PST.
+   ────────────────────────────────────────────────────────────────────
+   CAUSA RAÍZ (con evidencia en el archivo):
+   El aside YA era position:sticky top:132px (v1) y su columna
+   .vg-side-col YA se estiraba (align-self:stretch) a la altura de la
+   fila del catálogo. Lo que lo mataba era el ANCESTRO: `body` era un
+   CONTENEDOR DE SCROLL por `html,body{overflow-x:hidden!important}`
+   (línea ~4257). En CSS, cualquier overflow distinto de `visible`
+   convierte al elemento en contenedor de scroll, y un sticky se ancla
+   a su scrollport MÁS CERCANO: aquí `body`. Pero body nunca se
+   desplaza por dentro — su alto ES el alto del contenido
+   (height:auto, línea ~4261) — así que su desplazamiento interno es
+   siempre 0 y el lateral baja 1:1 con la página, con su propia barra
+   interna pero sin fijarse. En jsdom el sticky «pasaba» (27/27) porque
+   jsdom no hace layout de scrollports: solo reporta el valor
+   computado position:sticky, que no basta.
+   FIX: overflow-x:clip en html y body. `clip` contiene el
+   desbordamiento horizontal igual que hidden (sin barra lateral, sin
+   scroll horizontal) pero NO crea contenedor de scroll (CSS Overflow
+   L3, Chrome 90+), así el sticky del lateral vuelve a anclarse a la
+   ventana. Se deja overflow-y como está (propaga a la ventana) y NO
+   se toca body.vg-admin-lock: cuando el panel admin está abierto, su
+   overflow:hidden sigue bloqueando el scroll como antes.
+   Se inserta DESPUÉS del último cierre de style del documento para ganarle
+   en orden a la regla !important de la línea ~4257 (mismo selector).
+   ════════════════════════════════════════════════════════════════════ */
+html, body{overflow-x:clip !important;}
+</style>
+<style id="vg-card-boton-v1">
+/* ════════════════════════════════════════════════════════════════════
+   vg-card-boton-v1 · «Ver opciones» CABE ENTERO en las tarjetas
+   Ronda 3 (2026-11-27): fallo en vivo 06:42 PST («'er opcione» en
+   TODAS las tarjetas del catálogo).
+   ────────────────────────────────────────────────────────────────────
+   CAUSA RAÍZ (geometría medida en el archivo + fuente real Inter):
+   a 1920px la tarjeta mide 197px (rejilla de 6 en una columna de
+   1252px: wrap 1600 − lateral 280 − gap 24 − 5×14 de gaps), .info
+   tiene padding 16px (línea ~41956, .card .info, especificidad 0,2,0),
+   así que la fila de botones mide 165px. La rejilla .premium-actions
+   es 1fr 44px (líneas ~48357/~48429) y el botón rápido — INVISIBLE
+   (opacity:0) pero con display:grid y 48px de ancho (línea ~7676) —
+   reserva su pista de 44px: al botón «Ver opciones» le quedan 113px
+   de pista y 93px de caja para un texto de 88px (Inter 700 a 13.12px
+   + letter-spacing .02em, medido con la fuente real: 85.0px + 3.1px).
+   Solo 5px de margen: cualquier ventana un poco más angosta que
+   ~1571px de viewport, o la fuente de respaldo si Inter no carga,
+   recorta el texto por los dos lados (nowrap + overflow:hidden +
+   centrado). En jsdom «cabía» por 5px; en vivo no.
+   FIX: en reposo la rejilla es 1fr (el botón ocupa todo el ancho de
+   .info: caja 149px, 61px de margen) y el botón rápido se esconde.
+   Al pasar el cursor la rejilla vuelve a 1fr 40px y el botón rápido
+   reaparece (40px), con el botón principal a .78rem para que el texto
+   siga cabiendo también en hover (caja 101px, texto ~81px, 20px de
+   margen). Con esto el texto cabe hasta viewport ≈1235px (antes
+   ≈1571px). Se aplica a #productsGrid y a #featuredGrid (mismo botón,
+   misma rejilla); las tarjetas de Xbox/Retro usan otra maqueta y no
+   se tocan. No se usa ellipsis: el texto debe leerse completo.
+   ════════════════════════════════════════════════════════════════════ */
+@media (min-width:1024px){
+  /* Reposo: el botón ocupa todo el ancho de la tarjeta. */
+  html body #productsGrid .card .premium-actions,
+  html body #featuredGrid .card .premium-actions{
+    grid-template-columns:1fr !important;
+  }
+  html body #productsGrid .card .premium-actions .quick-add-btn,
+  html body #featuredGrid .card .premium-actions .quick-add-btn{
+    display:none !important;
+  }
+  html body #productsGrid .card .premium-actions .detail-btn,
+  html body #featuredGrid .card .premium-actions .detail-btn{
+    min-width:0 !important;
+    padding:9px 8px !important;
+  }
+  /* Hover: el botón rápido reaparece sin robarle el texto al botón. */
+  html body #productsGrid .card:hover .premium-actions,
+  html body #featuredGrid .card:hover .premium-actions{
+    grid-template-columns:1fr 40px !important;
+  }
+  html body #productsGrid .card:hover .premium-actions .quick-add-btn,
+  html body #featuredGrid .card:hover .premium-actions .quick-add-btn{
+    display:grid !important;
+    width:40px !important;
+    min-width:40px !important;
+    height:40px !important;
+    min-height:40px !important;
+    opacity:1 !important;
+  }
+  html body #productsGrid .card:hover .premium-actions .detail-btn,
+  html body #featuredGrid .card:hover .premium-actions .detail-btn{
+    font-size:.78rem !important;
+    padding:9px 8px !important;
+  }
+}
 </style>
 <script id="vg-oferta-resto-v1">
 /* ════════════════════════════════════════════════════════════════════
