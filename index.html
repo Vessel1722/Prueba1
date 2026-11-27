@@ -58560,6 +58560,43 @@ html, body{overflow-x:clip !important;}
    el navegador es la geometría real, sea cual sea el viewport,
    el zoom o el wrap — y el aside fijo toma left/ancho de ella.
 
+   RONDA 6 (2026-11-27) — CAUSA RAÍZ DE LA "DESALINEACIÓN",
+   CON EVIDENCIA: el viewport CSS en vivo NO es 1920px. Los
+   números medidos en vivo (ronda 4: 28/350/408, top 168; ronda 5:
+   28/340/410) cuadran EXACTOS con viewport CSS entre 1024 y
+   1600px y devicePixelRatio ≈ 1.25 (escalado de Windows al 125%
+   o zoom de Chrome al 125% sobre una pantalla de 1920px
+   físicos: 1920 / 1.25 = 1536px CSS). Prueba, con las reglas
+   que DE VERDAD ganan (wrap 1600 centrado solo si vw > 1600;
+   si vw <= 1600 el wrap va a lo ancho; columna 280px; gap 24px):
+     CSS 22px x 1.25 = 27.5 ≈ 28 medidos (borde izquierdo)
+     CSS 280px x 1.25 = 350 = ancho medido en la ronda 4
+     CSS 326px x 1.25 = 407.5 ≈ 408/410 medidos (rejilla)
+     CSS 132px x 1.25 = 165 ≈ 168 medidos (parte superior)
+     "ancho completo con margen ~28px": a vw=1536 el wrap
+     (max-width 1600) VA a lo ancho, con padding 22px CSS
+     = 27.5px físicos. Todo cuadra con DPR 1.25; la cascada
+     del archivo es CORRECTA (verificada en jsdom: wrap
+     max-width 1600px, layout 280px 1fr, gap 24px, aside
+     fixed 22/280/132 a 1024px; cero errores de hoja de
+     estilos; md5 servido = md5 local). El lateral SÍ está
+     alineado con la columna real — v4 lo garantiza —; lo
+     que estaba mal era el "esperado" 182/280/486, que solo
+     vale con viewport CSS >= 1920. Forzar un contenedor
+     1600 centrado es IMPOSIBLE a este viewport (max-width
+     es un tope: el contenedor no puede superar el viewport)
+     y estrechar el contenedor apretaría las tarjetas
+     (a 1280px de contenedor la zona de productos quedaría
+     en ~932px y las tarjetas en ~119px). DECISIÓN: no se
+     mueve el lateral; se hace VISIBLE la geometría real.
+   NOVEDAD v4.1: con ?vgdebug=1 (el mismo flag del header)
+   aparece una insignia fija abajo a la izquierda con la
+   geometría EN PÍXELES CSS (vw, dpr, columna, rejilla,
+   aside, top, altura de la barra) para verificar con las
+   unidades correctas, y window.__vgLatFijoV4.debug()
+   devuelve los mismos números. Sin ?vgdebug=1 no cambia
+   nada: ni insignia, ni geometría, ni comportamiento.
+
    HACE 2 COSAS:
    1. ALINEAR: mide .vg-side-col (getBoundingClientRect) y pone
       left/ancho del aside con setProperty(..., 'important') para
@@ -58592,6 +58629,12 @@ html, body{overflow-x:clip !important;}
   var MARGIN_PIE = 12;  /* holgura entre el fondo del lateral y el footer */
   var MIN_W = 981;      /* escritorio; en móvil manda el CSS de siempre */
   var POST_FADE_MS = 260;
+
+  /* Solo con ?vgdebug=1 (mismo flag que el header): sin él, la
+     insignia es un no-op y no cambia nada en la página. */
+  var DEBUG = /[?&]vgdebug=1(?:&|#|$)/.test(window.location.search || '');
+  var ultimoDy = 0;     /* translateY aplicado por el clamp del pie */
+  var badgeEl = null;   /* insignia de depuración (solo con ?vgdebug=1) */
 
   function aside(){
     return document.querySelector('#marketView .sidebar')
@@ -58645,19 +58688,91 @@ html, body{overflow-x:clip !important;}
     try{
       var a = aside();
       if(!a) return;
-      if(!visible()){ a.style.removeProperty('transform'); return; }
+      if(!visible()){ a.style.removeProperty('transform'); ultimoDy = 0; return; }
       var foot = document.querySelector('footer');
-      if(!foot){ a.style.removeProperty('transform'); return; }
+      if(!foot){ a.style.removeProperty('transform'); ultimoDy = 0; return; }
       var ft = foot.getBoundingClientRect().top;
       var bottom = TOP + a.offsetHeight;
       var dy = ft - bottom - MARGIN_PIE;
-      a.style.transform = (dy < 0)
-        ? ('translateY(' + Math.round(dy) + 'px)')
-        : '';
+      if(dy < 0){
+        ultimoDy = Math.round(dy);
+        a.style.transform = 'translateY(' + ultimoDy + 'px)';
+      }else{
+        ultimoDy = 0;
+        a.style.transform = '';
+      }
+    }catch(e){ ultimoDy = 0; }
+  }
+
+  /* 3 · Geometría real en píxeles CSS (ronda 6). Todo lo que mide
+     getBoundingClientRect / innerWidth ya viene en píxeles CSS;
+     devicePixelRatio es el factor físico (1.25 en el vivo). */
+  function geometria(){
+    var g = { vw: 0, dpr: 1, colLeft: null, colWidth: null, gridLeft: null,
+              asideLeft: null, asideWidth: null, asideTop: null, dy: ultimoDy,
+              headerH: 0, spacerH: 0 };
+    try{
+      g.vw = window.innerWidth || 0;
+      var dpr = (typeof window.devicePixelRatio === 'number' && window.devicePixelRatio > 0)
+        ? window.devicePixelRatio : 1;
+      g.dpr = Math.round(dpr * 100) / 100;
+      var col = columna();
+      if(col){
+        var r = col.getBoundingClientRect();
+        g.colLeft = Math.round(r.left);
+        g.colWidth = Math.round(r.width);
+        var lay = col.parentNode;
+        if(lay && lay.children && lay.children.length > 1){
+          var gr = lay.children[1].getBoundingClientRect();
+          g.gridLeft = Math.round(gr.left);
+        }
+      }
+      var a = aside();
+      if(a){
+        var ra = a.getBoundingClientRect();
+        g.asideLeft = Math.round(ra.left);
+        g.asideWidth = Math.round(ra.width);
+        g.asideTop = Math.round(ra.top);
+      }
+      var bar = document.querySelector('header.topbar');
+      if(bar) g.headerH = bar.offsetHeight || 0;
+      var sp = document.getElementById('vg-hs-spacer');
+      if(sp) g.spacerH = sp.offsetHeight || 0;
+    }catch(e){}
+    return g;
+  }
+
+  /* Insignia de depuración (solo ?vgdebug=1): fija abajo a la
+     izquierda, sin interferir con clics ni con el layout. El
+     header reescribe el título en cada sync, así que el título
+     NO sirve para esto; la insignia se lee en la captura. */
+  function badge(){
+    if(!DEBUG) return;
+    try{
+      if(!badgeEl){
+        badgeEl = document.createElement('div');
+        badgeEl.id = 'vg-lat-debug';
+        badgeEl.setAttribute('aria-hidden', 'true');
+        var s = badgeEl.style;
+        s.position = 'fixed'; s.left = '8px'; s.bottom = '8px';
+        s.zIndex = '9997'; s.pointerEvents = 'none';
+        s.background = 'rgba(2,6,23,.88)'; s.color = '#19e6c1';
+        s.border = '1px solid rgba(25,230,193,.4)'; s.borderRadius = '8px';
+        s.padding = '6px 8px'; s.font = '11px/1.4 monospace';
+        s.whiteSpace = 'nowrap';
+        document.body.appendChild(badgeEl);
+      }
+      var g = geometria();
+      badgeEl.textContent = 'LAT vw=' + g.vw + ' dpr=' + g.dpr
+        + ' col=' + g.colLeft + '/' + g.colWidth
+        + ' grid=' + g.gridLeft
+        + ' aside=' + g.asideLeft + '/' + g.asideWidth
+        + ' top=' + g.asideTop + ' dy=' + g.dy
+        + ' hdr=' + g.headerH + ' sp=' + g.spacerH;
     }catch(e){}
   }
 
-  function actualizar(){ medir(); clampPie(); }
+  function actualizar(){ medir(); clampPie(); badge(); }
 
   /* ── Ganchos ── */
   var rafPendiente = false;
@@ -58665,7 +58780,7 @@ html, body{overflow-x:clip !important;}
     if(rafPendiente) return;
     rafPendiente = true;
     var raf = window.requestAnimationFrame || function(f){ return setTimeout(f, 16); };
-    raf(function(){ rafPendiente = false; clampPie(); });
+    raf(function(){ rafPendiente = false; clampPie(); badge(); });
   }
   var resizeT = null;
   function enResize(){
@@ -58725,6 +58840,7 @@ html, body{overflow-x:clip !important;}
     medir: medir,
     clampPie: clampPie,
     actualizar: actualizar,
+    debug: geometria,
     TOP: TOP,
     MARGIN_PIE: MARGIN_PIE,
     MIN_W: MIN_W
