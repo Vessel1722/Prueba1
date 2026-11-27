@@ -16584,55 +16584,14 @@ setTimeout(()=>{ensureSections();bindTabs();renderSettings();},600);
     bar.style.width = max > 0 ? (window.scrollY / max * 100) + '%' : '0%';
   }, {passive:true});
 
-  /* ─── Navbar smart hide ─── */
-  const topbar = document.querySelector('header.topbar') || document.querySelector('.topbar');
-  let openModals = 0;
-  function hideNav(){ if(topbar) topbar.classList.add('vg-nav-hidden'); }
-  function showNav(){ if(topbar) topbar.classList.remove('vg-nav-hidden'); }
-
-  function onOpen(){  openModals++; hideNav(); }
-  function onClose(){ openModals = Math.max(0, openModals - 1); if(!openModals) showNav(); }
-
-  const toOpen  = ['openProduct','openCart','openRetroModal','openPaymentModal'];
-  const toClose = ['closeModal','closeCart','closeRetroModal','closePaymentModal'];
-
-  function patchFn(name, cb){
-    const orig = window[name];
-    if(typeof orig === 'function'){
-      window[name] = function(){ cb(); return orig.apply(this, arguments); };
-    }
-  }
-
-  // Patch after all scripts load
-  window.addEventListener('load', function(){
-    toOpen.forEach(n  => patchFn(n, onOpen));
-    toClose.forEach(n => patchFn(n, onClose));
-
-    // ESC key resets
-    document.addEventListener('keydown', function(e){
-      if(e.key==='Escape'){ openModals=0; showNav(); }
-    });
-    // Click backdrop
-    document.querySelectorAll('.modal,.cart').forEach(function(m){
-      m.addEventListener('click', function(e){
-        if(e.target===m){ openModals=0; showNav(); }
-      });
-    });
-  });
-
-  /* ─── Scroll-to-hide navbar (like mobile apps) ─── */
-  let lastScroll = 0;
-  window.addEventListener('scroll', function(){
-    if(openModals > 0) return;          // don't interfere with modal state
-    const y = window.scrollY || 0;
-    const diff = y - lastScroll;
-    if(diff > 8 && y > 100){            // scrolling down fast → hide
-      hideNav();
-    } else if(diff < -5 || y < 60){    // scrolling up or near top → show
-      showNav();
-    }
-    lastScroll = y;
-  }, {passive:true});
+  /* ─── Navbar hide/show ───
+     RETIRADO 2026-11-26 (header-scroll v2): el ocultar/mostrar de la barra
+     superior al hacer scroll lo maneja ahora el bloque vg-header-scroll-v2
+     (una sola implementación). Aquí vivían dos mecanismos que peleaban con
+     el bloque vg-navbar-scroll-only v1 (clases vg-nav-hidden y
+     vg-navbar-hidden) y el contador openModals podía quedarse atorado y
+     dejar la barra escondida. La barra de progreso de arriba y el
+     render del Dashboard quedan intactos. */
 
   /* ─── Admin Dashboard render ─── */
   window.renderDashboard = function(){
@@ -19505,183 +19464,8 @@ window.addEventListener('DOMContentLoaded', function(){
 })();
 </script>
 <!-- VG NAVBAR SCROLL ONLY PATCH v1: fixed + hide down / show up. No modifica login, registro ni referidos. -->
-<style id="vg-navbar-scroll-only-css-v1">
-  :root{
-    --vg-fixed-navbar-height:0px;
-  }
 
-  body.vg-fixed-navbar-ready{
-    padding-top:var(--vg-fixed-navbar-height,0px) !important;
-  }
 
-  html{
-    scroll-padding-top:calc(var(--vg-fixed-navbar-height,0px) + 12px) !important;
-  }
-
-  .topbar{
-    position:fixed !important;
-    top:0 !important;
-    left:0 !important;
-    right:0 !important;
-    width:100% !important;
-    z-index:70 !important;
-    transform:translate3d(0,0,0) !important;
-    opacity:1 !important;
-    transition:transform .28s cubic-bezier(.22,.61,.36,1), opacity .22s ease, box-shadow .22s ease !important;
-    will-change:transform,opacity !important;
-    backface-visibility:hidden !important;
-  }
-
-  .topbar.vg-navbar-hidden{
-    transform:translate3d(0,calc(-1 * var(--vg-fixed-navbar-height,96px)),0) !important;
-    opacity:.02 !important;
-    pointer-events:none !important;
-    box-shadow:none !important;
-  }
-
-  .topbar.vg-navbar-visible{
-    transform:translate3d(0,0,0) !important;
-    opacity:1 !important;
-    pointer-events:auto !important;
-  }
-
-  @media (prefers-reduced-motion:reduce){
-    .topbar{
-      transition:none !important;
-    }
-  }
-</style>
-<script id="vg-navbar-scroll-only-js-v1">
-(function(){
-  'use strict';
-
-  if (window.__vgNavbarScrollOnlyV1) return;
-  window.__vgNavbarScrollOnlyV1 = true;
-
-  function ready(fn){
-    if (document.readyState === 'loading') {
-      document.addEventListener('DOMContentLoaded', fn, { once:true });
-    } else {
-      fn();
-    }
-  }
-
-  ready(function(){
-    var navbar = document.querySelector('.topbar');
-    if (!navbar || !document.body) return;
-
-    var root = document.documentElement;
-    var lastY = Math.max(0, window.pageYOffset || root.scrollTop || 0);
-    var ticking = false;
-    var keepVisibleUntil = 0;
-
-    function currentY(){
-      return Math.max(0, window.pageYOffset || root.scrollTop || document.body.scrollTop || 0);
-    }
-
-    function updateNavbarHeight(){
-      var height = Math.ceil(navbar.getBoundingClientRect().height || navbar.offsetHeight || 0);
-      if (height > 0) {
-        root.style.setProperty('--vg-fixed-navbar-height', height + 'px');
-        document.body.classList.add('vg-fixed-navbar-ready');
-      }
-    }
-
-    function showNavbar(){
-      navbar.classList.remove('vg-navbar-hidden');
-      navbar.classList.add('vg-navbar-visible');
-    }
-
-    function hideNavbar(){
-      navbar.classList.add('vg-navbar-hidden');
-      navbar.classList.remove('vg-navbar-visible');
-    }
-
-    function forceVisible(ms){
-      keepVisibleUntil = Date.now() + (ms || 900);
-      showNavbar();
-    }
-
-    function shouldStayVisible(y){
-      if (y <= 16) return true;
-      if (Date.now() < keepVisibleUntil) return true;
-      var active = document.activeElement;
-      if (active && navbar.contains(active)) return true;
-      return false;
-    }
-
-    function onScroll(){
-      if (ticking) return;
-      ticking = true;
-
-      window.requestAnimationFrame(function(){
-        var y = currentY();
-        var diff = y - lastY;
-
-        if (shouldStayVisible(y)) {
-          showNavbar();
-        } else if (y > 90 && diff > 6) {
-          hideNavbar();
-        } else if (diff < -4) {
-          showNavbar();
-        }
-
-        lastY = y;
-        ticking = false;
-      });
-    }
-
-    updateNavbarHeight();
-    showNavbar();
-
-    window.addEventListener('scroll', onScroll, { passive:true });
-    window.addEventListener('resize', function(){
-      updateNavbarHeight();
-      forceVisible(700);
-    }, { passive:true });
-    window.addEventListener('orientationchange', function(){
-      setTimeout(function(){
-        updateNavbarHeight();
-        forceVisible(900);
-      }, 220);
-    }, { passive:true });
-
-    navbar.addEventListener('focusin', function(){ forceVisible(1200); });
-    navbar.addEventListener('pointerenter', function(){ forceVisible(700); });
-
-    var searchInputs = navbar.querySelectorAll('.searchbar input, input[type="search"], input[placeholder*="Buscar"], input[placeholder*="buscar"]');
-    searchInputs.forEach(function(input){
-      input.addEventListener('focus', function(){ forceVisible(1500); });
-      input.addEventListener('input', function(){ forceVisible(1500); });
-      input.addEventListener('keydown', function(){ forceVisible(1500); });
-    });
-
-    document.addEventListener('mousemove', function(ev){
-      if (ev && typeof ev.clientY === 'number' && ev.clientY < 80) {
-        forceVisible(600);
-      }
-    }, { passive:true });
-
-    document.addEventListener('keydown', function(ev){
-      if (!ev) return;
-      var key = ev.key || '';
-      if (key === '/' || key === 'Escape') {
-        forceVisible(1000);
-      }
-    });
-
-    if (window.ResizeObserver) {
-      try {
-        var ro = new ResizeObserver(function(){ updateNavbarHeight(); });
-        ro.observe(navbar);
-      } catch(e) {}
-    }
-
-    setTimeout(updateNavbarHeight, 250);
-    setTimeout(updateNavbarHeight, 1000);
-  });
-})();
-</script>
 <!-- VG PATCH: session navbar dedupe + persistent auth guard -->
 <style id="vg-session-navbar-dedupe-css">
   /* Mantiene la estructura existente, pero evita mostrar dos nombres de usuario en la navbar. */
@@ -52581,6 +52365,34 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
 }
 
 </style>
+<style id="vg-header-scroll-v2">
+/* ── vg-header-scroll-v2 · barra superior: se oculta al bajar, aparece al subir (2026-11-26) ──
+   Una sola implementación: reemplaza vg-pro-ux (clase vg-nav-hidden) y
+   vg-navbar-scroll-only v1 (clases vg-navbar-hidden/visible), cuyos dos
+   bloques se borraron de index.html. La barra es .topbar: incluye la fila
+   superior (logo, buscador, botones) y la fila de categorías, que se
+   ocultan y aparecen juntas. Cuando un modal de producto/carrito/pago está
+   abierto, la barra la gobierna el CSS de vg-header-fast-modal-v67
+   (body.vg-service-window-open-v67 .topbar), no este bloque. */
+header.topbar.vg-hs-hidden{
+  transform:translateY(-110%) !important;
+  opacity:0 !important;
+  pointer-events:none !important;
+}
+header.topbar.vg-hs-visible{
+  transform:translateY(0) !important;
+  opacity:1 !important;
+  pointer-events:auto !important;
+}
+.topbar{
+  transition:transform .28s cubic-bezier(.4,0,.2,1), opacity .28s ease !important;
+  will-change:transform !important;
+}
+@media (prefers-reduced-motion:reduce){
+  .topbar{ transition:none !important; }
+}
+
+</style>
 <style id="vg-admin-v6">
 /* ================================================================
    vg-admin-v6 · Panel admin nuevo (desde cero, NO un recolor de v5)
@@ -56218,6 +56030,119 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
   if(document.readyState === 'loading'){
     document.addEventListener('DOMContentLoaded', atarBarra);
   }
+})();
+</script>
+
+<script id="vg-header-scroll-v2">
+(function(){
+  'use strict';
+
+  /* Barra superior: se oculta al bajar, aparece al subir (2026-11-26).
+     Una sola implementación: reemplaza vg-pro-ux (vg-nav-hidden) y
+     vg-navbar-scroll-only v1 (vg-navbar-hidden/visible), que peleaban
+     entre sí con dos clases distintas y un contador de modales que podía
+     quedarse atorado y dejar la barra escondida.
+     - Bajar (y > 120 y diff > 8) → se oculta.
+     - Subir (diff < -6) o estar arriba (y <= 24) → aparece.
+     - Nunca se oculta mientras se escribe/busca en ella, ni se pelea con
+       los modales: si hay un modal abierto, este bloque no toca la barra
+       (la esconde el CSS de vg-header-fast-modal-v67). */
+  if (window.__vgHeaderScrollV2) return;
+  window.__vgHeaderScrollV2 = true;
+
+  var HIDE_AFTER = 120;  /* px bajados antes de permitir ocultar */
+  var HIDE_DIFF = 8;     /* px hacia abajo en un cuadro para ocultar */
+  var SHOW_DIFF = 6;     /* px hacia arriba en un cuadro para mostrar */
+  var TOP_ZONE = 24;     /* cerca de arriba: siempre visible */
+
+  function ready(fn){
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', fn, { once:true });
+    } else {
+      fn();
+    }
+  }
+
+  ready(function(){
+    var bar = document.querySelector('header.topbar') || document.querySelector('.topbar');
+    if (!bar || !document.body) return;
+
+    var root = document.documentElement;
+    var lastY = Math.max(0, window.pageYOffset || root.scrollTop || 0);
+    var ticking = false;
+
+    function currentY(){
+      return Math.max(0, window.pageYOffset || root.scrollTop || document.body.scrollTop || 0);
+    }
+
+    /* ¿Hay un modal de producto/carrito/pago o el panel admin abierto?
+       Si sí, no tocamos la barra: la gobierna el CSS del modal. */
+    function modalOpen(){
+      if (document.body.classList.contains('vg-service-window-open-v67')) return true;
+      var admin = document.getElementById('vgAdminModal');
+      if (admin && admin.classList.contains('active')) return true;
+      return !!document.querySelector(
+        '#productModal.active, #cartModal.active, #paymentModal.active, #retroModal.active, .modal.active, .cart.active'
+      );
+    }
+
+    /* ¿El cliente está escribiendo o viendo resultados en el buscador? */
+    function searchActive(){
+      var a = document.activeElement;
+      if (a && bar.contains(a)) return true;
+      var dd = document.getElementById('searchResultsPanel');
+      return !!(dd && dd.classList.contains('active'));
+    }
+
+    function show(){
+      bar.classList.remove('vg-hs-hidden');
+      bar.classList.add('vg-hs-visible');
+    }
+
+    function hide(){
+      bar.classList.add('vg-hs-hidden');
+      bar.classList.remove('vg-hs-visible');
+    }
+
+    function sync(){
+      var y = currentY();
+      var diff = y - lastY;
+      if (modalOpen()) {
+        /* No pelear con el modal: dejamos las clases como están. */
+      } else if (y <= TOP_ZONE || searchActive()) {
+        show();
+      } else if (y > HIDE_AFTER && diff > HIDE_DIFF) {
+        hide();
+      } else if (diff < -SHOW_DIFF) {
+        show();
+      }
+      lastY = y;
+    }
+
+    function onScroll(){
+      if (ticking) return;
+      ticking = true;
+      window.requestAnimationFrame(function(){
+        sync();
+        ticking = false;
+      });
+    }
+
+    /* Estado inicial según donde esté la página al cargar. */
+    sync();
+
+    window.addEventListener('scroll', onScroll, { passive:true });
+    window.addEventListener('resize', onScroll, { passive:true });
+    window.addEventListener('orientationchange', function(){
+      setTimeout(onScroll, 220);
+    }, { passive:true });
+
+    /* Al entrar al buscador (tecla / o clic), la barra se queda visible. */
+    bar.addEventListener('focusin', function(){ show(); });
+    document.addEventListener('keydown', function(ev){
+      if (ev && ev.key === '/') show();
+    });
+  });
 })();
 </script>
 
