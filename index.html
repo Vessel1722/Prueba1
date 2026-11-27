@@ -58108,6 +58108,87 @@ html, body{overflow-x:clip !important;}
   }
 }
 </style>
+<style id="vg-lateral-fijo-v4">
+/* ════════════════════════════════════════════════════════════════════
+   vg-lateral-fijo-v4 · ALINEACIÓN MEDIDA EN VIVO + EL LATERAL NO TAPA
+   EL PIE DE PÁGINA
+   Ronda 5 (2026-11-27). CSS mínimo; la alineación y el clamp del pie
+   los hace vg-lateral-fijo-v4.js (mide la columna real en el navegador).
+   ────────────────────────────────────────────────────────────────────
+   DIAGNÓSTICO DE LA RONDA 5 (con evidencia del archivo; la geometría
+   de v3 es CORRECTA y NO se toca):
+
+   (a) Las ramas v3 son correctas para la geometría REAL del archivo:
+       .wrap max-width 1600px + padding 22px (vg-redesign-kinguin-pc-v3
+       ≥1024px, !important, posterior a mockup-v1 1480px); .layout
+       280px 1fr, gap 24px (#marketView .layout, vg-reticula-css-v120,
+       especificidad (1,1,0) !important, vence al gap:22px de
+       kinguin-pc-v3). A 1920px: wrap centrado (1600) → columna 1 en
+       x=182px, ancho 280px, rejilla en 182+280+24=486px; la rama
+       ≥1601 (left calc(50vw−778px)=182px, width 280px) es EXACTA.
+       A 1366px: wrap a lo ancho (1366<1600) → columna 1 en x=22px,
+       ancho 280px, rejilla en 326px; la rama 1024–1600 (left 22px,
+       width 280px) es EXACTA. A 981–1023px: columna 260px (línea
+       283), wrap padding 22px (línea 270) → left 22px, width 260px:
+       la rama 981–1023 es EXACTA. El bloque v3 inyectado es
+       byte-idéntico a su fuente (verificado por diff) y ningún
+       selector posterior lo toca (vg-card-boton-v2, último <style>,
+       no tiene reglas de lateral).
+   (b) Los valores en vivo (borde ≈28px, ancho ≈350px, rejilla
+       x≈408) NO cuadran con el archivo a NINGÚN viewport: left=28
+       exigiría vw≈1612 (calc(50vw−778px)=28), pero a vw=1612 la
+       rejilla empezaría en 332px, no en 408px; y NO EXISTE ningún
+       350px en el archivo (grep: cero ocurrencias) ni regla de
+       ancho/min-width sobre el aside — `*{box-sizing:border-box}`
+       hace que width:280px sea 280px de caja. Conclusión: el live
+       no era 1920px CSS (viewport real ≈1612–1764, ventana no
+       maximizada o escalado) y/o la medida de "350px" capturó el
+       CONTENIDO que desborda, no la caja del aside (ver (c)).
+       Como el CSS no puede saber el viewport real, la alineación
+       pasa a medirse EN VIVO con JS (vg-lateral-fijo-v4.js): lee
+       la rect de la columna .vg-side-col — que ES la columna, sea
+       cual sea el viewport — y pone left/ancho del aside con esos
+       valores. Las ramas v3 quedan como respaldo pre-JS.
+   (c) El "ancho 350px" SÍ tiene un candidato en el archivo: los
+       inputs del rango de precio. .vg-paso2-rango es grid 1fr 1fr
+       (vg-fase2-paso2) dentro de una caja de contenido de 248px
+       (aside 280 − padding 16×2); cada <input type="number"> YA
+       tiene width:100% (vg-fase2-paso2), PERO sin min-width:0 su
+       mínimo automático es su min-content de serie (~170px:
+       size=20 + padding 0 12px + spinner), así que el input se
+       queda en ~170px y desborda su etiqueta, y cada etiqueta
+       (grid item, mínimo automático = su min-content ≈170px)
+       empuja su pista 1fr a ~170px: la rejilla quiere ~350px de
+       min-content (170+10+170) y desborda la caja del aside — el
+       scrollWidth del aside mide ~350px aunque su border-box sea
+       280px. FIX (este archivo): min-width:0 en las etiquetas Y
+       en los inputs, para que ambos se encojan a sus pistas 1fr
+       (~119px) sin desbordar. El width:100% que ya existe hace
+       el resto.
+
+   FIX PIE DE PÁGINA: lo hace el JS (clamp por translateY, ver
+   vg-lateral-fijo-v4.js): cuando el top del footer entra en la
+   zona del lateral, el aside se traslada hacia arriba para que su
+   fondo quede 12px por encima del top del footer. No se toca el
+   footer (su contenido está centrado en 1520/1480px; un
+   padding-left lo descentraría) ni se pasa el lateral a absoluto.
+   ════════════════════════════════════════════════════════════════════ */
+
+/* ── 1 · Los inputs del rango de precio se encogen a su pista ── */
+#marketView .sidebar .vg-paso2-rango > label,
+#marketView .sidebar .vg-paso2-rango input{
+  min-width:0 !important;   /* el input YA tiene width:100% (vg-fase2-paso2),
+                               pero su mínimo automático (min-content ~170px)
+                               lo derrotaba: el input se quedaba en ~170px y
+                               cada etiqueta empujaba su pista 1fr a ~170px,
+                               así que la rejilla quería ~350px y el aside
+                               medía ~350px de scrollWidth. Con min-width:0
+                               ambos se ciñen a sus pistas 1fr (~119px). */
+}
+#marketView .sidebar .vg-paso2-rango{
+  min-width:0;
+}
+</style>
 <script id="vg-oferta-resto-v1">
 /* ════════════════════════════════════════════════════════════════════
    vg-oferta-resto-v1 · Frente B
@@ -58458,7 +58539,206 @@ html, body{overflow-x:clip !important;}
   else boot();
 })();
 </script>
-<script id="vg-admin-v6">
+
+<script id="vg-lateral-fijo-v4">
+/* ============================================================
+   vg-lateral-fijo-v4 · Alineación medida en vivo + clamp del pie
+   Ronda 5 (2026-11-27). Se inserta ANTES del script vg-admin-v6
+   (corre tras v1 y tras definir showSection; el aside ya existe
+   en el DOM). Sin tocar renderNav ni los filtros.
+
+   POR QUÉ JS Y NO MÁS CSS (ver vg-lateral-fijo-v4.css): las ramas
+   v3 son correctas para la geometría del archivo (182/280 a 1920,
+   22/280 a 1366), pero en vivo se midió borde ≈28px y ancho
+   ≈350px — valores que el archivo no produce a ningún viewport
+   (left=28 exigiría vw≈1612, pero ahí la rejilla empezaría en
+   332px, no en 408px; y no existe ningún 350px en el archivo).
+   El viewport real no era 1920px CSS y/o la medida capturó el
+   contenido que desborda (los inputs del rango, ya corregidos en
+   el CSS v4). Así que la alineación se mide EN VIVO: la columna
+   .vg-side-col ES la columna que el aside reemplaza — su rect en
+   el navegador es la geometría real, sea cual sea el viewport,
+   el zoom o el wrap — y el aside fijo toma left/ancho de ella.
+
+   HACE 2 COSAS:
+   1. ALINEAR: mide .vg-side-col (getBoundingClientRect) y pone
+      left/ancho del aside con setProperty(..., 'important') para
+      vencer las ramas v3. Solo en escritorio (≥981px), solo con
+      la vista de catálogo activa y la columna visible; si no,
+      quita los inline y manda el CSS (v3 de respaldo / móvil
+      como hoy). Se re-mide al entrar al catálogo (envoltorio de
+      showSection + MutationObserver de #marketView + 260ms
+      post-fade), en resize/orientationchange, en load y en
+      document.fonts.ready. El scroll vertical NO cambia
+      left/ancho, así que no se mide al hacer scroll.
+   2. PIE: en cada scroll (pasivo, con rAF) y en resize, si el
+      top del <footer> entra en la zona del lateral, traslada el
+      aside hacia arriba (translateY) para que su fondo quede
+      12px por encima del top del footer. El lateral sigue visible
+      mientras se recorre el catálogo y nunca tapa texto del pie.
+      Cuando el footer está lejos, el transform se quita.
+
+   TRANSITORIO CONOCIDO (igual que v3): al entrar al catálogo,
+   .view.active corre el fade (transform 6px → none, 220ms);
+   mientras dura, #marketView es el bloque contenedor del fixed.
+   La medición de left/ancho no depende del fade (translateY no
+   mueve left/width) y la re-medición a +260ms deja los valores
+   finales en estado estable; el CSS v3 cubre los primeros 260ms.
+   ============================================================ */
+(function(){
+  'use strict';
+
+  var TOP = 132;        /* header fijo 120px + 12px (igual que v1/v3) */
+  var MARGIN_PIE = 12;  /* holgura entre el fondo del lateral y el footer */
+  var MIN_W = 981;      /* escritorio; en móvil manda el CSS de siempre */
+  var POST_FADE_MS = 260;
+
+  function aside(){
+    return document.querySelector('#marketView .sidebar')
+      || document.querySelector('.sidebar');
+  }
+  function columna(){
+    return document.querySelector('#marketView .layout > .vg-side-col');
+  }
+  function mercadoActivo(){
+    var mv = document.getElementById('marketView');
+    return !!(mv && mv.classList && mv.classList.contains('active'));
+  }
+  function visible(){
+    try{
+      if(window.innerWidth < MIN_W) return false;
+      if(!mercadoActivo()) return false;
+      if(document.body.classList.contains('vgfn-activo')) return false;
+      var a = aside();
+      if(!a) return false;
+      if(a.offsetHeight <= 0) return false;
+      return true;
+    }catch(e){ return false; }
+  }
+  function limpiar(){
+    try{
+      var a = aside();
+      if(!a) return;
+      a.style.removeProperty('left');
+      a.style.removeProperty('width');
+      a.style.removeProperty('transform');
+    }catch(e){}
+  }
+
+  /* 1 · Alinear el aside fijo con la columna medida en vivo. */
+  function medir(){
+    try{
+      var col = columna();
+      var a = aside();
+      if(!col || !a) return false;
+      if(!visible()){ limpiar(); return false; }
+      var r = col.getBoundingClientRect();
+      if(!r || !(r.width > 0)) return false;
+      a.style.setProperty('left', Math.round(r.left) + 'px', 'important');
+      a.style.setProperty('width', Math.round(r.width) + 'px', 'important');
+      return true;
+    }catch(e){ return false; }
+  }
+
+  /* 2 · El lateral nunca tapa el footer. */
+  function clampPie(){
+    try{
+      var a = aside();
+      if(!a) return;
+      if(!visible()){ a.style.removeProperty('transform'); return; }
+      var foot = document.querySelector('footer');
+      if(!foot){ a.style.removeProperty('transform'); return; }
+      var ft = foot.getBoundingClientRect().top;
+      var bottom = TOP + a.offsetHeight;
+      var dy = ft - bottom - MARGIN_PIE;
+      a.style.transform = (dy < 0)
+        ? ('translateY(' + Math.round(dy) + 'px)')
+        : '';
+    }catch(e){}
+  }
+
+  function actualizar(){ medir(); clampPie(); }
+
+  /* ── Ganchos ── */
+  var rafPendiente = false;
+  function enScroll(){
+    if(rafPendiente) return;
+    rafPendiente = true;
+    var raf = window.requestAnimationFrame || function(f){ return setTimeout(f, 16); };
+    raf(function(){ rafPendiente = false; clampPie(); });
+  }
+  var resizeT = null;
+  function enResize(){
+    if(resizeT) clearTimeout(resizeT);
+    resizeT = setTimeout(actualizar, 150);
+  }
+  function envolverShowSection(){
+    try{
+      if(typeof window.showSection !== 'function') return false;
+      if(window.showSection.__vgLatFijoV4) return true;
+      var orig = window.showSection;
+      var env = function(){
+        var r = orig.apply(this, arguments);
+        actualizar();
+        setTimeout(actualizar, POST_FADE_MS);
+        return r;
+      };
+      env.__vgLatFijoV4 = true;
+      window.showSection = env;
+      return true;
+    }catch(e){ return false; }
+  }
+
+  function instalar(){
+    actualizar();
+    setTimeout(actualizar, POST_FADE_MS);
+    if(!envolverShowSection()){
+      var n = 0;
+      var t = setInterval(function(){
+        if(envolverShowSection() || ++n >= 20){ clearInterval(t); }
+      }, 250);
+      if(document.readyState === 'loading'){
+        document.addEventListener('DOMContentLoaded', envolverShowSection);
+      }
+    }
+    try{
+      var mv = document.getElementById('marketView');
+      if(mv && window.MutationObserver){
+        var mo = new window.MutationObserver(function(){
+          setTimeout(actualizar, POST_FADE_MS);
+        });
+        mo.observe(mv, { attributes: true, attributeFilter: ['class'] });
+      }
+    }catch(e){}
+    window.addEventListener('scroll', enScroll, { passive: true });
+    window.addEventListener('resize', enResize);
+    window.addEventListener('orientationchange', enResize);
+    window.addEventListener('load', actualizar);
+    try{
+      if(document.fonts && document.fonts.ready){
+        document.fonts.ready.then(actualizar).catch(function(){});
+      }
+    }catch(e){}
+  }
+
+  window.__vgLatFijoV4 = {
+    medir: medir,
+    clampPie: clampPie,
+    actualizar: actualizar,
+    TOP: TOP,
+    MARGIN_PIE: MARGIN_PIE,
+    MIN_W: MIN_W
+  };
+
+  if(document.getElementById('sideList') || document.getElementById('marketView')){
+    instalar();
+  }else if(document.readyState === 'loading'){
+    document.addEventListener('DOMContentLoaded', instalar);
+  }else{
+    instalar();
+  }
+})();
+</script><script id="vg-admin-v6">
 (function(){
 'use strict';
 /* ═══════════════════════════════════════════════════════════════
