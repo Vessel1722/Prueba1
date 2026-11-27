@@ -52876,16 +52876,38 @@ html body #vgAdminModal#vgAdminModal .vg-users-toolbar{
 
 </style>
 <style id="vg-header-scroll-v2">
-/* ── vg-header-scroll-v2 · barra superior: se oculta al bajar, aparece al subir (2026-11-26) ──
-   Una sola implementación: reemplaza vg-pro-ux (clase vg-nav-hidden) y
-   vg-navbar-scroll-only v1 (clases vg-navbar-hidden/visible), cuyos dos
-   bloques se borraron de index.html. La barra es .topbar: incluye la fila
-   superior (logo, buscador, botones) y la fila de categorías, que se
-   ocultan y aparecen juntas. Cuando un modal de producto/carrito/pago está
-   abierto, la barra la gobierna el CSS de vg-header-fast-modal-v67
-   (body.vg-service-window-open-v67 .topbar), no este bloque. */
+/* ── vg-header-scroll-v2 · barra superior: se oculta al bajar, aparece al subir ──
+   v2.1 (2026-11-27) — la barra es position:fixed, NO sticky. CAUSA RAÍZ del
+   fallo en vivo (verificado en jsdom sobre el archivo real, 2026-11-27):
+   body es display:grid por una regla REAL sin id (línea ~6312 del index:
+   body{display:grid;min-height:100vh;place-items:center}) y header.topbar
+   es hijo directo de body, o sea un grid item: un elemento sticky queda
+   atrapado en su área de rejilla (la primera fila auto, ~120px en la parte
+   superior del documento) y nunca puede bajar con el viewport. Por eso a
+   y≈1713 la clase era vg-hs-visible con transform ty0, opacidad 1 y
+   visibility visible y la barra NO se veía: estaba pintada en la parte
+   superior del documento, fuera del viewport; en y=0 sí se veía. La
+   hipótesis de la clase modal atascada quedó descartada (modal=0, heal=0).
+   Con fixed la barra cuelga del viewport siempre. La clase vg-hs-fixed la
+   pone el JS en el mismo turno en que inserta el espaciador #vg-hs-spacer
+   (misma altura que la barra, medida en vivo) para que la página no salte
+   al salir del flujo. Sin la clase, la barra sigue siendo sticky (sin
+   espaciador), así nunca hay un momento con la barra fija y sin espaciador.
+   z-index 9998: por encima de todo el contenido y por debajo de la barra de
+   progreso de scroll (9999), los toasts (12000) y los modales.
+   Cuando un modal está abierto, la barra la gobierna el CSS de
+   vg-header-fast-modal-v67 (body.vg-service-window-open-v67 .topbar), no
+   este bloque: esta regla NO toca visibility a propósito. */
+html body header.topbar.vg-hs-fixed{
+  position:fixed !important;
+  top:0 !important;
+  left:0 !important;
+  right:0 !important;
+  width:100% !important;
+  z-index:9998 !important;
+}
 header.topbar.vg-hs-hidden{
-  transform:translateY(-110%) !important;
+  transform:translateY(-100%) !important;
   opacity:0 !important;
   pointer-events:none !important;
 }
@@ -52898,10 +52920,10 @@ header.topbar.vg-hs-visible{
   transition:transform .28s cubic-bezier(.4,0,.2,1), opacity .28s ease !important;
   will-change:transform !important;
 }
+#vg-hs-spacer{display:block !important;width:100% !important;}
 @media (prefers-reduced-motion:reduce){
   .topbar{ transition:none !important; }
 }
-
 </style>
 <style id="vg-cliente-mejora-v1">
 /* ════════════════════════════════════════════════════════════════
@@ -56674,6 +56696,31 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
      la clase del body es un resto atascado y se quita (v67 la vuelve a
      poner si se abre un modal de verdad). Con modal real abierto no se
      toca nada: la barra la sigue gobernando el CSS del modal.
+     FIX v2.1 2026-11-27 (CAUSA RAÍZ REAL del fallo en vivo, verificada
+     en jsdom sobre el archivo real — la hipótesis de la clase atascada
+     quedó DESCARTADA: modal=0 y heal=0 en la prueba ?vgdebug=1 del
+     2026-11-27 05:16): la barra era position:sticky, pero body es
+     display:grid por una regla REAL sin id (línea ~6312 del index:
+     body{display:grid;min-height:100vh;place-items:center}) y
+     header.topbar es hijo directo de body, o sea un grid item: un
+     elemento sticky queda atrapado en su área de rejilla (la primera
+     fila auto, ~120px en la parte superior del documento) y nunca puede
+     bajar con el viewport. Por eso a y≈1713 la clase era vg-hs-visible
+     con transform ty0, opacidad 1 y visibility visible y la barra NO se
+     veía (estaba pintada en la parte superior del documento, fuera del
+     viewport); en y=0 sí se veía. La cura: la barra es position:fixed
+     (clase vg-hs-fixed, regla en el <style> de este bloque) y un
+     espaciador #vg-hs-spacer con la altura exacta de la barra mantiene
+     la página en su sitio. La clase y el espaciador se ponen en el
+     mismo turno síncrono al cargar este script (la barra ya existe: va
+     en la línea ~9950 y este script va al final del body), así nunca hay
+     un momento con la barra fija y sin espaciador. La altura del
+     espaciador se re-mide en resize, orientationchange, load y cuando
+     las fuentes terminan (la altura de la barra cambia con el ancho).
+     Ocultar usa translateY(-100%) y mostrar translateY(0): relativo a
+     la propia altura de la barra, sin px fijos. El z-index 9998 deja la
+     barra por encima del contenido y por debajo de la barra de progreso
+     de scroll (9999), los toasts (12000) y los modales.
      INSTRUMENTACIÓN TEMPORAL: con ?vgdebug=1 en la URL, cada sync y
      cada show()/hide() escriben el estado en document.title para
      leerlo en vivo con el navegador. Sin ?vgdebug=1 no cambia nada. */
@@ -56689,6 +56736,33 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
   var DEBUG = /[?&]vgdebug=1(?:&|#|$)/.test(window.location.search || '');
   var heals = 0; /* nº de veces que se curó una clase modal atascada */
 
+  /* La barra ya existe cuando corre este script (va al final del body). */
+  var bar = document.querySelector('header.topbar') || document.querySelector('.topbar');
+  var spacer = null; /* #vg-hs-spacer: ocupa el hueco que deja la barra fija */
+
+  function syncSpacer(){
+    if (!bar || !spacer) return;
+    var h = bar.offsetHeight || 0;
+    if (h > 0) spacer.style.height = h + 'px';
+  }
+
+  /* Pone la clase vg-hs-fixed (la barra pasa a fixed) e inserta el
+     espaciador con su altura, en el mismo turno. Idempotente. */
+  function armFixed(){
+    if (!bar || !document.body) return;
+    if (!bar.classList.contains('vg-hs-fixed')) bar.classList.add('vg-hs-fixed');
+    if (!spacer) {
+      spacer = document.createElement('div');
+      spacer.id = 'vg-hs-spacer';
+      spacer.setAttribute('aria-hidden', 'true');
+      spacer.style.display = 'block';
+      spacer.style.width = '100%';
+      bar.parentNode.insertBefore(spacer, bar);
+    }
+    syncSpacer();
+  }
+  armFixed();
+
   function ready(fn){
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', fn, { once:true });
@@ -56698,8 +56772,9 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
   }
 
   ready(function(){
-    var bar = document.querySelector('header.topbar') || document.querySelector('.topbar');
+    if (!bar) bar = document.querySelector('header.topbar') || document.querySelector('.topbar');
     if (!bar || !document.body) return;
+    armFixed();
 
     var root = document.documentElement;
     var lastY = Math.max(0, window.pageYOffset || root.scrollTop || 0);
@@ -56782,6 +56857,8 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
           + ' n=' + document.querySelectorAll('header.topbar').length
           + ' tr=' + shortTr(cs ? cs.transform : '') + ' op=' + (cs ? cs.opacity : '?')
           + ' vis=' + (cs ? cs.visibility : '?') + ' heal=' + heals
+          + ' pos=' + (cs ? cs.position : '?')
+          + ' sp=' + (spacer ? (spacer.offsetHeight || 0) : 0)
           + (bodyCls ? ' body=' + bodyCls : '');
       } catch (e) { /* la instrumentación nunca rompe el header */ }
     }
@@ -56853,6 +56930,20 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-pedido-vista-titulo{
     window.addEventListener('orientationchange', function(){
       setTimeout(onScroll, 220);
     }, { passive:true });
+
+    /* La altura de la barra cambia con el ancho (la fila de categorías
+       se reacomoda) y con las fuentes: re-medir el espaciador. */
+    window.addEventListener('resize', function(){ syncSpacer(); }, { passive:true });
+    window.addEventListener('orientationchange', function(){
+      setTimeout(syncSpacer, 220);
+    }, { passive:true });
+    window.addEventListener('load', function(){
+      syncSpacer();
+      setTimeout(syncSpacer, 1000);
+    });
+    if (document.fonts && document.fonts.ready) {
+      document.fonts.ready.then(function(){ syncSpacer(); }).catch(function(){});
+    }
 
     /* Al entrar al buscador (tecla / o clic), la barra se queda visible. */
     bar.addEventListener('focusin', function(){ show(); });
