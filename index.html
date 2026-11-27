@@ -54499,6 +54499,32 @@ html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg7-etiqueta{
   text-overflow:ellipsis!important;
   white-space:nowrap!important;
 }
+/* Favoritos: misma cara oscura que las pestañas normales. Sin esto
+   el <button> .vg7-fav-tab queda con la cara blanca nativa del
+   navegador (la píldora blanca de la captura de Miguel 2026-11-26
+   19:39): la regla de arriba solo le da layout, no fondo ni color. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg7-fav-tab{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  background:#1a1a28!important;
+  border:1px solid #34344e!important;
+  border-radius:10px!important;
+  color:#d9dbe8!important;
+  font-size:.85rem!important;
+  font-weight:800!important;
+  cursor:pointer!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg7-fav-tab:hover{
+  background:#20202f!important;
+  border-color:#8b5cf6!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg7-fav-tab.active{
+  background:linear-gradient(135deg,#7c3aed,#8b5cf6)!important;
+  color:#ffffff!important;
+  border-color:#8b5cf6!important;
+  box-shadow:0 6px 18px rgba(139,92,246,.40)!important;
+}
 /* Favoritos: grupo fijo arriba, con fondo tenue. */
 html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg5-grupo.vg7-grupo-favs{
   background:rgba(139,92,246,.08)!important;
@@ -54981,20 +55007,24 @@ html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row em{
    clases reales que usa el JS de v6 (auditoría 2026-11-26: 55 clases
    sin CSS) con el mismo lenguaje visual de la sección 13. */
 
-/* ── 22.1 · Pedidos: rejilla lista | detalle | chat ── */
+/* ── 22.1 · Pedidos: lista, detalle y chat APILADOS ──
+   Revertido 2026-11-26 19:39: la rejilla de 3 columnas (lista 360px |
+   detalle | chat) era nueva del fix anterior y Miguel pidió volver
+   al diseño de antes: los tres bloques apilados a lo ancho, como los
+   pintaba v6 sin CSS (flujo de bloque). Se conserva el resto de la
+   sección 22 (filas oscuras, campos separados, chat). */
 html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-grid{
-  display:grid!important;
-  grid-template-columns:minmax(0,360px) minmax(0,1fr) minmax(0,340px)!important;
-  gap:14px!important;
-  align-items:start!important;
+  display:block!important;
 }
 html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-lista{
   display:flex!important;
   flex-direction:column!important;
   gap:10px!important;
   min-width:0!important;
-  max-height:calc(100dvh - 380px)!important;
-  overflow-y:auto!important;
+  margin-bottom:14px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-detalle{
+  margin-bottom:14px!important;
 }
 html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-detalle,
 html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-chat{
@@ -55654,25 +55684,10 @@ html body #vgAdminModal#vgAdminModal.vg6 .vg6-error-apertura span{
   flex:1 1 auto!important;
   min-width:0!important;
 }
-/* ── 22.11 · Rejilla de Pedidos en pantallas medianas y móvil ── */
-@media (max-width:1300px){
-  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-grid{
-    grid-template-columns:minmax(0,320px) minmax(0,1fr)!important;
-  }
-  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-chat{
-    grid-column:1 / -1!important;
-  }
-}
+/* ── 22.11 · Móvil: la fecha de Lo que buscan puede bajar de línea ──
+   (Las reglas de rejilla de Pedidos se quitaron con el revertido a
+   apilado, 2026-11-26 19:39.) */
 @media (max-width:900px){
-  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-grid{
-    grid-template-columns:minmax(0,1fr)!important;
-  }
-  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-lista{
-    max-height:420px!important;
-  }
-  html body #vgAdminModal#vgAdminModal.vg6 .vg6-pedidos-chat{
-    grid-column:auto!important;
-  }
   html body #vgAdminModal#vgAdminModal.vg6 .vg6-row time{
     white-space:normal!important;
   }
@@ -60990,6 +61005,7 @@ instalarV6();
 
 })();
 </script>
+
 
 
 
