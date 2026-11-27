@@ -54329,6 +54329,646 @@ html body #vgAdminModal#vgAdminModal.vg6 .vg6-aviso .vg6-btn:hover{
     max-height:none!important;
   }
 }
+
+
+/* ═══════════════════════════════════════════════════════════════
+   21 · v7 — lateral plegable (diseño 8 aprobado por Miguel)
+   Escritorio (≥901px): fila flexible [barra 250px | columna con
+   tira de resumen + avisos + contenido]. Móvil (≤900px): el mismo
+   apilado v6 (barra arriba, contenido abajo, la página desplaza).
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Utilidades (todos los anchos) ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-tab.vg7-oculto-busqueda,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-tab-x.vg7-oculto-busqueda,
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-tab.vg7-oculto-busqueda,
+html body #vgAdminModal#vgAdminModal.vg6 .vg5-grupo.vg7-grupo-oculto{
+  display:none!important;
+}
+/* Grupo cerrado: se esconde su lista de pestañas. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-grupo.vg7-cerrado .vg5-grupo-tabs{
+  display:none!important;
+}
+/* Monograma: oculto salvo en modo angosto. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-mono{
+  display:none!important;
+}
+/* En modo login no se ve nada del shell v7 (la vista de login la
+   manda la sección 5). */
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg6-login .vg7-main,
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel.vg5-login .vg7-main{
+  display:none!important;
+}
+
+/* ── Estructura base (todos los anchos; escritorio la vuelve fila) ── */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-main{
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra{
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-col{
+  display:flex!important;
+  flex-direction:column!important;
+  min-height:0!important;
+  flex:1 1 auto!important;
+}
+/* Buscador de secciones */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-buscador{
+  padding:12px 12px 6px!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-buscador-input{
+  width:100%!important;
+  background:#1a1a28!important;
+  border:1px solid #34344e!important;
+  color:#f5f5fa!important;
+  border-radius:10px!important;
+  padding:9px 12px!important;
+  font-size:.85rem!important;
+  outline:none!important;
+  box-sizing:border-box!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-buscador-input:focus{
+  border-color:#8b5cf6!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-buscador-input::placeholder{
+  color:#8a8ca3!important;
+}
+/* La barra: sus pestañas desplazan por dentro cuando no caben. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg-admin-tabs{
+  flex:1 1 auto!important;
+  min-height:0!important;
+  overflow-y:auto!important;
+  overflow-x:hidden!important;
+  position:static!important;
+  background:transparent!important;
+  border-bottom:0!important;
+  padding:6px 8px 10px!important;
+  gap:0!important;
+}
+/* Grupos: sin tarjeta, solo título + lista vertical. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg5-grupo{
+  display:block!important;
+  padding:0!important;
+  margin:0 0 4px!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:0!important;
+  width:100%!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg5-grupo + .vg5-grupo{
+  border-top:0!important;
+  padding-top:0!important;
+  margin-top:6px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-grupo-titulo{
+  display:flex!important;
+  width:100%!important;
+  min-width:0!important;
+  justify-content:space-between!important;
+  align-items:center!important;
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  background:transparent!important;
+  border:0!important;
+  border-radius:8px!important;
+  color:#9a9cb5!important;
+  font-family:inherit!important;
+  font-size:.68rem!important;
+  font-weight:900!important;
+  letter-spacing:.1em!important;
+  text-transform:uppercase!important;
+  padding:9px 10px 5px!important;
+  cursor:pointer!important;
+  text-align:left!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-grupo-titulo:hover{
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-grupo-titulo::after{
+  content:"▾"!important;
+  font-size:.7rem!important;
+  color:#8b5cf6!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-grupo.vg7-cerrado .vg7-grupo-titulo::after{
+  content:"▸"!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-grupo-activo > .vg7-grupo-titulo{
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-grupo-titulo-fijo{
+  cursor:default!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-grupo-titulo-fijo::after{
+  content:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg5-grupo-tabs{
+  display:flex!important;
+  flex-direction:column!important;
+  flex-wrap:nowrap!important;
+  gap:4px!important;
+  padding:0 4px 6px!important;
+  min-width:0!important;
+}
+/* Pestañas de la barra: fila completa, etiqueta a la izquierda. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg-admin-tab,
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg-admin-tab-x,
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg7-fav-tab{
+  display:flex!important;
+  align-items:center!important;
+  gap:8px!important;
+  width:100%!important;
+  flex:none!important;
+  text-align:left!important;
+  justify-content:flex-start!important;
+  white-space:normal!important;
+  padding:8px 10px!important;
+  min-height:36px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg7-etiqueta{
+  flex:1 1 auto!important;
+  min-width:0!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+  white-space:nowrap!important;
+}
+/* Favoritos: grupo fijo arriba, con fondo tenue. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra .vg5-grupo.vg7-grupo-favs{
+  background:rgba(139,92,246,.08)!important;
+  border:1px solid rgba(139,92,246,.25)!important;
+  border-radius:12px!important;
+  padding:6px!important;
+  margin-bottom:8px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-cab{
+  display:flex!important;
+  align-items:center!important;
+  justify-content:space-between!important;
+  gap:8px!important;
+  padding:2px 4px 4px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-cab .vg7-grupo-titulo{
+  flex:1 1 auto!important;
+  padding:6px 6px 2px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-editar{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  background:transparent!important;
+  border:1px solid #34344e!important;
+  color:#c4b5fd!important;
+  border-radius:999px!important;
+  padding:3px 10px!important;
+  font-size:.68rem!important;
+  font-weight:800!important;
+  cursor:pointer!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-editar:hover{
+  border-color:#8b5cf6!important;
+  color:#ffffff!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-tab.vg7-editando{
+  border-style:dashed!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-tab.vg7-fav-agregar{
+  opacity:.75!important;
+  border-style:dashed!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-quitar{
+  margin-left:auto!important;
+  color:#f87171!important;
+  font-weight:900!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-fav-marca{
+  margin-left:auto!important;
+  font-weight:900!important;
+  color:#c4b5fd!important;
+  flex:none!important;
+}
+/* Pie de la barra: botón Solo iconos. */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-pie{
+  padding:8px 12px 12px!important;
+  flex:none!important;
+  border-top:1px solid rgba(255,255,255,.08)!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-angosto-btn{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  width:100%!important;
+  background:transparent!important;
+  border:1px solid #34344e!important;
+  color:#d9dbe8!important;
+  border-radius:10px!important;
+  padding:8px 10px!important;
+  font-size:.8rem!important;
+  font-weight:800!important;
+  cursor:pointer!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-angosto-btn:hover{
+  border-color:#8b5cf6!important;
+  color:#ffffff!important;
+}
+/* Tira de resumen */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-resumen{
+  display:grid!important;
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+  gap:10px!important;
+  padding:16px 36px 0!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-resumen-item{
+  background:#12121f!important;
+  border:1px solid #26263a!important;
+  border-radius:12px!important;
+  padding:10px 12px!important;
+  display:flex!important;
+  flex-direction:column!important;
+  gap:2px!important;
+  min-width:0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-resumen-num{
+  font-size:1.15rem!important;
+  font-weight:900!important;
+  color:#ffffff!important;
+  line-height:1.2!important;
+  white-space:nowrap!important;
+  overflow:hidden!important;
+  text-overflow:ellipsis!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-resumen-etiqueta{
+  font-size:.66rem!important;
+  font-weight:800!important;
+  letter-spacing:.08em!important;
+  text-transform:uppercase!important;
+  color:#9a9cb5!important;
+}
+/* Aviso ámbar de pendientes (el display lo pone el JS: flex o none). */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-aviso-pend{
+  align-items:center!important;
+  gap:12px!important;
+  margin:12px 36px 0!important;
+  padding:11px 14px!important;
+  border-radius:12px!important;
+  border:1px solid rgba(245,158,11,.45)!important;
+  background:rgba(245,158,11,.12)!important;
+  color:#ffd9a0!important;
+  font-size:.85rem!important;
+  font-weight:700!important;
+  flex:none!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-aviso-pend-texto{
+  flex:1 1 auto!important;
+  min-width:0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-aviso-pend-btn{
+  appearance:none!important;
+  -webkit-appearance:none!important;
+  margin-left:auto!important;
+  background:#f59e0b!important;
+  color:#1c1005!important;
+  border:0!important;
+  border-radius:999px!important;
+  padding:7px 14px!important;
+  font-size:.8rem!important;
+  font-weight:900!important;
+  cursor:pointer!important;
+  flex:none!important;
+}
+/* Parpadeo NUEVO en Pedidos cuando llega un pedido nuevo. */
+@keyframes vg7PulsoNuevo{
+  0%,100%{box-shadow:0 0 0 0 rgba(25,230,193,0);}
+  50%{box-shadow:0 0 0 4px rgba(25,230,193,.45);}
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-tab.vg7-nuevo{
+  animation:vg7PulsoNuevo 1.2s ease-in-out infinite!important;
+  border-color:#19e6c1!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-insignia-nuevo{
+  background:#19e6c1!important;
+  color:#06281f!important;
+  font-size:.58rem!important;
+  font-weight:900!important;
+  letter-spacing:.08em!important;
+  border-radius:999px!important;
+  padding:2px 6px!important;
+  margin-left:auto!important;
+  flex:none!important;
+}
+/* Tablero Hoy */
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-stats{
+  grid-template-columns:repeat(4,minmax(0,1fr))!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-grid{
+  display:grid!important;
+  grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  gap:12px!important;
+  margin-bottom:12px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-grid .vg6-card{
+  margin-bottom:0!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-acciones{
+  display:flex!important;
+  flex-direction:column!important;
+  gap:8px!important;
+  padding:4px 0 12px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-acciones .vg6-btn{
+  width:100%!important;
+  justify-content:center!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-soporte-btn{
+  margin-top:10px!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-soporte-btn .vg6-btn{
+  width:100%!important;
+  justify-content:center!important;
+}
+
+/* ── Escritorio (≥901px): fila flexible ── */
+@media(min-width:901px){
+  /* .vg7-main crece dentro del panel (flex columna, sección 20).
+     La regla de la sección 20 pone flex:none a los hijos directos
+     del panel; .vg7-main.vg7-main gana por especificidad. */
+  html body #vgAdminModal#vgAdminModal.vg6 .vg-admin-panel > .vg7-main.vg7-main{
+    display:flex!important;
+    flex-direction:row!important;
+    flex:1 1 auto!important;
+    min-height:0!important;
+    overflow:hidden!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra{
+    flex:none!important;
+    width:250px!important;
+    min-width:250px!important;
+    max-width:250px!important;
+    background:rgba(255,255,255,.03)!important;
+    border-right:1px solid rgba(255,255,255,.08)!important;
+    overflow:hidden!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-col{
+    flex:1 1 auto!important;
+    min-width:0!important;
+    overflow:hidden!important;
+  }
+  /* El contenido sigue desplazando por dentro (sección 20) pero
+     ahora dentro de la columna: sin max-width para que la tira y
+     el contenido compartan ancho. */
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-col .vg-admin-content{
+    max-width:none!important;
+    margin:0!important;
+  }
+  /* Modo angosto: riel de 68px con monogramas. */
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-barra{
+    width:68px!important;
+    min-width:68px!important;
+    max-width:68px!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-barra .vg-admin-tab,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-barra .vg-admin-tab-x,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-barra .vg7-fav-tab{
+    justify-content:center!important;
+    padding:8px 0!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-mono{
+    display:inline-flex!important;
+    align-items:center!important;
+    justify-content:center!important;
+    width:34px!important;
+    height:34px!important;
+    flex:none!important;
+    border-radius:9px!important;
+    background:#1a1a28!important;
+    border:1px solid #34344e!important;
+    font-size:.72rem!important;
+    font-weight:900!important;
+    color:#d9dbe8!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg-admin-tab.active .vg7-mono,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-fav-tab.active .vg7-mono{
+    background:linear-gradient(135deg,#7c3aed,#8b5cf6)!important;
+    color:#ffffff!important;
+    border-color:#8b5cf6!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-etiqueta,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-grupo-titulo,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-fav-editar,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-buscador,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-fav-quitar,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-fav-marca,
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-insignia-nuevo{
+    display:none!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-barra .vg5-grupo-tabs{
+    padding:0 2px 6px!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-barra .vg5-grupo.vg7-grupo-favs{
+    background:transparent!important;
+    border:0!important;
+    padding:0!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-pie{
+    padding:8px 6px 12px!important;
+    border-top:0!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-angosto-btn{
+    font-size:0!important;
+    padding:8px 0!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg7-angosto-btn::after{
+    content:"▸"!important;
+    font-size:.9rem!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6.vg7-angosto .vg-admin-tab .vg17-dot{
+    position:absolute!important;
+    top:2px!important;
+    right:2px!important;
+    margin-left:0!important;
+  }
+}
+
+/* ── Móvil (≤900px): apilado v6; la barra ocupa su altura y la
+   página desplaza. El botón Solo iconos no tiene sentido aquí. ── */
+@media(max-width:900px){
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-barra{
+    width:100%!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-pie{
+    display:none!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-resumen{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+    padding:12px 14px 0!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-aviso-pend{
+    margin:10px 14px 0!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-stats{
+    grid-template-columns:repeat(2,minmax(0,1fr))!important;
+  }
+  html body #vgAdminModal#vgAdminModal.vg6 .vg7-hoy-grid{
+    grid-template-columns:1fr!important;
+  }
+}
+
+/* ── Tema claro ── */
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-panel{
+  background:#f2f2f7!important;
+  background-image:none!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-head{
+  background-color:#ffffff!important;
+  background-image:linear-gradient(90deg,rgba(139,92,246,.14),rgba(25,230,193,.06) 55%,transparent 85%)!important;
+  border-bottom:1px solid #e2e2ea!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-head h2{
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-head p{
+  color:#5a5a72!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra{
+  background:#ffffff!important;
+  border-right:1px solid #e2e2ea!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-tabs{
+  background:transparent!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg-admin-tab,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg-admin-tab-x,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg7-fav-tab{
+  background:#f0f0f5!important;
+  border:1px solid #dcdce6!important;
+  color:#33334a!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg-admin-tab:hover,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg-admin-tab-x:hover,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg7-fav-tab:hover{
+  background:#e8e8f2!important;
+  border-color:#8b5cf6!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg-admin-tab.active,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg7-fav-tab.active{
+  background:linear-gradient(135deg,#7c3aed,#8b5cf6)!important;
+  color:#ffffff!important;
+  border-color:#8b5cf6!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-grupo-titulo{
+  color:#6a6a82!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-grupo-titulo:hover,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-grupo-activo > .vg7-grupo-titulo{
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-buscador-input{
+  background:#ffffff!important;
+  border-color:#dcdce6!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-buscador-input::placeholder{
+  color:#8a8ca3!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-angosto-btn,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-fav-editar{
+  border-color:#dcdce6!important;
+  color:#33334a!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-angosto-btn:hover,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-fav-editar:hover{
+  border-color:#8b5cf6!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-barra .vg5-grupo.vg7-grupo-favs{
+  background:rgba(139,92,246,.07)!important;
+  border-color:rgba(139,92,246,.25)!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-content{
+  background:#f2f2f7!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-card,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg17-box,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg17-card{
+  background:#ffffff!important;
+  border-color:#e2e2ea!important;
+  border-top-color:#8b5cf6!important;
+  color:#1c1c28!important;
+  box-shadow:0 6px 18px rgba(20,20,60,.08)!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-card h4,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg17-card h4,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-section h3,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-section h4{
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-card p,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg17-box p,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg17-card p,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-section p{
+  color:#44445c!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stat,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stats>*{
+  background:#ffffff!important;
+  border-color:#e2e2ea!important;
+  border-top-color:#8b5cf6!important;
+  box-shadow:0 6px 18px rgba(20,20,60,.08)!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stat span,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stats>* span{
+  color:#6a6a82!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stat b,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stats>* b,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stat strong,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-stats>* strong{
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-resumen-item{
+  background:#ffffff!important;
+  border-color:#e2e2ea!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-resumen-num{
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg7-resumen-etiqueta{
+  color:#6a6a82!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-content input,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-content select,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-admin-content textarea{
+  background:#ffffff!important;
+  border-color:#dcdce6!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-muted,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg-analytics-muted{
+  color:#5a5a72!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-vacio{
+  color:#5a5a72!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row{
+  background:#ffffff!important;
+  border-color:#e2e2ea!important;
+  color:#1c1c28!important;
+}
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row small,
+html body #vgAdminModal#vgAdminModal.vg6.vg7-claro .vg6-row em{
+  color:#6a6a82!important;
+}
+
 </style>
 
 <script id="vg-admin-v5">
@@ -54873,12 +55513,22 @@ function pintarVacio(sec, texto){
 /* ── Cambio de pestaña (solo lo visual) + carga ── */
 function mostrarTab(nombre){
   var m = modal(); if(!m) return false;
+  /* v7: la pestaña principal manda (los clones de Favoritos son
+     atajos .vg7-fav-tab, no .vg-admin-tab): si falta la principal,
+     falso — así el hardening H2 (botón Pedidos ausente) sigue
+     pintando el error de apertura en vez de "ver" el clon. */
   var btn = qs('.vg-admin-tab[data-tab="' + nombre + '"]', m);
   var sec = secEl(nombre);
   if(!btn || !sec) return false;
   if(btn.style.display === 'none') return false;
-  qsa('.vg-admin-tab', m).forEach(function(b){ b.classList.toggle('active', b === btn); });
+  /* Activa la principal Y sus clones de Favoritos. */
+  qsa('.vg-admin-tab, .vg7-fav-tab', m).forEach(function(b){
+    b.classList.toggle('active', b.getAttribute('data-tab') === nombre);
+  });
   qsa('.vg-admin-section', m).forEach(function(s){ s.classList.toggle('active', s === sec); });
+  try{ vg7MarcarGrupoActivo(nombre); }catch(e){}
+  if(nombre === 'pedidos'){ try{ vg7LimpiarPedidoNuevo(); }catch(e){} }
+  try{ vg7ActualizarAvisoPendiente(); }catch(e){}
   return true;
 }
 function cargarTab(nombre){
@@ -55007,6 +55657,12 @@ function avisarPedidoNuevo(ped){
   }
   mostrarAvisoPedido(ped);
   beep();
+  /* v7: si no estás en Pedidos, la pestaña parpadea con NUEVO hasta
+     abrirla, y la tira de resumen suma el pendiente. */
+  try{
+    if(tabActivo() !== 'pedidos') vg7MarcarPedidoNuevo();
+    vg7IncrementarPendientes();
+  }catch(e){}
 }
 function toggleSonido(){
   sonidoOn = !sonidoOn;
@@ -55095,6 +55751,20 @@ function asegurarBotonesEncabezado(){
     head.appendChild(mute);
   }
   mute.textContent = sonidoOn ? '🔔 Sonido: ON' : '🔇 Silencio';
+  /* v7: botón de tema claro/oscuro (persiste en localStorage). */
+  if(!document.getElementById('vg7TemaBtn')){
+    var tb = document.createElement('button');
+    tb.id = 'vg7TemaBtn';
+    tb.className = 'vg-admin-btn';
+    tb.type = 'button';
+    tb.onclick = function(){
+      var claro = vg7LsLeer('vg7_tema', 'oscuro') !== 'claro';
+      vg7LsEscribir('vg7_tema', claro ? 'claro' : 'oscuro');
+      vg7AplicarTema();
+    };
+    head.appendChild(tb);
+  }
+  try{ vg7AplicarTema(); }catch(e){}
   if(!document.getElementById('vgAdminLogoutBtn')){
     var b = document.createElement('button');
     b.id = 'vgAdminLogoutBtn';
@@ -55183,6 +55853,528 @@ async function vgAdminOpenV6(){
   }finally{
     aperturaEnCurso = false;
   }
+}
+
+/* ═══════════════════════════════════════════════════════════════
+   v7 (2026-11-26) — rediseño aprobado por Miguel: "lateral
+   plegable" (diseño 8) + 6 extras, sobre el shell v6 sin tocar la
+   lógica de ninguna pestaña.
+   - Barra lateral (250px) con grupos plegables, favoritos, buscador
+     de secciones y botón "Solo iconos".
+   - Tira de resumen con los 4 números de vg6Pedidos.lista.
+   - Aviso ámbar de pedidos pendientes (fuera de Pedidos).
+   - Parpadeo "NUEVO" en Pedidos cuando llega un pedido nuevo.
+   - Tema claro/oscuro persistente.
+   - La vista Hoy se reconstruye en vg-admin-v6-parte-resto.js.
+   La búsqueda GLOBAL (pedidos/juegos/clientes) NO se implementó:
+   el buscador de la barra filtra solo secciones.
+   ═══════════════════════════════════════════════════════════════ */
+
+/* ── Persistencia (localStorage, con respaldo si falla) ─────── */
+function vg7LsLeer(k, def){
+  try{
+    var v = localStorage.getItem(k);
+    return (v === null || v === undefined) ? def : v;
+  }catch(e){ return def; }
+}
+function vg7LsEscribir(k, v){
+  try{ localStorage.setItem(k, v); }catch(e){}
+}
+function vg7LeerJson(k, def){
+  try{
+    var v = localStorage.getItem(k);
+    if(v === null || v === undefined) return def;
+    var j = JSON.parse(v);
+    return (j && typeof j === 'object') ? j : def;
+  }catch(e){ return def; }
+}
+function vg7EscribirJson(k, v){
+  try{ localStorage.setItem(k, JSON.stringify(v)); }catch(e){}
+}
+
+/* ── Datos fijos del shell ──────────────────────────────────── */
+var vg7EditandoFavs = false;   /* modo edición de favoritos */
+var vg7Pendientes = 0;         /* pendientes conocidos por el resumen */
+var VG7_ETIQUETAS = {
+  pedidos: 'Pedidos', soporte: 'Soporte', hoy: 'Hoy', usuarios: 'Usuarios',
+  dashboard: 'Dashboard', xboxcurrent: 'Xbox One / Series', cuentas: 'Xbox Cuentas',
+  retro: 'Xbox Retro', inicio: 'Inicio', imagenes: 'Imágenes', tokens: 'Tokens',
+  setup: 'Supabase', export: 'Exportar', debug: 'Diagnóstico',
+  settings: 'Ajustes rápidos', analytics: 'Analítica', reviews: 'Recomendaciones',
+  bitacora: 'Bitácora', buscado: 'Lo que buscan', enlaces: 'Fotos rotas'
+};
+var VG7_MONOGRAMA = {
+  pedidos: 'PE', soporte: 'SO', hoy: 'HO', usuarios: 'US', dashboard: 'DA',
+  xboxcurrent: 'X1', cuentas: 'XC', retro: 'XR', inicio: 'IN', imagenes: 'IM',
+  tokens: 'TO', setup: 'SU', export: 'EX', debug: 'DI', settings: 'AJ',
+  analytics: 'AN', reviews: 'RE', bitacora: 'BI', buscado: 'BU', enlaces: 'FO'
+};
+var VG7_GRUPOS = [
+  { nombre: 'Operación', tabs: ['pedidos', 'soporte', 'hoy', 'usuarios', 'dashboard'] },
+  { nombre: 'Catálogo', tabs: ['xboxcurrent', 'cuentas', 'retro', 'inicio', 'imagenes'] },
+  { nombre: 'Sistema', tabs: ['tokens', 'setup', 'export', 'debug', 'settings', 'analytics', 'reviews', 'bitacora', 'buscado', 'enlaces'] }
+];
+var VG7_GRUPO_DE = {};
+VG7_GRUPOS.forEach(function(g){ g.tabs.forEach(function(t){ VG7_GRUPO_DE[t] = g.nombre; }); });
+var VG7_FAVS_DEFECTO = ['pedidos', 'cuentas', 'inicio'];
+
+function vg7TabActivo(){
+  var b = document.querySelector('#vgAdminModal .vg-admin-tab.active');
+  return b ? (b.getAttribute('data-tab') || '') : '';
+}
+
+/* ── Monograma + envoltura de etiqueta ────────────────────────
+   Cada botón de sección lleva un monograma (visible solo en modo
+   angosto) y su texto en .vg7-etiqueta (oculta en modo angosto).
+   El punto de no-leídos (.vg17-dot) queda como hijo directo para
+   seguir viéndose en angosto. */
+function vg7EnvolverEtiqueta(b, monograma){
+  if(!b) return;
+  if(!b.querySelector('.vg7-mono')){
+    var mono = document.createElement('span');
+    mono.className = 'vg7-mono';
+    mono.textContent = monograma;
+    b.insertBefore(mono, b.firstChild);
+  }
+  var et = b.querySelector('.vg7-etiqueta');
+  if(et) return;
+  et = document.createElement('span');
+  et.className = 'vg7-etiqueta';
+  var monoEl = b.querySelector('.vg7-mono');
+  var dot = b.querySelector('.vg17-dot');
+  var nodos = [];
+  Array.prototype.forEach.call(b.childNodes, function(n){
+    if(n !== monoEl && n !== dot) nodos.push(n);
+  });
+  nodos.forEach(function(n){ et.appendChild(n); });
+  b.appendChild(et);
+  if(dot) b.appendChild(dot);
+}
+
+/* ── Grupos plegables ───────────────────────────────────────── */
+function vg7GruposGuardados(){
+  return vg7LeerJson('vg7_grupos', {});
+}
+function vg7AplicarGrupos(){
+  var guardados = vg7GruposGuardados();
+  var activo = vg7TabActivo();
+  qsa('#vgAdminModal .vg5-grupo').forEach(function(g){
+    if(g.classList.contains('vg7-grupo-favs')) return;
+    var titulo = g.querySelector('.vg7-grupo-titulo');
+    var nombre = titulo ? titulo.textContent.trim() : '';
+    /* En móvil los grupos empiezan cerrados (la barra sería
+       larguísima); en escritorio empiezan abiertos. El grupo con
+       la pestaña activa siempre queda abierto. */
+    var esActivo = !!activo && VG7_GRUPO_DE[activo] === nombre;
+    var abierto = esActivo ? true
+      : guardados.hasOwnProperty(nombre) ? !!guardados[nombre]
+      : ((window.innerWidth || 1024) > 900);
+    g.classList.toggle('vg7-cerrado', !abierto);
+  });
+}
+function vg7AlternarGrupo(g){
+  var titulo = g.querySelector('.vg7-grupo-titulo');
+  var nombre = titulo ? titulo.textContent.trim() : '';
+  var cerrado = !g.classList.contains('vg7-cerrado');
+  g.classList.toggle('vg7-cerrado', cerrado);
+  if(nombre){
+    var guardados = vg7GruposGuardados();
+    guardados[nombre] = !cerrado;
+    vg7EscribirJson('vg7_grupos', guardados);
+  }
+}
+function vg7MarcarGrupoActivo(tab){
+  var grupo = VG7_GRUPO_DE[tab];
+  if(!grupo) return;
+  qsa('#vgAdminModal .vg5-grupo').forEach(function(g){
+    var titulo = g.querySelector('.vg7-grupo-titulo');
+    var nombre = titulo ? titulo.textContent.trim() : '';
+    var es = nombre === grupo;
+    g.classList.toggle('vg7-grupo-activo', es);
+    if(es) g.classList.remove('vg7-cerrado');
+  });
+}
+
+/* ── Favoritos ──────────────────────────────────────────────── */
+function vg7Favoritos(){
+  var f = vg7LeerJson('vg7_favs', null);
+  if(!f || !Array.isArray(f) || !f.length) return VG7_FAVS_DEFECTO.slice();
+  return f.filter(function(t){ return !!VG7_ETIQUETAS[t]; });
+}
+function vg7GuardarFavoritos(f){ vg7EscribirJson('vg7_favs', f); }
+function vg7PintarFavoritos(){
+  var cont = document.querySelector('#vgAdminModal .vg7-favs');
+  if(!cont) return;
+  var favs = vg7Favoritos();
+  var activo = vg7TabActivo();
+  cont.innerHTML = '';
+  function favBoton(t, agregar){
+    var b = document.createElement('button');
+    b.type = 'button';
+    b.className = 'vg7-fav-tab' + (agregar ? ' vg7-fav-agregar' : '');
+    b.setAttribute('data-tab', t);
+    var mono = document.createElement('span');
+    mono.className = 'vg7-mono';
+    mono.textContent = VG7_MONOGRAMA[t] || t.slice(0, 2).toUpperCase();
+    var et = document.createElement('span');
+    et.className = 'vg7-etiqueta';
+    et.textContent = agregar ? '+ ' + (VG7_ETIQUETAS[t] || t) : (VG7_ETIQUETAS[t] || t);
+    b.appendChild(mono);
+    b.appendChild(et);
+    if(vg7EditandoFavs && !agregar){
+      var x = document.createElement('span');
+      x.className = 'vg7-fav-quitar';
+      x.textContent = '×';
+      b.appendChild(x);
+      b.classList.add('vg7-editando');
+    }
+    if(activo === t) b.classList.add('active');
+    cont.appendChild(b);
+  }
+  favs.forEach(function(t){ favBoton(t, false); });
+  /* En edición se muestran también las no favoritas, con +, para fijarlas. */
+  if(vg7EditandoFavs){
+    Object.keys(VG7_ETIQUETAS).forEach(function(t){
+      if(favs.indexOf(t) >= 0) return;
+      favBoton(t, true);
+    });
+  }
+  /* Marca +/× en la barra principal mientras se edita. */
+  qsa('#vgAdminModal .vg-admin-tab').forEach(function(b){
+    var t = b.getAttribute('data-tab');
+    if(!t) return;
+    var marca = b.querySelector('.vg7-fav-marca');
+    if(vg7EditandoFavs){
+      if(!marca){
+        marca = document.createElement('span');
+        marca.className = 'vg7-fav-marca';
+        b.appendChild(marca);
+      }
+      marca.textContent = favs.indexOf(t) >= 0 ? '×' : '+';
+    } else if(marca && marca.parentNode){
+      marca.parentNode.removeChild(marca);
+    }
+  });
+}
+function vg7AlternarFavorito(t){
+  if(!VG7_ETIQUETAS[t]) return;
+  var favs = vg7Favoritos();
+  var i = favs.indexOf(t);
+  if(i >= 0) favs.splice(i, 1);
+  else favs.push(t);
+  vg7GuardarFavoritos(favs);
+  vg7PintarFavoritos();
+}
+function vg7AlternarEdicionFavs(){
+  vg7EditandoFavs = !vg7EditandoFavs;
+  var btn = document.querySelector('#vgAdminModal .vg7-fav-editar');
+  if(btn) btn.textContent = vg7EditandoFavs ? 'Listo' : 'Editar';
+  vg7PintarFavoritos();
+}
+
+/* ── Buscador de secciones (solo secciones, no global) ─────── */
+function vg7FiltrarSecciones(q){
+  var barra = document.querySelector('#vgAdminModal .vg-admin-tabs');
+  if(!barra) return;
+  var texto = String(q || '').toLowerCase().replace(/\s+/g, ' ').trim();
+  var buscando = texto.length > 0;
+  barra.classList.toggle('vg7-buscando', buscando);
+  qsa('.vg5-grupo', barra).forEach(function(g){
+    var alguno = false;
+    /* La clase vg7-oculto-busqueda no toca el display en línea que
+       otros módulos usan para esconder pestañas por rol. */
+    qsa('.vg-admin-tab, .vg-admin-tab-x, .vg7-fav-tab', g).forEach(function(b){
+      var etiqueta = (b.textContent || '').toLowerCase();
+      var ok = !buscando || etiqueta.indexOf(texto) >= 0;
+      b.classList.toggle('vg7-oculto-busqueda', !ok);
+      if(ok) alguno = true;
+    });
+    /* La clase (con !important) esconde el grupo: el display en
+       línea no le gana al display:flex!important de v6. */
+    g.classList.toggle('vg7-grupo-oculto', !alguno);
+  });
+  if(buscando){
+    /* Mientras se busca, los grupos visibles se abren. */
+    qsa('.vg5-grupo', barra).forEach(function(g){
+      if(!g.classList.contains('vg7-grupo-oculto')) g.classList.remove('vg7-cerrado');
+    });
+  } else {
+    vg7AplicarGrupos();
+  }
+}
+
+/* ── Tira de resumen ──────────────────────────────────────────
+   Reutiliza vg6Pedidos.lista (la misma fuente del cargador de
+   Pedidos): sin consultas nuevas. Sin datos, guiones. */
+function vg7PintarResumen(){
+  var tira = document.getElementById('vg7Resumen');
+  if(!tira) return;
+  var nums = tira.querySelectorAll('.vg7-resumen-num');
+  if(nums.length < 4) return;
+  var lista = null;
+  try{
+    lista = (typeof vg6Pedidos !== 'undefined' && vg6Pedidos) ? vg6Pedidos.lista : null;
+  }catch(e){ lista = null; }
+  if(!lista || !lista.length){
+    var vacio = !!(lista && lista.length === 0);
+    nums[0].textContent = vacio ? '$0' : '—';
+    nums[1].textContent = vacio ? '0' : '—';
+    nums[2].textContent = vacio ? '0' : '—';
+    nums[3].textContent = vacio ? '0' : '—';
+    vg7Pendientes = 0;
+    vg7ActualizarAvisoPendiente();
+    return;
+  }
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var vendHoy = 0, pedHoy = 0, pend = 0, entr = 0;
+  lista.forEach(function(p){
+    var creado = p.created_at ? new Date(p.created_at) : null;
+    var esHoy = creado && creado.getTime() >= hoy.getTime();
+    if(String(p.status || '').toLowerCase() === 'entregado'){
+      entr++;
+      if(esHoy) vendHoy += Number(p.total) || 0;
+    }
+    if(String(p.status || '').toLowerCase() === 'pendiente') pend++;
+    if(esHoy) pedHoy++;
+  });
+  nums[0].textContent = dinero(vendHoy);
+  nums[1].textContent = String(pedHoy);
+  nums[2].textContent = String(pend);
+  nums[3].textContent = String(entr);
+  vg7Pendientes = pend;
+  vg7ActualizarAvisoPendiente();
+}
+
+/* ── Aviso ámbar de pendientes ──────────────────────────────── */
+function vg7ActualizarAvisoPendiente(){
+  var b = document.getElementById('vg7AvisoPend');
+  if(!b) return;
+  var n = vg7Pendientes;
+  if(n > 0 && vg7TabActivo() !== 'pedidos'){
+    /* display:flex explícito: el CSS no fija display en la banda
+       para no pelearse con este inline. */
+    b.style.display = 'flex';
+    var t = b.querySelector('.vg7-aviso-pend-texto');
+    if(t) t.textContent = 'Tienes ' + n + (n === 1 ? ' pedido pendiente' : ' pedidos pendientes') + ' por atender';
+  } else {
+    b.style.display = 'none';
+  }
+}
+
+/* ── Aviso de pedido nuevo: parpadeo NUEVO en Pedidos ──────── */
+function vg7MarcarPedidoNuevo(){
+  var b = document.querySelector('#vgAdminModal .vg-admin-tab[data-tab="pedidos"]');
+  if(!b) return;
+  b.classList.add('vg7-nuevo');
+  if(!b.querySelector('.vg7-insignia-nuevo')){
+    var ins = document.createElement('span');
+    ins.className = 'vg7-insignia-nuevo';
+    ins.textContent = 'NUEVO';
+    b.appendChild(ins);
+  }
+}
+function vg7LimpiarPedidoNuevo(){
+  var b = document.querySelector('#vgAdminModal .vg-admin-tab[data-tab="pedidos"]');
+  if(!b) return;
+  b.classList.remove('vg7-nuevo');
+  var ins = b.querySelector('.vg7-insignia-nuevo');
+  if(ins && ins.parentNode) ins.parentNode.removeChild(ins);
+}
+function vg7IncrementarPendientes(){
+  /* La lista de Pedidos aún no trae el pedido nuevo (el realtime
+     solo la refresca si estás en Pedidos), así que se suma el
+     número en la tira sin recalcular desde la lista. */
+  vg7Pendientes += 1;
+  var tira = document.getElementById('vg7Resumen');
+  if(tira){
+    var nums = tira.querySelectorAll('.vg7-resumen-num');
+    if(nums.length >= 3 && nums[2].textContent !== '—') nums[2].textContent = String(vg7Pendientes);
+  }
+  vg7ActualizarAvisoPendiente();
+}
+
+/* ── Solo iconos ────────────────────────────────────────────── */
+function vg7AplicarAngosto(){
+  var m = modal(); if(!m) return;
+  var angosto = vg7LsLeer('vg7_angosto', '0') === '1';
+  m.classList.toggle('vg7-angosto', angosto);
+  var btn = m.querySelector('.vg7-angosto-btn');
+  if(btn) btn.textContent = angosto ? 'Solo iconos ▸' : '◂ Solo iconos';
+}
+function vg7AlternarAngosto(){
+  var m = modal(); if(!m) return;
+  var angosto = !m.classList.contains('vg7-angosto');
+  m.classList.toggle('vg7-angosto', angosto);
+  vg7LsEscribir('vg7_angosto', angosto ? '1' : '0');
+  var btn = m.querySelector('.vg7-angosto-btn');
+  if(btn) btn.textContent = angosto ? 'Solo iconos ▸' : '◂ Solo iconos';
+}
+
+/* ── Tema claro/oscuro ──────────────────────────────────────── */
+function vg7AplicarTema(){
+  var m = modal(); if(!m) return;
+  var claro = vg7LsLeer('vg7_tema', 'oscuro') === 'claro';
+  m.classList.toggle('vg7-claro', claro);
+  var btn = document.getElementById('vg7TemaBtn');
+  if(btn) btn.textContent = claro ? '☀️ Claro' : '🌙 Oscuro';
+}
+
+/* ── Grupo Accesos (Catálogo / Oferta principal) ──────────────
+   Los inyectores viejos solo añaden el botón si NO está ya dentro
+   de .vg-admin-tabs; al moverlo al grupo Accesos (dentro de la
+   barra) no lo vuelven a añadir: no hay tira y afloja. */
+function vg7VigilarAccesos(barra){
+  if(!barra) return;
+  var grupo = barra.querySelector('.vg7-grupo-accesos .vg5-grupo-tabs');
+  if(!grupo) return;
+  qsa('.vg-admin-tab-x', barra).forEach(function(b){
+    if(b.parentNode !== grupo) grupo.appendChild(b);
+    var mono = (b.id === 'vgCatAdminTab') ? 'CA' : 'OF';
+    vg7EnvolverEtiqueta(b, mono);
+  });
+}
+
+/* ── Construcción del shell v7 ──────────────────────────────── */
+function vg7ConstruirShell(){
+  var m = modal(); if(!m) return;
+  var panel = m.querySelector('.vg-admin-panel');
+  var barra = m.querySelector('.vg-admin-tabs');
+  var cont = m.querySelector('.vg-admin-content');
+  if(!panel || !barra || !cont) return;
+  if(m.querySelector('.vg7-main')) return;   /* ya construido */
+  if(barra.__vg7shell) return;
+  barra.__vg7shell = true;
+
+  var head = m.querySelector('.vg-admin-head');
+  var aviso6 = document.getElementById('vg6Aviso');
+
+  /* 1) Estructura: .vg7-main > (aside .vg7-barra | .vg7-col). */
+  var main = document.createElement('div');
+  main.className = 'vg7-main';
+  var aside = document.createElement('aside');
+  aside.className = 'vg7-barra';
+  aside.setAttribute('aria-label', 'Secciones del panel');
+  var col = document.createElement('div');
+  col.className = 'vg7-col';
+  if(head && head.nextSibling) panel.insertBefore(main, head.nextSibling);
+  else panel.appendChild(main);
+  main.appendChild(aside);
+  main.appendChild(col);
+  aside.appendChild(barra);
+
+  /* 2) Buscador arriba de la barra. */
+  var busc = document.createElement('div');
+  busc.className = 'vg7-buscador';
+  var inp = document.createElement('input');
+  inp.type = 'search';
+  inp.className = 'vg7-buscador-input';
+  inp.placeholder = 'Buscar sección…';
+  inp.setAttribute('aria-label', 'Buscar sección');
+  inp.addEventListener('input', function(){ vg7FiltrarSecciones(inp.value); });
+  busc.appendChild(inp);
+  aside.insertBefore(busc, barra);
+
+  /* 3) Botón "Solo iconos" al pie de la barra. */
+  var pie = document.createElement('div');
+  pie.className = 'vg7-pie';
+  var ang = document.createElement('button');
+  ang.type = 'button';
+  ang.className = 'vg7-angosto-btn';
+  ang.textContent = '◂ Solo iconos';
+  ang.addEventListener('click', function(){ vg7AlternarAngosto(); });
+  pie.appendChild(ang);
+  aside.appendChild(pie);
+
+  /* 4) Tira de resumen + aviso de pendientes + aviso v6, en la columna. */
+  var tira = document.createElement('div');
+  tira.className = 'vg7-resumen';
+  tira.id = 'vg7Resumen';
+  tira.innerHTML =
+    '<div class="vg7-resumen-item"><span class="vg7-resumen-num">—</span><span class="vg7-resumen-etiqueta">Vendido hoy</span></div>' +
+    '<div class="vg7-resumen-item"><span class="vg7-resumen-num">—</span><span class="vg7-resumen-etiqueta">Pedidos hoy</span></div>' +
+    '<div class="vg7-resumen-item"><span class="vg7-resumen-num">—</span><span class="vg7-resumen-etiqueta">Pendientes</span></div>' +
+    '<div class="vg7-resumen-item"><span class="vg7-resumen-num">—</span><span class="vg7-resumen-etiqueta">Entregados</span></div>';
+  col.appendChild(tira);
+  var avisoP = document.createElement('div');
+  avisoP.className = 'vg7-aviso-pend';
+  avisoP.id = 'vg7AvisoPend';
+  avisoP.style.display = 'none';
+  avisoP.innerHTML = '<span class="vg7-aviso-pend-texto"></span>' +
+    '<button type="button" class="vg7-aviso-pend-btn">Ver pedidos</button>';
+  avisoP.querySelector('.vg7-aviso-pend-btn').addEventListener('click', function(){
+    if(mostrarTab('pedidos')) cargarTab('pedidos');
+  });
+  col.appendChild(avisoP);
+  if(aviso6) col.appendChild(aviso6);
+  col.appendChild(cont);
+
+  /* 5) Grupos: título → botón plegable; monograma + etiqueta en cada pestaña. */
+  qsa('.vg5-grupo', barra).forEach(function(g){
+    g.classList.add('vg7-grupo');
+    var titulo = g.querySelector('.vg5-grupo-titulo');
+    if(titulo && !g.querySelector('.vg7-grupo-titulo')){
+      var btn = document.createElement('button');
+      btn.type = 'button';
+      btn.className = 'vg7-grupo-titulo';
+      btn.textContent = titulo.textContent;
+      titulo.parentNode.replaceChild(btn, titulo);
+      btn.addEventListener('click', function(){ vg7AlternarGrupo(g); });
+    }
+    qsa('.vg-admin-tab', g).forEach(function(b){
+      var t = b.getAttribute('data-tab');
+      if(t) vg7EnvolverEtiqueta(b, VG7_MONOGRAMA[t] || t.slice(0, 2).toUpperCase());
+    });
+  });
+
+  /* 6) Grupo Favoritos fijo arriba de la barra. */
+  var favGrupo = document.createElement('div');
+  favGrupo.className = 'vg5-grupo vg7-grupo vg7-grupo-favs';
+  var favCab = document.createElement('div');
+  favCab.className = 'vg7-fav-cab';
+  var favTitulo = document.createElement('span');
+  favTitulo.className = 'vg7-grupo-titulo vg7-grupo-titulo-fijo';
+  favTitulo.textContent = '★ Favoritos';
+  var favEditar = document.createElement('button');
+  favEditar.type = 'button';
+  favEditar.className = 'vg7-fav-editar';
+  favEditar.textContent = 'Editar';
+  favEditar.addEventListener('click', function(){ vg7AlternarEdicionFavs(); });
+  favCab.appendChild(favTitulo);
+  favCab.appendChild(favEditar);
+  var favCont = document.createElement('div');
+  favCont.className = 'vg5-grupo-tabs vg7-favs';
+  favGrupo.appendChild(favCab);
+  favGrupo.appendChild(favCont);
+  barra.insertBefore(favGrupo, barra.firstChild);
+
+  /* 7) Grupo Accesos al final de la barra + observador que mete ahí
+     los botones inyectados (Catálogo / Oferta principal). */
+  var accGrupo = document.createElement('div');
+  accGrupo.className = 'vg5-grupo vg7-grupo vg7-grupo-accesos';
+  var accTitulo = document.createElement('button');
+  accTitulo.type = 'button';
+  accTitulo.className = 'vg7-grupo-titulo';
+  accTitulo.textContent = 'Accesos';
+  accTitulo.addEventListener('click', function(){ vg7AlternarGrupo(accGrupo); });
+  var accCont = document.createElement('div');
+  accCont.className = 'vg5-grupo-tabs';
+  accGrupo.appendChild(accTitulo);
+  accGrupo.appendChild(accCont);
+  barra.appendChild(accGrupo);
+  vg7VigilarAccesos(barra);
+  if(typeof MutationObserver !== 'undefined' && !barra.__vg7obsAccesos){
+    barra.__vg7obsAccesos = true;
+    var obs = new MutationObserver(function(){ vg7VigilarAccesos(barra); });
+    obs.observe(barra, { childList: true, subtree: true });
+  }
+
+  /* 8) Estado persistido + primer pintado. */
+  vg7AplicarGrupos();
+  vg7PintarFavoritos();
+  vg7AplicarAngosto();
+  vg7AplicarTema();
+  vg7PintarResumen();
+  vg7MarcarGrupoActivo(vg7TabActivo());
 }
 
 /* vg-admin-v6 — parte fase17
@@ -55363,6 +56555,8 @@ function vg6PintarPedidos(sec) {
       '<div class="vg6-card vg6-pedidos-chat" data-vg6="chat"></div>' +
     '</div>';
   sec.onclick = function (ev) { vg6PedidosClick(sec, ev); };
+  /* v7: la tira de resumen usa estos mismos datos. */
+  try{ vg7PintarResumen(); }catch(e){}
 }
 
 async function vg6PedidosClick(sec, ev) {
@@ -57162,6 +58356,9 @@ async function cargarHoy(sec){
     var vendHoy = pedidos.filter(function(o){
       return new Date(o.created_at) >= hoy && o.status === 'entregado';
     }).reduce(function(s, o){ return s + Number(o.total || 0); }, 0);
+    /* v7: cifras de la fila de stats del tablero Hoy. */
+    var pedHoy = pedidos.filter(function(o){ return new Date(o.created_at) >= hoy; }).length;
+    var entr = pedidos.filter(function(o){ return String(o.status || '') === 'entregado'; }).length;
     function nombrePedido(o){
       return String(o.product_name || (o.items && o.items[0] && o.items[0].title) || 'Pedido');
     }
@@ -57169,11 +58366,10 @@ async function cargarHoy(sec){
       return '<div class="vg6-card"><div class="vg6-card-head"><b>' + esc(titulo) + '</b>' +
         '<span class="vg6-chip ' + clase + '">' + n + '</span></div>' + cuerpo + '</div>';
     }
-    var html = '<div class="vg6-card"><b>Respaldo de tu historial</b>' +
-      '<p>Ventas, clientes, chats, tickets y tokens en un archivo. ' +
-      'Guárdalo donde quieras: si algo se borra, esto lo recupera.</p>' +
-      '<button type="button" class="vg6-btn vg6-btn-primary" data-vg6-hoy="respaldo">Descargar respaldo</button>' +
-      '<div class="vg6-muted" data-vg6-hoy-aviso style="display:none"></div></div>';
+    /* v7: tablero de lo urgente. Mismas consultas y mismos datos
+       de v6; solo cambia el orden y la presentación. El respaldo
+       baja al final de la pantalla. */
+    var html = '';
     if(fallos.length){
       html += '<div style="margin:0 0 12px;padding:11px 14px;border-radius:12px;' +
         'border:1px solid rgba(255,160,80,.3);background:rgba(255,160,80,.08);' +
@@ -57181,9 +58377,14 @@ async function cargarHoy(sec){
         '<b>No pude cargar ' + esc(fallos.join(' ni ')) + '.</b> ' +
         'Lo demás de esta pantalla sí es correcto.</div>';
     }
-    html += '<div class="vg6-card"><h3>Lo que te toca hoy</h3>' +
-      '<span>Vendido hoy: <b>' + dinero(vendHoy) + '</b></span></div>';
-    html += caja('Pedidos esperándote', pend.length,
+    html += '<div class="vg6-stats vg7-hoy-stats">' +
+      '<div class="vg6-card vg6-stat"><span>Vendido hoy</span><b>' + dinero(vendHoy) + '</b></div>' +
+      '<div class="vg6-card vg6-stat"><span>Pedidos hoy</span><b>' + pedHoy + '</b></div>' +
+      '<div class="vg6-card vg6-stat"><span>Pendientes</span><b>' + pend.length + '</b></div>' +
+      '<div class="vg6-card vg6-stat"><span>Entregados</span><b>' + entr + '</b></div>' +
+    '</div>';
+    html += '<div class="vg7-hoy-grid">';
+    html += caja('Por atender', pend.length,
       pend.length ? (pend.length > 4 ? 'urge' : 'hay') : 'cero',
       pend.length
         ? pend.slice(0, 8).map(function(o){
@@ -57197,7 +58398,7 @@ async function cargarHoy(sec){
               '<em>esperando ' + espera + '</em></div></div>';
           }).join('')
         : '<div class="vg6-vacio"><b>Nada pendiente</b>Todos los pedidos están atendidos.</div>');
-    html += caja('Suscripciones por vencer', vencen.length, vencen.length ? 'hay' : 'cero',
+    html += caja('Vencen esta semana', vencen.length, vencen.length ? 'hay' : 'cero',
       vencen.length
         ? vencen.slice(0, 8).map(function(x){
             var d = Number(x.dias || 0);
@@ -57208,8 +58409,14 @@ async function cargarHoy(sec){
               '<em>' + dinero(x.total) + '</em></div></div>';
           }).join('')
         : '<div class="vg6-vacio"><b>Ninguna por vencer</b>Nadie se te va esta semana.</div>');
-    html += caja('Tickets sin resolver', abiertos.length, abiertos.length ? 'hay' : 'cero',
-      abiertos.length
+    html += '<div class="vg6-card"><div class="vg6-card-head"><b>Acciones rápidas</b></div>' +
+      '<div class="vg7-hoy-acciones">' +
+      '<button type="button" class="vg6-btn vg6-btn-primary" data-vg7-accion="agregar-juego">+ Agregar juego a Xbox Cuentas</button>' +
+      '<button type="button" class="vg6-btn" data-vg7-accion="poner-oferta">🎯 Poner una oferta</button>' +
+      '<button type="button" class="vg6-btn" data-vg7-accion="ver-tienda">🛍 Ver la tienda</button>' +
+      '</div></div>';
+    html += caja('Soporte', abiertos.length, abiertos.length ? 'hay' : 'cero',
+      (abiertos.length
         ? abiertos.slice(0, 6).map(function(t){
             var q = String(t.problem_description || '').replace(/\s+/g, ' ').trim();
             return '<div class="vg6-row" data-tk="1">' +
@@ -57218,7 +58425,14 @@ async function cargarHoy(sec){
               (q ? ' · ' + esc(q.slice(0, 54)) + (q.length > 54 ? '…' : '') : '') + '</small></div>' +
               '<div class="vg6-row-side"><em>' + esc(String(t.status || 'abierto')) + '</em></div></div>';
           }).join('')
-        : '<div class="vg6-vacio"><b>Bandeja limpia</b>No hay tickets abiertos.</div>');
+        : '<div class="vg6-vacio"><b>Bandeja limpia</b>No hay tickets abiertos.</div>') +
+      '<div class="vg7-hoy-soporte-btn"><button type="button" class="vg6-btn" data-vg7-accion="soporte">Ver soporte</button></div>');
+    html += '</div>';
+    html += '<div class="vg6-card"><b>Respaldo de tu historial</b>' +
+      '<p>Ventas, clientes, chats, tickets y tokens en un archivo. ' +
+      'Guárdalo donde quieras: si algo se borra, esto lo recupera.</p>' +
+      '<button type="button" class="vg6-btn vg6-btn-primary" data-vg6-hoy="respaldo">Descargar respaldo</button>' +
+      '<div class="vg6-muted" data-vg6-hoy-aviso style="display:none"></div></div>';
     sec.innerHTML = html;
     if(!sec.dataset.vg6Hoy){
       sec.dataset.vg6Hoy = '1';
@@ -57238,6 +58452,19 @@ async function cargarHoy(sec){
           }).catch(function(e){
             if(av) av.textContent = 'No se pudo: ' + ((e && e.message) || e);
           }).finally(function(){ t.disabled = false; });
+          return;
+        }
+        /* v7: acciones rápidas del tablero Hoy. */
+        var acc = ev.target && ev.target.closest ? ev.target.closest('[data-vg7-accion]') : null;
+        if(acc){
+          var cual = acc.getAttribute('data-vg7-accion');
+          if(cual === 'agregar-juego'){ try{ vgAdminIrA('cuentas'); }catch(e){} }
+          else if(cual === 'poner-oferta'){ try{ vgAdminIrA('inicio'); }catch(e){} }
+          else if(cual === 'ver-tienda'){
+            try{ if(window.vgAdminClose) window.vgAdminClose(); }catch(e){}
+            try{ window.scrollTo(0, 0); }catch(e){}
+          }
+          else if(cual === 'soporte'){ try{ vgAdminIrA('soporte'); }catch(e){} }
           return;
         }
         var fila = ev.target && ev.target.closest ? ev.target.closest('[data-ped]') : null;
@@ -58900,10 +60127,17 @@ function instalarV6(){
   if(barra && !barra.__vg6bound){
     barra.__vg6bound = true;
     barra.addEventListener('click', function(ev){
-      var b = ev.target && ev.target.closest ? ev.target.closest('.vg-admin-tab, .vg-admin-tab-x') : null;
+      var b = ev.target && ev.target.closest ? ev.target.closest('.vg-admin-tab, .vg-admin-tab-x, .vg7-fav-tab') : null;
       if(!b || !barra.contains(b)) return;
       ev.stopPropagation();
       try{ ev.preventDefault(); }catch(e){}
+      /* v7: en modo edición de favoritos, el clic fija/quita la
+         sección en vez de navegar (el botón Editar dice "Listo"). */
+      if(vg7EditandoFavs && (b.classList.contains('vg-admin-tab') || b.classList.contains('vg7-fav-tab'))){
+        var fid = b.getAttribute('data-tab');
+        if(fid) vg7AlternarFavorito(fid);
+        return;
+      }
       var nombre = b.getAttribute('data-tab');
       if(nombre){
         if(mostrarTab(nombre)) cargarTab(nombre);
@@ -58953,11 +60187,16 @@ function instalarV6(){
       else window.addEventListener('load', lanzar);
     }
   }catch(e){}
+  /* 8) v7: reconstruir el shell en fila flexible (barra lateral +
+     columna de contenido). Un fallo aquí NO rompe la instalación:
+     el panel sigue siendo el apilado v6. */
+  try{ vg7ConstruirShell(); }catch(e){ console.warn('[v7] construir shell falló, se usa el diseño v6:', e); }
 }
 instalarV6();
 
 })();
 </script>
+
 
 <script id="vg-retro-tr-v2">
 /* Sección Cuenta Nueva v2 (vg-retro-tr-v2).
