@@ -51787,6 +51787,118 @@ html body #productsGrid .card.vg-tr-card .price-line .price{
   cursor:pointer;
 }
 .vg-tr-mas:hover{ background:rgba(139,92,246,.28); }
+
+/* ── F · Por plataforma (2026-11-27) ─────────────────────────────
+   Vista «Todos» de Xbox Cuentas en 5 bloques por consola, cada uno
+   con su fila horizontal con desplazamiento, en vez de la lista
+   plana paginada. Solo se activa sin filtros (ver esVistaBloquesTR
+   en el JS); la vista plana no cambia. */
+.vgxr-bloque{
+  grid-column:1 / -1;
+  min-width:0;
+  margin:4px 0 22px;
+}
+.vgxr-bloque-head{
+  display:flex;
+  align-items:center;
+  flex-wrap:wrap;
+  gap:8px 10px;
+  margin:2px 2px 10px;
+}
+.vgxr-bloque-head h3{
+  margin:0;
+  font-size:1.15rem;
+  font-weight:800;
+  color:#fff;
+  letter-spacing:-.01em;
+}
+.vgxr-bloque-n{
+  color:#8b93a5;
+  font-size:.85rem;
+  font-weight:700;
+}
+.vgxr-bloque-acciones{
+  margin-left:auto;
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+.vgxr-flecha{
+  width:30px;
+  height:30px;
+  border-radius:999px;
+  border:1px solid rgba(255,255,255,.16);
+  background:rgba(255,255,255,.06);
+  color:#e6e9f2;
+  font-size:1rem;
+  line-height:1;
+  cursor:pointer;
+  padding:0 0 2px;
+}
+.vgxr-flecha:hover{ background:rgba(255,255,255,.14); }
+.vgxr-bloque-todos{
+  background:none;
+  border:1px solid rgba(25,230,193,.45);
+  color:#19e6c1;
+  border-radius:999px;
+  padding:7px 14px;
+  font-size:.82rem;
+  font-weight:800;
+  cursor:pointer;
+  white-space:nowrap;
+}
+.vgxr-bloque-todos:hover{ background:rgba(25,230,193,.12); }
+.vgxr-fila{
+  display:flex;
+  gap:12px;
+  overflow-x:auto;
+  min-width:0;
+  padding:2px 2px 10px;
+  scroll-snap-type:x proximity;
+  -webkit-overflow-scrolling:touch;
+  scrollbar-width:thin;
+}
+.vgxr-fila .vgxr-card{
+  scroll-snap-align:start;
+}
+/* La tarjeta dentro de la fila lleva ancho fijo: en la rejilla el
+   ancho lo da la columna del grid; aquí lo da el flex. El selector
+   con ID gana a las reglas .card (incluida la de móvil ≤820px, que
+   la pone en horizontal de 122px). */
+html body #productsGrid .vgxr-fila .vgxr-card{
+  flex:0 0 200px !important;
+  width:200px !important;
+  max-width:200px !important;
+  min-width:0 !important;
+}
+@media (max-width:820px){
+  html body #productsGrid .vgxr-fila .vgxr-card{
+    display:flex !important;
+    flex-direction:column !important;
+    flex:0 0 168px !important;
+    width:168px !important;
+    max-width:168px !important;
+  }
+  html body #productsGrid .vgxr-fila .vgxr-card .imgbox{
+    width:100% !important;
+    height:140px !important;
+    min-height:0 !important;
+    padding:0 !important;
+  }
+  html body #productsGrid .vgxr-fila .vgxr-card .imgbox img{
+    width:100% !important;
+    height:100% !important;
+    object-fit:cover !important;
+  }
+}
+@media (max-width:600px){
+  html body #productsGrid .vgxr-fila .vgxr-card{
+    flex-basis:150px !important;
+    width:150px !important;
+    max-width:150px !important;
+  }
+  .vgxr-bloque-head h3{ font-size:1.02rem; }
+}
 </style>
 
 <style id="vg-inicio-abajo-v1">
@@ -64240,6 +64352,9 @@ window.VG_XBOX_COVER_POR_MS_ID = {"BWM6WTKKGQLC":"https://static.kinguin.net/med
  *     los chips, la búsqueda y la franja de la sección ya ven datos TR.
  *   · pintarTR() pinta la rejilla con badge Cuenta nueva, precio MX
  *     tachado y 360/Clásico primero.
+ *   · F · Por plataforma (2026-11-27): la vista «Todos» sin filtros
+ *     pinta 5 bloques por consola con sus primeras 12 tarjetas en
+ *     fila horizontal; cualquier filtro usa la lista plana.
  *   · COMPRA MÍNIMA $200 MXN: el cliente lo ve en la tarjeta de la
  *     sección y el sistema lo aplica solo: un juego de menos de $200
  *     no se compra solo (va al carrito) y el pago se bloquea mientras
@@ -64454,6 +64569,45 @@ window.VG_XBOX_COVER_POR_MS_ID = {"BWM6WTKKGQLC":"https://static.kinguin.net/med
 
   /* ── Rejilla TR ── */
   var ORDEN_PLAT = { 'Xbox 360': 0, 'Clásico': 1, 'Xbox One': 2, 'Xbox One / Series': 3, 'Xbox Series': 4 };
+  /* F · Por plataforma (2026-11-27): vista «Todos» en bloques por
+     consola, en este orden, cada uno con sus primeras 12 tarjetas
+     en fila horizontal. Solo cuando no hay ningún filtro activo
+     (ver esVistaBloquesTR); cualquier filtro usa la lista plana. */
+  var ORDEN_BLOQUES_F = ['Xbox 360', 'Clásico', 'Xbox One', 'Xbox Series', 'Xbox One / Series'];
+  var NOMBRE_BLOQUE_F = {
+    'Xbox 360': 'Xbox 360', 'Clásico': 'Xbox Clásico', 'Xbox One': 'Xbox One',
+    'Xbox Series': 'Xbox Series', 'Xbox One / Series': 'Xbox One / Series',
+  };
+  var LIMITE_BLOQUE_F = 12;
+  /* Tope de precio efectivo (chip «Hasta $…» o window.vgPriceMax):
+     extraído de filtradosTR para reutilizarlo en esVistaBloquesTR. */
+  function topePrecioTR() {
+    try {
+      var chipActivo = document.querySelector('.vg-filter-bar .vg-filter-chip.active');
+      var vTope = chipActivo && chipActivo.getAttribute('data-price');
+      if (vTope && vTope !== 'all') {
+        var nTope = Number(vTope);
+        if (isFinite(nTope) && nTope > 0) return nTope;
+      } else if (typeof window.vgPriceMax === 'number' && isFinite(window.vgPriceMax)) {
+        return window.vgPriceMax;
+      }
+    } catch (e) {}
+    return Infinity;
+  }
+  /* Rango Desde/Hasta del sidebar: vgPaso2EnRango devuelve true para
+     cualquier precio > 0 cuando no hay rango; un false en los
+     extremos delata un Desde o un Hasta puesto. */
+  function rangoPrecioActivoTR() {
+    try {
+      if (typeof window.vgPaso2EnRango !== 'function') return false;
+      return !window.vgPaso2EnRango(1) || !window.vgPaso2EnRango(1e9);
+    } catch (e) { return false; }
+  }
+  /* Bloques solo en la vista «Todos» sin búsqueda ni filtro de precio. */
+  function esVistaBloquesTR() {
+    return filtroPlataforma === 'all' && !busquedaTR &&
+      topePrecioTR() === Infinity && !rangoPrecioActivoTR();
+  }
   function filtradosTR() {
     /* La búsqueda se adopta del buscador de arriba solo si encuentra
        algo, igual que hace la sección vieja. */
@@ -64474,17 +64628,7 @@ window.VG_XBOX_COVER_POR_MS_ID = {"BWM6WTKKGQLC":"https://static.kinguin.net/med
        de cargar el catálogo— lo perdía). Ahora filtran a nivel de
        datos, igual que hace la sección Xbox One/Series.
        (Auditoría 2026-11-24.) */
-    var topePrecio = Infinity;
-    try {
-      var chipActivo = document.querySelector('.vg-filter-bar .vg-filter-chip.active');
-      var vTope = chipActivo && chipActivo.getAttribute('data-price');
-      if (vTope && vTope !== 'all') {
-        var nTope = Number(vTope);
-        if (isFinite(nTope) && nTope > 0) topePrecio = nTope;
-      } else if (typeof window.vgPriceMax === 'number' && isFinite(window.vgPriceMax)) {
-        topePrecio = window.vgPriceMax;
-      }
-    } catch (e) {}
+    var topePrecio = topePrecioTR();
     var list = state.juegos.filter(function (x) {
       if (filtroPlataforma === 'retro') {
         if (x.platform !== 'Xbox 360' && x.platform !== 'Clásico') return false;
@@ -64581,6 +64725,11 @@ window.VG_XBOX_COVER_POR_MS_ID = {"BWM6WTKKGQLC":"https://static.kinguin.net/med
     if (firma !== firmaTR) { firmaTR = firma; limiteTR = LIMITE_TR_PAGINA; }
     var vacio = document.getElementById('emptyState');
     if (vacio) vacio.style.display = 'none';
+    /* F · Por plataforma: vista «Todos» sin filtros en 5 bloques. */
+    if (esVistaBloquesTR()) {
+      grid.innerHTML = barraTR() + pintarBloquesTR(l);
+      return;
+    }
     var visibles = l.slice(0, limiteTR);
     var resto = l.length - visibles.length;
     grid.innerHTML = barraTR() + (l.length
@@ -64590,6 +64739,45 @@ window.VG_XBOX_COVER_POR_MS_ID = {"BWM6WTKKGQLC":"https://static.kinguin.net/med
       : '<div class="vgxr-vacio"><b>No encontré juegos con ese filtro.</b>' +
         '<p style="margin:6px 0 0">Borra la búsqueda de arriba o toca "Todos".</p></div>');
   }
+  /* F · Por plataforma: 5 bloques (uno por valor de platform), cada
+     uno con su encabezado (nombre + contador real + «Ver todos») y
+     sus primeras 12 tarjetas en fila horizontal con desplazamiento.
+     Cada juego va en exactamente un bloque: no hay bloque «Retro»
+     (Retro sigue siendo solo una pastilla-filtro). «Ver todos» pinta
+     la lista plana paginada de esa plataforma, como hoy. */
+  function pintarBloquesTR(l) {
+    var html = '';
+    for (var i = 0; i < ORDEN_BLOQUES_F.length; i++) {
+      var p = ORDEN_BLOQUES_F[i];
+      var juegos = [];
+      for (var j = 0; j < l.length; j++) if (l[j].platform === p) juegos.push(l[j]);
+      if (!juegos.length) continue;
+      html += '<section class="vgxr-bloque" data-platform="' + esc(p) + '">' +
+        '<div class="vgxr-bloque-head">' +
+          '<h3>' + esc(NOMBRE_BLOQUE_F[p]) + '</h3>' +
+          '<span class="vgxr-bloque-n">' + cuentaPlat(p) + ' juegos</span>' +
+          '<span class="vgxr-bloque-acciones">' +
+            '<button type="button" class="vgxr-flecha" aria-label="Anterior" onclick="window.vgxrFila(this,-1)">‹</button>' +
+            '<button type="button" class="vgxr-flecha" aria-label="Siguiente" onclick="window.vgxrFila(this,1)">›</button>' +
+            '<button type="button" class="vgxr-bloque-todos" onclick="window.vgxrFiltrar(\'' + esc(p) + '\')">Ver todos</button>' +
+          '</span>' +
+        '</div>' +
+        '<div class="vgxr-fila">' + juegos.slice(0, LIMITE_BLOQUE_F).map(tarjetaTR).join('') + '</div>' +
+      '</section>';
+    }
+    return html;
+  }
+  /* Flechas ‹ › de las filas F: desplazan la fila ~80% de su ancho. */
+  window.vgxrFila = function (btn, dir) {
+    try {
+      var bloque = btn && btn.closest ? btn.closest('.vgxr-bloque') : null;
+      var fila = bloque ? bloque.querySelector('.vgxr-fila') : null;
+      if (!fila) return;
+      var paso = Math.max(200, (fila.clientWidth || 600) * 0.8);
+      if (typeof fila.scrollBy === 'function') fila.scrollBy({ left: dir * paso, behavior: 'smooth' });
+      else fila.scrollLeft += dir * paso;
+    } catch (e) {}
+  };
   window.vgTRMas = function () {
     limiteTR += LIMITE_TR_PAGINA;
     pintarTR();
