@@ -50705,9 +50705,9 @@ html body footer{padding-bottom:84px !important}
  *  - Slide 3 CODPoints: imagen propia (antes reutilizaba la del slide 1
  *    por un bug de orden en imagenHero: «Recarga tu cuenta» casa «cuenta»)
  *    + precio real.
- *  - Slide 4 Game Pass: sin «Core» (no existe como producto). Precio $90
- *    de Miguel (el $290 es el Codigo MX de SERVICES id 6; el precio del
- *    heroe no se cambia sin su OK — correccion del coordinador 2026-11-27).
+ *  - Slide 4 Game Pass: sin «Core» (no existe como producto). Precio $270
+ *    decidido por Miguel el 2026-11-27 (antes $90; el $290 es el Codigo
+ *    MX de SERVICES id 6, otro producto).
  *  - Normalizador: en vivo manda /api/contenido-inicio (tabla
  *    vg_inicio_contenido), asi que el render tambien corrige los textos
  *    viejos que traiga la API. Ver INFORME-auditoria-h5.md.
@@ -50751,7 +50751,7 @@ html body footer{padding-bottom:84px !important}
       { titulo: 'Xbox Cuentas', subtitulo: '1,639 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: '' },
       { titulo: 'Fortnite', subtitulo: 'Skins, lotes y pases desde $20 MXN', enlace: 'fortnite', imagen: '' },
       { titulo: 'CODPoints de Warzone', subtitulo: 'Recarga tu cuenta desde $200 MXN \u00b7 2,400 CP', enlace: 'gaming', imagen: '' },
-      { titulo: 'Game Pass', subtitulo: 'Game Pass Ultimate desde $90 MXN', enlace: 'gaming', imagen: '' }
+      { titulo: 'Game Pass', subtitulo: 'Game Pass Ultimate desde $270 MXN', enlace: 'gaming', imagen: '' }
     ],
     ofertas: [
       { titulo: 'Gears Of War 3', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 45, precio_mx: 57.25, enlace: 'retro', imagen: '' },
@@ -50905,16 +50905,17 @@ html body footer{padding-bottom:84px !important}
    * $90), el heroe seguiria mal aunque el respaldo este corregido. Por
    * eso, ademas de corregir los datos (respaldo + semilla de la API +
    * SQL para la tabla), el render normaliza los 3 heroes conocidos:
-   *  - Game Pass: se quita «Core» (no existe como producto). El $90 se
-   *    respeta: es el precio que Miguel pone en el heroe (el $290 es el
-   *    Codigo MX de SERVICES id 6; no se cambia el precio sin su OK).
+   *  - Game Pass: se quita «Core» (no existe como producto). El precio
+   *    NO se toca si el subtitulo ya trae $: es el precio que Miguel
+   *    pone en el heroe (desde 2026-11-27: $270; el $290 es el Codigo
+   *    MX de SERVICES id 6; no se cambia el precio sin su OK).
    *  - Fortnite / CODPoints / Game Pass: si el subtitulo no trae ningun
    *    precio ($), se anade el «desde $X MXN» real (Fortnite: piso de la
    *    tienda hoy, 200 pavos = $20 a tarifa 100 pavos = $10 MXN;
-   *    CODPoints: 2,400 CP $200, SERVICES id 2; Game Pass: $90,
+   *    CODPoints: 2,400 CP $200, SERVICES id 2; Game Pass: $270,
    *    precio del heroe). Un subtitulo con precio propio nunca se toca.
    *  Devuelve copia nueva; no muta el heroe recibido. */
-  var PRECIO_DESDE_H5 = { fortnite: 20, codpoints: 200, gamepass: 90 };
+  var PRECIO_DESDE_H5 = { fortnite: 20, codpoints: 200, gamepass: 270 };
   function normalizarHeroe(h) {
     if (!h || !h.titulo) return h;
     var t = norm(h.titulo);
@@ -65442,5 +65443,61 @@ window.VG_XBOX_COVER_POR_MS_ID = {"BWM6WTKKGQLC":"https://static.kinguin.net/med
 })();
 </script>
 
+<style id="vg-arreglo-aud-h7-titulo">
+/* ARREGLO AUD-H7 — título del banner fuera del lateral fijo (2026-11-27).
+ *
+ * PROBLEMA (visto en vivo, ronda H6): en vista de sección, el lateral
+ * fijo tapaba el inicio del título del banner («…ntas» en vez de
+ * «Xbox Cuentas», «/ Series» en One/Series). #sectionHero vive ANTES
+ * de .layout (el lateral está dentro de .layout > .vg-side-col), así
+ * que el banner abarca todo el ancho de .wrap y el aside fijo se le
+ * pone encima por la izquierda.
+ *
+ * GEOMETRÍA (reglas reales del archivo, en píxeles CSS):
+ *  - .wrap: max-width 1600px, padding 22px laterales (línea 48360).
+ *    Su caja de contenido (donde viven el héroe y .layout) empieza en
+ *    22px (<1601) o en 50vw−778px (≥1601): el héroe y el lateral
+ *    comparten ese mismo borde izquierdo.
+ *  - .layout: columnas 280px 1fr ≥1024px (línea 48407), 260px 1fr en
+ *    981–1023px (línea 283); gap 24px (línea 42043, #marketView
+ *    .layout — gana al gap:22 de 48407).
+ *  - Lateral fijo solo en escritorio ≥981px (MIN_W 981 en
+ *    vg-lateral-fijo-v4.js); left/ancho se copian del rect de
+ *    .vg-side-col: 1024–1600 → left 22, ancho 280 (borde der. 302,
+ *    rejilla en 326); ≥1601 → left calc(50vw−778px), ancho 280
+ *    (rejilla en 50vw−474); 981–1023 → left 22, ancho 260
+ *    (borde der. 282, rejilla en 306).
+ *  - .section-hero-content: padding 34px (línea 294). El texto hoy
+ *    empieza en hero-left + 34, bajo el lateral.
+ *
+ * ARREGLO: solo padding-left en .section-hero-content, solo en
+ * escritorio (≥981px; en móvil el lateral es estático y no se toca
+ * nada). El fondo del banner sigue a lo ancho; solo el texto se corre.
+ * padding-left = (rejilla − hero-left) + 34 (los 34 originales):
+ *  - 981–1023:  (306 − 22) + 34 = 318px
+ *  - ≥1024:     (326 − 22) + 34 = 338px, y lo mismo ≥1601 porque
+ *    héroe y lateral se mueven juntos ((50vw−474) − (50vw−778) = 304;
+ *    304 + 34 = 338). Por eso hay solo dos valores.
+ * El título queda alineado con la columna de productos (+34px).
+ *
+ * CASCADA: selector #marketView .section-hero-content (1,1,0), igual
+ * que las reglas de portada v80/Fortnite; este bloque se inyecta al
+ * final del archivo (justo antes del cierre del body), así que gana por
+ * orden en padding-left. Ninguna regla existente pone padding-left
+ * aquí. No toca .section-hero (fondo/grid/portada) ni .layout.
+ *
+ * CONSECUENCIA HONESTA: la columna de texto del héroe es el 58% del
+ * banner (grid v80: 1fr + 42% portada). Con el texto corrido, «XBOX
+ * ONE / SERIES» pasa a 2 líneas a 1536/1920px (antes 1); a 981–1023px
+ * el ancho útil queda en ~190px y envuelve más (esa banda ya era
+ * estrecha: el título ya iba a 2 líneas sin el arreglo).
+ */
+@media(min-width:981px) and (max-width:1023px){
+  #marketView .section-hero-content{ padding-left:318px; }
+}
+@media(min-width:1024px){
+  #marketView .section-hero-content{ padding-left:338px; }
+}
+</style>
 </body>
 </html>
