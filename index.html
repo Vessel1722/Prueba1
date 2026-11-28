@@ -58115,11 +58115,16 @@ html, body{overflow-x:clip !important;}
   }
 }
 
-/* ── ≥1601px: columna 280px, .wrap centrado de 1600px ── */
+/* ── ≥1601px: columna 280px, .wrap FLUIDO (ancho-total v1) → left 22px ──
+   (antes: .wrap centrado de 1600px, left calc(50vw−778px); obsoleto
+   desde ancho-total v1, que quitó el tope de 1600px. El JS v4 lo
+   corregía en vivo, pero el respaldo CSS quedaba desplazado 160px a
+   1920px durante los primeros ~260ms. Corregido en la ronda
+   lateral-filtros v1, 2026-11-27.) */
 @media (min-width:1601px){
   #marketView .layout > .vg-side-col > .sidebar{
     width:280px !important;
-    left:calc(50vw - 778px) !important;  /* 50vw − 800px + 22px; a 1920px: 182px */
+    left:22px !important;  /* wrap fluido: la columna está en 22px a todo ancho */
   }
 }
 </style>
@@ -65497,6 +65502,105 @@ window.VG_XBOX_COVER_POR_MS_ID = {"BWM6WTKKGQLC":"https://static.kinguin.net/med
 }
 @media(min-width:1024px){
   #marketView .section-hero-content{ padding-left:338px; }
+}
+</style>
+<style id="vg-ancho-total-v1">
+/* ANCHO TOTAL V1 — contenido principal a lo ancho completo (2026-11-27).
+ *
+ * PROBLEMA (captura de Miguel): la página se ve angosta, con mucho
+ * espacio vacío en las orillas. La parte principal no usaba toda la
+ * página. Había DOS topes, no uno:
+ *
+ *  1. HOME (lo que se ve en la captura): el inicio visible es
+ *     #vgInicioKinguin, creado por el módulo Kinguin como primer hijo
+ *     de #homeView (NO vive dentro de .wrap; el .hero viejo está
+ *     oculto con display:none). Su regla base (línea 50405) dice
+ *     width:100%; max-width:1240px; margin:0 auto; padding:0 16px 8px.
+ *     A cualquier ancho de escritorio el inicio quedaba en 1240px
+ *     centrado. ESTE era el tope que se veía en la captura.
+ *  2. CATÁLOGO (marketView): #marketView > .wrap con max-width 1600px
+ *     (línea 48360, @media min-width:1024px) y 1480px (línea 48198).
+ *     El tope de 1600 solo se nota a viewport mayor de 1600px: a 1536
+ *     la página YA era fluida (1600 no alcanza a limitar).
+ *
+ * ARREGLO: solo escritorio (min-width:981px, donde el lateral es fijo;
+ * en móvil no se toca nada). Se quita el tope en los tres contenedores
+ * y se conserva el padding lateral que ya tenía cada uno (.wrap 22px,
+ * #vgInicioKinguin 16px, .hero-inner 22px). Con box-sizing:border-box
+ * (global, línea 242) el ancho del contenido es el viewport menos el
+ * padding, sin desbordamiento.
+ *
+ * SE MANTIENE SIN CAMBIOS:
+ *  - Rejilla del catálogo: 7 columnas a >=1440px; las tarjetas se hacen
+ *    más anchas (a 1920 pasan de ~167px a ~213px), eso es lo que se quiere.
+ *  - Lateral: columna 280px, gap 24; el lateral fijo mide la columna en
+ *    vivo con JS y se adapta solo.
+ *  - Título del banner (H7): padding-left 318px (981-1023) / 338px
+ *    (>=1024) sobre el contenido del héroe de sección. Es relativo a
+ *    la columna, no al ancho del viewport: el despeje sigue siendo
+ *    exactamente 34px. Este bloque NO toca esa regla.
+ *  - Encabezado fijo (su barra interior sigue con su tope de 1600px,
+ *    no se toca) y pie de página (fuera de .wrap, sin tope).
+ *
+ * CASCADA: este bloque se inyecta al final del archivo (justo antes
+ * del cierre del body), así que gana por orden a igualdad de
+ * especificidad e !important: .wrap (0,1,0) contra 48198/48360 (0,1,0);
+ * #vgInicioKinguin (1,0,0) contra su base (1,0,0) sin !important;
+ * .hero-inner (0,1,0) contra 48376 (0,1,0).
+ */
+@media(min-width:981px){
+  .wrap{max-width:none !important;width:100% !important;margin-left:auto !important;margin-right:auto !important;padding-left:22px !important;padding-right:22px !important}
+  #vgInicioKinguin{max-width:none !important;width:100% !important;margin-left:auto !important;margin-right:auto !important}
+  .hero-inner{max-width:none !important;width:100% !important;margin-left:auto !important;margin-right:auto !important}
+}
+</style>
+<style id="vg-lateral-filtros-v1">
+/* ARREGLO LATERAL-FILTROS V1 — barra de filtros y título de sección
+ * fuera del lateral fijo (2026-11-27).
+ *
+ * PROBLEMA (capturas de Miguel, sección Xbox Cuentas): al bajar, la
+ * barra de chips de precio (.vg-filter-bar: «Todos los precios /
+ * Hasta $100 / Hasta $300 / Hasta $500 / Hasta $1,000») se desliza
+ * DEBAJO del lateral fijo y el primer chip sale cortado («a $300» en
+ * vez de «Hasta $300»). La barra la crea injectFilterBar()
+ * insertándola justo después de #marketView .market-head, es decir,
+ * como hija de .wrap y FUERA de .layout: arranca en el borde izquierdo
+ * del wrap (22px) y su extremo izquierdo queda bajo el aside fijo
+ * (280px de ancho, top 132px). El título de .market-head («Juegos
+ * Xbox Cuentas» + «Orden recomendado») tiene el mismo defecto de
+ * origen: al bajar, pasa por detrás del lateral.
+ *
+ * GEOMETRÍA (reglas reales del archivo, px CSS; wrap FLUIDO desde
+ * ancho-total v1, caja de contenido en 22px a todo ancho):
+ *  - .layout: columnas 260px 1fr en 981–1023px (línea 283), 280px 1fr
+ *    ≥1024px (línea 48407); gap 24px (línea 42043).
+ *  - Lateral fijo ≥981px: left/ancho = rect de .vg-side-col, medido
+ *    en vivo por vg-lateral-fijo-v4.js.
+ *  - Rejilla de productos: 22+260+24 = 306px (981–1023) y
+ *    22+280+24 = 326px (≥1024). Borde derecho del lateral: 282px y
+ *    302px. Despeje de la rejilla: 24px (= el gap).
+ *
+ * ARREGLO (solo CSS, sin tocar el DOM ni los handlers): en escritorio
+ * ≥981px, y solo cuando el lateral está visible (en Fortnite el body
+ * lleva vgfn-activo y la columna se oculta: ahí la barra y el título
+ * van a lo ancho, sin desplazamiento), la barra y el .market-head se
+ * corren hasta el borde izquierdo de la columna de contenido:
+ *  - 981–1023: 284px (= 306 − 22);  ≥1024: 304px (= 326 − 22).
+ * La barra queda alineada con la rejilla de tarjetas y con la fila de
+ * pastillas de categoría (que ya vive dentro de la columna); el título
+ * de sección queda alineado con la rejilla. Nada se encima con el
+ * lateral en ninguna posición de scroll: la barra y el título ya no
+ * llegan a su horizontal en ningún momento. En móvil (≤980px) el
+ * lateral es estático y no se toca nada.
+ * No se sube z-index, no se esconde nada, no se recortan los chips.
+ */
+@media(min-width:981px) and (max-width:1023px){
+  html body:not(.vgfn-activo) #marketView .market-head{ padding-left:284px; }
+  html body:not(.vgfn-activo) #marketView .vg-filter-bar{ margin-left:284px; }
+}
+@media(min-width:1024px){
+  html body:not(.vgfn-activo) #marketView .market-head{ padding-left:304px; }
+  html body:not(.vgfn-activo) #marketView .vg-filter-bar{ margin-left:304px; }
 }
 </style>
 </body>
