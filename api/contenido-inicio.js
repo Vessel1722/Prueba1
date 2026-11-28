@@ -32,7 +32,7 @@ const POR_DEFECTO = {
     { id: 'h1', titulo: 'Xbox Cuentas', subtitulo: '1,639 juegos en cuenta nueva desde $20 MXN', enlace: 'retro', imagen: 'https://i.imgur.com/CwZeUfrh.jpg' },
     { id: 'h2', titulo: 'Fortnite', subtitulo: 'Skins, lotes y pases desde $20 MXN', enlace: 'fortnite', imagen: 'https://fortnite-api.com/images/cosmetics/br/character_fondaim/featured.png' },
     { id: 'h3', titulo: 'CODPoints de Warzone', subtitulo: 'Recarga tu cuenta desde $200 MXN \u00b7 2,400 CP', enlace: 'gaming', imagen: 'https://i.imgur.com/NbxACqwh.jpg' },
-    { id: 'h4', titulo: 'Game Pass', subtitulo: 'Game Pass Ultimate desde $90 MXN', enlace: 'gaming', imagen: 'https://i.imgur.com/soHmMpnh.jpg' },
+    { id: 'h4', titulo: 'Game Pass', subtitulo: 'Game Pass Ultimate desde $270 MXN', enlace: 'gaming', imagen: 'https://i.imgur.com/soHmMpnh.jpg' },
   ],
   ofertas: [
     { id: 'o1', titulo: 'Gears Of War 3', subtitulo: 'Xbox 360 · Cuenta nueva', precio: 45, precio_mx: 57.25, enlace: 'retro', imagen: '' },
